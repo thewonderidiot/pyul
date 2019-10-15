@@ -16,7 +16,7 @@ class Monitor:
         self.phi_read()
 
         # Generate a log number for this run
-        self._log_no = random.randrange(400000, 699999)
+        self._log_no = random.randrange(400000, 700000)
 
         self._mon_card_processed = True
 

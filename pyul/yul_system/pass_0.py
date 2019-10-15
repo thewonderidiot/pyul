@@ -3,6 +3,12 @@ from yul_system.yulprogs import Yulprogs
 
 months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
+class TypAbort(Exception):
+    pass
+
+class NewVers(Exception):
+    pass
+
 class Yul:
     def __init__(self, mon):
         self._mon = mon
@@ -11,6 +17,8 @@ class Yul:
         self._non_wise = 0
         self._invisible_director = False
         self._yulprogs = None
+        self._switch = 0
+        self._revno = 0
         self._page_head = 'LOGNO.  YUL SYSTEM FOR                  ' + \
                           '                                        ' + \
                           '                        (MAIN)  PAGE   0'
@@ -83,7 +91,10 @@ class Yul:
 
             # Set up table look-up on 1st word.
             if sentence[0] in self._directs:
-                self._directs[sentence[0]](card, sentence)
+                try:
+                    self._directs[sentence[0]](card, sentence)
+                except TypAbort:
+                    pass
             else:
                 # Announce unrecognition of first word.
                 self.howz_that(card, sentence[0])
@@ -137,6 +148,7 @@ class Yul:
         self._mon.mon_typer('8   TASK ABORT', end='\n\n\n')
 
         # FIXME: abort things
+        raise TypAbort
 
     def accept_m2(self):
         ## FIXME: call for backup?
@@ -157,6 +169,17 @@ class Yul:
         self.yul_typer('THIS WORD UNRECOGNIZED: ' + word)
         self.rejec_dir(card)
 
+    def rd_subdrc(self):
+        next_card = self._mon.phi_peek()
+        if next_card[0] == 'S':
+            self._mon.phi_read()
+            sentence = self._mon.phi_sentr(next_card)
+        else:
+            next_card = None
+            sentence = None
+
+        return next_card, sentence
+
     def decod_cpn(self, card, sentence, word):
         # Subroutine to decode and standardize a computer name. The word "MOD" is ignored if it
         # precedes the computer name. The raw name is returned. Error exit if name is more than
@@ -170,13 +193,11 @@ class Yul:
             # Cuss blank computer name and abort.
             self.yul_typer('COMPUTER NAME IS BLANK.')
             self.rejec_dir(card)
-            return None
 
         if len(sentence[word]) > 4:
             # Error if name longer than 4 characters.
             self.yul_typer('TOO-LONG COMPUTER NAME: %s' % sentence[word])
             self.rejec_dir(card)
-            return None
 
         self._comp_name = sentence[word]
 
@@ -200,7 +221,6 @@ class Yul:
         # "COMPUTER" is required.
         if sentence[word] != 'COMPUTER':
             self.howz_that(card, sentence[word])
-            return
 
         # "NAME" is optional.
         word += 1
@@ -209,13 +229,10 @@ class Yul:
 
         # Decode computer name.
         computer = self.decod_cpn(card, sentence, word)
-        if computer is None:
-            return
 
         # Superfluous words are forbidden.
         if sentence[word + 1] != '':
             self.howz_that(card, sentence[word + 1])
-            return
 
         # Announce new name.
         self.yul_typer('  NEW COMPUTER: %s' % sentence[word])
@@ -225,7 +242,6 @@ class Yul:
         if old_comp is not None:
             self._mon.mon_typer('CONFLICT WITH EXISTING COMPUTER NAME')
             self.typ_abort()
-            return
 
         # Form computer name entry.
         self._yulprogs.add_comp(computer)
@@ -241,7 +257,6 @@ class Yul:
         # "COMPUTER" is required.
         if sentence[word] != 'COMPUTER':
             self.howz_that(card, sentence[word])
-            return
 
         # "NAME" is optional.
         word = word + 1
@@ -250,8 +265,6 @@ class Yul:
 
         # Decode computer name and announce task.
         comp_name = self.decod_cpn(card, sentence, word)
-        if comp_name is None:
-            return
 
         self._mon.mon_typer('REMOVING COMPUTER NAME: %s' % sentence[word])
 
@@ -261,7 +274,6 @@ class Yul:
             # Cuss and abort if no such computer.
             self._mon.mon_typer('COMPUTER NAME NOT RECOGNIZED.')
             self.typ_abort()
-            return
 
         ## FIXME: Check to see if computer has programs
 
@@ -282,7 +294,6 @@ class Yul:
         if shared_passes > 0:
             # Abort if there was any sharing.
             self.typ_abort()
-            return
 
         # Remove the computer.
         self._yulprogs.remove_comp(comp_name)
@@ -299,7 +310,184 @@ class Yul:
         pass
 
     def assembly(self, card, sentence):
-        pass
+        task_msg = 'ASSEMBLY'
+        word = 1
+        try:
+            task_msg, objc_msg = self.task_objc(card, sentence, word, task_msg)
+            self.yul_typer(task_msg)
+            head_msg = objc_msg
+        except NewVers as e:
+            objc_msg = e.args[0]
+            head_msg = e.args[1]
+
+        self.typ_asobj(card, sentence, objc_msg, head_msg)
+
+    def typ_asobj(self, card, sentence, objc_msg, head_msg=None):
+        self.yul_typer(objc_msg)
+
+        if head_msg is None:
+            head_msg = objc_msg
+
+        head_comp_msg = '%s: %s' % (self._comp_name, head_msg)
+        head_comp_msg = '%-66s' % head_comp_msg
+
+        self._page_head = self._page_head[:23] + head_comp_msg + self._page_head[89:]
+
+        comp = self._yulprogs.find_comp(self._comp_name)
+        if comp is None:
+            self.yul_typer('COMPUTER NAME NOT RECOGNIZED.')
+            self.typ_abort()
+
+        for p in ('PASS 1', 'PASS 2', 'PASS 3'):
+            if not comp[p]['AVAILABLE']:
+                self.yul_typer('CAN\'T ASSEMBLE FOR THAT COMPUTER')
+                self.typ_abort()
+
+        # FIXME: Continue...
+
+    def task_objc(self, card, sentence, word, task_msg):
+        task_msg += ' FOR'
+        self._switch = 0
+        word = self.prog_adj(card, sentence, word, task_msg)
+
+        comp_name = self.decod_cpn(card, sentence, word)
+
+        sentence[0] = sentence[word]
+        sentence.pop(word)
+
+        task_msg += ' ' + comp_name + ':'
+        
+        word = self.decod_psr(card, sentence, word)
+
+        if sentence[word] == '':
+            self.yul_typer('AUTHOR NAME IS MISSING.')
+            self.rejec_dir(card)
+
+        if sentence[word] != 'BY':
+            self.howz_that(card, sentence[word])
+
+        word += 1
+        self.dcod_auth(card, sentence, word)
+
+        sentence.pop(0)
+
+        objc_msg = ' '.join(sentence)
+
+        return task_msg, objc_msg
+
+    def dcod_auth(self, card, sentence, word):
+        auth_name = sentence[word]
+        if auth_name == '':
+            self.yul_typer('AUTHOR NAME IS MISSING.')
+            self.rejec_dir(card)
+
+        terminating_chars = '-:+*/,'
+
+        word += 1
+        while sentence[word] != '':
+            if (auth_name[-1] not in terminating_chars) and (sentence[word][0] not in terminating_chars):
+                auth_name += ' '
+            auth_name += sentence[word]
+            word += 1
+
+        if len(auth_name) > 16:
+            self.yul_typer('AUTHOR NAME IS TOO LONG.')
+            self.rejec_dir(card)
+
+        self._auth_name = auth_name
+
+    def decod_psr(self, card, sentence, word, skip_first_word=False):
+        if not skip_first_word:
+            if sentence[word] == 'SEGMENT':
+                self._switch |= (1 << 6)
+
+            elif sentence[word] == 'SUBROUTINE':
+                self._switch |= (1 << 8)
+
+            elif sentence[word] != 'PROGRAM':
+                self.howz_that(card, sentence[word])
+
+        word += 1
+        if len(sentence[word]) > 8:
+            self.yul_typer('TOO-LONG PROG/SUB NAME: %s' % sentencew[word])
+            self.rejec_dir(card)
+
+        if sentence[word] == '':
+            self.yul_typer('PROG/SUB NAME IS BLANK.')
+            self.rejec_dir(card)
+
+        self._prog_name = sentence[word]
+
+        return word + 1
+
+    def prog_adj(self, card, sentence, word, task_msg):
+        if sentence[word] == 'NEW':
+            self._revno = 0
+            return word + 1
+
+        elif sentence[word] == 'VERSION':
+            if task_msg.split()[0] != 'ASSEMBLY':
+                self.howz_that(card, sentence[word])
+            if sentence[0] == 'FROM':
+                self.howz_that(card, sentence[word])
+
+            word = self.decod_psr(card, sentence, word, skip_first_word=True)
+
+            if sentence[word] == '':
+                self.yul_typer('AUTHOR NAME IS MISSING.')
+                self.rejec_dir(card)
+
+            if sentence[word] != 'BY':
+                self.howz_that(card, sentence[word])
+
+            sub_card, sub_sent = self.rd_subdrc()
+            if sub_sent is None or sub_sent[0] != 'FROM':
+                self._mon.mon_typer('VERSION ASSEMBLY MUST HAVE SUBDIRECTOR SPECIFYING SOURCE')
+                self.rejec_dir(card if sub_card is None else sub_card)
+
+            if (self._switch & (1 << 8)) == 0:
+                pass
+
+            self._new_prog_name = self._prog_name
+            self._new_auth_name = self._auth_name
+
+            task_msg, objc_msg = self.task_objc(sub_card, sub_sent, 1, task_msg)
+            self.yul_typer(task_msg)
+
+            sentence[0] = 'NEW'
+            sentence[1] = sub_sent[3]
+
+            self._switch |= (1 << 11)
+
+            head_msg = ' '.join(sentence)
+            self.yul_typer(head_msg)
+            self._mon.mon_typer('SOURCE:')
+
+            raise NewVers(objc_msg, head_msg)
+
+        elif sentence[word] == 'REVISION':
+            word += 1
+
+            if len(sentence[word]) > 3:
+                self.yul_typer('TOO-LONG REVISION NO.: %s' % sentence[word])
+                self.rejec_dir(card)
+
+            try:
+                revision = int(sentence[word], 10)
+            except:
+                self.yul_typer('UNDECIMAL REVISION NO.: %s' % sentence[word])
+                self.rejec_dir(card)
+
+            word += 1
+            if sentence[word] != 'OF':
+                self.howz_that(card, sentence[word])
+
+            self._switch |= (1 << 9)
+            self._revno = revision
+            return word + 1
+
+        else:
+            self.howz_that(card, sentence[word])
 
     def reprint(self, card, sentence):
         pass
@@ -338,13 +526,11 @@ class Yul:
         word = 1
         if sentence[word] != 'PASS':
             self.howz_that(card, sentence[word])
-            return
 
         # Pass number must be one digit, and must be in the range 1-3.
         word += 1
         if sentence[word] not in ('1', '2', '3'):
             self.howz_that(card, sentence[word])
-            return
 
         # Put pass number in the announcement.
         pass_name = 'PASS ' + sentence[word]
@@ -362,13 +548,10 @@ class Yul:
         # "FOR" is required.
         if sentence[word] != 'FOR':
             self.howz_that(card, sentence[word])
-            return
 
         # Decode computer name.
         word += 1
         comp_name = self.decod_cpn(card, sentence, word)
-        if comp_name is None:
-            return
 
         # Announce which pass for which computer.
         stats_msg += sentence[word] + ' '
@@ -380,7 +563,6 @@ class Yul:
             # Cuss and abort if nonexistent computer.
             self._mon.mon_typer('COMPUTER NAME NOT RECOGNIZED.')
             self.rejec_dir(card)
-            return
 
         # Branch if absolute declaration.
         word += 1
@@ -397,7 +579,6 @@ class Yul:
                 if comp[pass_name]['AVAILABLE']:
                     self.yul_typer('   REDUNDANT')
                     self.typ_abort()
-                    return
 
                 # Signal availability, exit.
                 comp[pass_name]['AVAILABLE'] = True
@@ -409,7 +590,6 @@ class Yul:
                 word += 1
                 if sentence[word] != 'OUT':
                     self.howz_that(card, sentence[word])
-                    return
 
                 # Type "DECLARED CHECKED OUT".
                 self.yul_typer('DECLARED CHECKED OUT')
@@ -418,13 +598,11 @@ class Yul:
                 if not comp[pass_name]['AVAILABLE']:
                     self.yul_typer('NOT AVAILABLE')
                     self.typ_abort()
-                    return
 
                 # Cuss and abort if redundant.
                 if comp[pass_name]['CHECKED OUT']:
                     self.yul_typer('   REDUNDANT')
                     self.typ_abort()
-                    return
 
                 # Signal checkout, exit.
                 comp[pass_name]['CHECKED OUT'] = True
@@ -439,7 +617,6 @@ class Yul:
                 if not comp[pass_name]['AVAILABLE']:
                     self.yul_typer('NOT AVAILABLE')
                     self.typ_abort()
-                    return
 
                 # Erase avail and chko bits, exit.
                 comp[pass_name]['AVAILABLE'] = False
@@ -449,7 +626,6 @@ class Yul:
 
             else:
                 self.howz_that(card, sentence[word])
-                return
 
         else:
             # Procedure for equivalence declarations.
@@ -463,8 +639,6 @@ class Yul:
 
             # Decode second computer name.
             other_comp_name = self.decod_cpn(card, sentence, word)
-            if other_comp_name is None:
-                return
 
             # Change "RE:" to "="
             stats_msg = stats_msg.replace('RE:', '  =')
@@ -479,7 +653,6 @@ class Yul:
                 # Cuss and abort if no such computer.
                 self.yul_typer('COMPUTER NAME NOT RECOGNIZED.')
                 self.typ_abort()
-                return
 
             if comp_name == other_comp_name:
                 # When names are same, it means that the computer has stopped sharing a pass.
