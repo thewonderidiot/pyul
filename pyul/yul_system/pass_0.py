@@ -1,12 +1,30 @@
 from datetime import datetime
 from yul_system.yulprogs import Yulprogs
 
-months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+# Months
+MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+
+# Non-Blank Terminating Characters
+NBTCS = '-:+*/,'
+
+class SwitchBit:
+    RENUMBER   = (1 << 0)
+    MERGING    = (1 << 1)
+    SEGMENT    = (1 << 6)
+    BEFORE     = (1 << 7)
+    SUBROUTINE = (1 << 8)
+    REVISION   = (1 << 9)
+    VERSION    = (1 << 11)
 
 class TypAbort(Exception):
+    # Generic task-aborting error.
     pass
 
 class NewVers(Exception):
+    # This exception is defined as a means to accomplish a direct jump back into the
+    # ASSEMBLY routine, in the case PROG ADJ determines a VERSION assembly is being
+    # done. The object messages created in such a case are passed back as the
+    # arguments to this exception.
     pass
 
 class Yul:
@@ -19,6 +37,8 @@ class Yul:
         self._yulprogs = None
         self._switch = 0
         self._revno = 0
+        self._auth_name = ''
+        self._prog_name = ''
         self._page_head = 'LOGNO.  YUL SYSTEM FOR                  ' + \
                           '                                        ' + \
                           '                        (MAIN)  PAGE   0'
@@ -120,14 +140,14 @@ class Yul:
 
         # Append "A" or "B" to log number.
         self._yul_log_a = str(self._mon.get_log_no()) + self._mon.h1800_ab_sw
-        
+
         # Type "BEGIN YUL SYSTEM".
         self._mon.mon_typer('BEGIN YUL SYSTEM', end='\n\n\n')
-        
+
         # Format the date
         now = datetime.now()
-        self._yul_date = '%s %u, %u' % (months[now.month], now.day, now.year)
-        
+        self._yul_date = '%s %u, %u' % (MONTHS[now.month], now.day, now.year)
+
 
     def set_pg_hed(self):
         # Forbid revisions on a frozen tape.
@@ -170,11 +190,18 @@ class Yul:
         self.rejec_dir(card)
 
     def rd_subdrc(self):
+        # Subroutine in pass 0 to peek at end sentence-read cards. Returns card contents and
+        # parsed sentence if the next card is a subdirector, or None if not.
+
+        # Peek at next card.
         next_card = self._mon.phi_peek()
         if next_card[0] == 'S':
+            # Set up for sentence reading.
             self._mon.phi_read()
+            # Break down subdirector.
             sentence = self._mon.phi_sentr(next_card)
         else:
+            # Not a subdirector.
             next_card = None
             sentence = None
 
@@ -213,7 +240,7 @@ class Yul:
 
     def add_comp(self, card, sentence):
         word = 1
-        
+
         # "NEW" is optional here.
         if sentence[word] == 'NEW':
             word += 1
@@ -249,7 +276,7 @@ class Yul:
 
     def rmov_comp(self, card, sentence):
         word = 1
-        
+
         # "OLD" is optional.
         if sentence[word] == 'OLD':
             word += 1
@@ -275,7 +302,14 @@ class Yul:
             self._mon.mon_typer('COMPUTER NAME NOT RECOGNIZED.')
             self.typ_abort()
 
-        ## FIXME: Check to see if computer has programs
+        # Branch if computer has no programs.
+        progs = self._yulprogs.list_progs(comp_name)
+        if len(progs) > 0:
+            # Cuss about removing computer in use. Tell him to check
+            # the directory listing.
+            self._mon.mon_typer('COMPUTER IS STILL IN USE')
+            self._mon.mon_typer('CHECK DIRECTORY LISTING')
+            self.typ_abort()
 
         # Checking on software sharing.
         other_comp_names = self._yulprogs.list_comps()
@@ -310,129 +344,302 @@ class Yul:
         pass
 
     def assembly(self, card, sentence):
-        task_msg = 'ASSEMBLY'
+        self._task_msg = 'ASSEMBLY'
         word = 1
         try:
-            task_msg, objc_msg = self.task_objc(card, sentence, word, task_msg)
-            self.yul_typer(task_msg)
+            # Break down and reform rest of director.
+            objc_msg = self.task_objc(card, sentence, word)
+            # Type task.
+            self.yul_typer(self._task_msg)
             head_msg = objc_msg
         except NewVers as e:
+            # Read object messages from created by NEWVERS.
             objc_msg = e.args[0]
             head_msg = e.args[1]
 
         self.typ_asobj(card, sentence, objc_msg, head_msg)
 
     def typ_asobj(self, card, sentence, objc_msg, head_msg=None):
+        # Type object of task.
         self.yul_typer(objc_msg)
 
+        # Include computer name in page heading.
         if head_msg is None:
             head_msg = objc_msg
-
         head_comp_msg = '%s: %s' % (self._comp_name, head_msg)
         head_comp_msg = '%-66s' % head_comp_msg
 
         self._page_head = self._page_head[:23] + head_comp_msg + self._page_head[89:]
 
+        # Seek computer name in directory.
         comp = self._yulprogs.find_comp(self._comp_name)
         if comp is None:
+            # Cuss and exit if not there.
             self.yul_typer('COMPUTER NAME NOT RECOGNIZED.')
             self.typ_abort()
 
+        # Branch if passes 1-3 available for it.
         for p in ('PASS 1', 'PASS 2', 'PASS 3'):
             if not comp[p]['AVAILABLE']:
                 self.yul_typer('CAN\'T ASSEMBLE FOR THAT COMPUTER')
                 self.typ_abort()
 
-        # FIXME: Continue...
+        if self._task_msg.split()[0] != 'ASSEMBLY':
+            # Branch if doing reprent, not assembly.
+            # FIXME: Reprint logic...
+            pass
 
-    def task_objc(self, card, sentence, word, task_msg):
-        task_msg += ' FOR'
+        elif self._switch & SwitchBit.VERSION:
+            # Branch if doing version assembly.
+            self._switch |= SwitchBit.MERGING
+
+            # Check prog/sub name, revno, author, etc.
+            self.known_psr()
+
+            # Recover new progname, force revision.
+            self._prog_name = self._new_prog_name
+            self._switch |= SwitchBit.REVISION
+
+            # Recoer author name of version.
+            self._auth_name = self._new_auth_name
+
+            # Go join procedure for new prog/subro.
+            self.new_prsub()
+
+        elif (self._switch & SwitchBit.REVISION) == 0:
+            # Branch if new program or subroutine.
+            self.new_prsub()
+
+        else:
+            # Here alone the revision number is begin changed.
+            if self._no_revise:
+                # Forbid revisions on a frozen tape.
+                self._mon.mon_typer('CAN\'T REVISE A PROGRAM ON A FROZEN TAPE')
+                self.typ_abort()
+
+            # Request merging, check program name etc.
+            switch |= SwitchBit.MERGING
+            self.known_psr()
+
+        self.init_assy()
+
+    def init_assy(self):
+        # Procedure to initialize a permissible assembly or reprint.
+        pass
+
+    def known_psr(self):
+        # Subroutine in pass 0 to check a request for action on a known program or subroutine by
+        # verifying the computer name, program or subroutine name, revision number, and author name
+        # are mutually consistent.
+        comp = self._yulprogs.find_comp(self._comp_name)
+        if comp is None:
+            # Cuss and abort if no such computer.
+            self.yul_typer('COMPUTER NAME NOT RECOGNIZED.')
+            self.typ_abort()
+
+        # Determine expected type and revno.
+        expected_type = 'SUBROUTINE' if (self._switch & SwitchBit.SUBROUTINE) else 'PROGRAM'
+        expected_rev = self._revno
+        if (self._switch & SwitchBit.REVISION) and not (self._switch & SwitchBit.VERSION):
+            expected_rev -= 1
+
+        # See if name exists as either a prog or sr.
+        prog = self._yulprogs.find_prog(self._comp_name, self._prog_name)
+        if prog is None or prog['TYPE'] != expected_type:
+            if expected_type == 'SUBROUTINE':
+                # Cuss unrecognized subro name, abort.
+                self.yul_typer('SUBROUTINE NAME NOT RECOGNIZED.')
+            else:
+                # Cuss unrecognized program name, abort.
+                self.yul_typer('PROGRAM NAME NOT RECOGNIZED.')
+            self.typ_abort()
+
+        if prog['REVISION'] != expected_rev:
+            # Procedure to cuss a wrong revision no. Announce correct one and abort.
+            self._mon.mon_typer('WRONG REVISION NUMBER, SHOULD BE: %u' % expected_rev)
+            self.typ_abort()
+
+        if prog['AUTHOR'] != self._auth_name:
+            # Tell the man the correct author name.
+            self.yul_typer('WRONG AUTHOR, SHOULD BE: %s' % prog['AUTHOR'])
+            self.typ_abort()
+
+        if (self._switch & SwitchBit.REVISION) and prog['CONTROLLED']:
+            # Cuss attempt to revise controlled subro.
+            self._mon.mon_typer('CONTROLLED SUBROUTINE CANNOT BE DIDDLED.')
+            self.typ_abort()
+
+    def new_prsub(self):
+        # Seek program/subro name in directory.
+        prog = self._yulprogs.find_prog(self._comp_name, self._prog_name)
+        if prog is not None:
+            # Cuss conflict and exit if found.
+            self.yul_typer('CONFLICT WITH EXISTING PROG/SUB NAME.')
+            self.typ_abort()
+
+        # FIXME: Check if doing transferred assembly
+
+        if self._switch & SwitchBit.SUBROUTINE:
+            prog_type = 'SUBROUTINE'
+        else:
+            prog_type = 'PROGRAM'
+
+        # Enter the name of a new program or subroutine in the directory.
+        self._yulprogs.add_prog(self._comp_name, prog_type, self._prog_name, self._auth_name, self._yul_date)
+
+        # Seek author name in directory.
+        auth = self._yulprogs.find_auth(self._auth_name)
+        if auth is None:
+            # Include it now if not found.
+            self._yulprogs.add_auth(self._auth_name)
+            self._yulprogs.incr_auth(self._auth_name, self._comp_name, self._prog_name)
+
+    def task_objc(self, card, sentence, word):
+        # Some initializations.
+        self._task_msg += ' FOR'
         self._switch = 0
-        word = self.prog_adj(card, sentence, word, task_msg)
 
+        # Decode "NEW", "REVISION N OF", or "VERSION".
+        word = self.prog_adj(card, sentence, word)
+
+        # Decode and standardize computer name.
         comp_name = self.decod_cpn(card, sentence, word)
 
+        # Move computer name to head of sentence.
         sentence[0] = sentence[word]
+
+        # Cover its old place in the list.
         sentence.pop(word)
 
-        task_msg += ' ' + comp_name + ':'
-        
+        # Append colon to computer name.
+        sentence[0] += ':'
+
+        # Move computer name to task msg.
+        self._task_msg += ' ' + sentence[0]
+
+        # Decode "PROGRAM" or "SUBROUTINE".
         word = self.decod_psr(card, sentence, word)
 
         if sentence[word] == '':
+            # Complain about missing author name.
             self.yul_typer('AUTHOR NAME IS MISSING.')
             self.rejec_dir(card)
 
+        # Reject if this word is not "BY".
         if sentence[word] != 'BY':
             self.howz_that(card, sentence[word])
 
+        # Decode and standardize author name.
         word += 1
         self.dcod_auth(card, sentence, word)
 
+        # Omit computer name from object message.
         sentence.pop(0)
 
+        # Object message begins with "NEW" or "REVISION" and ends with author name.
         objc_msg = ' '.join(sentence)
 
-        return task_msg, objc_msg
+        return objc_msg
 
     def dcod_auth(self, card, sentence, word):
+        # Subroutine in pass 0 to decode an author name and store it in standardized form in _auth_name
+        # and in the sentence replacing the first word of the author name. Standardizing here means
+        # closing up the words with only the non-blank terminating characters intervening. Error exits
+        # if the author name is missing or is longer than 16 characters when standardized.
+
+        # Save location of first word.
+        first_word = word
+
         auth_name = sentence[word]
         if auth_name == '':
+            # Error if author name is missing.
             self.yul_typer('AUTHOR NAME IS MISSING.')
             self.rejec_dir(card)
 
-        terminating_chars = '-:+*/,'
-
+        # Insert all remaining words in sentence. Insert blanks between any two words not delimited
+        # by non-blank terminating characters.
         word += 1
         while sentence[word] != '':
-            if (auth_name[-1] not in terminating_chars) and (sentence[word][0] not in terminating_chars):
+            if (auth_name[-1] not in NBTCS) and (sentence[word][0] not in NBTCS):
                 auth_name += ' '
             auth_name += sentence[word]
             word += 1
 
         if len(auth_name) > 16:
+            # Error if name more than 16 characters.
             self.yul_typer('AUTHOR NAME IS TOO LONG.')
             self.rejec_dir(card)
 
+        # Close-up sentence after standardized author name.
+        sentence[first_word] = auth_name
+        for i in range(first_word + 1, len(sentence)):
+            sentence[i] = ''
+
+        # Store author name separately and exit.
         self._auth_name = auth_name
 
     def decod_psr(self, card, sentence, word, skip_first_word=False):
+        # Subroutine in pass 0 to decode noun and name. The noun is either "PROGRAM" or "SUBROUTINE".
+        # The program or subroutine name is stored in _prog_name. Error exit if name is longer than
+        # 8 characters. Bit 9 of the switch register is set to 0 if program or 1 if subroutine.
         if not skip_first_word:
             if sentence[word] == 'SEGMENT':
-                self._switch |= (1 << 6)
+                # Set segment flag and treat like a program.
+                self._switch |= SwitchBit.SEGMENT
 
             elif sentence[word] == 'SUBROUTINE':
-                self._switch |= (1 << 8)
+                self._switch |= SwitchBit.SUBROUTINE
 
             elif sentence[word] != 'PROGRAM':
+                # Branch if unrecognized noun.
                 self.howz_that(card, sentence[word])
 
         word += 1
         if len(sentence[word]) > 8:
+            # Cuss name of more than 8 characters.
             self.yul_typer('TOO-LONG PROG/SUB NAME: %s' % sentencew[word])
             self.rejec_dir(card)
 
         if sentence[word] == '':
+            # Cuss blank program/subro name and abort.
             self.yul_typer('PROG/SUB NAME IS BLANK.')
             self.rejec_dir(card)
 
+        # Store name and exit.
         self._prog_name = sentence[word]
 
         return word + 1
 
-    def prog_adj(self, card, sentence, word, task_msg):
+    def prog_adj(self, card, sentence, word):
+        # Subroutine in pass 0 to decode a program or subroutine adjective and set bit 10 of the
+        # switch register accordingly (0 if new, 1 if revision). The adjective is either "NEW" or
+        # "REVISION N OF", where N is a decimal number in the range 0-999. The value of the
+        # revision number is stored in right-justified decimal in revno, zero being used as the
+        # revision number of a new program or subroutine. Error exits are provided for any
+        # violation of these constraints.
+
         if sentence[word] == 'NEW':
+            # Revision number = 0 if new.
             self._revno = 0
+
+            # Step up word index and exit.
             return word + 1
 
         elif sentence[word] == 'VERSION':
-            if task_msg.split()[0] != 'ASSEMBLY':
+            # Branch on recognizing version assembly.
+            if self._task_msg.split()[0] != 'ASSEMBLY':
                 self.howz_that(card, sentence[word])
             if sentence[0] == 'FROM':
                 self.howz_that(card, sentence[word])
 
+            # Variations on assembly for the case of assembling a new program (or subroutine)
+            # as a version of an existing one. Acts like revision except that the source
+            # program (or subro) is preserved. Author may change.
+
+            # Decode prog or subro name.
             word = self.decod_psr(card, sentence, word, skip_first_word=True)
 
+            # Decode and standardize author name.
             if sentence[word] == '':
                 self.yul_typer('AUTHOR NAME IS MISSING.')
                 self.rejec_dir(card)
@@ -440,53 +647,66 @@ class Yul:
             if sentence[word] != 'BY':
                 self.howz_that(card, sentence[word])
 
+            self.dcod_auth(card, sentence, word)
+
+            # Save these quantities in parsed form.
+            self._new_prog_name = self._prog_name
+            self._new_auth_name = self._auth_name
+
+            # Cussabort if subdirector "FROM" missing.
             sub_card, sub_sent = self.rd_subdrc()
             if sub_sent is None or sub_sent[0] != 'FROM':
                 self._mon.mon_typer('VERSION ASSEMBLY MUST HAVE SUBDIRECTOR SPECIFYING SOURCE')
                 self.rejec_dir(card if sub_card is None else sub_card)
 
-            if (self._switch & (1 << 8)) == 0:
-                pass
+            # Break down and re-form subdirector.
+            objc_msg = self.task_objc(sub_card, sub_sent, 1)
+            self.yul_typer(self._task_msg)
 
-            self._new_prog_name = self._prog_name
-            self._new_auth_name = self._auth_name
-
-            task_msg, objc_msg = self.task_objc(sub_card, sub_sent, 1, task_msg)
-            self.yul_typer(task_msg)
-
+            # Call version "NEW".
             sentence[0] = 'NEW'
+            # Close up sentence to suit.
             sentence[1] = sub_sent[3]
 
-            self._switch |= (1 << 11)
+            self._switch |= SwitchBit.VERSION
 
+            # Type synthetic msg from old line.
             head_msg = ' '.join(sentence)
             self.yul_typer(head_msg)
             self._mon.mon_typer('SOURCE:')
 
+            # Join regular assembly procedure.
             raise NewVers(objc_msg, head_msg)
 
         elif sentence[word] == 'REVISION':
+            # Length of revision number.
             word += 1
-
             if len(sentence[word]) > 3:
+                # Four and up is illegal.
                 self.yul_typer('TOO-LONG REVISION NO.: %s' % sentence[word])
                 self.rejec_dir(card)
 
             try:
                 revision = int(sentence[word], 10)
             except:
+                # Error if revision no. not decimal.
                 self.yul_typer('UNDECIMAL REVISION NO.: %s' % sentence[word])
                 self.rejec_dir(card)
 
+            # Error if 3rd word is not "OF".
             word += 1
             if sentence[word] != 'OF':
                 self.howz_that(card, sentence[word])
 
-            self._switch |= (1 << 9)
+            # Signify revision rather than new.
+            self._switch |= SwitchBit.REVISION
+
+            # Fetch decimal revision number and exit.
             self._revno = revision
             return word + 1
 
         else:
+            # In case word is not "REVISION", "VERSION", or "TRANSFERRED".
             self.howz_that(card, sentence[word])
 
     def reprint(self, card, sentence):
@@ -574,7 +794,7 @@ class Yul:
             if sentence[word] == 'AVAILABLE':
                 # Type "DECLARED AVAILABLE".
                 self.yul_typer('DECLARED AVAILABLE')
-                
+
                 # Cuss and abort if redundant.
                 if comp[pass_name]['AVAILABLE']:
                     self.yul_typer('   REDUNDANT')
