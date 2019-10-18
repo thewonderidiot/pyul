@@ -14,6 +14,7 @@ class SwitchBit:
     BEFORE     = (1 << 7)
     SUBROUTINE = (1 << 8)
     REVISION   = (1 << 9)
+    REPRINT    = (1 << 10)
     VERSION    = (1 << 11)
 
 class TypAbort(Exception):
@@ -386,8 +387,20 @@ class Yul:
 
         if self._task_msg.split()[0] != 'ASSEMBLY':
             # Branch if doing reprent, not assembly.
-            # FIXME: Reprint logic...
-            pass
+            sub_card, sub_sent = self.rd_subdrc()
+            if sub_card is None or sub_sent[0] != 'FOR':
+                # Require subdirector "FOR CUSTOMERNAME".
+                self._mon.mon_typer('REPRINT REQUIRES "FOR WHOM" SUBDIRECTOR')
+                self.typ_abort()
+
+            # Type out entire subdirector card.
+            self.yul_typer(' '.join(sub_sent))
+
+            # Request reprint, check prg/sub name etc.
+            self._switch |= SwitchBit.REPRINT | SwitchBit.MERGING
+            self.known_psr()
+
+            # FIXME: Test obsolescence bit.
 
         elif self._switch & SwitchBit.VERSION:
             # Branch if doing version assembly.
@@ -440,7 +453,7 @@ class Yul:
         # Determine expected type and revno.
         expected_type = 'SUBROUTINE' if (self._switch & SwitchBit.SUBROUTINE) else 'PROGRAM'
         expected_rev = self._revno
-        if (self._switch & SwitchBit.REVISION) and not (self._switch & SwitchBit.VERSION):
+        if (self._switch & SwitchBit.REVISION) and not (self._switch & (SwitchBit.VERSION | SwitchBit.REPRINT)):
             expected_rev -= 1
 
         # See if name exists as either a prog or sr.
@@ -710,7 +723,23 @@ class Yul:
             self.howz_that(card, sentence[word])
 
     def reprint(self, card, sentence):
-        pass
+        # Procedure to respond to a request for a repring of an assembly listing. Do not confuse
+        # this with the print function, which makes a symbolic listing only. The reprint function
+        # is just like the assembly except that the revision number is not advanced, no input is
+        # accepted, and renumbering may not be done. SYPT, SYLT, and BYPT are not changed in any
+        # way. In particular, the BYPT/no BYPT bit for a program does not change even if its
+        # subroutines have changed since the last assembly in such a way as to change the
+        # good/fair/bad rating of the dummy assembly inherent in reprinting.
+
+        self._task_msg = 'REPRINT'
+
+        # Break down remainder of Yul director.
+        word = 1
+        objc_msg = self.task_objc(card, sentence, word)
+
+        # Type task, go join assembly process.
+        self.yul_typer(self._task_msg)
+        self.typ_asobj(card, sentence, objc_msg)
 
     def manufact(self, card, sentence):
         pass
