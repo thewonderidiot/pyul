@@ -1,5 +1,6 @@
 from datetime import datetime
 from yul_system.yulprogs import Yulprogs
+from yul_system.assembler import pass_1
 
 # Months
 MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
@@ -465,6 +466,8 @@ class Yul:
             except BadSubdirector:
                 pass
             sub_card, sub_sent = self.rd_subdrc()
+
+        pass_1.inish_p1(self._mon, self)
 
     def assy_subd(self, sub_card, sub_sent, is_assembly):
         # Subroutine in pass 0 to process assembly and/or printing subdirectors.
