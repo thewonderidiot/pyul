@@ -8,17 +8,28 @@ MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 
 NBTCS = '-:+*/,'
 
 class SwitchBit:
-    RENUMBER   = (1 << 0)
-    MERGING    = (1 << 1)
-    SEGMENT    = (1 << 6)
-    BEFORE     = (1 << 7)
-    SUBROUTINE = (1 << 8)
-    REVISION   = (1 << 9)
-    REPRINT    = (1 << 10)
-    VERSION    = (1 << 11)
+    RENUMBER          = (1 << 47)  # Bit 1
+    MERGING           = (1 << 46)  # Bit 2
+    SEGMENT           = (1 << 41)  # Bit 7
+    BEFORE            = (1 << 40)  # Bit 8
+    SUBROUTINE        = (1 << 39)  # Bit 9
+    REVISION          = (1 << 38)  # Bit 10
+    REPRINT           = (1 << 37)  # Bit 11
+    VERSION           = (1 << 36)  # Bit 12
+    SUPPRESS_INACTIVE = (1 << 34)  # Bit 14
+    SUPPRESS_SYMBOL   = (1 << 33)  # Bit 15
+    SUPPRESS_OCTAL    = (1 << 32)  # Bit 16
+    FREEZE            = (1 << 31)  # Bit 17
+    CONDISH_INACTIVE  = (1 << 30)  # Bit 18
+    CONDISH_SYMBOL    = (1 << 29)  # Bit 19
+    CONDISH_OCTAL     = (1 << 28)  # Bit 20
 
 class TypAbort(Exception):
     # Generic task-aborting error.
+    pass
+
+class BadSubdirector(Exception):
+    # Error raised when a bad subdirector is encountered.
     pass
 
 class NewVers(Exception):
@@ -40,6 +51,14 @@ class Yul:
         self._revno = 0
         self._auth_name = ''
         self._prog_name = ''
+        self._new_auth_name = ''
+        self._new_prog_name = ''
+        self._tape = 'YULPROGS'
+        self._task_msg = ''
+        self._yul_date = ''
+        self._yul_log_a = 'A'
+        self._n_lines = 54
+        self._n_copies = 0
         self._page_head = 'LOGNO.  YUL SYSTEM FOR                  ' + \
                           '                                        ' + \
                           '                        (MAIN)  PAGE   0'
@@ -227,11 +246,11 @@ class Yul:
             self.yul_typer('TOO-LONG COMPUTER NAME: %s' % sentence[word])
             self.rejec_dir(card)
 
-        self._comp_name = sentence[word]
+        self.comp_name = sentence[word]
 
         self.cpn_fixer(sentence, word)
 
-        return self._comp_name
+        return self.comp_name
 
     def cpn_fixer(self, sentence, word):
         # Exit if name does not begin with digit.
@@ -367,13 +386,13 @@ class Yul:
         # Include computer name in page heading.
         if head_msg is None:
             head_msg = objc_msg
-        head_comp_msg = '%s: %s' % (self._comp_name, head_msg)
+        head_comp_msg = '%s: %s' % (self.comp_name, head_msg)
         head_comp_msg = '%-66s' % head_comp_msg
 
         self._page_head = self._page_head[:23] + head_comp_msg + self._page_head[89:]
 
         # Seek computer name in directory.
-        comp = self._yulprogs.find_comp(self._comp_name)
+        comp = self._yulprogs.find_comp(self.comp_name)
         if comp is None:
             # Cuss and exit if not there.
             self.yul_typer('COMPUTER NAME NOT RECOGNIZED.')
@@ -438,13 +457,164 @@ class Yul:
 
     def init_assy(self):
         # Procedure to initialize a permissible assembly or reprint.
-        pass
+        # FIXME: Set things up for pass 1!
+        sub_card, sub_sent = self.rd_subdrc()
+        while sub_card is not None:
+            try:
+                self.assy_subd(sub_card, sub_sent, True)
+            except BadSubdirector:
+                pass
+            sub_card, sub_sent = self.rd_subdrc()
+
+    def assy_subd(self, sub_card, sub_sent, is_assembly):
+        # Subroutine in pass 0 to process assembly and/or printing subdirectors.
+        word = 0
+        if sub_sent[word] == 'PRINT':
+            word += 1
+            if len(sub_sent[word]) < 1 or len(sub_sent[word]) > 2:
+                self._mon.mon_typer('NUMERIC FIELD WRONG SIZE')
+                self.ign_sbdir(sub_card)
+
+            try:
+                num = int(sub_sent[word], 10)
+            except:
+                self._mon.mon_typer('NUMERIC WORD NOT DECIMAL')
+                self.ign_sbdir(sub_card)
+
+            if num < 2 or num > 63:
+                    self.num_rng_er(sub_card)
+
+            word += 1
+            if sub_sent[word] == 'LINES':
+                if num < 10:
+                    self.num_rng_er(sub_card)
+
+                if self._n_lines != 54:
+                    self.duplisub(sub_card)
+
+                self._n_lines = num
+                self._mon.mon_typer('PRINT %u LINES PER PAGE' % num)
+                return
+
+            elif sub_sent[word] == 'COPIES':
+                if self._n_copies != 0:
+                    self.duplisub(sub_card)
+
+                self._n_copies = num
+            
+            else:
+                self.unrc_sbdr(sub_card, sub_sent[word])
+
+        elif sub_sent[word] == 'RENUMBER':
+            if (SwitchBit.MERGING | SwitchBit.REPRINT) <= (self._switch & (SwitchBit.Merging | SwitchBit.REPRINT)):
+                # Refuse to renumber during a reprint.
+                self.il_reqest(sub_card)
+
+            # Check duplication and call from print.
+            self.dup_sub_ch(SwitchBit.RENUMBER, is_assembly, sub_card)
+
+            self._switch |= SwitchBit.RENUMBER
+            self._mon.mon_typer('RENUMBER CARDS')
+            return
+
+        elif sub_sent[word] == 'SUPPRESS':
+            word += 1
+            conditional = False
+            temp_mask = SwitchBit.CONDISH_SYMBOL | SwitchBit.CONDISH_OCTAL | SwitchBit.CONDISH_INACTIVE
+            if sub_sent[word] == 'CONDITIONALLY':
+                conditional = True
+                word += 1
+            else:
+                temp_mask |= SwitchBit.SUPPRESS_SYMBOL | SwitchBit.SUPPRESS_OCTAL | SwitchBit.SUPPRESS_INACTIVE
+
+            if sub_sent[word] == 'SYMBOL':
+                self.dup_sub_ch(SwitchBit.CONDISH_SYMBOL, is_assembly, sub_card)
+                self._switch |= (SwitchBit.CONDISH_SYMBOL | SwitchBit.SUPPRESS_SYMBOL) & temp_mask
+                suppressed = ' SYMBOL TABLE LISTING'
+            elif sub_sent[word] == 'OCTAL':
+                self.dup_sub_ch(SwitchBit.CONDISH_OCTAL, is_assembly, sub_card)
+                self._switch |= (SwitchBit.CONDISH_OCTAL | SwitchBit.SUPPRESS_OCTAL) & temp_mask
+                suppressed = ' OCTAL STORAGE MAP'
+            elif sub_sent[word] == 'INACTIVE':
+                self.dup_sub_ch(SwitchBit.CONDISH_INACTIVE, is_assembly, sub_card)
+                self._switch |= (SwitchBit.CONDISH_INACTIVE | SwitchBit.SUPPRESS_INACTIVE) & temp_mask
+                suppressed = ' INACTIVE SUBROUTINES'
+            else:
+                self.unrc_sbdr(sub_card, sub_sent[word])
+
+            if conditional:
+                self._mon.mon_typer('SUPPRESS', end='')
+            else:
+                self._mon.mon_typer('SUPPRESS CONDITIONALLY: ', end='')
+
+            self._mon.mon_typer('%s' % suppressed, end='\n\n\n')
+            return
+
+        elif sub_sent[word] == 'FREEZE':
+            if (SwitchBit.MERGING | SwitchBit.REPRINT) <= (self._switch & (SwitchBit.Merging | SwitchBit.REPRINT)):
+                # Refuse to freeze during a reprint.
+                self.il_reqest(sub_card)
+
+            word += 1
+            if sub_sent[word] != 'SUBROUTINES':
+                self.unrc_sbdr(sub_card, sub_sent[word])
+
+            if self._switch & SwitchBit.SUBROUTINE:
+                self.il_reqest(sub_card)
+
+            self.dup_sub_ch(SwitchBit.FREEZE, is_assembly, sub_card)
+
+            self._switch |= SwitchBit.FREEZE
+            self._mon.mon_typer('FREEZE SUBROUTINES')
+            return
+
+        elif sub_sent[word] == 'BEFORE':
+            # Point to subro name, quit if reprint.
+            word += 1
+            if (SwitchBit.MERGING | SwitchBit.REPRINT) <= (self._switch & (SwitchBit.Merging | SwitchBit.REPRINT)):
+                self.il_reqest(sub_card)
+
+            if (self._switch & SwitchBit.SUBROUTINE) == 0:
+                self.il_reqest(sub_card)
+
+            self.dup_sub_ch(SwitchBit.BEFORE, is_assembly, sub_card)
+            self._switch |= SwitchBit.BEFORE
+
+
+
+    def unrc_sbdr(self, sub_card, bad_word):
+        self.yul_typer('THIS WORD UNRECOGNIZED: %s' % bad_word)
+        self.ign_sbdir(sub_card)
+
+    def num_rng_er(self, sub_card):
+        self._mon.mon_typer('NUMERIC WORD RANGE ERROR')
+        self.ign_sbdir(sub_card)
+
+    def duplisub(self, sub_card):
+        self._mon.mon_typer('DUPLICATE SUBDIRECTOR')
+        self.ign_sbdir(sub_card)
+
+    def dup_sub_ch(self, switch_bit, is_assembly, sub_card): 
+        if self._switch & switch_bit:
+            self.duplisub(sub_card)
+
+        if is_assembly:
+            self.il_reqest(sub_card)
+
+    def ign_sbdir(self, sub_card):
+        self.yul_typer('THEREFORE THIS CARD IS IGNORED:')
+        self.yul_typer(sub_card[8:])
+        raise BadSubdirector()
+
+    def il_reqest(self, sub_card):
+        self._mon.mon_typer('ILLEGAL REQUEST FOR TASK')
+        self.ign_sbdir(sub_card)
 
     def known_psr(self):
         # Subroutine in pass 0 to check a request for action on a known program or subroutine by
         # verifying the computer name, program or subroutine name, revision number, and author name
         # are mutually consistent.
-        comp = self._yulprogs.find_comp(self._comp_name)
+        comp = self._yulprogs.find_comp(self.comp_name)
         if comp is None:
             # Cuss and abort if no such computer.
             self.yul_typer('COMPUTER NAME NOT RECOGNIZED.')
@@ -457,7 +627,7 @@ class Yul:
             expected_rev -= 1
 
         # See if name exists as either a prog or sr.
-        prog = self._yulprogs.find_prog(self._comp_name, self._prog_name)
+        prog = self._yulprogs.find_prog(self.comp_name, self._prog_name)
         if prog is None or prog['TYPE'] != expected_type:
             if expected_type == 'SUBROUTINE':
                 # Cuss unrecognized subro name, abort.
@@ -484,7 +654,7 @@ class Yul:
 
     def new_prsub(self):
         # Seek program/subro name in directory.
-        prog = self._yulprogs.find_prog(self._comp_name, self._prog_name)
+        prog = self._yulprogs.find_prog(self.comp_name, self._prog_name)
         if prog is not None:
             # Cuss conflict and exit if found.
             self.yul_typer('CONFLICT WITH EXISTING PROG/SUB NAME.')
@@ -498,14 +668,14 @@ class Yul:
             prog_type = 'PROGRAM'
 
         # Enter the name of a new program or subroutine in the directory.
-        self._yulprogs.add_prog(self._comp_name, prog_type, self._prog_name, self._auth_name, self._yul_date)
+        self._yulprogs.add_prog(self.comp_name, prog_type, self._prog_name, self._auth_name, self._yul_date)
 
         # Seek author name in directory.
         auth = self._yulprogs.find_auth(self._auth_name)
         if auth is None:
             # Include it now if not found.
             self._yulprogs.add_auth(self._auth_name)
-            self._yulprogs.incr_auth(self._auth_name, self._comp_name, self._prog_name)
+            self._yulprogs.incr_auth(self._auth_name, self.comp_name, self._prog_name)
 
     def task_objc(self, card, sentence, word):
         # Some initializations.
