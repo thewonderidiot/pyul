@@ -2,6 +2,8 @@ from yul_system.assembler.pass_1 import Pass1
 
 class AGC4Pass1(Pass1):
     def __init__(self, mon, yul):
+        super().__init__(mon, yul)
+
         self.max_num_op = 7
         self.max_loc = 0o71777
         self.adr_lim = 0o72000
@@ -163,6 +165,11 @@ class AGC4Pass1(Pass1):
             '=PLUS':  self.equ_plus,
             '=MINUS': self.equ_minus,
         }
+
+    def m_special(self):
+        # FIXME: Modify OP FOUND
+        # FIXME: Change AGC4 memory table if segment assembly
+        self.post_spec()
 
     def agc4_bank(self):
         pass

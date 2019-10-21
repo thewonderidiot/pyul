@@ -8,22 +8,73 @@ MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 
 # Non-Blank Terminating Characters
 NBTCS = '-:+*/,'
 
+class Bit:
+    BIT1  = (1 << 47)
+    BIT2  = (1 << 46)
+    BIT3  = (1 << 45)
+    BIT4  = (1 << 44)
+    BIT5  = (1 << 43)
+    BIT6  = (1 << 42)
+    BIT7  = (1 << 41)
+    BIT8  = (1 << 40)
+    BIT9  = (1 << 39)
+    BIT10 = (1 << 38)
+    BIT11 = (1 << 37)
+    BIT12 = (1 << 36)
+    BIT13 = (1 << 35)
+    BIT14 = (1 << 34)
+    BIT15 = (1 << 33)
+    BIT16 = (1 << 32)
+    BIT17 = (1 << 31)
+    BIT18 = (1 << 30)
+    BIT19 = (1 << 29)
+    BIT20 = (1 << 28)
+    BIT21 = (1 << 27)
+    BIT22 = (1 << 26)
+    BIT23 = (1 << 25)
+    BIT24 = (1 << 24)
+    BIT25 = (1 << 23)
+    BIT26 = (1 << 22)
+    BIT27 = (1 << 21)
+    BIT28 = (1 << 20)
+    BIT29 = (1 << 19)
+    BIT30 = (1 << 18)
+    BIT31 = (1 << 17)
+    BIT32 = (1 << 16)
+    BIT33 = (1 << 15)
+    BIT34 = (1 << 14)
+    BIT35 = (1 << 13)
+    BIT36 = (1 << 12)
+    BIT37 = (1 << 11)
+    BIT38 = (1 << 10)
+    BIT39 = (1 << 9)
+    BIT40 = (1 << 8)
+    BIT41 = (1 << 7)
+    BIT42 = (1 << 6)
+    BIT43 = (1 << 5)
+    BIT44 = (1 << 4)
+    BIT45 = (1 << 3)
+    BIT46 = (1 << 2)
+    BIT47 = (1 << 1)
+    BIT48 = (1 << 0)
+
 class SwitchBit:
-    RENUMBER          = (1 << 47)  # Bit 1
-    MERGING           = (1 << 46)  # Bit 2
-    SEGMENT           = (1 << 41)  # Bit 7
-    BEFORE            = (1 << 40)  # Bit 8
-    SUBROUTINE        = (1 << 39)  # Bit 9
-    REVISION          = (1 << 38)  # Bit 10
-    REPRINT           = (1 << 37)  # Bit 11
-    VERSION           = (1 << 36)  # Bit 12
-    SUPPRESS_INACTIVE = (1 << 34)  # Bit 14
-    SUPPRESS_SYMBOL   = (1 << 33)  # Bit 15
-    SUPPRESS_OCTAL    = (1 << 32)  # Bit 16
-    FREEZE            = (1 << 31)  # Bit 17
-    CONDISH_INACTIVE  = (1 << 30)  # Bit 18
-    CONDISH_SYMBOL    = (1 << 29)  # Bit 19
-    CONDISH_OCTAL     = (1 << 28)  # Bit 20
+    RENUMBER          = Bit.BIT1
+    MERGING           = Bit.BIT2
+    ANOTHER_TASK      = Bit.BIT4
+    SEGMENT           = Bit.BIT7
+    BEFORE            = Bit.BIT8
+    SUBROUTINE        = Bit.BIT9
+    REVISION          = Bit.BIT10
+    REPRINT           = Bit.BIT11
+    VERSION           = Bit.BIT12
+    SUPPRESS_INACTIVE = Bit.BIT14
+    SUPPRESS_SYMBOL   = Bit.BIT15
+    SUPPRESS_OCTAL    = Bit.BIT16
+    FREEZE            = Bit.BIT17
+    CONDISH_INACTIVE  = Bit.BIT18
+    CONDISH_SYMBOL    = Bit.BIT19
+    CONDISH_OCTAL     = Bit.BIT20
 
 class TypAbort(Exception):
     # Generic task-aborting error.
@@ -48,7 +99,7 @@ class Yul:
         self._non_wise = 0
         self._invisible_director = False
         self._yulprogs = None
-        self._switch = 0
+        self.switch = 0
         self._revno = 0
         self._auth_name = ''
         self._prog_name = ''
@@ -417,21 +468,21 @@ class Yul:
             self.yul_typer(' '.join(sub_sent))
 
             # Request reprint, check prg/sub name etc.
-            self._switch |= SwitchBit.REPRINT | SwitchBit.MERGING
+            self.switch |= SwitchBit.REPRINT | SwitchBit.MERGING
             self.known_psr()
 
             # FIXME: Test obsolescence bit.
 
-        elif self._switch & SwitchBit.VERSION:
+        elif self.switch & SwitchBit.VERSION:
             # Branch if doing version assembly.
-            self._switch |= SwitchBit.MERGING
+            self.switch |= SwitchBit.MERGING
 
             # Check prog/sub name, revno, author, etc.
             self.known_psr()
 
             # Recover new progname, force revision.
             self._prog_name = self._new_prog_name
-            self._switch |= SwitchBit.REVISION
+            self.switch |= SwitchBit.REVISION
 
             # Recoer author name of version.
             self._auth_name = self._new_auth_name
@@ -439,7 +490,7 @@ class Yul:
             # Go join procedure for new prog/subro.
             self.new_prsub()
 
-        elif (self._switch & SwitchBit.REVISION) == 0:
+        elif (self.switch & SwitchBit.REVISION) == 0:
             # Branch if new program or subroutine.
             self.new_prsub()
 
@@ -509,14 +560,14 @@ class Yul:
                 self.unrc_sbdr(sub_card, sub_sent[word])
 
         elif sub_sent[word] == 'RENUMBER':
-            if (SwitchBit.MERGING | SwitchBit.REPRINT) <= (self._switch & (SwitchBit.Merging | SwitchBit.REPRINT)):
+            if (SwitchBit.MERGING | SwitchBit.REPRINT) <= (self.switch & (SwitchBit.Merging | SwitchBit.REPRINT)):
                 # Refuse to renumber during a reprint.
                 self.il_reqest(sub_card)
 
             # Check duplication and call from print.
             self.dup_sub_ch(SwitchBit.RENUMBER, is_assembly, sub_card)
 
-            self._switch |= SwitchBit.RENUMBER
+            self.switch |= SwitchBit.RENUMBER
             self._mon.mon_typer('RENUMBER CARDS')
             return
 
@@ -532,15 +583,15 @@ class Yul:
 
             if sub_sent[word] == 'SYMBOL':
                 self.dup_sub_ch(SwitchBit.CONDISH_SYMBOL, is_assembly, sub_card)
-                self._switch |= (SwitchBit.CONDISH_SYMBOL | SwitchBit.SUPPRESS_SYMBOL) & temp_mask
+                self.switch |= (SwitchBit.CONDISH_SYMBOL | SwitchBit.SUPPRESS_SYMBOL) & temp_mask
                 suppressed = ' SYMBOL TABLE LISTING'
             elif sub_sent[word] == 'OCTAL':
                 self.dup_sub_ch(SwitchBit.CONDISH_OCTAL, is_assembly, sub_card)
-                self._switch |= (SwitchBit.CONDISH_OCTAL | SwitchBit.SUPPRESS_OCTAL) & temp_mask
+                self.switch |= (SwitchBit.CONDISH_OCTAL | SwitchBit.SUPPRESS_OCTAL) & temp_mask
                 suppressed = ' OCTAL STORAGE MAP'
             elif sub_sent[word] == 'INACTIVE':
                 self.dup_sub_ch(SwitchBit.CONDISH_INACTIVE, is_assembly, sub_card)
-                self._switch |= (SwitchBit.CONDISH_INACTIVE | SwitchBit.SUPPRESS_INACTIVE) & temp_mask
+                self.switch |= (SwitchBit.CONDISH_INACTIVE | SwitchBit.SUPPRESS_INACTIVE) & temp_mask
                 suppressed = ' INACTIVE SUBROUTINES'
             else:
                 self.unrc_sbdr(sub_card, sub_sent[word])
@@ -554,7 +605,7 @@ class Yul:
             return
 
         elif sub_sent[word] == 'FREEZE':
-            if (SwitchBit.MERGING | SwitchBit.REPRINT) <= (self._switch & (SwitchBit.Merging | SwitchBit.REPRINT)):
+            if (SwitchBit.MERGING | SwitchBit.REPRINT) <= (self.switch & (SwitchBit.Merging | SwitchBit.REPRINT)):
                 # Refuse to freeze during a reprint.
                 self.il_reqest(sub_card)
 
@@ -562,26 +613,26 @@ class Yul:
             if sub_sent[word] != 'SUBROUTINES':
                 self.unrc_sbdr(sub_card, sub_sent[word])
 
-            if self._switch & SwitchBit.SUBROUTINE:
+            if self.switch & SwitchBit.SUBROUTINE:
                 self.il_reqest(sub_card)
 
             self.dup_sub_ch(SwitchBit.FREEZE, is_assembly, sub_card)
 
-            self._switch |= SwitchBit.FREEZE
+            self.switch |= SwitchBit.FREEZE
             self._mon.mon_typer('FREEZE SUBROUTINES')
             return
 
         elif sub_sent[word] == 'BEFORE':
             # Point to subro name, quit if reprint.
             word += 1
-            if (SwitchBit.MERGING | SwitchBit.REPRINT) <= (self._switch & (SwitchBit.Merging | SwitchBit.REPRINT)):
+            if (SwitchBit.MERGING | SwitchBit.REPRINT) <= (self.switch & (SwitchBit.Merging | SwitchBit.REPRINT)):
                 self.il_reqest(sub_card)
 
-            if (self._switch & SwitchBit.SUBROUTINE) == 0:
+            if (self.switch & SwitchBit.SUBROUTINE) == 0:
                 self.il_reqest(sub_card)
 
             self.dup_sub_ch(SwitchBit.BEFORE, is_assembly, sub_card)
-            self._switch |= SwitchBit.BEFORE
+            self.switch |= SwitchBit.BEFORE
 
 
 
@@ -598,7 +649,7 @@ class Yul:
         self.ign_sbdir(sub_card)
 
     def dup_sub_ch(self, switch_bit, is_assembly, sub_card): 
-        if self._switch & switch_bit:
+        if self.switch & switch_bit:
             self.duplisub(sub_card)
 
         if is_assembly:
@@ -624,9 +675,9 @@ class Yul:
             self.typ_abort()
 
         # Determine expected type and revno.
-        expected_type = 'SUBROUTINE' if (self._switch & SwitchBit.SUBROUTINE) else 'PROGRAM'
+        expected_type = 'SUBROUTINE' if (self.switch & SwitchBit.SUBROUTINE) else 'PROGRAM'
         expected_rev = self._revno
-        if (self._switch & SwitchBit.REVISION) and not (self._switch & (SwitchBit.VERSION | SwitchBit.REPRINT)):
+        if (self.switch & SwitchBit.REVISION) and not (self.switch & (SwitchBit.VERSION | SwitchBit.REPRINT)):
             expected_rev -= 1
 
         # See if name exists as either a prog or sr.
@@ -650,7 +701,7 @@ class Yul:
             self.yul_typer('WRONG AUTHOR, SHOULD BE: %s' % prog['AUTHOR'])
             self.typ_abort()
 
-        if (self._switch & SwitchBit.REVISION) and prog['CONTROLLED']:
+        if (self.switch & SwitchBit.REVISION) and prog['CONTROLLED']:
             # Cuss attempt to revise controlled subro.
             self._mon.mon_typer('CONTROLLED SUBROUTINE CANNOT BE DIDDLED.')
             self.typ_abort()
@@ -665,7 +716,7 @@ class Yul:
 
         # FIXME: Check if doing transferred assembly
 
-        if self._switch & SwitchBit.SUBROUTINE:
+        if self.switch & SwitchBit.SUBROUTINE:
             prog_type = 'SUBROUTINE'
         else:
             prog_type = 'PROGRAM'
@@ -683,7 +734,7 @@ class Yul:
     def task_objc(self, card, sentence, word):
         # Some initializations.
         self._task_msg += ' FOR'
-        self._switch = 0
+        self.switch = 0
 
         # Decode "NEW", "REVISION N OF", or "VERSION".
         word = self.prog_adj(card, sentence, word)
@@ -771,10 +822,10 @@ class Yul:
         if not skip_first_word:
             if sentence[word] == 'SEGMENT':
                 # Set segment flag and treat like a program.
-                self._switch |= SwitchBit.SEGMENT
+                self.switch |= SwitchBit.SEGMENT
 
             elif sentence[word] == 'SUBROUTINE':
-                self._switch |= SwitchBit.SUBROUTINE
+                self.switch |= SwitchBit.SUBROUTINE
 
             elif sentence[word] != 'PROGRAM':
                 # Branch if unrecognized noun.
@@ -854,7 +905,7 @@ class Yul:
             # Close up sentence to suit.
             sentence[1] = sub_sent[3]
 
-            self._switch |= SwitchBit.VERSION
+            self.switch |= SwitchBit.VERSION
 
             # Type synthetic msg from old line.
             head_msg = ' '.join(sentence)
@@ -885,7 +936,7 @@ class Yul:
                 self.howz_that(card, sentence[word])
 
             # Signify revision rather than new.
-            self._switch |= SwitchBit.REVISION
+            self.switch |= SwitchBit.REVISION
 
             # Fetch decimal revision number and exit.
             self._revno = revision

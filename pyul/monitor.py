@@ -52,9 +52,17 @@ class Monitor:
         self.lcard = card
         return card
 
+    def mon_read(self):
+        # Alternate name for phi_read()
+        return self.phi_read()
+
     def phi_peek(self):
         # Return the next card that will be returned by phi_read()
         return self._next_card
+
+    def mon_peek(self):
+        # Alternate name for phi_peek()
+        return self.phi_peek()
 
     def phi_sentr(self, card):
         # Process a director card into a sentence. Whitespace is removed between all
