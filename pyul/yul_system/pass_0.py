@@ -60,8 +60,10 @@ class Bit:
 
 class SwitchBit:
     RENUMBER          = Bit.BIT1
-    MERGING           = Bit.BIT2
+    MERGE_MODE        = Bit.BIT2
+    TAPE_KEPT         = Bit.BIT3
     ANOTHER_TASK      = Bit.BIT4
+    KNOW_SUBS         = Bit.BIT5
     SEGMENT           = Bit.BIT7
     BEFORE            = Bit.BIT8
     SUBROUTINE        = Bit.BIT9
@@ -468,14 +470,14 @@ class Yul:
             self.yul_typer(' '.join(sub_sent))
 
             # Request reprint, check prg/sub name etc.
-            self.switch |= SwitchBit.REPRINT | SwitchBit.MERGING
+            self.switch |= SwitchBit.REPRINT | SwitchBit.MERGE_MODE
             self.known_psr()
 
             # FIXME: Test obsolescence bit.
 
         elif self.switch & SwitchBit.VERSION:
             # Branch if doing version assembly.
-            self.switch |= SwitchBit.MERGING
+            self.switch |= SwitchBit.MERGE_MODE
 
             # Check prog/sub name, revno, author, etc.
             self.known_psr()
@@ -502,7 +504,7 @@ class Yul:
                 self.typ_abort()
 
             # Request merging, check program name etc.
-            switch |= SwitchBit.MERGING
+            switch |= SwitchBit.MERGE_MODE
             self.known_psr()
 
         self.init_assy()
@@ -560,7 +562,7 @@ class Yul:
                 self.unrc_sbdr(sub_card, sub_sent[word])
 
         elif sub_sent[word] == 'RENUMBER':
-            if (SwitchBit.MERGING | SwitchBit.REPRINT) <= (self.switch & (SwitchBit.Merging | SwitchBit.REPRINT)):
+            if self.switch & SwitchBit.REPRINT:
                 # Refuse to renumber during a reprint.
                 self.il_reqest(sub_card)
 
@@ -605,7 +607,7 @@ class Yul:
             return
 
         elif sub_sent[word] == 'FREEZE':
-            if (SwitchBit.MERGING | SwitchBit.REPRINT) <= (self.switch & (SwitchBit.Merging | SwitchBit.REPRINT)):
+            if self.switch & SwitchBit.REPRINT:
                 # Refuse to freeze during a reprint.
                 self.il_reqest(sub_card)
 
@@ -625,7 +627,7 @@ class Yul:
         elif sub_sent[word] == 'BEFORE':
             # Point to subro name, quit if reprint.
             word += 1
-            if (SwitchBit.MERGING | SwitchBit.REPRINT) <= (self.switch & (SwitchBit.Merging | SwitchBit.REPRINT)):
+            if self.switch SwitchBit.REPRINT:
                 self.il_reqest(sub_card)
 
             if (self.switch & SwitchBit.SUBROUTINE) == 0:
