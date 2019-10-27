@@ -1,6 +1,7 @@
 from datetime import datetime
 from yul_system.yulprogs import Yulprogs
 from yul_system.assembler import pass_1
+from yul_system.types import MONTHS, NBTCS, Bit, SwitchBit
 
 # Months
 MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
@@ -627,7 +628,7 @@ class Yul:
         elif sub_sent[word] == 'BEFORE':
             # Point to subro name, quit if reprint.
             word += 1
-            if self.switch SwitchBit.REPRINT:
+            if self.switch & SwitchBit.REPRINT:
                 self.il_reqest(sub_card)
 
             if (self.switch & SwitchBit.SUBROUTINE) == 0:

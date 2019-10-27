@@ -1,34 +1,5 @@
 import importlib
-from yul_system.assembler.pass_0 import Bit, SwitchBit
-
-class HealthBit:
-    CARD_TYPE_MASK   = Bit.BIT1 | Bit.BIT2 | Bit.BIT3 | Bit.BIT4 | Bit.BIT5 | Bit.BIT6
-    CARD_TYPE_END_OF =        0 |        0 |        0 |        0 |        0 |        0 # 00
-    CARD_TYPE_MODIFY =        0 |        0 |        0 |        0 |          | Bit.BIT6 # 01
-    CARD_TYPE_CARDNO =        0 |        0 |        0 |        0 | Bit.BIT5 | Bit.BIT6 # 03
-    CARD_TYPE_ACCEPT =        0 |        0 |        0 | Bit.BIT4 |        0 |        0 # 04
-    CARD_TYPE_DELETE =        0 |        0 |        0 | Bit.BIT4 |          | Bit.BIT6 # 05
-    CARD_TYPE_REMARK =        0 |        0 |        0 | Bit.BIT4 | Bit.BIT5 |        0 # 06
-    CARD_TYPE_RIGHTP =        0 |        0 |        0 | Bit.BIT4 | Bit.BIT5 | Bit.BIT6 # 07
-    CARD_TYPE_ALIREM =        0 |        0 | Bit.BIT3 |        0 |        0 |        0 # 10
-    CARD_TYPE_MEMORY =        0 |        0 | Bit.BIT3 |        0 |        0 | Bit.BIT6 # 11
-    CARD_TYPE_INSTR  =        0 |        0 | Bit.BIT3 |        0 | Bit.BIT5 |        0 # 12
-    CARD_TYPE_ILLOP  =        0 |        0 | Bit.BIT3 |        0 | Bit.BIT5 | Bit.BIT6 # 13
-    CARD_TYPE_DECML  =        0 |        0 | Bit.BIT3 | Bit.BIT4 |        0 |        0 # 14
-    CARD_TYPE_OCTAL  =        0 |        0 | Bit.BIT3 | Bit.BIT4 |        0 | Bit.BIT6 # 15
-    CARD_TYPE_EQUALS =        0 |        0 | Bit.BIT3 | Bit.BIT4 | Bit.BIT5 |        0 # 16
-    CARD_TYPE_SETLOC =        0 |        0 | Bit.BIT3 | Bit.BIT4 | Bit.BIT5 | Bit.BIT6 # 17
-    CARD_TYPE_ERASE  =        0 | Bit.BIT2 |        0 |        0 |        0 |        0 # 20
-    CARD_TYPE_2CTAL  =        0 | Bit.BIT2 |        0 |        0 |        0 | Bit.BIT6 # 21
-    CARD_TYPE_2DECML =        0 | Bit.BIT2 |        0 |        0 | Bit.BIT5 |        0 # 22
-    CARD_TYPE_BLOCK  =        0 | Bit.BIT2 |        0 |        0 | Bit.BIT5 | Bit.BIT6 # 23
-    CARD_TYPE_HEAD   =        0 | Bit.BIT2 |        0 | Bit.BIT4 |        0 |        0 # 24
-    CARD_TYPE_2LATE  =        0 | Bit.BIT2 |        0 | Bit.BIT4 |        0 | Bit.BIT6 # 25
-    CARD_TYPE_SUBRO  =        0 | Bit.BIT2 |        0 | Bit.BIT4 | Bit.BIT5 |        0 # 26
-    CARD_TYPE_NWINST =        0 | Bit.BIT2 |        0 | Bit.BIT4 | Bit.BIT5 | Bit.BIT6 # 27
-    CARD_TYPE_EVEN   =        0 | Bit.BIT2 | Bit.BIT3 |        0 |        0 |        0 # 30
-    CARD_TYPE_COUNT  =        0 | Bit.BIT2 | Bit.BIT3 |        0 |        0 | Bit.BIT6 # 31
-    CARD_TYPE_SEGNUM =        0 | Bit.BIT2 | Bit.BIT3 |        0 | Bit.BIT5 |        0 # 32
+from yul_system.types import Bit, SwitchBit, FieldCodBit
 
 class POPO:
     def __init__(self, health=0, card=''):
@@ -58,11 +29,12 @@ class Pass1:
         self._mon = mon
         self._yul = yul
         self._real_cdno = 0
+        self._field_cod = [0, 0]
         self._end_of = POPO(health=0, card='⌑999999Q' + 72*' ')
 
     def post_spec(self):
-        while True:
-            self.get_real()
+        # while True:
+        #     self.get_real()
 
     def get_real(self):
         # Get real is normally the chief node of pass 1. Occasionally merge control procedures take
@@ -77,7 +49,7 @@ class Pass1:
         if self._yul.switch & SwitchBit.MERGE_MODE:
             if not self._yul.switch & SwitchBit.TAPE_KEPT:
                 self._tape = self.get_tape()
-                
+
                 if self._tape is None:
                     # FIXME: Clean up and exit pass 1
                     return
@@ -148,11 +120,11 @@ class Pass1:
 
         if not card_no.isnumeric():
             # "SEQBRK" is only non-numeric allowed.
-            is card_no == 'SEQBRK':
+            if card_no == 'SEQBRK':
                 seq_break = True
 
             # Allow for "LOG" in col 2-7 of acceptor.
-            else if self._real.card[0] == '=':
+            elif self._real.card[0] == '=':
                 seq_break = True
 
             # Show illegal number field by zero.
@@ -160,7 +132,7 @@ class Pass1:
                 card_no = '000000'
 
         # Card number 999999 is a sequence break.
-        if card_no = '999999':
+        if card_no == '999999':
             seq_break = True
 
         # Do not test column 1 of right print.
@@ -172,13 +144,13 @@ class Pass1:
                 seq_break = True
 
 
-        # Branch if not TINS (Tuck In New Section)... which is an incipient log card.
-        if self._real.card[0] == 'L':
-            seq_break = True
+            # Branch if not TINS (Tuck In New Section)... which is an incipient log card.
+            if self._real.card[0] == 'L':
+                seq_break = True
 
-        # Op code "MODIFY" is automatic seq. brk.
-        if self._real.card[0] == ' ' and self._real.card[16:22] == 'MODIFY':
-            seq_break = True
+            # Op code "MODIFY" is automatic seq. brk.
+            if self._real.card[0] == ' ' and self._real.card[16:22] == 'MODIFY':
+                seq_break = True
 
         if seq_break:
             # Insert sequence break bit in card.
@@ -200,6 +172,114 @@ class Pass1:
 
         self.real_cdno = card_no
         return self._real.card
+
+    def modif_chk(self):
+        pass
+
+    def proc_real(self):
+        return process(self._real, self._real_cdno)
+
+    def proc_tape(self):
+        return process(self._tape, self._tape_cdno)
+
+    def process(self, popo, cdno):
+        if popo.card[7] == '9':
+            popo.health |= HealthBit.CARD_TYPE_RIGHTP
+            return self.send_popo(popo)
+
+        if popo.card[0] == 'R':
+            popo.health |= HealthBit.CARD_TYPE_REMARK
+            return self.send_popo(popo)
+
+        if popo.card[0] == 'A':
+            popo.health |= HealthBit.CARD_TYPE_ALIREM
+            return self.send_popo(popo)
+
+        if popo.card[0] == 'P':
+            popo.health |= HealthBit.CARD_TYPE_REMARK
+            return self.send_popo(popo)
+
+        if popo.card[0] == 'L':
+            # Branch if dashes should be put in date.
+            if popo.card[67:69] != '  ' or popo.card[70:72] != '  ':
+                popo.card = popo.card[:69] + '-' + popo.card[70:72] + '-' + popo.card[73:]
+
+            # FIXME: Send a dummy acceptor ahead of a marked log card entering as a member of a called subro
+            popo.health |= HealthBit.CARD_TYPE_REMARK
+            return self.send_popo(popo)
+
+        if popo.card[1:6] == 'MEMORY':
+            pass
+
+    def adr_field(self, popo):
+        field_cod = [0, 0]
+        adr_wd = [0, 0]
+        if popo.address_1().isspace():
+            if popo.address_2().isspace():
+                return field_cod, adr_wd
+
+    def anal_subf(self, common, check_blank=False):
+        if check_blank and common.isspace():
+            self._field_cod[0] = 0
+            return common, None
+
+        self._field_cod[0] = FieldCodBit.NUMERIC | FieldCodBit.POSITIVE | FieldCodBit.UNSIGNED
+        while common[0] == ' ':
+            common = common[1:] + common[0]
+
+        subf = common
+        dig_file = None
+
+        if subf[0] != '0':
+            if subf[0] in '+-':
+                self._field_cod[0] &= ~FieldCodBit.UNSIGNED
+                if subf[0] == '-':
+                    self._field_cod[0] &= ~FieldCodBit.POSITIVE
+
+                if subf[1:].isspace():
+                    self._field_cod[0] = FieldCodBit.SYMBOLIC
+                    return common, subf
+
+                subf = subf[1:] + ' '
+
+        while subf[0] != ' ':
+            if not subf[0].isnumeric():
+                if (subf[0] != 'D'):
+                    self._field_cod[0] = FieldCodBit.SYMBOLIC
+                    return common, subf
+
+                if not subf[1:].isspace():
+                    self._field_cod[0] = FieldCodBit.SYMBOLIC
+                    return common, subf
+
+                if dig_file is None:
+                    self._field_cod[0] = FieldCodBit.SYMBOLIC
+                    return common, subf
+
+                # Set up conversion, decimal to binary
+                self._field_cod[0] |= FieldCodBit.DECIMAL
+                break
+            else:
+                if subf[0] in '89':
+                    self._field_cod[0] |= FieldCodBit.DECIMAL
+
+                if dig_file is None:
+                    dig_file = '0'
+
+                if dig_file != '0' or subf[0] != '0':
+                    dig_file += subf[0]
+
+            subf = subf[1:] + ' '
+
+        if self._field_cod[0] & FieldCodBit.DECIMAL:
+            value = int(dig_file, 10)
+        else:
+            value = int(dig_file, 8)
+
+        if not self._field_cod[0] & FieldCodBit.POSITIVE:
+            value = -value
+
+        return common, value
 
     def get_tape(self):
         # FIXME: Read from SYPT and SYLT
@@ -252,7 +332,8 @@ def inish_p1(mon, yul):
         comp_mod = importlib.import_module('yul_system.assembler.' + yul.comp_name.lower() + '.pass_1')
         comp_pass1_class = getattr(comp_mod, yul.comp_name + 'Pass1')
         comp_pass1 = comp_pass1_class(mon, yul)
-        comp_pass1.m_special()
     except:
         mon.mon_typer('UNABLE TO LOAD PASS 1 FOR COMPUTER %s' % yul.comp_name)
         yul.typ_abort()
+
+    comp_pass1.m_special()
