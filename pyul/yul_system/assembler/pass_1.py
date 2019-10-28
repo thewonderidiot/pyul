@@ -1,5 +1,5 @@
 import importlib
-from yul_system.types import Bit, SwitchBit, FieldCodBit
+from yul_system.types import Bit, SwitchBit, FieldCodBit, HealthBit, MemType
 
 class POPO:
     def __init__(self, health=0, card=''):
@@ -24,17 +24,22 @@ class POPO:
     def date_word(self):
         return self.card[64:72]
 
+class BadMemory(Exception):
+    pass
+
 class Pass1:
     def __init__(self, mon, yul):
         self._mon = mon
         self._yul = yul
         self._real_cdno = 0
-        self._field_cod = [0, 0]
+        self._field_cod = [None, None]
         self._end_of = POPO(health=0, card='⌑999999Q' + 72*' ')
 
     def post_spec(self):
         # while True:
         #     self.get_real()
+        p = POPO(health=0, card=' 0300    FIXED   MEMORY  300  -1777                                             ')
+        self.process(p, 1)
 
     def get_real(self):
         # Get real is normally the chief node of pass 1. Occasionally merge control procedures take
@@ -208,15 +213,222 @@ class Pass1:
             popo.health |= HealthBit.CARD_TYPE_REMARK
             return self.send_popo(popo)
 
-        if popo.card[1:6] == 'MEMORY':
-            pass
+        if popo.op_field()[1:7] == 'MEMORY':
+            return self.memory(popo)
 
+    def memory(self, popo):
+        adr_wd = self.adr_field(popo)
+        try:
+            if self._field_cod[0] is None:
+                raise BadMemory(Bit.BIT11)
+
+            us_num = FieldCodBit.NUMERIC | FieldCodBit.UNSIGNED
+            if (self._field_cod[0] & us_num) != us_num:
+                raise BadMemory(Bit.BIT11)
+
+            popo.health |= (adr_wd[0] << 16) & 0xFFFF0000
+            if self._field_cod[1] == 0:
+                adr_wd[1] = adr_wd[0]
+            elif self._field_cod[1] & FieldCodBit.POSITIVE:
+                adr_wd[1] = adr_wd[0] + adr_wd[1]
+            elif adr_wd[0] > abs(adr_wd[1]):
+                raise BadMemory(Bit.BIT11)
+
+            low_lim = adr_wd[0]
+            hi_lim = abs(adr_wd[1])
+
+            if hi_lim > self.adr_limit:
+                raise BadMemory(Bit.BIT12)
+
+            popo.health |= hi_lim & 0xFFFF
+
+            common, value = self.anal_subf(popo.loc_field())
+            m_name = common.strip()
+            if not self._field_cod[0] & FieldCodBit.SYMBOLIC:
+                raise BadMemory(Bit.BIT8)
+
+            if m_name == 'ERASABLE':
+                mem_type = MemType.ERASABLE
+            elif m_name == 'FIXED':
+                mem_type = MemType.FIXED
+            elif m_name == 'SPEC/NON':
+                mem_type = MemType.SPEC_NON
+            else:
+                raise BadMemory(Bit.BIT8)
+
+            midx = 0
+
+            if low_lim == 0:
+                if hi_lim > self.m_typ_tab[0][1]:
+                    self.m_typ_tab[0] = (mem_type, self.m_type_tab[0][1])
+            else:
+                low_lim -= 1
+                while low_lim > self.m_typ_tab[midx][1]:
+                    midx += 1
+
+        except BadMemory as e:
+            popo.health |= e.args[0]
+
+        popo.health |= HealthBit.CARD_TYPE_MEMORY
+        return self.send_popo(popo)
+
+    # Minor subroutines to shift two or three words right by one character.
+    def _3srt_1c(self, afield):
+        return ' ' + afield[:-1]
+
+    def _2srt_1c(self, afield):
+        return ' ' + afield[:15] + afield[16:]
+
+    # Subroutine to break an address field down into subfields. Results are delivered in self._fieldcod[0:2],
+    # and returned as adr_wd[0:2], as follows....
+    #  _field_cod[0] all zero                Blank address field
+    #  _field_cod[0] None                    Illegal format
+    #  _field_cod[1] all zero                No modifier
+    #  _field_cod[1] indicates signed num    Modifier given in adr_wd[1]
+    #  _field_cod[0] indicates symbolic      Address symbol in adr_wd[0]
+    #  _field_cod[0] indicates S or US num   Value given in adr_wd[0]
     def adr_field(self, popo):
-        field_cod = [0, 0]
-        adr_wd = [0, 0]
-        if popo.address_1().isspace():
-            if popo.address_2().isspace():
-                return field_cod, adr_wd
+        adr_wd = [None, None]
+
+        if popo.address_1().isspace() and popo.address_2().isspace():
+            # Indicate blank address field and exit.
+            self._field_cod[0] = 0
+            return adr_wd
+
+        afield = popo.address_1() + popo.address_2() + ' '*8
+
+        # Initially assume no modifier.
+        self._field_cod[1] = 0
+
+        # Set up to look for signs initially.
+        also_main = None
+        # Maximum number of NBCs in a subfield.
+        max_nbcs = 8
+
+        while max_nbcs > 0:
+            # Branch when 2 words are right-justified.
+            while afield[15] == ' ':
+                afield = self._2srt_1c(afield)
+
+            max_nbcs -= 1
+            afield = self._3srt_1c(afield)
+
+            # Branch if seeking sign and sign not preceded by a blank
+            if also_main is None and afield[16] in '+-' and afield[15] == ' ':
+                # Analyze possible modifier
+                _, value = self.anal_subf(afield[16:])
+
+                # Branch if twasn't a signed numeric subf.
+                if (self._field_cod[0] & (FieldCodBit.NUMERIC | FieldCodBit.UNSIGNED)) != FieldCodBit.NUMERIC:
+                    break
+
+                # Branch if compound address.
+                if afield[:16].isspace():
+                    # Exit for signed numeric field.
+                    adr_wd[0] = value
+                    return adr_wd
+
+                # Indicate presence of modifier.
+                self._field_cod[1] = self._field_cod[0]
+                # Save original form of rest of field.
+                also_main = afield[:16] + ' '*8
+                # Deliver value of modifier
+                adr_wd[1] = value
+
+                max_nbcs = 8
+                afield = afield[:16] + ' '*8
+                continue
+
+            # Branch if more NBCs to examine.
+            if afield[:16].isspace():
+                # Analyze possible main address.
+                _, value = self.anal_subf(afield[16:])
+
+                # Branch if not numeric.
+                if not self._field_cod[0] & FieldCodBit.NUMERIC:
+                    break
+
+                # Exit when main address is S or US num.
+                adr_wd[0] = value
+                return adr_wd
+            else:
+                # Seek another non-blank character.
+                if max_nbcs == 0:
+                    self._field_cod[0] = None
+                    return adr_wd
+
+        if also_main is None:
+            # Set up putative symbolic subfield.
+            afield = popo.address_1() + popo.address_2() + ' '*8
+        else:
+            # Recover non-modifier part of adr field.
+            afield = also_main + ' '*8
+
+        # Branch when possible head found.
+        afield = self._3srt_1c(afield)
+        while afield[16] == ' ':
+            # Triple shift right to find head.
+            afield = self._3srt_1c(afield)
+
+        # Char preceded by non-blank isn't head.
+        if afield[15] != ' ':
+            # Backtrack after no-head finding.
+            afield = afield[:8] + afield[9:16] + afield[8] + afield[16:]
+
+            # Error if symbol is too long.
+            if afield[15] != ' ' or not afield[:8].isspace():
+                self._field_cod[0] = None
+                return adr_wd
+
+            # Finish backtracking.
+            afield = afield[:15] + afield[16] + afield[16:]
+
+            # Branch when symbol is normalized.
+            while afield[8] == ' ':
+                afield = afield[:8] + afield[9:16] + afield[8] + afield[16:]
+
+            # Exit when main address is symbolic.
+            adr_wd[0] = afield[8:16]
+            return adr_wd
+
+        if not afield[:8].isspace():
+            # Move symbol right to insert head.
+            while True:
+                afield = self._2srt_1c(afield)
+
+                # Error if no room for head.
+                if afield[15] != ' ':
+                    self._field_cod[0] = None
+                    return adr_wd
+
+                # Shift until normalized in afield[8:16].
+                if afield[:8].isspace():
+                    break
+
+            # Insert head character.
+            afield = afield[:15] + afield[16] + afield[16:]
+
+            # Exit when main address is symbolic.
+            adr_wd[0] = afield[8:16]
+            return adr_wd
+
+        # Exit when main address is 1-char sym.
+        if afield[8:16].isspace():
+            adr_wd[0] = afield[16:24]
+            return adr_wd
+
+        # Move symbol left to insert head.
+        while True:
+            if afield[8] != ' ':
+                break
+            afield = afield[:16] + afield[17:24] + afield[15] + afield[24:]
+
+        # Insert head character.
+        afield = afield[:15] + afield[16] + afield[16:]
+
+        # Exit when main address is 1-char sym.
+        adr_wd[0] = afield[8:16]
+        return adr_wd
 
     def anal_subf(self, common, check_blank=False):
         if check_blank and common.isspace():

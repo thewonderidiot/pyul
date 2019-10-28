@@ -109,3 +109,8 @@ class FieldCodBit:
     DECIMAL   = Bit.BIT3
     POSITIVE  = Bit.BIT5
     UNSIGNED  = Bit.BIT6
+
+class MemType:
+    ERASABLE = Bit.BIT25
+    FIXED    = Bit.BIT26
+    SPEC_NON = Bit.BIT27

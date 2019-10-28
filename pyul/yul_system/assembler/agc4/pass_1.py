@@ -1,4 +1,5 @@
 from yul_system.assembler.pass_1 import Pass1
+from yul_system.types import MemType
 
 class AGC4Pass1(Pass1):
     def __init__(self, mon, yul):
@@ -6,9 +7,16 @@ class AGC4Pass1(Pass1):
 
         self.max_num_op = 7
         self.max_loc = 0o71777
-        self.adr_lim = 0o72000
+        self.adr_limit = 0o72000
         self.blok_ones = 0o1777
         self.mod_shift = 0o4224
+        self.m_typ_tab = [
+            (MemType.SPEC_NON,    0o57),
+            (MemType.ERASABLE,  0o1777),
+            (MemType.FIXED,    0o31777),
+            (MemType.SPEC_NON, 0o41777),
+            (MemType.FIXED,    0o71777),
+        ]
         self.op_thrs = {
             # CODES 01
             'MASK':   0o7400,
