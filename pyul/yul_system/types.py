@@ -73,6 +73,7 @@ class SwitchBit:
     CONDISH_INACTIVE  = Bit.BIT18
     CONDISH_SYMBOL    = Bit.BIT19
     CONDISH_OCTAL     = Bit.BIT20
+    BEGINNING_OF_EQU  = Bit.BIT29
 
 class HealthBit:
     CARD_TYPE_MASK   = Bit.BIT1 | Bit.BIT2 | Bit.BIT3 | Bit.BIT4 | Bit.BIT5 | Bit.BIT6
@@ -102,6 +103,8 @@ class HealthBit:
     CARD_TYPE_EVEN   =        0 | Bit.BIT2 | Bit.BIT3 |        0 |        0 |        0 # 30
     CARD_TYPE_COUNT  =        0 | Bit.BIT2 | Bit.BIT3 |        0 |        0 | Bit.BIT6 # 31
     CARD_TYPE_SEGNUM =        0 | Bit.BIT2 | Bit.BIT3 |        0 | Bit.BIT5 |        0 # 32
+
+    POLISH = Bit.BIT32
 
 class FieldCodBit:
     SYMBOLIC  = Bit.BIT1

@@ -1,5 +1,5 @@
 from yul_system.assembler.pass_1 import Pass1
-from yul_system.types import MemType
+from yul_system.types import MemType, SwitchBit
 
 class AGC4Pass1(Pass1):
     def __init__(self, mon, yul):
@@ -9,7 +9,8 @@ class AGC4Pass1(Pass1):
         self.max_loc = 0o71777
         self.adr_limit = 0o72000
         self.blok_ones = 0o1777
-        self.mod_shift = 0o4224
+        self.mod_shift = 24
+        self.blok_shif = 10
         self.m_typ_tab = [
             (MemType.SPEC_NON,    0o57),
             (MemType.ERASABLE,  0o1777),
@@ -175,12 +176,33 @@ class AGC4Pass1(Pass1):
         }
 
     def m_special(self):
-        # FIXME: Modify OP FOUND
+        self._op_found = self.polish_q
         # FIXME: Change AGC4 memory table if segment assembly
         self.post_spec()
 
-    def agc4_bank(self):
+    def polish_q(self, popo, opcode):
+        if (opcode & 0o1) == 0:
+            popo.health |= opcode << 16
+
+            if opcode & 0o2:
+                return
+
+            if (opcode & 0o370) < 0o70:
+                return
+
+            if 0o120 < (opcode & 0o370):
+                return
+
+            self._yul.switch &= ~SwitchBit.BEGINNING_OF_EQU
+            return
+
+        b18t24m = (Bit.BIT18 * 2 - 1) - (Bit.BIT25 * 2 - 1)
+        popo.health |= (opcode << 21) & b18t24m
+        popo.health |= HealthBit.POLISH
+
+
+    def agc4_bank(self, popo):
         pass
 
-    def agc4_blok(self):
+    def agc4_blok(self, popo):
         pass

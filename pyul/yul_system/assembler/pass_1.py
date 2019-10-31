@@ -27,6 +27,9 @@ class POPO:
 class BadMemory(Exception):
     pass
 
+class IllegalOp(Exception):
+    pass
+
 class Pass1:
     def __init__(self, mon, yul):
         self._mon = mon
@@ -35,12 +38,13 @@ class Pass1:
         self._field_cod = [None, None]
         self._end_of = POPO(health=0, card='⌑999999Q' + 72*' ')
         self._early = True
+        self._op_found = None
 
     def post_spec(self):
         # while True:
         #     self.get_real()
         #p = POPO(health=0, card=' 0300   ERASABLE MEMORY  1000  -32200                                           ')
-        p = POPO(health=0, card=' 0300   SPEC/NON MEMORY   2000 -2005                                            ')
+        p = POPO(health=0, card=' 0300   INTPRET  DMP      VVECT                                                 ')
         self.process(p, 1)
 
     def get_real(self):
@@ -219,14 +223,58 @@ class Pass1:
             popo.health |= HealthBit.CARD_TYPE_REMARK
             return self.send_popo(popo)
 
+        op_field = popo.op_field()[1:7]
+
         if self._early:
-            if popo.op_field()[1:7] == 'MEMORY':
+            if op_field == 'MEMORY':
                 return self.memory(popo)
 
-            if popo.op_field()[1:7] == 'SEGNUM':
+            if op_field == 'SEGNUM':
                 return self.segnum(popo)
 
             self._early = False
+
+        common, value = self.anal_subf(op_field)
+        operation = common.strip()
+
+        try:
+            if self._field_cod[0] is None:
+                raise IllegalOp()
+
+            elif self._field_cod[0] in (0, FieldCodBit.SYMBOLIC):
+                if operation != '' and operation[-1] == '*':
+                    popo.health |= Bit.BIT11
+                    operation = operation[:-1]
+
+                if operation in self.op_thrs:
+                    if isinstance(self.op_thrs[operation], int):
+                        opcode = self.op_thrs[operation] & ~Bit.BIT37
+                        if self._op_found is None:
+                            popo.health |= (opcode << 16)
+                        else:
+                            self._op_found(popo, opcode)
+                        popo.health |= HealthBit.CARD_TYPE_INSTR
+                    else:
+                        self.op_thrs[operation](popo)
+                else:
+                    raise IllegalOp()
+
+            elif not self._field_cod[0] & FieldCodBit.UNSIGNED:
+                raise IllegalOp()
+
+            else:
+                popo.health |= (value << self.mod_sift)
+                if value <= self.max_num_op:
+                    popo.health |= HealthBit.CARD_TYPE_INSTR
+                else:
+                    raise IllegalOp()
+
+        except IllegalOp:
+            self._yul.switch &= ~(Bit.BIT25 | Bit.BIT26 | Bit.BIT27)
+            self._yul.switch |= MemType.FIXED
+            self._loc_state = 0
+            popo.health |= HealthBit.CARD_TYPE_ILLOP
+        
 
     def segnum(self, popo):
         # FIXME: IMPLEMENT SEGMENT ASSEMBLIES
@@ -582,46 +630,46 @@ class Pass1:
         # FIXME: Read from SYPT and SYLT
         return None
 
-    def head_tail(self):
+    def head_tail(self, popo):
         pass
 
-    def is_equals(self):
+    def is_equals(self, popo):
         pass
 
-    def erase(self):
+    def erase(self, popo):
         pass
 
-    def octal(self):
+    def octal(self, popo):
         pass
 
-    def decimal(self):
+    def decimal(self, popo):
         pass
 
-    def _2octal(self):
+    def _2octal(self, popo):
         pass
 
-    def _2decimal(self):
+    def _2decimal(self, popo):
         pass
 
-    def even(self):
+    def even(self, popo):
         pass
 
-    def setloc(self):
+    def setloc(self, popo):
         pass
 
-    def subro(self):
+    def subro(self, popo):
         pass
 
-    def equ_plus(self):
+    def equ_plus(self, popo):
         pass
 
-    def equ_minus(self):
+    def equ_minus(self, popo):
         pass
 
-    def count(self):
+    def count(self, popo):
         pass
 
-    def late_mem(self):
+    def late_mem(self, popo):
         pass
 
 def inish_p1(mon, yul):
