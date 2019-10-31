@@ -34,11 +34,13 @@ class Pass1:
         self._real_cdno = 0
         self._field_cod = [None, None]
         self._end_of = POPO(health=0, card='⌑999999Q' + 72*' ')
+        self._early = True
 
     def post_spec(self):
         # while True:
         #     self.get_real()
-        p = POPO(health=0, card=' 0300    FIXED   MEMORY  300  -1777                                             ')
+        #p = POPO(health=0, card=' 0300   ERASABLE MEMORY  1000  -32200                                           ')
+        p = POPO(health=0, card=' 0300   SPEC/NON MEMORY   2000 -2005                                            ')
         self.process(p, 1)
 
     def get_real(self):
@@ -178,6 +180,10 @@ class Pass1:
         self.real_cdno = card_no
         return self._real.card
 
+    def send_popo(self, popo):
+        # FIXME: Renumber and append POPO
+        pass
+
     def modif_chk(self):
         pass
 
@@ -213,8 +219,18 @@ class Pass1:
             popo.health |= HealthBit.CARD_TYPE_REMARK
             return self.send_popo(popo)
 
-        if popo.op_field()[1:7] == 'MEMORY':
-            return self.memory(popo)
+        if self._early:
+            if popo.op_field()[1:7] == 'MEMORY':
+                return self.memory(popo)
+
+            if popo.op_field()[1:7] == 'SEGNUM':
+                return self.segnum(popo)
+
+            self._early = False
+
+    def segnum(self, popo):
+        # FIXME: IMPLEMENT SEGMENT ASSEMBLIES
+        return self.send_popo(popo)
 
     def memory(self, popo):
         adr_wd = self.adr_field(popo)
@@ -244,27 +260,96 @@ class Pass1:
 
             common, value = self.anal_subf(popo.loc_field())
             m_name = common.strip()
+
+            # Reject if not symbolic.
             if not self._field_cod[0] & FieldCodBit.SYMBOLIC:
                 raise BadMemory(Bit.BIT8)
 
             if m_name == 'ERASABLE':
+                # Attach erasable code to upper limit.
                 mem_type = MemType.ERASABLE
             elif m_name == 'FIXED':
+                # Attach fixed code to upper limit.
                 mem_type = MemType.FIXED
             elif m_name == 'SPEC/NON':
+                # Attach spec/non code to upper limit.
                 mem_type = MemType.SPEC_NON
             else:
+                # Reject ill-formed memory card.
                 raise BadMemory(Bit.BIT8)
 
-            midx = 0
+            low_idx = 0
+            hi_idx = 0
 
             if low_lim == 0:
+                # Does req cover all 1st present category.
                 if hi_lim > self.m_typ_tab[0][1]:
+                    # Put req type in 1st category.
                     self.m_typ_tab[0] = (mem_type, self.m_type_tab[0][1])
+                else:
+                    common = 0
+                    # FIXME: go to CHECK TM1
             else:
+                # Use reduced lower limit.
                 low_lim -= 1
-                while low_lim > self.m_typ_tab[midx][1]:
-                    midx += 1
+
+                # Find first category affected by request.
+                while low_lim > self.m_typ_tab[low_idx][1]:
+                    low_idx += 1
+
+                hi_idx = low_idx
+                # go to CHK HI LIM
+
+            # Determine end of table.
+            end_typ_ta = len(self.m_typ_tab) - 1
+
+            # Search for last affected category.
+            while (hi_idx < end_typ_ta) and (hi_lim >= self.m_typ_tab[hi_idx][1]):
+                hi_idx += 1
+
+            # Branch if request is non-trivial.
+            if (low_idx == hi_idx) and (mem_type == self.m_typ_tab[low_idx][0]):
+                popo.health |= HealthBit.CARD_TYPE_MEMORY
+                return self.send_popo(popo)
+
+            if hi_lim == self.m_typ_tab[end_typ_ta][1] and low_idx < hi_idx:
+                self.m_typ_tab[hi_idx] = (mem_type, hi_lim)
+
+            # Remove entries entirely spanned.
+            obsolete = max(hi_idx - low_idx - 1, 0)
+            for i in range(obsolete):
+                self.m_typ_tab.pop(low_idx + 1)
+                hi_idx -= 1
+
+            if low_lim < self.m_typ_tab[low_idx][1] and mem_type != self.m_typ_tab[low_idx][0]:
+                # First affected category is being shortened.
+                if low_idx == hi_idx:
+                    # The request splits the first category in two. Insert an entry corresponding to
+                    # the bottom half.
+                    old_type, old_lim = self.m_typ_tab[low_idx]
+                    self.m_typ_tab.insert(low_idx, (old_type, low_lim))
+
+                    if old_lim != hi_lim:
+                        # The high limit does not reach the end of the old region. Insert a new
+                        # entry for the new region's high limit.
+                        self.m_typ_tab.insert(low_idx+1, (mem_type, hi_lim))
+                    else:
+                        # Change the type of the old node.
+                        self.m_typ_tab[low_idx+1] = (mem_type, hi_lim)
+
+                    popo.health |= HealthBit.CARD_TYPE_MEMORY
+                    return self.send_popo(popo)
+                else:
+                    # Push back the end of the first category.
+                    self.m_typ_tab[low_idx] = (self.m_typ_tab[low_idx][0], low_lim)
+
+            if mem_type == self.m_typ_tab[low_idx][0]:
+                # The new category matches the type of the first category. Extend out its end.
+                self.m_typ_tab[low_idx] = (mem_type, hi_lim)
+
+            elif self.m_typ_tab[hi_idx][0] != mem_type:
+                # Insert a new category.
+                self.m_typ_tab.insert(hi_idx, (mem_type, hi_lim))
 
         except BadMemory as e:
             popo.health |= e.args[0]
