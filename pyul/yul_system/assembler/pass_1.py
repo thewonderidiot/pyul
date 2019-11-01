@@ -273,8 +273,23 @@ class Pass1:
             self._yul.switch &= ~(Bit.BIT25 | Bit.BIT26 | Bit.BIT27)
             self._yul.switch |= MemType.FIXED
             self._loc_state = 0
+            # FIXME: BLNK LOCN
             popo.health |= HealthBit.CARD_TYPE_ILLOP
-        
+            return self.reg_incon(popo, translate_loc=False)
+
+        self._yul.switch &= ~(MemType.ERASABLE | MemType.SPEC_NON)
+        self._yul.switch |= MemType.FIXED
+        if popo.card[0] == 'J':
+            # FIXME: handle leftovers
+            translate_loc = False
+        else:
+            translate_loc = True
+
+        return self.reg_incon(popo, translate_loc)
+
+    def reg_incon(self, popo, translate_loc=True):
+        if translate_loc:
+            self._loc_state = 0
 
     def segnum(self, popo):
         # FIXME: IMPLEMENT SEGMENT ASSEMBLIES

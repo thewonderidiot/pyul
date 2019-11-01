@@ -1,5 +1,5 @@
 from yul_system.assembler.pass_1 import Pass1
-from yul_system.types import MemType, SwitchBit
+from yul_system.types import MemType, SwitchBit, Bit, HealthBit
 
 class AGC4Pass1(Pass1):
     def __init__(self, mon, yul):
@@ -182,24 +182,77 @@ class AGC4Pass1(Pass1):
 
     def polish_q(self, popo, opcode):
         if (opcode & 0o1) == 0:
+            # Send bits as usual if not polish.
             popo.health |= opcode << 16
 
+            # Exit if an implied address code.
             if opcode & 0o2:
                 return
 
+            # Branch if not a polish or store address.
             if (opcode & 0o370) < 0o70:
                 return
 
             if 0o120 < (opcode & 0o370):
                 return
 
+            # Reset indicator, exit.
             self._yul.switch &= ~SwitchBit.BEGINNING_OF_EQU
             return
 
+        # Send equivalent of left operator.
         b18t24m = (Bit.BIT18 * 2 - 1) - (Bit.BIT25 * 2 - 1)
         popo.health |= (opcode << 21) & b18t24m
+        # Indicate polish operator word.
         popo.health |= HealthBit.POLISH
 
+        two_polop_7 = (0o7 << 14)
+
+        # Branch if not beginning of equation.
+        if not self._yul.switch & SwitchBit.BEGINNING_OF_EQU:
+            # Send indication to pass 2.
+            popo.health |= two_polop_7
+            # Set indicator and exit.
+            self._yul.switch |= SwitchBit.BEGINNING_OF_EQU
+            return
+
+        # Decode address field.
+        adr_wd, _ = self.adr_field(popo)
+        # Fast exit for blank (vacuous) operator.
+        if self._field_cod[0] == 0:
+            return
+
+        # Branch if address field is not symbolic.
+        if self._field_cod != FieldCodBit.SYMBOLIC:
+            # Send indication to pass 2.
+            popo.health |= two_polop_7
+            # Set indicator and exit.
+            self._yul.switch |= SwitchBit.BEGINNING_OF_EQU
+            return
+
+        # Branch if no modifier.
+        two_polop_17 = (0o17 << 14)
+        if self._field_cod[1] != 0:
+            # Indicate improper address field, exit.
+            popo.health |= two_polop_17
+            return
+
+        # FIXME: Handle detached asterisk?
+
+        if adr_wd[-1] == '*':
+            # Blank out attached asterisk.
+            adr_wd = adr_wd[:-1]
+
+        two_polop_27 = (0o27 << 14)
+        # Branch if more than six characters or polish operator not found.
+        if len(adr_wd) > 6 or adr_wd not in self.op_thrs:
+            # Indicate failure and exit.
+            popo.health |= two_polop_27
+            return
+
+        # Send equivalent of right operator.
+        second_opcode = self.op_thrs[adr_wd] & ~Bit.BIT37
+        popo.health |= second_opcode << 14
 
     def agc4_bank(self, popo):
         pass
