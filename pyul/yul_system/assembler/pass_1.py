@@ -39,13 +39,12 @@ class Pass1:
         self._end_of = POPO(health=0, card='⌑999999Q' + 72*' ')
         self._early = True
         self._op_found = None
+        self._test_done = False
 
     def post_spec(self):
-        # while True:
-        #     self.get_real()
-        #p = POPO(health=0, card=' 0300   ERASABLE MEMORY  1000  -32200                                           ')
-        p = POPO(health=0, card=' 0300   INTPRET  DMP      VVECT                                                 ')
-        self.process(p, 1)
+        while not self._test_done:
+            self.get_real()
+            self.process(self._real, self._real_cdno)
 
     def get_real(self):
         # Get real is normally the chief node of pass 1. Occasionally merge control procedures take
@@ -55,7 +54,7 @@ class Pass1:
         card = self.get_card()
         if card is None:
             # Run out tape cards at end of file.
-            pass
+            self._test_done = True
 
         if self._yul.switch & SwitchBit.MERGE_MODE:
             if not self._yul.switch & SwitchBit.TAPE_KEPT:
@@ -107,7 +106,7 @@ class Pass1:
         vertical_format = ord(self._real.card[7]) & 0xF
 
         # Mark all cards entering during merging.
-        if self._yul.switch & SwitchBit.MERGING:
+        if self._yul.switch & SwitchBit.MERGE_MODE:
             vertical_format |= 0x10
 
         self._real.card = self._real.card[:7] + chr(vertical_format) + self._real.card[8:]
@@ -151,7 +150,7 @@ class Pass1:
             # A log card is an automatic sequence break.
             if self._real.card[0] == 'L':
                 # Remove confusing info from log card.
-                self._real.card = self._real.card[0] + '      ' + self._real.card[8:]
+                self._real.card = self._real.card[0] + '      ' + self._real.card[7:]
                 seq_break = True
 
 
@@ -172,21 +171,21 @@ class Pass1:
             self._real_cdno = Bit.BIT6
             return self._real.card
 
-        card_no = int(card_no, 10)
+        real_card_no = int(card_no, 10)
 
-        if card_no <= self._real_cdno:
+        if real_card_no <= self._real_cdno:
             # Disorder
             self._real.health |= Bit.BIT7
 
         # Keep normal form of card number on tape.
         self._real.card = self._real.card[0] + card_no + self._real.card[7:]
 
-        self.real_cdno = card_no
+        self.real_cdno = real_card_no
         return self._real.card
 
     def send_popo(self, popo):
         # FIXME: Renumber and append POPO
-        pass
+        print('%016o:%s' % (popo.health, popo.card))
 
     def modif_chk(self):
         pass
@@ -198,7 +197,7 @@ class Pass1:
         return process(self._tape, self._tape_cdno)
 
     def process(self, popo, cdno):
-        if popo.card[7] == '9':
+        if (ord(popo.card[7]) & 0xF) == 9:
             popo.health |= HealthBit.CARD_TYPE_RIGHTP
             return self.send_popo(popo)
 
@@ -263,7 +262,7 @@ class Pass1:
                 raise IllegalOp()
 
             else:
-                popo.health |= (value << self.mod_sift)
+                popo.health |= (value << self.mod_shift)
                 if value <= self.max_num_op:
                     popo.health |= HealthBit.CARD_TYPE_INSTR
                 else:

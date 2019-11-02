@@ -43,7 +43,7 @@ class Monitor:
 
         # Read the next card for next time. This is done so that phi_peek operations
         # can show what the next card will be.
-        self._next_card = self._card_deck.readline().strip()
+        self._next_card = self._card_deck.readline().rstrip()
         if self._next_card != '':
             # Adjust the card to 80 columns
             self._next_card = '%-80s' % self._next_card
