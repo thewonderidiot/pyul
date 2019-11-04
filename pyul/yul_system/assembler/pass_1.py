@@ -314,6 +314,7 @@ class Pass1:
                         popo.health |= HealthBit.CARD_TYPE_INSTR
                     else:
                         self.op_thrs[operation](popo)
+                        return
                 else:
                     raise IllegalOp()
 
@@ -331,11 +332,14 @@ class Pass1:
             self._yul.switch &= ~(Bit.BIT25 | Bit.BIT26 | Bit.BIT27)
             self._yul.switch |= MemType.FIXED
             self._loc_state = 0
-            # FIXME: BLNK LOCN
+            self.location(popo, blank=True)
             popo.health |= HealthBit.CARD_TYPE_ILLOP
             return self.reg_incon(popo, translate_loc=False)
 
-        self._yul.switch &= ~(MemType.ERASABLE | MemType.SPEC_NON)
+        return self.inst_dec_oct(popo)
+
+    def inst_dec_oct(self, popo):
+        self._yul.switch &= ~MemType.MEM_MASK
         self._yul.switch |= MemType.FIXED
         if popo.card[0] == 'J':
             # FIXME: handle leftovers
@@ -412,11 +416,11 @@ class Pass1:
         midx = 0
         while loc_value > self.m_typ_tab[midx][1]:
             midx += 1
-        mem_type = selfl.m_typ_tab[midx][0]
+        mem_type = self.m_typ_tab[midx][0]
 
         bad = False
         # Branch if type doesn't match that suplyd.
-        if (self._yul.switch & MemoryType.MEM_MASK) != mem_type:
+        if (self._yul.switch & MemType.MEM_MASK) != mem_type:
             new_health = (sym_xform >> 6*4) & 0xF
             self._loc_state |= LocStateBit.WRONG_TYPE
             if self._field_cod[1] is not None:
@@ -431,7 +435,7 @@ class Pass1:
                 leftover_type = MemType.ERASABLE
             else:
                 leftover_type = MemType.FIXED
-            if (self._yul.switch & MemoryType.MEM_MASK) != leftover_type:
+            if (self._yul.switch & MemType.MEM_MASK) != leftover_type:
                 new_health = (sym_xform >> 6*4) & 0xF
 
         if not self.avail(loc_value, reserve=True):
@@ -831,10 +835,12 @@ class Pass1:
         pass
 
     def octal(self, popo):
-        pass
+        popo.health |= HealthBit.CARD_TYPE_OCTAL
+        return self.inst_dec_oct(popo)
 
     def decimal(self, popo):
-        pass
+        popo.health |= HealthBit.CARD_TYPE_DECML
+        return self.inst_dec_oct(popo)
 
     def _2octal(self, popo):
         pass
@@ -846,7 +852,8 @@ class Pass1:
         pass
 
     def setloc(self, popo):
-        pass
+        self._loc_ctr = 0o5000
+        print('SETLOC!!!')
 
     def subro(self, popo):
         pass
