@@ -1,5 +1,5 @@
 import importlib
-from yul_system.types import Bit, SwitchBit, FieldCodBit, HealthBit, MemType
+from yul_system.types import Bit, SwitchBit, FieldCodBit, HealthBit, LocStateBit, MemType, Symbol
 
 class POPO:
     def __init__(self, health=0, card=''):
@@ -30,6 +30,9 @@ class BadMemory(Exception):
 class IllegalOp(Exception):
     pass
 
+class Disaster(Exception):
+    pass
+
 class Pass1:
     def __init__(self, mon, yul):
         self._mon = mon
@@ -40,31 +43,55 @@ class Pass1:
         self._early = True
         self._op_found = None
         self._test_done = False
+        self._loc_state = 0
+        self._head = ' '
+        self._xforms = [
+            0x4689A5318F,
+            0x47BCDF42E2,
+            0x47BCDF42E2,
+            0xB7BCD642B4,
+            0xB7BCD742B4,
+            0x07BCDF62FF,
+            0x37BCDF42B7,
+            0x37BCDF42B7,
+            0x1BBEEFB2BB,
+            0x3CECEFC2EC,
+            0x3DEEDFD2ED,
+            0x1BBEEFB2BB,
+            0x3CECEFC2EC,
+            0x3DEEDFD2ED,
+            0x1EEEEFE2EE,
+            0x1FFFFFF2FF,
+        ]
+
 
     def post_spec(self):
-        while not self._test_done:
-            self.get_real()
-            self.process(self._real, self._real_cdno)
+        if self._yul.switch & SwitchBit.SUBROUTINE:
+            self._loc_ctr = self.subr_loc
+        else:
+            self._loc_ctr = 0xFFFFFFFFFFFF
+        self.get_real()
 
     def get_real(self):
         # Get real is normally the chief node of pass 1. Occasionally merge control procedures take
         # over, accepting or rejecting tape cards.
+        while True:
 
-        # Get a card and branch on no end of file.
-        card = self.get_card()
-        if card is None:
-            # Run out tape cards at end of file.
-            self._test_done = True
+            # Get a card and branch on no end of file.
+            card = self.get_card()
+            if card is None:
+                # Run out tape cards at end of file.
+                break
 
-        if self._yul.switch & SwitchBit.MERGE_MODE:
-            if not self._yul.switch & SwitchBit.TAPE_KEPT:
-                self._tape = self.get_tape()
+            if self._yul.switch & SwitchBit.MERGE_MODE:
+                if not self._yul.switch & SwitchBit.TAPE_KEPT:
+                    self._tape = self.get_tape()
 
-                if self._tape is None:
-                    # FIXME: Clean up and exit pass 1
-                    return
+                    if self._tape is None:
+                        # FIXME: Clean up and exit pass 1
+                        return
 
-        self.modif_chk()
+            self.modif_chk()
 
     def get_card(self):
         # Subroutine in pass 1 to get a real card. Normally performs card number checking. Response
@@ -188,13 +215,45 @@ class Pass1:
         print('%016o:%s' % (popo.health, popo.card))
 
     def modif_chk(self):
+        # See if operation code of real card is "MODIFY". But don't be fooled by a remarks card.
+        if self._real.card[1:6] == 'MODIFY' and self._real.card[0] == ' ' and (ord(self._real.card[7]) & 0xF) != 9:
+            # Indicate card type.
+            self._real.health |= HealthBit.CARD_TYPE_MODIFY
+            if not self._yul.switch & SwitchBit.MERGE_MODE:
+                # When in main part of new program send the "MODIFY" card, create and send the
+                # "END OF" card made up by pass 0, and process the latter.
+                self.proc_real()
+                self._real = self._end_of
+                self.proc_real()
+                return
+
+            # Set up search for "END OF" card.
+            while self._tape.card[:8] != self._end_of[:8]:
+                self.proc_tape()
+
+                # Get another tape card if not found yet.
+                self._tape = self.get_tape()
+                if self._tape is None:
+                    raise Disaster()
+
+            # Process "MODIFY" just before "END OF".
+            self.proc_real()
+            return self.proc_tape()
+
+        if not self._yul.switch & SwitchBit.MERGE_MODE:
+            # Process real card with no further ado.
+            return self.proc_real()
+
+        return self.comp_cdns()
+
+    def comp_cdns(self):
         pass
 
     def proc_real(self):
-        return process(self._real, self._real_cdno)
+        return self.process(self._real, self._real_cdno)
 
     def proc_tape(self):
-        return process(self._tape, self._tape_cdno)
+        return self.process(self._tape, self._tape_cdno)
 
     def process(self, popo, cdno):
         if (ord(popo.card[7]) & 0xF) == 9:
@@ -289,6 +348,124 @@ class Pass1:
     def reg_incon(self, popo, translate_loc=True):
         if translate_loc:
             self._loc_state = 0
+            self.location(popo)
+        popo.health |= self._loc_state
+        return self.send_popo(popo)
+
+    def location(self, popo, blank=False):
+        self._field_cod[1] = None
+        symbol = None
+        new_health = 0
+
+        # Initialize transform address
+        sym_xform = self._xforms[0]
+
+        if not blank:
+            # Analyze location field.
+            common, value = self.anal_subf(popo.loc_field())
+            if self._field_cod[0] == FieldCodBit.SYMBOLIC:
+                # Signal symbolic loc.
+                self._loc_state |= LocStateBit.SYMBOLIC
+
+                # Aanalyze history of symbol.
+                sym_name = common.strip()
+                symbol = self.anal_symb(sym_name)
+
+                # Using old symbol health as rel address, get address of transform word.
+                sym_xform = self._xforms[symbol.health]
+                new_health = (sym_xform >> 8*4) & 0xF
+            elif self._field_cod[0] != None:
+                if self._field_cod[0] & FieldCodBit.UNSIGNED:
+                    self._field_cod[1] = self._loc_ctr
+                    self._loc_ctr = value
+
+        loc_value = self._loc_ctr
+        if self.incr_lctr():
+            self._field_cod[1] = None
+
+        if loc_value > self.max_loc:
+            self._loc_ctr = 0xFFFFFFFFFFFF
+            # Signal oversize.
+            self._loc_state |= LocStateBit.OVERSIZE
+            # Use oversize transform on symbol health.
+            new_health = (sym_xform >> 7*4) & 0xF
+            loc_value = 0
+            if self._field_cod[1] is not None:
+                self._loc_ctr = self._field_cod[1]
+                loc_value = self._loc_ctr
+                self.incr_lctr()
+            self.loc_exit(loc_value, symbol, new_health)
+        else:
+            self.ok_l_size(loc_value, symbol, sym_xform, new_health)
+
+    def loc_exit(self, loc_value, symbol, new_health):
+        self._loc_state |= loc_value
+        if self._loc_state & LocStateBit.SYMBOLIC:
+            self.sy_def_xit(loc_value, symbol, new_health)
+
+    def sy_def_xit(self, loc_value, symbol, new_health):
+        symbol.value = loc_value
+        symbol.health = new_health
+
+    def ok_l_size(self, loc_value, symbol, sym_xform, new_health):
+        # Look up memory type.
+        midx = 0
+        while loc_value > self.m_typ_tab[midx][1]:
+            midx += 1
+        mem_type = selfl.m_typ_tab[midx][0]
+
+        bad = False
+        # Branch if type doesn't match that suplyd.
+        if (self._yul.switch & MemoryType.MEM_MASK) != mem_type:
+            new_health = (sym_xform >> 6*4) & 0xF
+            self._loc_state |= LocStateBit.WRONG_TYPE
+            if self._field_cod[1] is not None:
+                self._loc_ctr = self._field_cod[1]
+                loc_value = self._loc_ctr
+                self.incr_lctr()
+            self.loc_exit(loc_value, symbol, new_health)
+            return
+
+        if sym_xform == self._xforms[5]:
+            if symbol.value < 0:
+                leftover_type = MemType.ERASABLE
+            else:
+                leftover_type = MemType.FIXED
+            if (self._yul.switch & MemoryType.MEM_MASK) != leftover_type:
+                new_health = (sym_xform >> 6*4) & 0xF
+
+        if not self.avail(loc_value, reserve=True):
+            new_health = (sym_xform >> 5*4) & 0xF
+            self._loc_state |= LocStateBit.CONFLICT
+
+        self.loc_exit(loc_value, symbol, new_health)
+
+    def avail(self, loc_value, reserve=False):
+        available = True
+
+        avail_msk = 1 << (loc_value & 0x1F)
+        avail_idx = loc_value >> 5
+
+        if self._yul.av_table[avail_idx] & avail_msk:
+            available = False
+
+        if reserve:
+            self._yul.av_table[avail_idx] |= avail_msk
+
+        return available
+
+    def incr_lctr(self):
+        if self._loc_ctr >= 0xFFFFFFFFFFFF:
+            return False
+        self._loc_ctr += 1
+        return True
+
+    def anal_symb(self, symbol):
+        if len(symbol) < 8:
+            symbol = ('%-7s%s' % (symbol, self._head)).strip()
+        if symbol not in self._yul.sym_thr:
+            self._yul.sym_thr[symbol] = Symbol(symbol)
+        return self._yul.sym_thr[symbol]
 
     def segnum(self, popo):
         # FIXME: IMPLEMENT SEGMENT ASSEMBLIES
@@ -463,7 +640,7 @@ class Pass1:
             # Branch if seeking sign and sign not preceded by a blank
             if also_main is None and afield[16] in '+-' and afield[15] == ' ':
                 # Analyze possible modifier
-                _, value = self.anal_subf(afield[16:])
+                _, value = self.anal_subf(afield[16:], check_blank=False)
 
                 # Branch if twasn't a signed numeric subf.
                 if (self._field_cod[0] & (FieldCodBit.NUMERIC | FieldCodBit.UNSIGNED)) != FieldCodBit.NUMERIC:
@@ -489,7 +666,7 @@ class Pass1:
             # Branch if more NBCs to examine.
             if afield[:16].isspace():
                 # Analyze possible main address.
-                _, value = self.anal_subf(afield[16:])
+                _, value = self.anal_subf(afield[16:], check_blank=False)
 
                 # Branch if not numeric.
                 if not self._field_cod[0] & FieldCodBit.NUMERIC:
@@ -577,7 +754,7 @@ class Pass1:
         adr_wd[0] = afield[8:16]
         return adr_wd
 
-    def anal_subf(self, common, check_blank=False):
+    def anal_subf(self, common, check_blank=True):
         if check_blank and common.isspace():
             self._field_cod[0] = 0
             return common, None

@@ -11,6 +11,7 @@ class AGC4Pass1(Pass1):
         self.blok_ones = 0o1777
         self.mod_shift = 24
         self.blok_shif = 10
+        self.subr_loc = 1024
         self.m_typ_tab = [
             (MemType.SPEC_NON,    0o57),
             (MemType.ERASABLE,  0o1777),

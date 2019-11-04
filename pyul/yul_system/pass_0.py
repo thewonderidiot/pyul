@@ -437,6 +437,10 @@ class Yul:
     def init_assy(self):
         # Procedure to initialize a permissible assembly or reprint.
         # FIXME: Set things up for pass 1!
+        # Initialize symbol table
+        self.sym_thr = {}
+        self.av_table = [0]*2048
+
         sub_card, sub_sent = self.rd_subdrc()
         while sub_card is not None:
             try:

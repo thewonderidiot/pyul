@@ -113,7 +113,22 @@ class FieldCodBit:
     POSITIVE  = Bit.BIT5
     UNSIGNED  = Bit.BIT6
 
+class LocStateBit:
+    SYMBOLIC   = Bit.BIT8
+    OVERSIZE   = Bit.BIT14
+    WRONG_TYPE = Bit.BIT15
+    CONFLICT   = Bit.BIT16
+
 class MemType:
     ERASABLE = Bit.BIT25
     FIXED    = Bit.BIT26
     SPEC_NON = Bit.BIT27
+    MEM_MASK = ERASABLE | FIXED | SPEC_NON
+
+class Symbol:
+    def __init__(self, name, value=0, health=0, definer=None):
+        self.name = name
+        self.health = health
+        self.value = value
+        self.definer = definer
+        self.definees = []
