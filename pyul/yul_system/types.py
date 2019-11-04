@@ -104,7 +104,10 @@ class HealthBit:
     CARD_TYPE_COUNT  =        0 | Bit.BIT2 | Bit.BIT3 |        0 |        0 | Bit.BIT6 # 31
     CARD_TYPE_SEGNUM =        0 | Bit.BIT2 | Bit.BIT3 |        0 | Bit.BIT5 |        0 # 32
 
-    POLISH = Bit.BIT32
+    ASTERISK       = Bit.BIT11
+    NEARLY_DEFINED = Bit.BIT12
+    MEANINGLESS    = Bit.BIT13
+    POLISH         = Bit.BIT32
 
 class FieldCodBit:
     SYMBOLIC  = Bit.BIT1

@@ -72,6 +72,11 @@ class Pass1:
             self._loc_ctr = 0xFFFFFFFFFFFF
         self.get_real()
 
+        print('SYMBOL TABLE:')
+        print('-------------')
+        for n,s in self._yul.sym_thr.items():
+            print('%-8s: %s (%x)' % (n, s.value, s.health))
+
     def get_real(self):
         # Get real is normally the chief node of pass 1. Occasionally merge control procedures take
         # over, accepting or rejecting tape cards.
@@ -301,7 +306,7 @@ class Pass1:
 
             elif self._field_cod[0] in (0, FieldCodBit.SYMBOLIC):
                 if operation != '' and operation[-1] == '*':
-                    popo.health |= Bit.BIT11
+                    popo.health |= HealthBit.ASTERISK
                     operation = operation[:-1]
 
                 if operation in self.op_thrs:
@@ -329,14 +334,19 @@ class Pass1:
                     raise IllegalOp()
 
         except IllegalOp:
-            self._yul.switch &= ~(Bit.BIT25 | Bit.BIT26 | Bit.BIT27)
-            self._yul.switch |= MemType.FIXED
-            self._loc_state = 0
-            self.location(popo, blank=True)
-            popo.health |= HealthBit.CARD_TYPE_ILLOP
-            return self.reg_incon(popo, translate_loc=False)
+            return self.illegop(popo)
 
         return self.inst_dec_oct(popo)
+
+    def illegop(self, popo):
+        self._yul.switch &= ~(Bit.BIT25 | Bit.BIT26 | Bit.BIT27)
+        self._yul.switch |= MemType.FIXED
+        self._loc_state = 0
+        self.location(popo, blank=True)
+        popo.health &= ~HealthBit.CARD_TYPE_MASK
+        popo.health |= HealthBit.CARD_TYPE_ILLOP
+        return self.reg_incon(popo, translate_loc=False)
+
 
     def inst_dec_oct(self, popo):
         self._yul.switch &= ~MemType.MEM_MASK
@@ -828,9 +838,6 @@ class Pass1:
     def head_tail(self, popo):
         pass
 
-    def is_equals(self, popo):
-        pass
-
     def erase(self, popo):
         pass
 
@@ -851,17 +858,101 @@ class Pass1:
     def even(self, popo):
         pass
 
-    def setloc(self, popo):
-        self._loc_ctr = 0o5000
-        print('SETLOC!!!')
-
-    def subro(self, popo):
-        pass
-
-    def equ_plus(self, popo):
-        pass
+    def is_equals(self, popo):
+        popo.health |= HealthBit.CARD_TYPE_EQUALS
+        return self.decod_adr(popo, 0)
 
     def equ_minus(self, popo):
+        popo.health |= HealthBit.CARD_TYPE_EQUALS
+        return self.decod_adr(popo, self._loc_ctr)
+
+    def equ_plus(self, popo):
+        popo.health |= HealthBit.CARD_TYPE_EQUALS
+        return self.decod_adr(popo, -self._loc_ctr)
+
+    def setloc(self, popo):
+        popo.health |= HealthBit.CARD_TYPE_EQUALS
+        return self.decod_adr(popo, 0)
+
+    def decod_adr(self, popo, loc_loc):
+        # Asterisk makes illegal op.
+        if popo.health & HealthBit.ASTERISK:
+            return self.illegop(popo)
+
+        # Decode address field.
+        adr_wd = self.adr_field(popo)
+
+        # Abort if meaningless address field.
+        if self._field_cod[0] is None:
+            popo.health |= HealthBit.MEANINGLESS
+            return self.no_adress(popo)
+
+        # Bad loc ctr kills =PLUS and =MINUS now.
+        if loc_loc >= 0xFFFFFFFFFFF:
+            return self.ch_il_size(popo, loc_loc, check_loc=False)
+
+        # If blank adr field, fake up absolute.
+        if self._field_cod[0] == 0:
+            self._field_cod[0] = FieldCodBit.NUMERIC | FieldCodBit.UNSIGNED
+            if self._loc_ctr >= 0xFFFFFFFFFFF:
+                return self.ch_il_size(popo, loc_loc, check_loc=False)
+            adr_wd[0] = self._loc_ctr
+            self._field_cod[1] = 0
+
+        if self._field_cod[1] == 0:
+            # Fake up a modifier if it lacks one.
+            self._field_cod[1] = FieldCodBit.NUMERIC
+            adr_wd[1] = loc_loc
+        else:
+            # Combine loc ctr with exisiting modifier.
+            adr_wd[1] += loc_loc
+
+        # Set up sign of net modifier.
+        if adr_wd[1] > 0:
+            self._field_cod[1] |= FieldCodBit.POSITIVE
+        else:
+            self._field_cod[1] &= ~FieldCodBit.POSITIVE
+
+        unsigned_mask = FieldCodBit.NUMERIC | FieldCodBit.UNSIGNED
+        if (self._field_cod[0] & unsigned_mask) == unsigned_mask:
+            # Branch if main part is unsigned numeric.
+            pass
+        elif self._field_cod[0] == FieldCodBit.SYMBOLIC:
+            # Branch if address field contains a sym.
+            return self.sym_is_loc(popo, loc_loc, adr_wd)
+        elif self._loc_ctr >= 0xFFFFFFFFFFF:
+            # Branch if location counter is bad.
+            return self.ch_il_size(popo, loc_loc, check_loc=False)
+        else:
+            # Form address relative to L.C. setting.
+            adr_wd[0] -= self._loc_ctr
+
+        # Add modifier part to unsigned numeric.
+        adr_wd[0] += adr_wd[1]
+        # Go to test size of num + modifier.
+        loc_loc = adr_wd[0]
+        return self.ch_il_size(popo, loc_loc)
+
+    def sym_is_loc(self, popo, loc_loc, adr_wd):
+        # Analyze address symbol history.
+        sym_name = adr_wd[0].strip()
+        symbol = self.anal_symb(sym_name)
+
+        # Store address of address symbol.
+        if symbol.health > 0x0 and symbol.health < 0x3:
+            # Signal address nearly defined.
+            popo.health |= HealthBit.NEARLY_DEFINED
+            return self.no_address(popo)
+
+        sym_xform = self._xforms[symbol.health]
+
+    def ch_il_size(self, popo, loc_loc, check_loc=True):
+        pass
+
+    def no_address(self, popo):
+        pass
+
+    def subro(self, popo):
         pass
 
     def count(self, popo):
