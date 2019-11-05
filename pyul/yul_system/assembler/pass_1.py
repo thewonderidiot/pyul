@@ -1,5 +1,6 @@
 import importlib
-from yul_system.types import Bit, SwitchBit, FieldCodBit, HealthBit, LocStateBit, MemType, Symbol
+from yul_system.types import Bit, SwitchBit, FieldCodBit, HealthBit, LocStateBit, \
+                             MemType, Symbol, ALPHABET
 
 class POPO:
     def __init__(self, health=0, card=''):
@@ -72,10 +73,12 @@ class Pass1:
             self._loc_ctr = 0xFFFFFFFFFFFF
         self.get_real()
 
-        print('SYMBOL TABLE:')
+        print('\nSYMBOL TABLE:')
         print('-------------')
-        for n,s in self._yul.sym_thr.items():
-            print('%-8s: %s (%x)' % (n, s.value, s.health))
+        syms = sorted(self._yul.sym_thr.keys(), key=lambda sym: [ALPHABET.index(c) for c in sym])
+        for sym in syms:
+            s = self._yul.sym_thr[sym]
+            print('%-8s: %04o (%x)' % (sym, s.value, s.health))
 
     def get_real(self):
         # Get real is normally the chief node of pass 1. Occasionally merge control procedures take
@@ -871,7 +874,7 @@ class Pass1:
         return self.decod_adr(popo, -self._loc_ctr)
 
     def setloc(self, popo):
-        popo.health |= HealthBit.CARD_TYPE_EQUALS
+        popo.health |= HealthBit.CARD_TYPE_SETLOC
         return self.decod_adr(popo, 0)
 
     def decod_adr(self, popo, loc_loc):
@@ -944,9 +947,86 @@ class Pass1:
             popo.health |= HealthBit.NEARLY_DEFINED
             return self.no_address(popo)
 
+        # Use health of symbol to find transform.
         sym_xform = self._xforms[symbol.health]
 
+        # Test predefinition bit.
+        if not sym_xform & 0x1000000000:
+            # Signal address undefined as yet.
+            popo.health |= HealthBit.UNDEFINED
+            return self.no_address(popo)
+
+        # Test def/no-def bit.
+        if not sym_xform & 0x2000000000:
+            popo.health |= HealthBit.ILL_DEFINED
+            return self.no_address(popo)
+
+        # Add modifier to symbol definition.
+        loc_loc = symbol.value
+        loc_loc += adr_wd[1]
+
+        return self.ch_il_size(popo, loc_loc)
+
     def ch_il_size(self, popo, loc_loc, check_loc=True):
+        if not check_loc or loc_loc >= 0xFFFFFFFFFFF:
+            popo.health |= HealthBit.OVERSIZE
+            return self.no_address(popo)
+
+        popo.health |= loc_loc & 0xFFFF
+
+        # Branch for normal IS,= path.
+        if (popo.health & HealthBit.CARD_TYPE_MASK) == HealthBit.CARD_TYPE_EQUALS:
+            return self.iseq_lsym(popo, loc_loc)
+
+        # Look up memory type for setloc.
+        midx = 0
+        while loc_loc > self.m_typ_tab[midx][1]:
+            midx += 1
+        mem_type = self.m_typ_tab[midx][0]
+
+        if mem_type == MemType.SPEC_NON:
+            # Signal setloc to spec/non memory.
+            popo.health |= Bit.BIT10
+        else:
+            self._loc_ctr = popo.health & 0xFFFF
+
+        return self.nd_setloc(popo)
+
+    def nd_setloc(self, popo):
+        if not popo.loc_field().isspace():
+            # Cuss about non-blank loc field in loc.
+            popo.health |= HealthBit.SYMBOLIC
+
+        return self.send_popo(popo)
+
+    def iseq_lsym(self, popo, loc_loc):
+        common, value = self.anal_subf(popo.loc_field())
+        if self._field_cod[0] != FieldCodBit.SYMBOLIC:
+            return self.send_popo(popo)
+
+        popo.health |= HealthBit.SYMBOLIC
+        sym_name = common.strip()
+        symbol = self.anal_symb(sym_name)
+
+        sym_xform = self._xforms[symbol.health]
+        if symbol.health <= 2 or symbol.heatlh != 5:
+            return self.it_is(popo, loc_loc, symbol, sym_xform, check_loc=True)
+
+        # FIXME: handle leftovers
+
+    def it_is(self, popo, loc_loc, symbol, sym_xform, check_loc=False):
+        if check_loc and loc_loc >= 0xFFFFFFFFFFFF:
+            return self.not_ok_def()
+
+        new_health = (sym_xform >> 3*4) & 0xF
+        return self.end_is(popo, loc_loc, symbol, new_health)
+
+    def end_is(self, popo, loc_loc, symbol, new_health):
+        self._loc_state = LocStateBit.SYMBOLIC
+        self.sy_def_xit(loc_loc, symbol, new_health)
+        return self.send_popo(popo)
+
+    def not_ok_def(self):
         pass
 
     def no_address(self, popo):

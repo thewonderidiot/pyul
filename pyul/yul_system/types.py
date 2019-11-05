@@ -4,6 +4,9 @@ MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 
 # Non-Blank Terminating Characters
 NBTCS = '-:+*/,'
 
+# H-1800 alphabet sorting
+ALPHABET = '0123456789=\' +ABCDEFGHI.)-JKLMNOPQR$*/STUVWXYZ.('
+
 class Bit:
     BIT1  = (1 << 47)
     BIT2  = (1 << 46)
@@ -104,9 +107,12 @@ class HealthBit:
     CARD_TYPE_COUNT  =        0 | Bit.BIT2 | Bit.BIT3 |        0 |        0 | Bit.BIT6 # 31
     CARD_TYPE_SEGNUM =        0 | Bit.BIT2 | Bit.BIT3 |        0 | Bit.BIT5 |        0 # 32
 
+    SYMBOLIC       = Bit.BIT8
     ASTERISK       = Bit.BIT11
+    UNDEFINED      = Bit.BIT11
     NEARLY_DEFINED = Bit.BIT12
     MEANINGLESS    = Bit.BIT13
+    ILL_DEFINED    = Bit.BIT14
     POLISH         = Bit.BIT32
 
 class FieldCodBit:
