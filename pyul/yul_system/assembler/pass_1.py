@@ -848,6 +848,28 @@ class Pass1:
         pass
 
     def erase(self, popo):
+        popo.health |= HealthBit.CARD_TYPE_ERASE
+
+        if popo.health & HealthBit.ASTERISK:
+            # Asterisk makes illegal op.
+            return self.illegop(popo)
+
+        # Decode address field.
+        adr_wd = self.adr_field(popo)
+
+        if self._field_cod[0] is None:
+            # When address is meaningless.
+            popo.health |= Bit.BIT11
+            return self.er_loc_sym(popo)
+
+        unsigned_mask = FieldCodBit.NUMERIC | FieldCodBit.UNSIGNED
+        if (self._field_cod[0] & unsigned_mask) == unsigned_mask:
+            if self._field_cod[1] == 0:
+                # Lone numeric is both limits.
+                adr_wd[1] = adr_wd[0]
+                return self.ch_er_size()
+
+    def er_loc_sym(self, popo):
         pass
 
     def octal(self, popo):
