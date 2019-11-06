@@ -113,6 +113,7 @@ class HealthBit:
     NEARLY_DEFINED = Bit.BIT12
     MEANINGLESS    = Bit.BIT13
     ILL_DEFINED    = Bit.BIT14
+    OVERSIZE       = Bit.BIT14
     POLISH         = Bit.BIT32
 
 class FieldCodBit:

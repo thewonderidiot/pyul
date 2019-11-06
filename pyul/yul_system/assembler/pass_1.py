@@ -2,6 +2,8 @@ import importlib
 from yul_system.types import Bit, SwitchBit, FieldCodBit, HealthBit, LocStateBit, \
                              MemType, Symbol, ALPHABET
 
+ONES = 0xFFFFFFFFFFFF
+
 class POPO:
     def __init__(self, health=0, card=''):
         self.health = health
@@ -70,7 +72,7 @@ class Pass1:
         if self._yul.switch & SwitchBit.SUBROUTINE:
             self._loc_ctr = self.subr_loc
         else:
-            self._loc_ctr = 0xFFFFFFFFFFFF
+            self._loc_ctr = ONES
         self.get_real()
 
         print('\nSYMBOL TABLE:')
@@ -79,6 +81,10 @@ class Pass1:
         for sym in syms:
             s = self._yul.sym_thr[sym]
             print('%-8s: %04o (%x)' % (sym, s.value, s.health))
+            if s.definer is not None:
+                print('  - Defined by: %s' % s.definer)
+            if len(s.definees) > 0:
+                print('  - Defines:    %s' % ', '.join(s.definees))
 
     def get_real(self):
         # Get real is normally the chief node of pass 1. Occasionally merge control procedures take
@@ -401,7 +407,7 @@ class Pass1:
             self._field_cod[1] = None
 
         if loc_value > self.max_loc:
-            self._loc_ctr = 0xFFFFFFFFFFFF
+            self._loc_ctr = ONES
             # Signal oversize.
             self._loc_state |= LocStateBit.OVERSIZE
             # Use oversize transform on symbol health.
@@ -472,7 +478,7 @@ class Pass1:
         return available
 
     def incr_lctr(self):
-        if self._loc_ctr >= 0xFFFFFFFFFFFF:
+        if self._loc_ctr >= ONES:
             return False
         self._loc_ctr += 1
         return True
@@ -888,17 +894,17 @@ class Pass1:
         # Abort if meaningless address field.
         if self._field_cod[0] is None:
             popo.health |= HealthBit.MEANINGLESS
-            return self.no_adress(popo)
+            return self.no_adress(popo, adr_wd)
 
         # Bad loc ctr kills =PLUS and =MINUS now.
-        if loc_loc >= 0xFFFFFFFFFFF:
-            return self.ch_il_size(popo, loc_loc, check_loc=False)
+        if loc_loc >= ONES:
+            return self.ch_il_size(popo, loc_loc, adr_wd, check_loc=False)
 
         # If blank adr field, fake up absolute.
         if self._field_cod[0] == 0:
             self._field_cod[0] = FieldCodBit.NUMERIC | FieldCodBit.UNSIGNED
-            if self._loc_ctr >= 0xFFFFFFFFFFF:
-                return self.ch_il_size(popo, loc_loc, check_loc=False)
+            if self._loc_ctr >= ONES:
+                return self.ch_il_size(popo, loc_loc, adr_wd, check_loc=False)
             adr_wd[0] = self._loc_ctr
             self._field_cod[1] = 0
 
@@ -923,18 +929,18 @@ class Pass1:
         elif self._field_cod[0] == FieldCodBit.SYMBOLIC:
             # Branch if address field contains a sym.
             return self.sym_is_loc(popo, loc_loc, adr_wd)
-        elif self._loc_ctr >= 0xFFFFFFFFFFF:
+        elif self._loc_ctr >= ONES:
             # Branch if location counter is bad.
-            return self.ch_il_size(popo, loc_loc, check_loc=False)
+            return self.ch_il_size(popo, loc_loc, adr_wd, check_loc=False)
         else:
             # Form address relative to L.C. setting.
-            adr_wd[0] -= self._loc_ctr
+            adr_wd[0] += self._loc_ctr
 
         # Add modifier part to unsigned numeric.
         adr_wd[0] += adr_wd[1]
         # Go to test size of num + modifier.
         loc_loc = adr_wd[0]
-        return self.ch_il_size(popo, loc_loc)
+        return self.ch_il_size(popo, loc_loc, adr_wd)
 
     def sym_is_loc(self, popo, loc_loc, adr_wd):
         # Analyze address symbol history.
@@ -945,7 +951,7 @@ class Pass1:
         if symbol.health > 0x0 and symbol.health < 0x3:
             # Signal address nearly defined.
             popo.health |= HealthBit.NEARLY_DEFINED
-            return self.no_address(popo)
+            return self.no_adress(popo, adr_wd, symbol)
 
         # Use health of symbol to find transform.
         sym_xform = self._xforms[symbol.health]
@@ -954,29 +960,29 @@ class Pass1:
         if not sym_xform & 0x1000000000:
             # Signal address undefined as yet.
             popo.health |= HealthBit.UNDEFINED
-            return self.no_address(popo)
+            return self.no_adress(popo, adr_wd, symbol)
 
         # Test def/no-def bit.
         if not sym_xform & 0x2000000000:
             popo.health |= HealthBit.ILL_DEFINED
-            return self.no_address(popo)
+            return self.no_adress(popo, adr_wd, symbol)
 
         # Add modifier to symbol definition.
         loc_loc = symbol.value
         loc_loc += adr_wd[1]
 
-        return self.ch_il_size(popo, loc_loc)
+        return self.ch_il_size(popo, loc_loc, adr_wd, symbol)
 
-    def ch_il_size(self, popo, loc_loc, check_loc=True):
-        if not check_loc or loc_loc >= 0xFFFFFFFFFFF:
+    def ch_il_size(self, popo, loc_loc, adr_wd, adr_symbol=None, check_loc=True):
+        if not check_loc or loc_loc >= ONES:
             popo.health |= HealthBit.OVERSIZE
-            return self.no_address(popo)
+            return self.no_adress(popo, adr_wd, adr_symbol)
 
         popo.health |= loc_loc & 0xFFFF
 
         # Branch for normal IS,= path.
         if (popo.health & HealthBit.CARD_TYPE_MASK) == HealthBit.CARD_TYPE_EQUALS:
-            return self.iseq_lsym(popo, loc_loc)
+            return self.iseq_lsym(popo, loc_loc, adr_wd, adr_symbol)
 
         # Look up memory type for setloc.
         midx = 0
@@ -999,24 +1005,63 @@ class Pass1:
 
         return self.send_popo(popo)
 
-    def iseq_lsym(self, popo, loc_loc):
+    def iseq_lsym(self, popo, loc_loc, adr_wd, adr_symbol=None):
         common, value = self.anal_subf(popo.loc_field())
         if self._field_cod[0] != FieldCodBit.SYMBOLIC:
             return self.send_popo(popo)
 
+        # Signal symb locn, get symbol history.
         popo.health |= HealthBit.SYMBOLIC
         sym_name = common.strip()
         symbol = self.anal_symb(sym_name)
 
+        # Save symbol, get address of transform.
         sym_xform = self._xforms[symbol.health]
         if symbol.health <= 2 or symbol.heatlh != 5:
-            return self.it_is(popo, loc_loc, symbol, sym_xform, check_loc=True)
+            # Branch if loc sym was not leftover.
+            return self.it_is(popo, loc_loc, symbol, sym_xform, adr_wd, adr_symbol, check_loc=True)
 
-        # FIXME: handle leftovers
+        # Branch if an OK definition was made.
+        if loc_loc >= ONES:
+            # Throw up hands if EQUALS failed to def.
+            new_health = 0xF
+            return self.not_ok_def(popo, loc_loc, symbol, sym_xform, adr_wd, adr_symbol)
 
-    def it_is(self, popo, loc_loc, symbol, sym_xform, check_loc=False):
-        if check_loc and loc_loc >= 0xFFFFFFFFFFFF:
-            return self.not_ok_def()
+        if symbol.value < 0:
+            # When symbol goes with leftover erase.
+            sym_type = MemType.ERASABLE
+        else:
+            # When symbol goes with lefto con or inst.
+            sym_type = MemType.FIXED
+
+        # Branch when memory type is known.
+        midx = 0
+        while loc_loc > self.m_typ_tab[midx][1]:
+            midx += 1
+        mem_type = self.m_typ_tab[midx][0]
+
+        # Br if leftover equated to wrong type.
+        if sym_type != mem_type:
+            # Indicate type error in symbol table.
+            new_health = 0xC
+            return self.end_is(popo, loc_loc, symbol, new_health)
+
+        hi_lim = loc_loc + abs(sym.value)
+        if hi_lim > self._m_typ_tab[midx][1]:
+            new_health = 0xC
+            return self.end_is(popo, loc_loc, symbol, new_health)
+
+        for loc in range(loc_loc, hi_lim):
+            if not self.avail(loc, reserve=True):
+                # Force special transform if conflict
+                sym_xform = 0xA000
+
+        return self.it_is(popo, loc_loc, symbol, sym_xform, adr_wd, adr_symbol)
+
+
+    def it_is(self, popo, loc_loc, symbol, sym_xform, adr_wd, adr_symbol=None, check_loc=False):
+        if check_loc and loc_loc >= ONES:
+            return self.not_ok_def(popo, loc_loc, symbol, sym_xform, adr_wd, adr_symbol)
 
         new_health = (sym_xform >> 3*4) & 0xF
         return self.end_is(popo, loc_loc, symbol, new_health)
@@ -1026,11 +1071,33 @@ class Pass1:
         self.sy_def_xit(loc_loc, symbol, new_health)
         return self.send_popo(popo)
 
-    def not_ok_def(self):
-        pass
+    def not_ok_def(self, popo, loc_loc, symbol, sym_xform, adr_wd, adr_symbol=None):
+        if popo.health & Bit.BIT13:
+            new_health = 0xF
+            return self.end_is(popo, loc_loc, symbol, new_health)
 
-    def no_address(self, popo):
-        pass
+        if popo.health & Bit.BIT14:
+            new_health = (sym_xform >> 1*4) & 0xF
+            return self.end_is(popo, loc_loc, symbol, new_health)
+
+        if abs(adr_wd[1]) > 0o77777:
+            popo.health |= HealthBit.OVERSIZE
+            new_health = (sym_xform >> 1*4) & 0xF
+            return self.end_is(popo, loc_loc, symbol, new_health)
+
+        symbol.definer = adr_symbol.name
+        if symbol.name not in adr_symbol.definees:
+            adr_symbol.definees.append(symbol.name)
+
+        new_health = (sym_xform >> 2*4) & 0xF
+        return self.end_is(popo, adr_wd[1], symbol, new_health)
+
+    def no_adress(self, popo, adr_wd, adr_symbol=None):
+        if (popo.health & HealthBit.CARD_TYPE_MASK) != HealthBit.CARD_TYPE_EQUALS:
+            return self.nd_setloc(popo)
+
+        loc_loc = ONES
+        return self.iseq_lsym(popo, loc_loc, adr_wd, adr_symbol)
 
     def subro(self, popo):
         pass
