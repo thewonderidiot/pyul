@@ -515,7 +515,7 @@ class Pass1:
             low_lim = adr_wd[0]
             hi_lim = abs(adr_wd[1])
 
-            if hi_lim > self.adr_limit:
+            if hi_lim >= self.adr_limit:
                 raise BadMemory(Bit.BIT12)
 
             popo.health |= hi_lim & 0xFFFF
@@ -864,12 +864,171 @@ class Pass1:
 
         unsigned_mask = FieldCodBit.NUMERIC | FieldCodBit.UNSIGNED
         if (self._field_cod[0] & unsigned_mask) == unsigned_mask:
+            # Lone numeric is both limits.
             if self._field_cod[1] == 0:
-                # Lone numeric is both limits.
                 adr_wd[1] = adr_wd[0]
-                return self.ch_er_size()
 
-    def er_loc_sym(self, popo):
+            # Minus sign on modifier means thru.
+            elif not self._field_cod[1] & FieldCodBit.POSITIVE:
+                # Upper limit is negative of modifier.
+                adr_wd[1] = -adr_wd[1]
+                # Branch if limits are in OK order.
+                if adr_wd[0] > adr_wd[1]:
+                    # Bad news when lower limit is greater.
+                    popo.health |= Bit.BIT12
+                    return self.er_loc_sym(popo)
+            else:
+                # For plus modifier, upper limit is sum.
+                adr_wd[0] += adr_wd[1]
+
+            return self.ch_er_size(popo, adr_wd)
+
+        elif self._field_cod[0] == FieldCodBit.SYMBOLIC:
+            # Error if symbol is not ..ANYWHERE..
+            if adr_wd[0] != 'ANYWHERE':
+                popo.health |= Bit.BIT11
+                return self.er_loc_sym(popo)
+
+            # Mark card as leftover.
+            popo.health |= Bit.BIT15
+            if self._field_cod[1] == 0:
+                # When symbol is alone.
+                adr_wd[1] = 0
+                return self.eras_lefto(popo, adr_wd)
+
+            # Bad news when modifier is minus.
+            if adr_wd[1] < 0:
+                popo.health |= Bit.BIT11
+                return self.er_loc_sym(popo)
+
+            # Branch if modifier has OK size
+            if adr_wd[1] <= 0o77777:
+                return self.eras_lefto(popo, adr_wd)
+
+            # When leftover block length too big.
+            popo.health |= Bit.BIT12
+            return self.er_loc_sym(popo)
+
+        else:
+            # Check for illegal loc cntr value.
+            if self._loc_ctr >= ONES:
+                popo.health |= Bit.BIT12
+                return self.er_loc_sym(popo)
+
+            # Branch if address field is not blank.
+            if self._field_cod[0] == 0:
+                # Erase current location only.
+                adr_wd[1] = 0
+            else:
+                # Branch if theres 2 signed numeric parts.
+                if self._field_cod[1] == 0:
+                    adr_wd[1] = adr_wd[0]
+                else:
+                    adr_wd[1] = adr_wd[0] + adr_wd[1]
+
+            # Area begins with loc cntr value anyhow.
+            adr_wd[0] = self._loc_ctr
+
+            # Negative upper limit means through here. Otherwise hi lim gave rel adres of end.
+            if adr_wd[1] >= 0:
+                adr_wd[1] += adr_wd[0]
+
+            # Ensure positive upper limit.
+            adr_wd[1] = abs(adr_wd[1])
+
+            # Branch if limits are in OK order.
+            if (adr_wd[0] > adr_wd[1]) or (adr_wd[1] >= self.adr_limit):
+                popo.health |= Bit.BIT12
+                return self.er_loc_sym(popo, adr_wd[0])
+
+            # For blank or signed num addresses only.
+            self._loc_ctr = adr_wd[1] + 1
+
+            return self.ch_er_size(popo, adr_wd)
+
+    def ch_er_size(self, popo, adr_wd):
+        low_lim = adr_wd[0]
+        hi_lim = adr_wd[1]
+
+        # When address size(s) are wrong.
+        if hi_lim > self.max_loc or low_lim >= ONES:
+            popo.health |= Bit.BIT12
+            return self.er_loc_sym(popo, low_lim)
+
+        # Put limits into card.
+        popo.health |= (low_lim << 16) | hi_lim
+
+        # Look up memory type of lower limit.
+        midx = 0
+        while low_lim > self.m_typ_tab[midx][1]:
+            midx += 1
+        mem_type = self.m_typ_tab[midx][0]
+
+        # Error if lower not erasable.
+        if mem_type != MemType.ERASABLE or hi_lim > self.m_typ_tab[midx][1]:
+            popo.health |= Bit.BIT13
+            return self.er_loc_sym(popo, low_lim)
+
+        # Check availability of block.
+        loc_loc = low_lim
+        while loc_loc <= hi_lim:
+            if not self.avail(loc_loc, reserve=True):
+                # Signal conflict.
+                popo.health |= Bit.BIT14
+            loc_loc += 1
+
+        return self.er_loc_sym(popo, low_lim)
+
+    def er_loc_sym(self, popo, low_lim=0):
+        # Analyze location field of non-leftover.
+        common, value = self.anal_subf(popo.loc_field())
+        if self._field_cod[0] == 0:
+            # OK exit if blank.
+            return self.send_popo(popo)
+
+        unsigned_mask = FieldCodBit.NUMERIC | FieldCodBit.UNSIGNED
+        if (self._field_cod[0] & unsigned_mask) == unsigned_mask:
+            # Error exit if unsigned numeric.
+            popo.health |= Bit.BIT16
+            return self.send_popo(popo)
+        elif self._field_cod[0] != FieldCodBit.SYMBOLIC:
+            # OK exit if signed numeric.
+            return self.send_popo(popo)
+
+        # Analyze location symbol.
+        sym_name = common.strip()
+        symbol = self.anal_symb(sym_name)
+
+        # Get address of location transforms.
+        sym_xform = self._xforms[symbol.health]
+
+        # Symbol health becomes F if illeg. adr.
+        if popo.health & Bit.BIT11:
+            new_health = 0xF
+            return self.end_is(popo, 0, symbol, new_health)
+
+        # Select and apply transform for erase location symbol.
+        if popo.health & Bit.BIT12:
+            # Use transform for oversize assignment.
+            new_health = (sym_xform >> 7*4) & 0xF
+            return self.end_is(popo, 0, symbol, new_health)
+
+        if popo.health & Bit.BIT13:
+            # Use transform for oversize assignment.
+            new_health = (sym_xform >> 6*4) & 0xF
+            return self.end_is(popo, low_lim, symbol, new_health)
+
+        if popo.health & Bit.BIT14:
+            # Use transform for conflict.
+            new_health = (sym_xform >> 5*4) & 0xF
+            return self.end_is(popo, low_lim, symbol, new_health)
+
+        # Use normal erase transform.
+        new_health = (sym_xform >> 8*4) & 0xF
+        return self.end_is(popo, low_lim, symbol, new_health)
+
+    def eras_lefto(self, popo, adr_wd):
+        # FIXME: implement leftovers
         pass
 
     def octal(self, popo):
@@ -1077,6 +1236,8 @@ class Pass1:
             if not self.avail(loc, reserve=True):
                 # Force special transform if conflict
                 sym_xform = 0xA000
+
+        adr_wd[1] = hi_lim
 
         return self.it_is(popo, loc_loc, symbol, sym_xform, adr_wd, adr_symbol)
 
