@@ -845,7 +845,20 @@ class Pass1:
         return None
 
     def head_tail(self, popo):
-        pass
+        if popo.health & HealthBit.ASTERISK:
+            # Asterisk makes illegal op.
+            return self.illeg(popo)
+
+        self._head = popo.loc_field().strip()
+        if self._head == '':
+            self._head = ' '
+        else:
+            self._head = self._head[-1]
+
+        # Store head in POPO.
+        popo.health |= ALPHABET.index(self._head)
+        popo.health |= HealthBit.CARD_TYPE_HEAD
+        return self.send_popo(popo)
 
     def erase(self, popo):
         popo.health |= HealthBit.CARD_TYPE_ERASE
@@ -1040,13 +1053,99 @@ class Pass1:
         return self.inst_dec_oct(popo)
 
     def _2octal(self, popo):
-        pass
+        popo.health |= HealthBit.CARD_TYPE_2OCTAL
+        return self._2oct_2dec(popo)
 
     def _2decimal(self, popo):
-        pass
+        popo.health |= HealthBit.CARD_TYPE_2DECML
+        return self._2oct_2dec(popo)
+
+    def _2oct_2dec(self, popo):
+        # Set up later test
+        self._save_loc = ONES
+
+        self._yul.switch &= ~MemType.MEM_MASK
+        self._yul.switch |= MemType.FIXED
+
+        if popo.card[0] == 'J':
+            # FIXME: Implement leftovers!
+            pass
+        else:
+            # Translate regular location field.
+            self._loc_state = 0
+            self.location(popo)
+
+        popo.health |= self._loc_state
+        if popo.health & (Bit.BIT12 | Bit.BIT14) != 0:
+            # Exit if leftover or oversize location.
+            return self.send_popo(popo)
+
+        # Branch if loc ctr was not saved.
+        if self._save_loc < ONES:
+            self._loc_ctr = (popo.health & 0xFFFF) + 1
+
+        loc_value = self._loc_ctr
+        # Branch if size of 2nd loc is OK.
+        if not self.incr_lctr() or loc_value > self.max_loc:
+            popo.health |= Bit.BIT14
+            self._loc_ctr = ONES
+            return self.dp_loc_end(popo)
+
+        # Find memory type (this happened in LOCATION, but wasn't saved in this port)
+        midx = 0
+        while loc_value > self.m_typ_tab[midx][1]:
+            midx += 1
+
+        # Branch if 1st loc in bad memory type or end of category.
+        if (popo.health & Bit.BIT15) or (popo.health & 0xFFFF == self.m_typ_tab[midx][1]):
+            # Which would mean type error on at least one of the locations.
+            popo.health |= Bit.BIT15
+
+            if popo.health & HealthBit.SYMBOLIC:
+                # If loc is symbolic and in table, use the DP type error transformation.
+                sym_xform = 0xFEECEE9EC900FEEC
+                symbol = self.anal_symb(popo.loc_field().strip())
+                symbol.health = (sym_xform >> (symbol.health*4)) & 0xF
+
+            return self.dp_loc_end(popo)
+
+        # Test and reserve 2nd location. Branch if it was available.
+        if not self.avail(loc_value, reserve=True):
+            popo.health |= Bit.BIT16
+
+            # With same conditions as for type error, use DP conflict transform.
+            if popo.health & HealthBit.SYMBOLIC:
+                sym_xform = 0xFEDEEAEEDA00FEDE
+                symbol = self.anal_symb(popo.loc_field().strip())
+                symbol.health = (sym_xform >> (symbol.health*4)) & 0xF
+
+        return self.dp_loc_end(popo)
+
+    def dp_loc_end(self, popo):
+        if self._save_loc < ONES:
+            # Restore loc ctr and exit.
+            self._loc_ctr = self._save_loc
+        return self.send_popo(popo)
 
     def even(self, popo):
-        pass
+        if popo.health & HealthBit.ASTERISK:
+            # Asterisk makes illegal op.
+            return self.illegop(popo)
+
+        if not popo.address_1().isspace() or not popo.address_2().isspace():
+            # Cuss mildly at non-blank address fields.
+            popo.health |= Bit.BIT13
+
+        if self._loc_ctr >= self.max_loc:
+            # Cuss attempt to fly off the end.
+            popo.health |= Bit.BIT14
+        elif self._loc_ctr & 1:
+            # Location is odd, so add one.
+            self._loc_ctr += 1
+
+        popo.health |= HealthBit.CARD_TYPE_EVEN
+        return self.ch_il_size(popo, self._loc_ctr, [None, None])
+
 
     def is_equals(self, popo):
         popo.health |= HealthBit.CARD_TYPE_EQUALS
@@ -1289,7 +1388,8 @@ class Pass1:
         pass
 
     def late_mem(self, popo):
-        pass
+        popo.heatlh |= HealthBit.CARD_TYPE_2LATE
+        return self.send_popo(popo)
 
 def inish_p1(mon, yul):
     try:
