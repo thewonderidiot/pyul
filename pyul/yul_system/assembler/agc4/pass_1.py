@@ -11,6 +11,7 @@ class AGC4Pass1(Pass1):
         self.blok_ones = 0o1777
         self.mod_shift = 24
         self.blok_shif = 10
+        self.bank_inc = 0
         self.subr_loc = 1024
         self.m_typ_tab = [
             (MemType.SPEC_NON,    0o57),
@@ -256,7 +257,10 @@ class AGC4Pass1(Pass1):
         popo.health |= second_opcode << 14
 
     def agc4_bank(self, popo):
-        pass
+        return self.block(popo)
 
     def agc4_blok(self, popo):
-        pass
+        self.blok_shif = 8
+        result = self.block(popo)
+        self.blok_shif = 10
+        return result

@@ -1381,6 +1381,103 @@ class Pass1:
         loc_loc = ONES
         return self.iseq_lsym(popo, loc_loc, adr_wd, adr_symbol)
 
+    def block(self, popo):
+        # Asterisk makes illegal op.
+        if popo.health & HealthBit.ASTERISK:
+            return self.illegop(popo)
+
+        # Decode address field.
+        adr_wd = self.adr_field(popo)
+        if self._field_cod[0] is None or self._field_cod[0] & FieldCodBit.SYMBOLIC:
+            # When address field is meaningless or there is no numeric part.
+            return self.ilfo_blok(popo)
+
+        # Branch if address field is blank or main part is signed num.
+        unsigned_mask = FieldCodBit.NUMERIC | FieldCodBit.UNSIGNED
+        if (self._field_cod[0] & unsigned_mask) != unsigned_mask:
+            if self._field_cod[0] != 0:
+                if self._field_cod[1] == 0:
+                    adr_wd[1] = adr_wd[0]
+                else:
+                    adr_wd[1] += adr_wd[0]
+
+            if self._loc_ctr >= ONES:
+                # Cannot evaluate rel to bad location.
+                popo.health |= Bit.BIT14
+                return self.block_loc(popo)
+
+            # Set loc value to beginning of bank.
+            loc_value = self._loc_ctr & ~self.blok_ones
+
+            # Show whether modifier is present
+            self._field_cod[1] = self._field_cod[0]
+
+        else:
+            # Shift amount supplied by initialization.
+            loc_value = adr_wd[0] << self.blok_shif
+            loc_value += self.bank_inc
+
+        # Branch if there is no modifier.
+        if self._field_cod[1] != 0:
+            # Error if modifier is minus or modifier greater than block size.
+            if adr_wd[1] < 0 or adr_wd[1] > self.blok_ones:
+                return self.ilfo_blok(popo)
+
+            # Add modifier to shifted numeric.
+            loc_value += adr_wd[1]
+
+        if loc_value > self.max_loc:
+            # Exit for no such block.
+            popo.health |= Bit.BIT11
+            return self.block_loc(popo)
+
+        # Look up memory type.
+        midx = 0
+        while loc_value > self.m_typ_tab[midx][1]:
+            midx += 1
+        mem_type = self.m_typ_tab[midx][0]
+
+        # Branch if in fixed or erasable.
+        if mem_type == MemType.SPEC_NON:
+            # Memory type error exit.
+            popo.health |= Bit.BIT13
+            return self.block_loc(popo)
+
+        loc = loc_value
+        # Form end of major block.
+        loc_value |= self.blok_ones
+
+        # Branch if major block end comes first.
+        if loc_value > self.m_typ_tab[midx][1]:
+            # When minor block end comes first.
+            loc_value = self.m_typ_tab[midx][1]
+
+        # Non-destructive availability test.
+        while loc <= loc_value:
+            # Branch if available.
+            if self.avail(loc, reserve=False):
+                # Store found address.
+                popo.health |= loc
+                # Set loc ctr accordingly.
+                self._loc_ctr = loc
+                return self.block_loc(popo)
+
+            loc += 1
+
+        # When block is full.
+        popo.health |= Bit.BIT10
+        return self.block_loc(popo)
+
+    def ilfo_blok(self, popo):
+        popo.health |= Bit.BIT12
+        return self.block_loc(popo)
+
+    def block_loc(self, popo):
+        if not popo.loc_field().isspace():
+            popo.health |= Bit.BIT8
+        popo.health |= HealthBit.CARD_TYPE_BLOCK
+        return self.send_popo(popo)
+
     def subro(self, popo):
         pass
 
