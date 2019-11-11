@@ -1,5 +1,11 @@
 from yul_system.types import ALPHABET
 
+class Cuss:
+    def __init__(self, msg, poison=False):
+        self.msg = msg
+        self.poison = poison
+        self.requested = False
+
 class Pass2:
     def __init__(self, mon, yul, adr_limit):
         self._mon = mon
