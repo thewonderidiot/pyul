@@ -142,3 +142,4 @@ class Symbol:
         self.value = value
         self.definer = definer
         self.definees = []
+        self.analyzer = 0

@@ -365,6 +365,10 @@ class Yul:
         # Include computer name in page heading.
         if head_msg is None:
             head_msg = objc_msg
+
+        # Omit computer name from "END OF" line.
+        self.old_line = head_msg + self._yul_date
+
         head_comp_msg = '%s: %s' % (self.comp_name, head_msg)
         head_comp_msg = '%-66s' % head_comp_msg
 
@@ -436,10 +440,14 @@ class Yul:
 
     def init_assy(self):
         # Procedure to initialize a permissible assembly or reprint.
-        # FIXME: Set things up for pass 1!
         # Initialize symbol table
         self.sym_thr = {}
+
+        # Initialize availability table.
         self.av_table = [0]*2048
+
+        # Initialize POPO list
+        self.popos = []
 
         sub_card, sub_sent = self.rd_subdrc()
         while sub_card is not None:

@@ -42,11 +42,12 @@ class Pass1:
         self._yul = yul
         self._real_cdno = 0
         self._field_cod = [None, None]
-        self._end_of = POPO(health=0, card='⌑999999Q' + 72*' ')
+        self._end_of = POPO(health=0, card='⌑999999Q' + '%-72s' % yul.old_line)
         self._early = True
         self._op_found = None
-        self._test_done = False
+        self._send_endo = False
         self._loc_state = 0
+        self._renumber = 0
         self._head = ' '
         self._xforms = [
             0x4689A5318F,
@@ -73,18 +74,8 @@ class Pass1:
             self._loc_ctr = self.subr_loc
         else:
             self._loc_ctr = ONES
-        self.get_real()
 
-        print('\nSYMBOL TABLE:')
-        print('-------------')
-        syms = sorted(self._yul.sym_thr.keys(), key=lambda sym: [ALPHABET.index(c) for c in sym])
-        for sym in syms:
-            s = self._yul.sym_thr[sym]
-            print('%-8s: %04o (%x)' % (sym, s.value, s.health))
-            if s.definer is not None:
-                print('  - Defined by: %s' % s.definer)
-            if len(s.definees) > 0:
-                print('  - Defines:    %s' % ', '.join(s.definees))
+        return self.get_real()
 
     def get_real(self):
         # Get real is normally the chief node of pass 1. Occasionally merge control procedures take
@@ -94,8 +85,8 @@ class Pass1:
             # Get a card and branch on no end of file.
             card = self.get_card()
             if card is None:
-                # Run out tape cards at end of file.
-                break
+                self._real = self._end_of
+                return self.tp_runout()
 
             if self._yul.switch & SwitchBit.MERGE_MODE:
                 if not self._yul.switch & SwitchBit.TAPE_KEPT:
@@ -106,6 +97,46 @@ class Pass1:
                         return
 
             self.modif_chk()
+
+    def tp_runout(self):
+        if not self._yul.switch & SwitchBit.MERGE_MODE:
+            self.proc_real()
+
+        if self._yul.switch & SwitchBit.TAPE_KEPT:
+            self.proc_tape()
+
+        self._tape = self.get_tape()
+        while self._tape is not None:
+            self.proc_tape()
+            self._tape = self.get_tape()
+
+        return self.end_pass_1()
+
+    def end_pass_1(self):
+        if self._yul.popos[-1].health != 0:
+            print(self._yul.popos[-1].card)
+            raise Disaster()
+
+        if self._yul.switch & SwitchBit.FREEZE:
+            self.send_popo(self._end_of)
+
+        # FIXME: check for merge errors
+
+        # FIXME: play with number of copies?
+
+        self._mon.mon_typer('END YUL PASS 1')
+
+        # FIXME: do segment things
+
+        try:
+            comp_mod = importlib.import_module('yul_system.assembler.' + self._yul.comp_name.lower() + '.pass_2')
+            comp_pass2_class = getattr(comp_mod, self._yul.comp_name + 'Pass2')
+            comp_pass2 = comp_pass2_class(self._mon, self._yul, self.adr_limit)
+        except:
+            self._mon.mon_typer('UNABLE TO LOAD PASS 2 FOR COMPUTER %s' % self._yul.comp_name)
+            self._yul.typ_abort()
+
+        return comp_pass2.pass_1p5()
 
     def get_card(self):
         # Subroutine in pass 1 to get a real card. Normally performs card number checking. Response
@@ -225,8 +256,38 @@ class Pass1:
         return self._real.card
 
     def send_popo(self, popo):
-        # FIXME: Renumber and append POPO
-        print('%016o:%s' % (popo.health, popo.card))
+        if self._yul.switch & SwitchBit.RENUMBER:
+            card_type = popo.health & HealthBit.CARD_TYPE_MASK
+            if card_type >= HealthBit.CARD_TYPE_REMARK:
+                if (card_type >= HealthBit.CARD_TYPE_REMARK) and (popo.card[0] == 'L'):
+                    self._renumber = 0
+                    return self.move_popo(popo)
+
+                # Wipe out obsolete sequence error bit.
+                popo.health &= ~Bit.BIT7
+                vert_format = ord(popo.card[7])
+
+                if self._renumber > 999898:
+                    vert_format |= 0x20
+                    popo.card = popo.card[0] + 'SEQBRK' + chr(vert_format) + popo.card[8:]
+                    self._renumber = 0
+                    return self.move_popo(popo)
+                
+                self._renumber += 100
+
+                # Erase old sequence break flag.
+                vert_format &= ~0x20
+
+                popo.card = popo.card[0] + ('%06d' % self._renumber) + chr(vert_format) + popo.card[8:]
+
+            elif card_type > HealthBit.CARD_TYPE_CARDNO:
+                # Shut off renumbering on bad merge.
+                self._yul.switch &= ~SwitchBit.RENUMBER
+
+        return self.move_popo(popo)
+
+    def move_popo(self, popo):
+        self._yul.popos.append(popo)
 
     def modif_chk(self):
         # See if operation code of real card is "MODIFY". But don't be fooled by a remarks card.
@@ -295,6 +356,11 @@ class Pass1:
             popo.health |= HealthBit.CARD_TYPE_REMARK
             return self.send_popo(popo)
 
+        # Check for "END OF" information from tape or (new program or subro) from pass 0.
+        if popo.cardno_wd() == self._end_of.cardno_wd():
+            popo.health |= HealthBit.CARD_TYPE_END_OF
+            return self.end_of(popo)
+
         op_field = popo.op_field()[1:7]
 
         if self._early:
@@ -346,6 +412,22 @@ class Pass1:
             return self.illegop(popo)
 
         return self.inst_dec_oct(popo)
+
+    def end_of(self, popo):
+        if not self._send_endo:
+            self._send_endo = True
+            # The subroutines are known.
+            self._yul.switch |= SwitchBit.KNOW_SUBS
+            # Prohibit renumbering in subroutines.
+            self._yul.switch &= ~SwitchBit.RENUMBER
+
+            # FIXME: set up first subro
+
+        # FIXME: set up next subro
+
+        # Exit via SEND POPO unless freezing subs.
+        if not self._yul.switch & SwitchBit.FREEZE:
+            return self.send_popo(popo)
 
     def illegop(self, popo):
         self._yul.switch &= ~(Bit.BIT25 | Bit.BIT26 | Bit.BIT27)
