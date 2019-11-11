@@ -1189,4 +1189,44 @@ P0801252THE FOLLOWING STORAGE IS RESERVED EXCLUSIVELY FOR SELF-CHECK
  0814   SKEEP5   =      1775
  0815   SKEEP6   =      1776
  0816   SKEEP7   EQUALS 1777
+L 001  2INTERRUPT TRANSFER ROUTINES
+ 0001  2         SETLOC 2000
+ 0002            TS     ARUPT
+ 0003            XCH    Q
+ 0004            XCH    QRUPT
+ 0005  2         TC     T3RUPT
+ 0006            TS     ARUPT
+ 0007            XCH    Q
+ 0008            XCH    QRUPT
+ 0009  2         TC     ERRUPT
+ 0010            TS     ARUPT
+ 0011            XCH    Q
+ 0012            XCH    QRUPT
+ 0013  2         TC     T4RUPT          OUTPUT CONTROL.
+ 0014            TS     ARUPT
+ 0015            XCH    Q
+ 0016            XCH    QRUPT
+ 0017  2         TC     KEYRUPT
+ 0018            TS     ARUPT
+ 0019            XCH    Q
+ 0020            XCH    QRUPT
+ 0021  2         TC     UPRUPT
+ 0022            TS     ARUPT
+ 0023            XCH    Q
+ 0024            XCH    QRUPT
+ 0025  2         TC     DOWNRUPT        DOWNLINK.
+ 0026            INHINT                 GOJAM - PARITY ALARM, POWER FAIL, ETC.
+ 0027  2         CAF    EXECBANK
+ 0028            TS     BANKREG
+ 0029  8         TC     GOPROG
+ 0030   ERRUPT   TC     ALARM           ***NO ERRUPTS IN SYSTEM 5***
+ 0031            OCT    01101
+ 0032  2         TC     NBRESUME
+ 0033   UPRUPT   CAF    UPBANK          CALL IN BANK WITH UPRUPT PROGRAM.
+ 0034            XCH    BANKREG
+ 0035  2         TC     UPRUPTB
+ 0036   KEYRUPT  CAF    MODEBANK
+ 0037            XCH    BANKREG
+ 0038  2         TC     KEYRUPTA
+ 0039   MODEBANK CADR   KEYRUPTA
 *       ENDOFJOB
