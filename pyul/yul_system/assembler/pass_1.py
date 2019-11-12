@@ -287,6 +287,7 @@ class Pass1:
         return self.move_popo(popo)
 
     def move_popo(self, popo):
+        #print('%016o:%s' % (popo.health, popo.card))
         self._yul.popos.append(popo)
 
     def modif_chk(self):

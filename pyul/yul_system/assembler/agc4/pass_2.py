@@ -5,7 +5,7 @@ class AGC4Pass2(Pass2):
         super().__init__(mon, yul, adr_limit)
 
         self.cuss_list = [
-            Cuss('CARD NUMBER OUT OF SEQUENCE'),
+            Cuss('CARD NUMBER OUT OF SEQUENCE     '),
             Cuss('NO "D" IN DECIMAL SUBFIELD'),
             Cuss('ILLEGAL OR MIS-SPELLED OPERATION CODE', poison=True),
 

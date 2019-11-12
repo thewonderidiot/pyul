@@ -65,6 +65,7 @@ class SwitchBit:
     KNOW_SUBS         = Bit.BIT5
     SEGMENT           = Bit.BIT7
     BEFORE            = Bit.BIT8
+    LAST_REM          = Bit.BIT8
     SUBROUTINE        = Bit.BIT9
     REVISION          = Bit.BIT10
     REPRINT           = Bit.BIT11
@@ -77,11 +78,13 @@ class SwitchBit:
     CONDISH_SYMBOL    = Bit.BIT19
     CONDISH_OCTAL     = Bit.BIT20
     BEGINNING_OF_EQU  = Bit.BIT29
+    PRINT             = Bit.BIT44
 
 class HealthBit:
     CARD_TYPE_MASK   = Bit.BIT1 | Bit.BIT2 | Bit.BIT3 | Bit.BIT4 | Bit.BIT5 | Bit.BIT6
     CARD_TYPE_END_OF =        0 |        0 |        0 |        0 |        0 |        0 # 00
     CARD_TYPE_MODIFY =        0 |        0 |        0 |        0 |        0 | Bit.BIT6 # 01
+    CARD_TYPE_ENDERR =        0 |        0 |        0 |        0 | Bit.BIT5 |        0 # 02
     CARD_TYPE_CARDNO =        0 |        0 |        0 |        0 | Bit.BIT5 | Bit.BIT6 # 03
     CARD_TYPE_ACCEPT =        0 |        0 |        0 | Bit.BIT4 |        0 |        0 # 04
     CARD_TYPE_DELETE =        0 |        0 |        0 | Bit.BIT4 |        0 | Bit.BIT6 # 05

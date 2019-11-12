@@ -1,4 +1,4 @@
-from yul_system.types import ALPHABET
+from yul_system.types import ALPHABET, SwitchBit
 
 class Cuss:
     def __init__(self, msg, poison=False):
@@ -12,9 +12,71 @@ class Pass2:
         self._yul = yul
         self._adr_limit = adr_limit
         self._def_xform = 0o31111615554
+        self._marker = '*'
+        self._line = ' '*120
+        self._old_line = ' '*120
+
+    def pass_2(self):
+        for popo in self._yul.popos:
+            # Clear location symbol switch.
+            self._equaloc = 0
+            # Branch if last card wasnt remarks
+            if self._yul.switch & SwitchBit.LAST_REM:
+                self._yul.switch &= ~SwitchBit.LAST_REM
+                # Branch if this card isnt right print.
+                if (popo.health & HealthBit.CARD_TYPE_MASK) == HealthBit.CARD_TYPE_RIGHTP:
+                    # Branch if line unaffected by this rev.
+                    vert_format = ord(popo.card[7])
+                    if vert_format & 0x10:
+                        self._old_line = self._old_line[:7] + self._marker + self._marker[8:]
+                        self._marker = '*'
+
+                    self.send_sypt(popo.card)
+
+                    # Set right print remarks in print.
+                    self._old_line = self._old_line[:80] + popo.card[8:48]
+
+                    # Branch if no right print cardno error.
+                    if not popo.health & Bit.BIT7:
+                        self.cusser()
+                        continue
+
+                    # Make up card number error note.
+                    self._line = self._line[:88] + self.cuss_list[0].msg
+                    if self.cuss_list[0].requested:
+                        self.rem_cn_err(popo)
+                        continue
+            else:
+                self.rem_cn_err(popo)
+
+        return self.end_pass_2()
+
+    def rem_cn_err(self, popo):
+        pass
+
+    def end_pass_2(self):
+        pass
+
+    def send_sypt(self, card):
+        pass
+
+    def cusser(self):
+        pass
 
     def pass_1p5(self):
+        # print('\nSYMBOL TABLE:')
+        # print('-------------')
+        # syms = sorted(self._yul.sym_thr.keys(), key=lambda sym: [ALPHABET.index(c) for c in sym])
+        # for sym in syms:
+        #     s = self._yul.sym_thr[sym]
+        #     print('%-8s: %04o (%x)' % (sym, s.value, s.health))
+        #     if s.definer is not None:
+        #         print('  - Defined by: %s' % s.definer)
+        #     if len(s.definees) > 0:
+        #         print('  - Defines:    %s' % ', '.join(s.definees))
+
         # FIXME: resolve leftovers
+
         self.resolvem()
         self.assy_typ_q()
 
@@ -80,4 +142,27 @@ class Pass2:
             self.definem(def_symbol)
 
     def assy_typ_q(self):
-        pass
+        if not self._yul.switch & SwitchBit.REPRINT:
+            return self.real_assy()
+
+        # FIXME: handle revisions and bad merges
+
+    # Assembly of a new program or subroutine, or a well-merged revision or version. Clean out the
+    # delete list and refurbish the lists of threads to subsidiary subroutines.
+    def real_assy(self):
+        # FIXME: handle deletes?
+        # FIXME: create files, update metadata
+        return self.inish_p2()
+
+    # Initializing procedure for pass 2.
+    def inish_p2(self):
+        # Turn on print switch for main part.
+        self._yul.switch |= SwitchBit.PRINT
+
+        # Initialize count of word records.
+        self._n_word_recs = 0
+        self._yul.switch &= ~SwitchBit.LAST_REM
+
+        self._err_pages = 0
+
+        return self.pass_2()
