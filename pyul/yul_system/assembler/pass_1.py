@@ -8,6 +8,26 @@ class POPO:
     def __init__(self, health=0, card=''):
         self.health = health
         self.card = card
+        self.marked = False
+        self.seq_break = False
+
+    def mark(self):
+        if not self.marked:
+            vert_format = ord(self.card[7])
+            self.card = self.card[:7] + chr(vert_format + 0x10) + self.card[8:]
+            self.marked = True
+
+    def set_seq_break(self):
+        if not self.seq_break:
+            vert_format = ord(self.card[7])
+            self.card = self.card[:7] + chr(vert_format + 0x20) + self.card[8:]
+            self.seq_break = True
+
+    def clear_seq_break(self):
+        if self.seq_break:
+            vert_format = ord(self.card[7])
+            self.card = self.card[:7] + chr(vert_format - 0x20) + self.card[8:]
+            self.seq_break = False
 
     def cardno_wd(self):
         return self.card[0:8]
@@ -174,14 +194,9 @@ class Pass1:
             # Insert form-skip for non-numeric.
             self._real.card = self._real.card[:7] + '8' + self._real.card[8:]
 
-        # Clear zone bits of vertical format.
-        vertical_format = ord(self._real.card[7]) & 0xF
-
         # Mark all cards entering during merging.
         if self._yul.switch & SwitchBit.MERGE_MODE:
-            vertical_format |= 0x10
-
-        self._real.card = self._real.card[:7] + chr(vertical_format) + self._real.card[8:]
+            self._real.mark()
 
         # Blot out undesirable column 1 contents.
         if not (self._real.card[0].isalnum() or self._real.card[0] in '= '):
@@ -236,8 +251,7 @@ class Pass1:
 
         if seq_break:
             # Insert sequence break bit in card.
-            vertical_format |= 0x20
-            self._real.card = self._real.card[:7] + chr(vertical_format) + self._real.card[8:]
+            self._real.set_seq_break()
 
             # Set up criterion after sequence break.
             self._real_cdno = Bit.BIT6
@@ -265,20 +279,19 @@ class Pass1:
 
                 # Wipe out obsolete sequence error bit.
                 popo.health &= ~Bit.BIT7
-                vert_format = ord(popo.card[7])
 
                 if self._renumber > 999898:
-                    vert_format |= 0x20
-                    popo.card = popo.card[0] + 'SEQBRK' + chr(vert_format) + popo.card[8:]
+                    popo.set_seq_break()
+                    popo.card = popo.card[0] + 'SEQBRK' + popo.card[7:]
                     self._renumber = 0
                     return self.move_popo(popo)
                 
                 self._renumber += 100
 
                 # Erase old sequence break flag.
-                vert_format &= ~0x20
+                popo.clear_seq_break()
 
-                popo.card = popo.card[0] + ('%06d' % self._renumber) + chr(vert_format) + popo.card[8:]
+                popo.card = popo.card[0] + ('%06d' % self._renumber) + popo.card[7:]
 
             elif card_type > HealthBit.CARD_TYPE_CARDNO:
                 # Shut off renumbering on bad merge.
@@ -287,7 +300,6 @@ class Pass1:
         return self.move_popo(popo)
 
     def move_popo(self, popo):
-        #print('%016o:%s' % (popo.health, popo.card))
         self._yul.popos.append(popo)
 
     def modif_chk(self):

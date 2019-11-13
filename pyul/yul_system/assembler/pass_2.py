@@ -1,10 +1,15 @@
-from yul_system.types import ALPHABET, SwitchBit
+from yul_system.types import ALPHABET, SwitchBit, HealthBit, Bit
 
 class Cuss:
     def __init__(self, msg, poison=False):
         self.msg = msg
         self.poison = poison
         self.requested = False
+
+class Line:
+    def __init__(self, text='', config=0):
+        self.config = config
+        self.text = text
 
 class Pass2:
     def __init__(self, mon, yul, adr_limit):
@@ -13,28 +18,60 @@ class Pass2:
         self._adr_limit = adr_limit
         self._def_xform = 0o31111615554
         self._marker = '*'
-        self._line = ' '*120
-        self._old_line = ' '*120
+        self._line = Line(' '*120)
+        self._old_line = Line(' '*120)
+        self._user_log = Line(' '*81 + 'USER\'S OWN PAGE NO.' + 20*' ', config=Bit.BIT11)
+        self._card_typs = [
+            (self.end_of,      2),
+            (self.modify,      3),
+            (self.end_error,   2),
+            (self.card_no,     3),
+            (self.accept,      2),
+            (self.delete,      3),
+            (self.remarks,     2),
+            (self.disaster,    0),
+            (self.no_loc_sym,  2),
+            (self.memory,      3),
+            (self.instruct,    2),
+            (self.illegop,     2),
+            (self.decimal,     0),
+            (self.octal,       0),
+            (self.equals,      3),
+            (self.setloc,      3),
+            (self.erase,       3),
+            (self._2octal,     0),
+            (self._2decimal,   0),
+            (self.block,       3),
+            (self.head_tail,   3),
+            (self.too_late,    3),
+            (self.subro,       3),
+            (self.instruct_p1, 3),
+            (self.even,        3),
+            (self.count,       3),
+            (self.segnum,      3),
+        ]
 
     def pass_2(self):
         for popo in self._yul.popos:
+            card_type = popo.health & HealthBit.CARD_TYPE_MASK
+
             # Clear location symbol switch.
             self._equaloc = 0
+
             # Branch if last card wasnt remarks
             if self._yul.switch & SwitchBit.LAST_REM:
                 self._yul.switch &= ~SwitchBit.LAST_REM
                 # Branch if this card isnt right print.
-                if (popo.health & HealthBit.CARD_TYPE_MASK) == HealthBit.CARD_TYPE_RIGHTP:
+                if card_type == HealthBit.CARD_TYPE_RIGHTP:
                     # Branch if line unaffected by this rev.
-                    vert_format = ord(popo.card[7])
-                    if vert_format & 0x10:
-                        self._old_line = self._old_line[:7] + self._marker + self._marker[8:]
+                    if popo.marked:
+                        self._old_line.text = self._old_line.text[:7] + self._marker + self._old_line.text[8:]
                         self._marker = '*'
 
                     self.send_sypt(popo.card)
 
                     # Set right print remarks in print.
-                    self._old_line = self._old_line[:80] + popo.card[8:48]
+                    self._old_line.text = self._old_line.text[:80] + popo.card[8:48]
 
                     # Branch if no right print cardno error.
                     if not popo.health & Bit.BIT7:
@@ -42,12 +79,70 @@ class Pass2:
                         continue
 
                     # Make up card number error note.
-                    self._line = self._line[:88] + self.cuss_list[0].msg
+                    self._line.text = self._line.text[:88] + self.cuss_list[0].msg
                     if self.cuss_list[0].requested:
                         self.rem_cn_err(popo)
                         continue
+
+                    # If 1st cuss of page, left end of blots.
+                    self.go_num_cus()
+                    self.count_cus(6)
+                    continue
             else:
-                self.rem_cn_err(popo)
+                if self.cuss_list[0].requested:
+                    self.rem_cn_err(popo)
+
+            # Procedure when last card was not left print remarks.
+            # Set up columns 1-7.
+            self._line.text = popo.card[:7] + self._line.text[7:]
+
+            # Branch if line affected by this revision
+            if popo.marked:
+                self._line.text = self._line.text[:7] + self._marker + self._line.text[8:]
+                self._marker = '*'
+
+            # Maybe cuss card number sequence error.
+            if popo.health & Bit.BIT7:
+                self.cuss_list[0].requested = True
+
+            # Branch if card is not right print
+            if card_type == HealthBit.CARD_TYPE_RIGHTP:
+                # Print under 1st half of remarks field.
+                self._line.text = self._line.text[:80] + popo.card[8:48]
+                # Make right print a continuation card.
+                self._line.text = 'C' + self._line.text[1:]
+                self.no_loc_sym(popo)
+                continue
+
+            vert_format = ord(popo.card[7]) & 0xF
+            if vert_format == 8:
+                # Maybe set up skip bit.
+                self._line.config |= Bit.BIT1
+            else:
+                # Maybe set up space count.
+                self._line.config |= vert_format * Bit.BIT12
+
+            # Set up columns 9-80.
+            self._line.text = self._line.text[:48] + popo.card[8:]
+
+            # Turn off leftover switch.
+            self._yul.switch &= ~SwitchBit.LEFTOVER
+
+            # Set up branches on card type.
+            own_proc, ternary_key = self._card_typs[card_type // Bit.BIT6]
+
+            # Use ternary key to check whether columns 1, 17, and 24 contain
+            # queer information.
+            if ternary_key == 3 or (ternary_key == 0 and popo.card[0] != 'J'):
+                if popo.card[0] != ' ':
+                    self.cuss_list[60].requested = True
+                if popo.card[16] != ' ':
+                    self.cuss_list[61].requested = True
+                if popo.card[23] != ' ':
+                    self.cuss_list[62].requested = True
+
+            own_proc(popo)
+            print(self._line.text)
 
         return self.end_pass_2()
 
@@ -57,12 +152,138 @@ class Pass2:
     def end_pass_2(self):
         pass
 
+    def end_of(self, popo):
+        pass
+
+    def modify(self, popo):
+        pass
+
+    def end_error(self, popo):
+        pass
+
+    def card_no(self, popo):
+        pass
+
+    def accept(self, popo):
+        pass
+
+    def delete(self, popo):
+        pass
+
+    # Procedure in pass 2 for remarks cards. Postpones cussing to check for a right print card.
+    def remarks(self, popo):
+        # Move remark 5 words left. Fill out line with blanks.
+        self._line.text = self._line.text[:8] + self._line.text[48:] + 40*' '
+        # Signal that last was remarks, print.
+        self._yul.switch |= SwitchBit.LAST_REM
+        self.print_lin()
+        self.send_sypt(popo)
+
+    def disaster(self, popo):
+        pass
+
+    def no_loc_sym(self, popo):
+        pass
+
+    def memory(self, popo):
+        pass
+
+    def instruct(self, popo):
+        pass
+
+    def illegop(self, popo):
+        pass
+
+    def decimal(self, popo):
+        pass
+
+    def octal(self, popo):
+        pass
+
+    def equals(self, popo):
+        pass
+
+    def setloc(self, popo):
+        pass
+
+    def erase(self, popo):
+        pass
+
+    def _2octal(self, popo):
+        pass
+
+    def _2decimal(self, popo):
+        pass
+
+    def block(self, popo):
+        pass
+
+    def head_tail(self, popo):
+        pass
+
+    def too_late(self, popo):
+        pass
+
+    def subro(self, popo):
+        pass
+
+    def instruct_p1(self, popo):
+        pass
+
+    def even(self, popo):
+        pass
+
+    def count(self, popo):
+        pass
+
+    def segnum(self, popo):
+        pass
+
     def send_sypt(self, card):
+        pass
+
+    def go_num_cus(self):
+        pass
+
+    def count_cus(self, offset):
         pass
 
     def cusser(self):
         pass
 
+    def print_lin(self):
+        # New line ages suddenly.
+        self._old_line = self._line
+
+        if self._line.text[0] == 'L':
+            if self._line.config == Bit.BIT12:
+                # Change log card SP1 to SP2.
+                self._line.config = Bit.BIT11
+
+            # Erase any special flag at end of loglin.
+            self._user_log.text = self._user_log.text[:116] + ' '*4
+
+            # Lose any right print on log card.
+            self._yul.switch &= ~SwitchBit.LAST_REM
+
+            # Always start page number at 1.
+            self._user_log.text = self._user_log.text[:100] + '   1' + self._user_log.text[104:]
+
+            # Keep log line for page subheads.
+            self._user_log.text = self._line.text[:80] + self._user_log.text[80:]
+
+            # Set up "USER'S OWN PAGE NO."
+            self._user_page = 1
+
+        else:
+            # Make card number look helpful by suppressing at most two zeros.
+            # From right to left (columns 7 and 6).
+            if self._line.text[6] == '0':
+                self._line.text = self._line.text[:6] + ' ' + self._line.text[7:]
+                if self._line.text[5] == '0':
+                    self._line.text = self._line.text[:5] + ' ' + self._line.text[6:]
+
+        
     def pass_1p5(self):
         # print('\nSYMBOL TABLE:')
         # print('-------------')

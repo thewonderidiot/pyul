@@ -60,6 +60,7 @@ class Bit:
 class SwitchBit:
     RENUMBER          = Bit.BIT1
     MERGE_MODE        = Bit.BIT2
+    LEFTOVER          = Bit.BIT2
     TAPE_KEPT         = Bit.BIT3
     ANOTHER_TASK      = Bit.BIT4
     KNOW_SUBS         = Bit.BIT5

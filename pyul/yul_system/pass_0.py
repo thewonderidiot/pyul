@@ -145,7 +145,7 @@ class Yul:
 
         # Format the date
         now = datetime.now()
-        self._yul_date = '%s %u, %u' % (MONTHS[now.month], now.day, now.year)
+        self._yul_date = '%s %u, %u' % (MONTHS[now.month-1], now.day, now.year)
 
 
     def set_pg_hed(self):
