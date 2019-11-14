@@ -5,6 +5,7 @@ import sys
 import random
 from datetime import datetime
 from yul_system import pass_0
+from yul_system.types import Bit
 
 class Monitor:
     def __init__(self, card_deck, typewriter=sys.stderr, lineprinter=sys.stdout):
@@ -34,8 +35,16 @@ class Monitor:
     def mon_typer(self, s, end='\n'):
         print(s, file=self._typewriter, end=end)
 
-    def phi_print(self, s):
-        print(s, file=self._lineprinter)
+    def phi_print(self, s, spacing=1):
+        page_sep = False
+        if spacing & Bit.BIT1:
+            spacing = 1
+            page_sep = True
+        elif spacing <= 1:
+            spacing = 1
+        print(s, file=self._lineprinter, end='\n'*spacing)
+        if page_sep:
+            print('\n'+'-'*120+'\n', file=self._lineprinter)
 
     def phi_read(self):
         # Return the contents of the last read punch card

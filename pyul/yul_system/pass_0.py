@@ -36,9 +36,9 @@ class Yul:
         self._task_msg = ''
         self._yul_date = ''
         self._yul_log_a = 'A'
-        self._n_lines = 54
-        self._n_copies = 0
-        self._page_head = 'LOGNO.  YUL SYSTEM FOR                  ' + \
+        self.n_lines = 54
+        self.n_copies = 0
+        self.page_head = 'LOGNO.  YUL SYSTEM FOR                  ' + \
                           '                                        ' + \
                           '                        (MAIN)  PAGE   0'
 
@@ -154,7 +154,7 @@ class Yul:
             self._no_revise = True
 
         # Put log and date in page heading.
-        self._page_head = self._yul_log_a + self._page_head[7:90] + self._yul_date + self._page_head[90+len(self._yul_date):]
+        self.page_head = self._yul_log_a + self.page_head[7:90] + self._yul_date + self.page_head[90+len(self._yul_date):]
 
     def rejec_dir(self, card):
         # Director or subdirector rejected.
@@ -372,7 +372,7 @@ class Yul:
         head_comp_msg = '%s: %s' % (self.comp_name, head_msg)
         head_comp_msg = '%-66s' % head_comp_msg
 
-        self._page_head = self._page_head[:23] + head_comp_msg + self._page_head[89:]
+        self.page_head = self.page_head[:23] + head_comp_msg + self.page_head[89:]
 
         # Seek computer name in directory.
         comp = self._yulprogs.find_comp(self.comp_name)
@@ -482,18 +482,18 @@ class Yul:
                 if num < 10:
                     self.num_rng_er(sub_card)
 
-                if self._n_lines != 54:
+                if self.n_lines != 54:
                     self.duplisub(sub_card)
 
-                self._n_lines = num
+                self.n_lines = num
                 self._mon.mon_typer('PRINT %u LINES PER PAGE' % num)
                 return
 
             elif sub_sent[word] == 'COPIES':
-                if self._n_copies != 0:
+                if self.n_copies != 0:
                     self.duplisub(sub_card)
 
-                self._n_copies = num
+                self.n_copies = num
             
             else:
                 self.unrc_sbdr(sub_card, sub_sent[word])

@@ -152,8 +152,8 @@ class Pass1:
             comp_mod = importlib.import_module('yul_system.assembler.' + self._yul.comp_name.lower() + '.pass_2')
             comp_pass2_class = getattr(comp_mod, self._yul.comp_name + 'Pass2')
             comp_pass2 = comp_pass2_class(self._mon, self._yul, self.adr_limit)
-        except:
-            self._mon.mon_typer('UNABLE TO LOAD PASS 2 FOR COMPUTER %s' % self._yul.comp_name)
+        except Exception as e:
+            self._mon.mon_typer('UNABLE TO LOAD PASS 2 FOR COMPUTER %s: %s' % (self._yul.comp_name, e.text.upper()))
             self._yul.typ_abort()
 
         return comp_pass2.pass_1p5()
@@ -1588,8 +1588,8 @@ def inish_p1(mon, yul):
         comp_mod = importlib.import_module('yul_system.assembler.' + yul.comp_name.lower() + '.pass_1')
         comp_pass1_class = getattr(comp_mod, yul.comp_name + 'Pass1')
         comp_pass1 = comp_pass1_class(mon, yul)
-    except:
-        mon.mon_typer('UNABLE TO LOAD PASS 1 FOR COMPUTER %s' % yul.comp_name)
+    except Exception as e:
+        mon.mon_typer('UNABLE TO LOAD PASS 1 FOR COMPUTER %s: %s' % (yul.comp_name, e.text.upper()))
         yul.typ_abort()
 
     comp_pass1.m_special()

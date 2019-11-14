@@ -7,8 +7,8 @@ class Cuss:
         self.requested = False
 
 class Line:
-    def __init__(self, text='', config=0):
-        self.config = config
+    def __init__(self, text=' '*120, spacing=0):
+        self.spacing = spacing
         self.text = text
 
 class Pass2:
@@ -18,9 +18,12 @@ class Pass2:
         self._adr_limit = adr_limit
         self._def_xform = 0o31111615554
         self._marker = '*'
-        self._line = Line(' '*120)
-        self._old_line = Line(' '*120)
-        self._user_log = Line(' '*81 + 'USER\'S OWN PAGE NO.' + 20*' ', config=Bit.BIT11)
+        self._lin_count = 0
+        self._page_no = 0
+        self._user_page = 0
+        self._line = Line()
+        self._old_line = Line()
+        self._user_log = Line(' '*81 + 'USER\'S OWN PAGE NO.' + 20*' ', spacing=2)
         self._card_typs = [
             (self.end_of,      2),
             (self.modify,      3),
@@ -117,10 +120,10 @@ class Pass2:
             vert_format = ord(popo.card[7]) & 0xF
             if vert_format == 8:
                 # Maybe set up skip bit.
-                self._line.config |= Bit.BIT1
+                self._line.spacing |= Bit.BIT1
             else:
                 # Maybe set up space count.
-                self._line.config |= vert_format * Bit.BIT12
+                self._line.spacing |= vert_format
 
             # Set up columns 9-80.
             self._line.text = self._line.text[:48] + popo.card[8:]
@@ -142,7 +145,6 @@ class Pass2:
                     self.cuss_list[62].requested = True
 
             own_proc(popo)
-            print(self._line.text)
 
         return self.end_pass_2()
 
@@ -253,12 +255,13 @@ class Pass2:
 
     def print_lin(self):
         # New line ages suddenly.
+        old_line = self._old_line
         self._old_line = self._line
 
         if self._line.text[0] == 'L':
-            if self._line.config == Bit.BIT12:
+            if self._line.spacing <= 1:
                 # Change log card SP1 to SP2.
-                self._line.config = Bit.BIT11
+                self._line.spacing = 2
 
             # Erase any special flag at end of loglin.
             self._user_log.text = self._user_log.text[:116] + ' '*4
@@ -274,16 +277,255 @@ class Pass2:
 
             # Set up "USER'S OWN PAGE NO."
             self._user_page = 1
+            self._line.text = self._line.text[:80] + self._user_log.text[80:]
+
+            # Branch unless printing is suppressed.
+            if self._yul.switch & SwitchBit.PRINT:
+                return self.prin_skip(old_line)
+
+            # Exit at once if page head is owed.
+            if self._yul.switch & SwitchBit.OWE_HEADS:
+                return self.print_old()
+
+            # Print E and owe heads if E is owed.
+            if old_line.text[0] == 'E':
+                self._yul.switch |= SwitchBit.OWE_HEADS
+                return self.endoform(old_line, False)
+
+            # If nothing is owed, we're in mid-page. So print blank line(s) to
+            # get to E-O-F.
+            self._yul.switch |= SwitchBit.OWE_HEADS
+            return self.endoform(old_line, True)
+
+        # Make card number look helpful by suppressing at most two zeros.
+        # From right to left (columns 7 and 6).
+        if self._line.text[6] == '0':
+            self._line.text = self._line.text[:6] + ' ' + self._line.text[7:]
+            if self._line.text[5] == '0':
+                self._line.text = self._line.text[:5] + ' ' + self._line.text[6:]
+
+        # Branch unless printing is suppressed.
+        if not self._yul.switch & SwitchBit.PRINT:
+            # Branch unless owe a cuss or cussed line.
+            if self._line.text[0] == 'E':
+                # Single-space any line preceding E-line.
+                old_line.spacing = 1
+                self._line.spacing = 2
+
+                # Branch if we owe heads.
+                if self._yul.switch & SwitchBit.OWE_HEADS:
+                    return self.page_unit(old_line)
+
+                self._yul.switch &= ~SwitchBit.OWE_HEADS
+
+                # Add to line count from last line.
+                self._lin_count += old.spacing & ~Bit.BIT1
+                return self.print_old(old_line)
+
+            # Exit at once if nor this nor last was E.
+            if old_line.text[0] != 'E':
+                return self.print_old()
+
+            # Add to line count from last line.
+            self._lin_count += old_line.spacing & ~Bit.BIT1
+
+            # Back to normal print.
+            if self._lin_count <= self._yul.n_lines:
+                return self.print_old(old_line)
+
+            self._yul.switch |= SwitchBit.OWE_HEADS
+            return self.endoform(old_line, False)
+
+        # Unless immediately following a log card, skip to head of form before ..P.. card.
+        if self._line.text[0] == 'P' and old_line.text[0] != 'L':
+            return self.prin_skip(old_line)
+
+        # Branch unless A-line after C-line.
+        if self._line.text[0] == 'A':
+            if old_line.text[0] != 'C':
+                return self.ask_skip(old_line)
+
+            # Maybe copy 2nd loc and word of DP const.
+            self._line.text = self._line.text[:8] + old_line.text[8:48] + self._line.text[48:]
+
+            # Absorb it into A-line if it was.
+            if not self._line.text[40:48].isspace():
+                return self.print_old()
+
+        # Branch if not pass 2 error/warning line or continuation line.
+        if not self._line.text[0] in 'EC':
+            return self.ask_skip(old_line)
+
+        if self._lin_count != self._yul.n_lines:
+            # Keep "E" and "C" lines on same page.
+            self._lin_count -= 1
+
+        # Branch if last line is already skip.
+        if old_line.spacing & Bit.BIT1:
+            # Move last lines skip to this E-line.
+            self._line.spacing = Bit.BIT1
+
+        # Branch if last line is SP1.
+        elif old_line.spacing <= 1:
+            # Make last line SP1.
+            old_line.spacing = 1
 
         else:
-            # Make card number look helpful by suppressing at most two zeros.
-            # From right to left (columns 7 and 6).
-            if self._line.text[6] == '0':
-                self._line.text = self._line.text[:6] + ' ' + self._line.text[7:]
-                if self._line.text[5] == '0':
-                    self._line.text = self._line.text[:5] + ' ' + self._line.text[6:]
+            # If not, space this line 1 less.
+            self._line.spacing -= 1
 
-        
+        # Make last line SP1.
+        old_line.spacing = 1
+        return self.ask_skip(old_line, False)
+
+    def ask_skip(self, old_line, check_skip=True):
+        # Branch if last line is skip.
+        if check_skip and old_line.spacing & Bit.BIT1:
+            return self.prin_skip(old_line)
+
+        # Add to line count from last line.
+        self._lin_count += old_line.spacing
+
+        # Branch to normal print.
+        if self._lin_count <= self._yul.n_lines:
+            return self.print_old(old_line)
+
+        return self.prin_skip(old_line)
+
+    def prin_skip(self, old_line, check_cusses=True):
+        # "Branch" if any cusses on this page.
+        if check_cusses and not self._yul.switch & SwitchBit.CUSSES_ON_PAGE:
+            # Skip after last line at end of page.
+            old_line.spacing = Bit.BIT1
+            return self.dpaginat(old_line)
+
+        # Set up SP2 and record it in line count.
+        old_line.spacing = 2
+        self._lin_count += old_line.spacing
+
+        # Branch if more copies should be done.
+        if self._yul.n_copies > 0:
+            self.copy_prt5()
+
+        self._mon.phi_print(old_line.text, old_line.spacing)
+
+        # Turn off cusses-on-this-page flag.
+        self._yul.switch &= ~SwitchBit.CUSSES_ON_PAGE
+
+        # Branch if not yet at end of form.
+        if self._lin_count <= self._yul.n_lines:
+            # Go to end of form by blank lines w/ SP2.
+            old_line.text = ' '*120
+            return self.prin_skip(old_line, check_cusses=False)
+
+        # Prepare a wham for last line of page.
+        old_line.spacing = Bit.BIT1
+        old_line.text = '■'*120
+        return self.dpaginat(old_line)
+
+    def dpaginat(self, old_line):
+        # FIXME: what does DEPAGIN8 do?
+        # if self._yul.n_copies > 0:
+        #     self.copy_prt5()
+        #self._mon.phi_print('', spacing=Bit.BIT1)
+
+        if self._yul.n_copies > 0:
+            self.copy_prt5()
+
+        self._mon.phi_print(old_line.text, spacing=old_line.spacing)
+
+        return self.page_unit(old_line)
+
+    # Printing of page head and subhead (loc), and detail lines.
+
+    def page_unit(self, old_line):
+        self._page_no += 1
+        # Put page number alpha in page head.
+        self._yul.page_head = self._yul.page_head[:116] + ('%4d' % self._page_no)
+
+        return self.print_hed(old_line)
+
+    def print_hed(self, old_line):
+        if self._yul.n_copies > 0:
+            self.copy_prt5()
+        self._mon.phi_print(self._yul.page_head, spacing=3)
+        # Reset line count to 3.
+        self._lin_count = 3
+
+        # Finish up and exit if no log.
+        if self._user_page > 0:
+            # Go to print if not new log.
+            if self._user_page != 1:
+                # Put page no. in alpha in page subhead.
+                self._user_log.text = self._user_log.text[:100] + ('%4d' % self._user_page) + self._user_log.text[104:]
+
+            # Print log line now if heads are owed.
+            elif not self._yul.switch & SwitchBit.OWE_HEADS:
+                # Advance page no. for next use of log.
+                self._user_page = 2
+                return self.print_old()
+
+            if self._yul.n_copies > 0:
+                self.copy_prt5()
+
+            # Print log line and double space.
+            self._mon.phi_print(self._user_log.text, spacing=self._user_log.spacing)
+            self._user_page += 1
+
+            # Accordingly set line count to 5.
+            self._lin_count += self._user_log.spacing
+
+        # Exit now unless heads were owed.
+        if not self._yul.switch & SwitchBit.OWE_HEADS:
+            return self.print_old()
+
+        # Now heads are paid up, print a cussed L.
+        self._yul.switch &= ~SwitchBit.OWE_HEADS
+
+        # Add to line count from last line.
+        self._lin_count += old.spacing & ~Bit.BIT1
+        return self.print_old(old_line)
+
+    def endoform(self, old_line, check_cusses):
+        if check_cusses and not self._yul.switch & SwitchBit.CUSSES_ON_PAGE:
+            # Branch if more copies should be done.
+            if self._yul.n_copies > 0:
+                self.copy_prt5()
+
+            # FIXME: DEPAGIN8
+
+            # Print last line, skip, and owe heads.
+            old_line.spacing = Bit.BIT1
+            return self.print_old(old_line)
+
+        self._yul.switch &= ~SwitchBit.CUSSES_ON_PAGE
+
+        # Set up SP2 and record it in line count.
+        old_line.spacing = 2
+        self._lin_count += old_line.spacing
+
+        if self._yul.n_copies > 0:
+            self.copy_prt5()
+
+        self.phi_print(old_line.text, old_line.spacing)
+
+        if self._lin_count <= self._yul.n_lines:
+            old_line.text = ' '*120
+            return self.endoform(old_line, False)
+
+    def print_old(self, old_line=None):
+        if old_line is not None:
+            if self._yul.n_copies != 0:
+                self.copy_prt5()
+
+            self._mon.phi_print(old_line.text, old_line.spacing)
+
+        # Old line discovers fountain of youth. And moreover is made clean again.
+        self._line = Line()
+
+    def copy_prt5(self):
+        pass
+
     def pass_1p5(self):
         # print('\nSYMBOL TABLE:')
         # print('-------------')
