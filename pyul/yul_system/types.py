@@ -7,6 +7,9 @@ NBTCS = '-:+*/,'
 # H-1800 alphabet sorting
 ALPHABET = '0123456789=\' +ABCDEFGHI.)-JKLMNOPQR$*/STUVWXYZ.('
 
+# H-1800 max word
+ONES = 0xFFFFFFFFFFFF
+
 class Bit:
     BIT1  = (1 << 47)
     BIT2  = (1 << 46)
@@ -148,4 +151,7 @@ class Symbol:
         self.value = value
         self.definer = definer
         self.definees = []
+        self.defined = False
         self.analyzer = 0
+        self.def_page = 0
+        self.ref_pages = []

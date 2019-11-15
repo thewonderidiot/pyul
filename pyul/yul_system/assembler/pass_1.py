@@ -1,8 +1,6 @@
 import importlib
 from yul_system.types import Bit, SwitchBit, FieldCodBit, HealthBit, LocStateBit, \
-                             MemType, Symbol, ALPHABET
-
-ONES = 0xFFFFFFFFFFFF
+                             MemType, Symbol, ALPHABET, ONES
 
 class POPO:
     def __init__(self, health=0, card=''):
@@ -385,7 +383,7 @@ class Pass1:
 
             self._early = False
 
-        common, value = self.anal_subf(op_field)
+        common, value = self.anal_subf(op_field, popo)
         operation = common.strip()
 
         try:
@@ -480,7 +478,7 @@ class Pass1:
 
         if not blank:
             # Analyze location field.
-            common, value = self.anal_subf(popo.loc_field())
+            common, value = self.anal_subf(popo.loc_field(), popo)
             if self._field_cod[0] == FieldCodBit.SYMBOLIC:
                 # Signal symbolic loc.
                 self._loc_state |= LocStateBit.SYMBOLIC
@@ -615,7 +613,7 @@ class Pass1:
 
             popo.health |= hi_lim & 0xFFFF
 
-            common, value = self.anal_subf(popo.loc_field())
+            common, value = self.anal_subf(popo.loc_field(), popo)
             m_name = common.strip()
 
             # Reject if not symbolic.
@@ -758,7 +756,7 @@ class Pass1:
             # Branch if seeking sign and sign not preceded by a blank
             if also_main is None and afield[16] in '+-' and afield[15] == ' ':
                 # Analyze possible modifier
-                _, value = self.anal_subf(afield[16:], check_blank=False)
+                _, value = self.anal_subf(afield[16:], popo, check_blank=False)
 
                 # Branch if twasn't a signed numeric subf.
                 if (self._field_cod[0] & (FieldCodBit.NUMERIC | FieldCodBit.UNSIGNED)) != FieldCodBit.NUMERIC:
@@ -784,7 +782,7 @@ class Pass1:
             # Branch if more NBCs to examine.
             if afield[:16].isspace():
                 # Analyze possible main address.
-                _, value = self.anal_subf(afield[16:], check_blank=False)
+                _, value = self.anal_subf(afield[16:], popo, check_blank=False)
 
                 # Branch if not numeric.
                 if not self._field_cod[0] & FieldCodBit.NUMERIC:
@@ -872,7 +870,7 @@ class Pass1:
         adr_wd[0] = afield[8:16]
         return adr_wd
 
-    def anal_subf(self, common, check_blank=True):
+    def anal_subf(self, common, popo, check_blank=True):
         if check_blank and common.isspace():
             self._field_cod[0] = 0
             return common, None
@@ -915,6 +913,9 @@ class Pass1:
                 break
             else:
                 if subf[0] in '89':
+                    # Set complaint when 8s or 9s and no D.
+                    if not self._field_cod[0] & FieldCodBit.DECIMAL:
+                        popo.health |= Bit.BIT9
                     self._field_cod[0] |= FieldCodBit.DECIMAL
 
                 if dig_file is None:
@@ -1089,7 +1090,7 @@ class Pass1:
 
     def er_loc_sym(self, popo, low_lim=0):
         # Analyze location field of non-leftover.
-        common, value = self.anal_subf(popo.loc_field())
+        common, value = self.anal_subf(popo.loc_field(), popo)
         if self._field_cod[0] == 0:
             # OK exit if blank.
             return self.send_popo(popo)
@@ -1322,7 +1323,9 @@ class Pass1:
         sym_name = adr_wd[0].strip()
         symbol = self.anal_symb(sym_name)
 
-        # Store address of address symbol.
+        # Store address of address symbol. (Assumes ordered dict).
+        popo.health |= (list(self._yul.sym_thr.keys()).index(symbol.name) + 1) << 16
+
         if symbol.health > 0x0 and symbol.health < 0x3:
             # Signal address nearly defined.
             popo.health |= HealthBit.NEARLY_DEFINED
@@ -1381,7 +1384,7 @@ class Pass1:
         return self.send_popo(popo)
 
     def iseq_lsym(self, popo, loc_loc, adr_wd, adr_symbol=None):
-        common, value = self.anal_subf(popo.loc_field())
+        common, value = self.anal_subf(popo.loc_field(), popo)
         if self._field_cod[0] != FieldCodBit.SYMBOLIC:
             return self.send_popo(popo)
 

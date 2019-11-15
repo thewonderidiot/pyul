@@ -1,10 +1,10 @@
-from yul_system.types import ALPHABET, SwitchBit, HealthBit, Bit
+from yul_system.types import ALPHABET, ONES, SwitchBit, HealthBit, Bit
 
 class Cuss:
     def __init__(self, msg, poison=False):
         self.msg = msg
         self.poison = poison
-        self.requested = False
+        self.demand = False
 
 class Line:
     def __init__(self, text=' '*120, spacing=0):
@@ -21,6 +21,8 @@ class Pass2:
         self._lin_count = 0
         self._page_no = 0
         self._user_page = 0
+        self._field_cod = [None, None]
+        self._head = ' '
         self._line = Line()
         self._old_line = Line()
         self._user_log = Line(' '*81 + 'USER\'S OWN PAGE NO.' + 20*' ', spacing=2)
@@ -58,9 +60,6 @@ class Pass2:
         for popo in self._yul.popos:
             card_type = popo.health & HealthBit.CARD_TYPE_MASK
 
-            # Clear location symbol switch.
-            self._equaloc = 0
-
             # Branch if last card wasnt remarks
             if self._yul.switch & SwitchBit.LAST_REM:
                 self._yul.switch &= ~SwitchBit.LAST_REM
@@ -83,7 +82,7 @@ class Pass2:
 
                     # Make up card number error note.
                     self._line.text = self._line.text[:88] + self.cuss_list[0].msg
-                    if self.cuss_list[0].requested:
+                    if self.cuss_list[0].demand:
                         self.rem_cn_err(popo)
                         continue
 
@@ -92,7 +91,7 @@ class Pass2:
                     self.count_cus(6)
                     continue
             else:
-                if self.cuss_list[0].requested:
+                if self.cuss_list[0].demand:
                     self.rem_cn_err(popo)
 
             # Procedure when last card was not left print remarks.
@@ -106,7 +105,7 @@ class Pass2:
 
             # Maybe cuss card number sequence error.
             if popo.health & Bit.BIT7:
-                self.cuss_list[0].requested = True
+                self.cuss_list[0].demand = True
 
             # Branch if card is not right print
             if card_type == HealthBit.CARD_TYPE_RIGHTP:
@@ -138,11 +137,11 @@ class Pass2:
             # queer information.
             if ternary_key == 3 or (ternary_key == 0 and popo.card[0] != 'J'):
                 if popo.card[0] != ' ':
-                    self.cuss_list[60].requested = True
+                    self.cuss_list[60].demand = True
                 if popo.card[16] != ' ':
-                    self.cuss_list[61].requested = True
+                    self.cuss_list[61].demand = True
                 if popo.card[23] != ' ':
-                    self.cuss_list[62].requested = True
+                    self.cuss_list[62].demand = True
 
             own_proc(popo)
 
@@ -202,9 +201,220 @@ class Pass2:
     def octal(self, popo):
         pass
 
+    # Procedure in pass 2 for IS,=,EQUALS cards. Prints value, cusses for format, value, and both symbols.
     def equals(self, popo):
+        # Maybe cuss  D  error.
+        if popo.health & Bit.BIT9:
+            self.cuss_list[1].demand = True
+
+        # Maybe cuss unsymbolic loc field (that bit inverted in err/warn code).
+        if not popo.health & Bit.BIT8:
+            self.cuss_list[46].demand = True
+
+        # Maybe cuss predefinition failure.
+        if popo.health & Bit.BIT10:
+            self.cuss_list[13].demand = True
+
+        # Maybe cuss loc sym no fit in table.
+        if popo.health & Bit.BIT15:
+            self.cuss_list[14].demand = True
+
+        # Maybe cuss meaningless address field.
+        if popo.health & Bit.BIT13:
+            self.cuss_list[8].demand = True
+
+        # Maybe cuss address size error.
+        if popo.health & Bit.BIT14:
+            self.cuss_list[10].demand = True
+
+        # Branch if location is symbolic.
+        if self.cuss_list[46].demand:
+            # Proclaim absence of location symbol.
+            loc_symbol = None
+        else:
+            # Analyze and pre-process location symbol.
+            loc_symbol = self.loc_sym_1(popo)
+
+        # Branch if address symbol is in table.
+        if popo.health & Bit.BIT16:
+            adr_wd = self.adr_field(popo)
+            # Form headed symbol.
+            if len(adr_wd[0]) < 8:
+                adr_wd[0] = ('%-7s%s' % (adr_wd[0], self._head)).strip()
+            # Cuss fullness.
+            self.sym_cuss(self.cuss_list[14], adr_wd[0])
+            # Go to join end of setloc procedure.
+            self.cuss_list[0].demand = True
+            return self.form_locn(good_loc=False)
+
+        # Recover address symbol information
+        adr_symbol = self.fits_fitz(popo)
+        # Branch if there is no address symbol.
+        if adr_symbol is not None:
+            # Call for address symbol cussing.
+            self.symb_fits(adr_symbol, True)
+
+        # Exit when no location symbol.
+        if loc_symbol is None:
+            return self.form_locn(good_loc=False)
+
+        if loc_symbol.defined:
+            location = loc_symbol.value
+        else:
+            location = ONES
+
+        # Print location value.
+        self.m_ploc_is(location)
+
+        if loc_symbol.health >= 5:
+            # Move location symbol for cussing by proc word, done for 5 through F.
+            return self.health_cq(loc_symbol)
+
+        # Select local cussing procedure on 1 - 4.
+        if loc_symbol.health == 1:
+            # FIXME
+            pass
+        elif loc_symbol.health == 3:
+            self.print_lin()
+            return self.pag_loxim(popo, loc_symbol, adr_symbol)
+
+    def pag_loxim(self, popo, loc_symbol=None, adr_symbol=None):
+        page = self._page_no
+        if self._yul.switch & SwitchBit.OWE_HEADS:
+            # Compensates if page heads are owed.
+            page += 1
+
+        # Branch if no loc symbol in sym table.
+        if loc_symbol is not None:
+            # Record page on which symbol was defined.
+            loc_symbol.def_page = page
+
+        # Branch if no address symbol in sym tab.
+        if adr_symbol is not None:
+            adr_symbol.ref_pages.append(page)
+
+            # Branch if this is not the first ref or doing a suppressed subroutine.
+            if len(adr_symbol.ref_pages) > 1 and self._yul.switch & SwitchBit.PRINT:
+                # Set in print page of last ref in alpha.
+                self._old_line.text = (self._old_line.text[:16] + 'LAST' + ('%4d' % adr_symbol.ref_pages[-2]) +
+                                    self._old_line.text[24:])
+
+            ref_str = 'REF '
+            if len(adr_symbol.ref_pages) > 999:
+                # If over 999 references, set up "REF >1K".
+                ref_str += '>1K '
+            else:
+                ref_str += '%3d ' % len(adr_symbol.ref_pages)
+
+            # Set in print serial no. of ref in alpha.
+            self._old_line.text = self._old_line.text[:8] + ref_str + self._old_line.text[16:]
+
+        # Release card for tape and go to cuss.
+        self.send_sypt(popo)
+        return self.cusser()
+
+    def health_cq(self):
+        # FIXME
         pass
 
+    def fits_fitz(self, popo):
+        sym_addr = (popo.health >> 16) & 0xFFFF
+        if sym_addr == 0:
+            return None
+
+        sym_keys = list(self._yul.sym_thr.keys())
+        return self._yul.sym_thr[sym_keys[sym_addr-1]]
+
+    def symb_fits(self, symbol, ret_on_def=False):
+        # Branch if health of symbol is B or more.
+        if symbol.health >= 0xB:
+            self.cuss_list[23].demand = True
+            self.sym_cuss(self.cuss_list[23], symbol.name)
+
+        if symbol.health == 0:
+            # Undefined.
+            self.cuss_list[9].demand = True
+            self.sym_cuss(self.cuss_list[9], symbol.name)
+            return None
+
+        elif symbol.health == 1:
+            # Nearly defined by equals.
+            self.cuss_list[47].demand = True
+            self.sym_cuss(self.cuss_list[47], symbol.name)
+            return None
+
+        elif symbol.health == 2:
+            # Multiply defined including nearly by =.
+            self.cuss_list[48].demand = True
+            self.sym_cuss(self.cuss_list[48], symbol.name)
+            return None
+
+        elif symbol.health in (3, 6):
+            # Defined by equals or defined (no cuss).
+            return self.symb_mod_q(ret_on_def)
+
+        elif symbol.health == 4:
+            # Multiply defined including by equals.
+            self.cuss_list[50].demand = True
+            self.sym_cuss(self.cuss_list[50], symbol.name)
+            return self.symb_mod_q(ret_on_def)
+
+        elif symbol.health == 5:
+            # Failed leftover.
+            self.cuss_list[49].demand = True
+            self.sym_cuss(self.cuss_list[49], symbol.name)
+            return None
+
+        elif symbol.health == 7:
+            # Multiply defined.
+            self.cuss_list[23].demand = True
+            self.sym_cuss(self.cuss_list[23], symbol.name)
+            return self.symb_mod_q(ret_on_def)
+
+        elif symbol.health in (8, 0xB):
+            # Oversize definition.
+            self.cuss_list[21].demand = True
+            self.sym_cuss(self.cuss_list[21], symbol.name)
+            return None
+
+        elif symbol.health in (9, 0xC):
+            # Wrong memory type.
+            self.cuss_list[17].demand = True
+            self.sym_cuss(self.cuss_list[17], symbol.name)
+            return self.symb_mod_q(ret_on_def)
+
+        elif symbol.health in (0xA, 0xD):
+            # Conflict.
+            self.cuss_list[19].demand = True
+            self.sym_cuss(self.cuss_list[19], symbol.name)
+            return self.symb_mod_q(ret_on_def)
+
+        elif symbol.health == 0xE:
+            # Multiple errors.
+            self.cuss_list[25].demand = True
+            # No multiple definition cuss for E and F.
+            self.cuss_list[23].demand = False
+            self.sym_cuss(self.cuss_list[25], symbol.name)
+            return None
+
+        else: # 0xF
+            # Miscellaneous trouble.
+            self.cuss_list[27].demand = True
+            # No multiple definition cuss for E and F.
+            self.cuss_list[23].demand = False
+            self.sym_cuss(self.cuss_list[27], symbol.name)
+            return None
+
+    def symb_mod_q(self, ret_on_def):
+        if ret_on_def:
+            return None
+        # FIXME
+
+    def form_locn(self, good_loc=True):
+        pass
+
+    # Procedure in pass 2 for SETLOC. Does not accept any changes in the status of an
+    # address symbol.
     def setloc(self, popo):
         pass
 
@@ -240,6 +450,259 @@ class Pass2:
 
     def segnum(self, popo):
         pass
+
+    # Minor subroutines to shift two or three words right by one character.
+    def _3srt_1c(self, afield):
+        return ' ' + afield[:-1]
+
+    def _2srt_1c(self, afield):
+        return ' ' + afield[:15] + afield[16:]
+
+    # Subroutine to break an address field down into subfields. Results are delivered in self._fieldcod[0:2],
+    # and returned as adr_wd[0:2], as follows....
+    #  _field_cod[0] all zero                Blank address field
+    #  _field_cod[0] None                    Illegal format
+    #  _field_cod[1] all zero                No modifier
+    #  _field_cod[1] indicates signed num    Modifier given in adr_wd[1]
+    #  _field_cod[0] indicates symbolic      Address symbol in adr_wd[0]
+    #  _field_cod[0] indicates S or US num   Value given in adr_wd[0]
+    def adr_field(self, popo):
+        adr_wd = [None, None]
+
+        if popo.address_1().isspace() and popo.address_2().isspace():
+            # Indicate blank address field and exit.
+            self._field_cod[0] = 0
+            return adr_wd
+
+        afield = popo.address_1() + popo.address_2() + ' '*8
+
+        # Initially assume no modifier.
+        self._field_cod[1] = 0
+
+        # Set up to look for signs initially.
+        also_main = None
+        # Maximum number of NBCs in a subfield.
+        max_nbcs = 8
+
+        while max_nbcs > 0:
+            # Branch when 2 words are right-justified.
+            while afield[15] == ' ':
+                afield = self._2srt_1c(afield)
+
+            max_nbcs -= 1
+            afield = self._3srt_1c(afield)
+
+            # Branch if seeking sign and sign not preceded by a blank
+            if also_main is None and afield[16] in '+-' and afield[15] == ' ':
+                # Analyze possible modifier
+                _, value = self.anal_subf(afield[16:], popo, check_blank=False)
+
+                # Branch if twasn't a signed numeric subf.
+                if (self._field_cod[0] & (FieldCodBit.NUMERIC | FieldCodBit.UNSIGNED)) != FieldCodBit.NUMERIC:
+                    break
+
+                # Branch if compound address.
+                if afield[:16].isspace():
+                    # Exit for signed numeric field.
+                    adr_wd[0] = value
+                    return adr_wd
+
+                # Indicate presence of modifier.
+                self._field_cod[1] = self._field_cod[0]
+                # Save original form of rest of field.
+                also_main = afield[:16] + ' '*8
+                # Deliver value of modifier
+                adr_wd[1] = value
+
+                max_nbcs = 8
+                afield = afield[:16] + ' '*8
+                continue
+
+            # Branch if more NBCs to examine.
+            if afield[:16].isspace():
+                # Analyze possible main address.
+                _, value = self.anal_subf(afield[16:], popo, check_blank=False)
+
+                # Branch if not numeric.
+                if not self._field_cod[0] & FieldCodBit.NUMERIC:
+                    break
+
+                # Exit when main address is S or US num.
+                adr_wd[0] = value
+                return adr_wd
+            else:
+                # Seek another non-blank character.
+                if max_nbcs == 0:
+                    self._field_cod[0] = None
+                    return adr_wd
+
+        if also_main is None:
+            # Set up putative symbolic subfield.
+            afield = popo.address_1() + popo.address_2() + ' '*8
+        else:
+            # Recover non-modifier part of adr field.
+            afield = also_main + ' '*8
+
+        # Branch when possible head found.
+        afield = self._3srt_1c(afield)
+        while afield[16] == ' ':
+            # Triple shift right to find head.
+            afield = self._3srt_1c(afield)
+
+        # Char preceded by non-blank isn't head.
+        if afield[15] != ' ':
+            # Backtrack after no-head finding.
+            afield = afield[:8] + afield[9:16] + afield[8] + afield[16:]
+
+            # Error if symbol is too long.
+            if afield[15] != ' ' or not afield[:8].isspace():
+                self._field_cod[0] = None
+                return adr_wd
+
+            # Finish backtracking.
+            afield = afield[:15] + afield[16] + afield[16:]
+
+            # Branch when symbol is normalized.
+            while afield[8] == ' ':
+                afield = afield[:8] + afield[9:16] + afield[8] + afield[16:]
+
+            # Exit when main address is symbolic.
+            adr_wd[0] = afield[8:16]
+            return adr_wd
+
+        if not afield[:8].isspace():
+            # Move symbol right to insert head.
+            while True:
+                afield = self._2srt_1c(afield)
+
+                # Error if no room for head.
+                if afield[15] != ' ':
+                    self._field_cod[0] = None
+                    return adr_wd
+
+                # Shift until normalized in afield[8:16].
+                if afield[:8].isspace():
+                    break
+
+            # Insert head character.
+            afield = afield[:15] + afield[16] + afield[16:]
+
+            # Exit when main address is symbolic.
+            adr_wd[0] = afield[8:16]
+            return adr_wd
+
+        # Exit when main address is 1-char sym.
+        if afield[8:16].isspace():
+            adr_wd[0] = afield[16:24]
+            return adr_wd
+
+        # Move symbol left to insert head.
+        while True:
+            if afield[8] != ' ':
+                break
+            afield = afield[:16] + afield[17:24] + afield[15] + afield[24:]
+
+        # Insert head character.
+        afield = afield[:15] + afield[16] + afield[16:]
+
+        # Exit when main address is 1-char sym.
+        adr_wd[0] = afield[8:16]
+        return adr_wd
+
+    def anal_subf(self, common, popo, check_blank=True):
+        if check_blank and common.isspace():
+            self._field_cod[0] = 0
+            return common, None
+
+        self._field_cod[0] = FieldCodBit.NUMERIC | FieldCodBit.POSITIVE | FieldCodBit.UNSIGNED
+        while common[0] == ' ':
+            common = common[1:] + common[0]
+
+        subf = common
+        dig_file = None
+
+        if subf[0] != '0':
+            if subf[0] in '+-':
+                self._field_cod[0] &= ~FieldCodBit.UNSIGNED
+                if subf[0] == '-':
+                    self._field_cod[0] &= ~FieldCodBit.POSITIVE
+
+                if subf[1:].isspace():
+                    self._field_cod[0] = FieldCodBit.SYMBOLIC
+                    return common, subf
+
+                subf = subf[1:] + ' '
+
+        while subf[0] != ' ':
+            if not subf[0].isnumeric():
+                if (subf[0] != 'D'):
+                    self._field_cod[0] = FieldCodBit.SYMBOLIC
+                    return common, subf
+
+                if not subf[1:].isspace():
+                    self._field_cod[0] = FieldCodBit.SYMBOLIC
+                    return common, subf
+
+                if dig_file is None:
+                    self._field_cod[0] = FieldCodBit.SYMBOLIC
+                    return common, subf
+
+                # Set up conversion, decimal to binary
+                self._field_cod[0] |= FieldCodBit.DECIMAL
+                break
+            else:
+                if subf[0] in '89':
+                    # Set complaint when 8s or 9s and no D.
+                    if not self._field_cod[0] & FieldCodBit.DECIMAL:
+                        popo.health |= Bit.BIT9
+                    self._field_cod[0] |= FieldCodBit.DECIMAL
+
+                if dig_file is None:
+                    dig_file = '0'
+
+                if dig_file != '0' or subf[0] != '0':
+                    dig_file += subf[0]
+
+            subf = subf[1:] + ' '
+
+        if self._field_cod[0] & FieldCodBit.DECIMAL:
+            value = int(dig_file, 10)
+        else:
+            value = int(dig_file, 8)
+
+        if not self._field_cod[0] & FieldCodBit.POSITIVE:
+            value = -value
+
+        return common, value
+
+    # Subroutine in pass 2 to analyze and pre-process a location symbol.
+    def loc_sym_1(self, popo):
+        # Fetch location field of card.
+        common = popo.loc_field().strip()
+
+        # Branch if location symbol is in table.
+        if self.cuss_list[14].demand:
+            # Cuss fit failure and exit.
+            self.sym_cuss(self.cuss_list[14], common)
+            return None
+
+        # Get history of normalized symbol.
+        symbol = self.anal_symb(common)
+
+        # Show whether there is a valid definition.
+        symbol.defined = (((self._def_xform << 1) >> symbol.health) & 0x1) == 1
+
+        return symbol
+
+    def anal_symb(self, symbol):
+        if len(symbol) < 8:
+            symbol = ('%-7s%s' % (symbol, self._head)).strip()
+        if symbol not in self._yul.sym_thr:
+            self._yul.sym_thr[symbol] = Symbol(symbol)
+        return self._yul.sym_thr[symbol]
+
+    def sym_cuss(self, cuss, common):
+        cuss.msg = cuss.msg[0] + ('%-8s' % common) + cuss.msg[9:]
 
     def send_sypt(self, card):
         pass
