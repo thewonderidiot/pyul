@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+import traceback
 from monitor import Monitor
 
 if __name__ == '__main__':
@@ -22,7 +23,7 @@ if __name__ == '__main__':
     try:
         mon.execute()
     except Exception as e:
-        print(e)
+        traceback.print_exc()
 
     # Close the punch card file if we opened one
     if card_file != sys.stdin:
