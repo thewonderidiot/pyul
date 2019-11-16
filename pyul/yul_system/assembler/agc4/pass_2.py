@@ -8,123 +8,123 @@ class AGC4Pass2(Pass2):
         self.cuss_list = [
             # 0-2
             Cuss('CARD NUMBER OUT OF SEQUENCE     '),
-            Cuss('NO "D" IN DECIMAL SUBFIELD'),
-            Cuss('ILLEGAL OR MIS-SPELLED OPERATION CODE', poison=True),
+            Cuss('NO "D" IN DECIMAL SUBFIELD      '),
+            Cuss('ILLEGAL OR MIS-SPELLED OPERATION CODE   ', poison=True),
 
             # 3-5
-            Cuss('IMPROPER LEFTOVER LOCATION FIELD FORMAT', poison=True),
+            Cuss('IMPROPER LEFTOVER LOCATION FIELD FORMAT ', poison=True),
             Cuss('CONFLICT IN USE OF THIS LOCATION', poison=True),
             Cuss('LOCATION IS IN WRONG MEMORY TYPE', poison=True),
 
             # 6-8
             Cuss('OVERSIZE OR ILL-DEFINED LOCATION', poison=True),
-            Cuss('ILLEGAL POLISH INDEXING', poison=True),
-            Cuss('ADDRESS FIELD IS MEANINGLESS', poison=True),
+            Cuss('ILLEGAL POLISH INDEXING ', poison=True),
+            Cuss('ADDRESS FIELD IS MEANINGLESS    ', poison=True),
 
             # 9-11
-            Cuss('"        " IS UNDEFINED', poison=True),
-            Cuss('RANGE ERROR IN VALUE OF ADDRESS', poison=True),
+            Cuss('"        " IS UNDEFINED ', poison=True),
+            Cuss('RANGE ERROR IN VALUE OF ADDRESS ', poison=True),
             Cuss('IRREGULAR BUT ACCEPTABLE ADDRESS'),
 
             # 12-14
-            Cuss('LEFTOVER WON\'T FIT IN MEMORY', poison=True),
-            Cuss('ATTEMPT TO PREDEFINE LOCATION SYMBOL FAILED', poison=True),
-            Cuss('"        " WON\'T FIT IN SYMBOL TABLE', poison=True),
+            Cuss('LEFTOVER WON\'T FIT IN MEMORY    ', poison=True),
+            Cuss('ATTEMPT TO PREDEFINE LOCATION SYMBOL FAILED     ', poison=True),
+            Cuss('"        " WON\'T FIT IN SYMBOL TABLE    ', poison=True),
 
             # 15-17
-            Cuss('"        " WON\'T FIT IN SYMBOL TABLE', poison=True),
-            Cuss('"        " ASSOCIATED WITH WRONG MEMORY TYPE', poison=True),
-            Cuss('"        " ASSOCIATED WITH WRONG MEMORY TYPE', poison=True),
+            Cuss('"        " WON\'T FIT IN SYMBOL TABLE    ', poison=True),
+            Cuss('"        " ASSOCIATED WITH WRONG MEMORY TYPE    ', poison=True),
+            Cuss('"        " ASSOCIATED WITH WRONG MEMORY TYPE    ', poison=True),
 
             # 18-20
-            Cuss('"        " ASSOCIATED WITH CONFLICT', poison=True),
-            Cuss('"        " ASSOCIATED WITH CONFLICT', poison=True),
-            Cuss('"        " GIVEN OVERSIZE DEFINITION', poison=True),
+            Cuss('"        " ASSOCIATED WITH CONFLICT     ', poison=True),
+            Cuss('"        " ASSOCIATED WITH CONFLICT     ', poison=True),
+            Cuss('"        " GIVEN OVERSIZE DEFINITION    ', poison=True),
 
             # 21-23
-            Cuss('"        " GIVEN OVERSIZE DEFINITION', poison=True),
-            Cuss('"        " GIVEN MULTIPLE DEFINITIONS', poison=True),
-            Cuss('"        " GIVEN MULTIPLE DEFINITIONS', poison=True),
+            Cuss('"        " GIVEN OVERSIZE DEFINITION    ', poison=True),
+            Cuss('"        " GIVEN MULTIPLE DEFINITIONS   ', poison=True),
+            Cuss('"        " GIVEN MULTIPLE DEFINITIONS   ', poison=True),
 
             # 24-26
-            Cuss('"        " ASSOCIATED WITH MULTIPLE ERRORS', poison=True),
-            Cuss('"        " ASSOCIATED WITH MULTIPLE ERRORS', poison=True),
-            Cuss('"        " IS IN MISCELLANEOUS TROUBLE', poison=True),
+            Cuss('"        " ASSOCIATED WITH MULTIPLE ERRORS      ', poison=True),
+            Cuss('"        " ASSOCIATED WITH MULTIPLE ERRORS      ', poison=True),
+            Cuss('"        " IS IN MISCELLANEOUS TROUBLE  ', poison=True),
 
             # 27-29
-            Cuss('"        " IS IN MISCELLANEOUS TROUBLE', poison=True),
-            Cuss('"        " WAS NEARLY DEFINED BY EQUALS', poison=True),
-            Cuss('ADDRESS DEPENDS ON UNKNOWN LOCATION', poison=True),
+            Cuss('"        " IS IN MISCELLANEOUS TROUBLE  ', poison=True),
+            Cuss('"        " WAS NEARLY DEFINED BY EQUALS ', poison=True),
+            Cuss('ADDRESS DEPENDS ON UNKNOWN LOCATION     ', poison=True),
 
             # 30-32
-            Cuss('"        " IS INDEFINABLY LEFTOVER', poison=True),
-            Cuss('"        " MULTIPLY DEFINED INCLUDING NEARLY BY EQUALS', poison=True),
-            Cuss('"        " MULTIPLY DEFINED INCLUDING BY EQUALS', poison=True),
+            Cuss('"        " IS INDEFINABLY LEFTOVER      ', poison=True),
+            Cuss('"        " MULTIPLY DEFINED INCLUDING NEARLY BY EQUALS  ', poison=True),
+            Cuss('"        " MULTIPLY DEFINED INCLUDING BY EQUALS ', poison=True),
 
             # 33-35
-            Cuss('ADDRESS IS IN BANK 00', poison=True),
-            Cuss('ADDRESS IS INAPPROPRIATE FOR OP CODE'),
-            Cuss('ADDRESS'),
+            Cuss('ADDRESS IS IN BANK 00   ', poison=True),
+            Cuss('ADDRESS IS INAPPROPRIATE FOR OP CODE    '),
+            Cuss('ADDRESS         '),
 
             # 36-38
-            Cuss('THIS INSTRUCTION SHOULD BE INDEXED'),
+            Cuss('THIS INSTRUCTION SHOULD BE INDEXED      '),
             Cuss('CCS CANNOT REFER TO FIXED MEMORY'),
-            Cuss('INEXACT DECIMAL-TO-BINARY CONVERSION'),
+            Cuss('INEXACT DECIMAL-TO-BINARY CONVERSION    '),
 
             # 39-41
-            Cuss('MORE THAN 10 DIGITS IN DECIMAL CONSTANT'),
-            Cuss('RANGE ERROR IN CONSTANT FIELD', poison=True),
-            Cuss('FRACTIONAL PART LOST BY TRUNCATION'),
+            Cuss('MORE THAN 10 DIGITS IN DECIMAL CONSTANT '),
+            Cuss('RANGE ERROR IN CONSTANT FIELD   ', poison=True),
+            Cuss('FRACTIONAL PART LOST BY TRUNCATION      '),
 
             # 42-44
-            Cuss('MORE THAN 14 DIGITS IN OCTAL CONSTANT'),
-            Cuss('LOCATION FIELD SHOULD BE BLANK'),
-            Cuss('"        " WAS UNDEFINED IN PASS 1', poison=True),
+            Cuss('MORE THAN 14 DIGITS IN OCTAL CONSTANT   '),
+            Cuss('LOCATION FIELD SHOULD BE BLANK  '),
+            Cuss('"        " WAS UNDEFINED IN PASS 1      ', poison=True),
 
             # 45-47
-            Cuss('"        " WAS NEARLY DEFINED BY EQUALS IN PASS 1', poison=True),
-            Cuss('LOCATION FIELD SHOULD BE SYMBOLIC', poison=True),
-            Cuss('"        " WAS NEARLY DEFINED BY EQUALS', poison=True),
+            Cuss('"        " WAS NEARLY DEFINED BY EQUALS IN PASS 1       ', poison=True),
+            Cuss('LOCATION FIELD SHOULD BE SYMBOLIC       ', poison=True),
+            Cuss('"        " WAS NEARLY DEFINED BY EQUALS ', poison=True),
 
             # 48-50
-            Cuss('"        " MULTIPLY DEFINED INCLUDING NEARLY BY EQUALS', poison=True),
-            Cuss('"        " IS INDEFINABLY LEFTOVER', poison=True),
-            Cuss('"        " MULTIPLY DEFINED INCLUDING BY EQUALS', poison=True),
+            Cuss('"        " MULTIPLY DEFINED INCLUDING NEARLY BY EQUALS  ', poison=True),
+            Cuss('"        " IS INDEFINABLY LEFTOVER      ', poison=True),
+            Cuss('"        " MULTIPLY DEFINED INCLUDING BY EQUALS ', poison=True),
 
             # 51-53
-            Cuss('"        " SHOULDN\'T HAVE BEEN PREDEFINED', poison=True),
-            Cuss('NUMERIC LOCATION FIELD IS ILLEGAL HERE', poison=True),
-            Cuss('NO SUCH BANK IN THIS MACHINE', poison=True),
+            Cuss('"        " SHOULDN\'T HAVE BEEN PREDEFINED       ', poison=True),
+            Cuss('NUMERIC LOCATION FIELD IS ILLEGAL HERE  ', poison=True),
+            Cuss('NO SUCH BANK IN THIS MACHINE    ', poison=True),
 
             # 54-56
-            Cuss('THIS BANK IS FULL', poison=True),
-            Cuss('ILLEGAL LOCATION FIELD FORMAT', poison=True),
-            Cuss('CARD IGNORED BECAUSE IT\'S TOO LATE IN THE DECK', poison=True),
+            Cuss('THIS BANK IS FULL       ', poison=True),
+            Cuss('ILLEGAL LOCATION FIELD FORMAT   ', poison=True),
+            Cuss('CARD IGNORED BECAUSE IT\'S TOO LATE IN THE DECK  ', poison=True),
 
             # 57-59
-            Cuss('CARD IGNORED BECAUSE IT MAKES MEMORY TABLE TOO LONG', poison=True),
-            Cuss('NO MATCH FOUND FOR CARD NUMBER OR ACCEPTOR TEXT', poison=True),
-            Cuss('FIRST CARD NUMBER NOT LESS THAN SECOND', poison=True),
+            Cuss('CARD IGNORED BECAUSE IT MAKES MEMORY TABLE TOO LONG     ', poison=True),
+            Cuss('NO MATCH FOUND FOR CARD NUMBER OR ACCEPTOR TEXT ', poison=True),
+            Cuss('FIRST CARD NUMBER NOT LESS THAN SECOND  ', poison=True),
 
             # 60-62
-            Cuss('QUEER INFORMATION IN COLUMN 1'),
-            Cuss('QUEER INFORMATION IN COLUMN 17'),
-            Cuss('QUEER INFORMATION IN COLUMN 24'),
+            Cuss('QUEER INFORMATION IN COLUMN 1   '),
+            Cuss('QUEER INFORMATION IN COLUMN 17  '),
+            Cuss('QUEER INFORMATION IN COLUMN 24  '),
 
             # 63-65
-            Cuss('BLANK ADDRESS FIELD EXPECTED'),
-            Cuss('ADDRESS FIELD SHOULD CONTAIN A POLISH OPERATOR', poison=True),
+            Cuss('BLANK ADDRESS FIELD EXPECTED    '),
+            Cuss('ADDRESS FIELD SHOULD CONTAIN A POLISH OPERATOR  ', poison=True),
             Cuss('OVERFLOW IN POLISH OPERATOR WORD', poison=True),
 
             # 66-68
-            Cuss('FIRST ADDRESS OF AN EQUATION MUST BE POSITIVE', poison=True),
-            Cuss('FIRST POLISH OPERATOR ILLEGAL INDEXED', poison=True),
-            Cuss('SECOND POLISH OPERATOR ILLEGAL INDEXED', poison=True),
+            Cuss('FIRST ADDRESS OF AN EQUATION MUST BE POSITIVE   ', poison=True),
+            Cuss('FIRST POLISH OPERATOR ILLEGAL INDEXED   ', poison=True),
+            Cuss('SECOND POLISH OPERATOR ILLEGAL INDEXED  ', poison=True),
 
             # 69-71
-            Cuss('NO MATCH FOUND FOR SECOND CARD NUMBER', poison=True),
-            Cuss('LAST OPERATOR WORD COUNT WRONG', poison=True),
-            Cuss('THIS CODE MAY BECOME OBSOLETE'),
+            Cuss('NO MATCH FOUND FOR SECOND CARD NUMBER   ', poison=True),
+            Cuss('LAST OPERATOR WORD COUNT WRONG  ', poison=True),
+            Cuss('THIS CODE MAY BECOME OBSOLETE   '),
 
             # 72-74
             Cuss(''),
@@ -142,8 +142,8 @@ class AGC4Pass2(Pass2):
             Cuss(''),
 
             # 81-83
-            Cuss('SUBROUTINE NAME NOT RECOGNIZED', poison=True),
-            Cuss('MULTIPLE CALLS IN ONE PROGRAM OR SUBRO'),
+            Cuss('SUBROUTINE NAME NOT RECOGNIZED  ', poison=True),
+            Cuss('MULTIPLE CALLS IN ONE PROGRAM OR SUBRO  '),
             Cuss('CONFLICT WITH EARLIER HEAD SPECIFICATION', poison=True),
         ]
 
