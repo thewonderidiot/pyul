@@ -485,13 +485,80 @@ class Pass2:
             return None
         # FIXME
 
-    def form_locn(self, good_loc=True):
-        pass
-
     # Procedure in pass 2 for SETLOC. Does not accept any changes in the status of an
     # address symbol.
     def setloc(self, popo):
-        pass
+        # Maybe cuss  D  error.
+        if popo.health & Bit.BIT9:
+            self.cuss_list[1].demand = True
+        
+        # Maybe cuss nonblank loc field.
+        if popo.health & Bit.BIT8:
+            self.cuss_list[43].demand = True
+
+        # Maybe cuss wrong memory type.
+        if popo.health & Bit.BIT10:
+            self.cuss_list[5].demand = True
+
+        # Maybe cuss meaningless address field.
+        if popo.health & Bit.BIT13:
+            self.cuss_list[8].demand = True
+
+        # Maybe cuss address size error.
+        if popo.health & Bit.BIT14:
+            self.cuss_list[10].demand = True
+
+        # Branch if adr sym fitted in sym tab.
+        if popo.health & Bit.BIT16:
+            adr_wd = self.adr_field(popo)
+            if len(symbol) < 8:
+                # Get address symbol (headed).
+                symbol = ('%-7s%s' % (adr_wd[0], self._head)).strip()
+            self.sym_cuss(self.cuss_list[15], symbol)
+            self.cuss_list[15].demand = True
+            return self.form_locn(good_loc=False)
+
+        adr_symbol = self.fits_fitz(popo)
+        # Branch if no address symbol.
+        if adr_symbol is None:
+            return self.form_locn(popo)
+
+        if popo.health & Bit.BIT11:
+            # Undefined setloc symbol is fatal.
+            self.sym_cuss(self.cuss_list[44], adr_symbol.name)
+            # Cuss no define by pass 1.
+            self.cuss_list[44].demand = True
+
+        if popo.health & Bit.BIT12:
+            self.sym_cuss(self.cuss_list[45], adr_symbol.name)
+            # Cuss near define by pass 1.
+            self.cuss_list[45].demand = True
+
+        # Modify and visit address symbol cusser.
+        self.symb_fits(adr_symbol, True)
+
+        # Branch if no definition from pass 1.
+        if (popo.health & (Bit.BIT11 | Bit.BIT12)) != 0:
+            return self.form_locn(popo, good_loc=False)
+
+        # Branch if no address field problems.
+        if (popo.health & (Bit.BIT13 | Bit.BIT14)) == 0:
+            return self.form_locn(popo)
+
+        return self.form_locn(popo, good_loc=False)
+
+    def form_locn(self, popo, good_loc=True):
+        if good_loc:
+            # Use determined location
+            location = popo.health & 0xFFFF
+        else:
+            # Signal bad location
+            location = ONES
+
+        # Print loc value if any.
+        self.m_ploc_is(location)
+        self.print_lin()
+        return self.pag_loxim(popo)
 
     def erase(self, popo):
         pass
