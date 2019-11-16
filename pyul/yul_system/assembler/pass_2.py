@@ -63,97 +63,110 @@ class Pass2:
 
             # Branch if last card wasnt remarks
             if self._yul.switch & SwitchBit.LAST_REM:
-                self._yul.switch &= ~SwitchBit.LAST_REM
-                # Branch if this card isnt right print.
-                if card_type == HealthBit.CARD_TYPE_RIGHTP:
-                    # Branch if line unaffected by this rev.
-                    if popo.marked:
-                        self._old_line.text = self._old_line.text[:7] + self._marker + self._old_line.text[8:]
-                        self._marker = '*'
-
-                    self.send_sypt(popo.card)
-
-                    # Set right print remarks in print.
-                    self._old_line.text = self._old_line.text[:80] + popo.card[8:48]
-
-                    # Branch if no right print cardno error.
-                    if not popo.health & Bit.BIT7:
-                        self.cusser()
-                        continue
-
-                    # Make up card number error note.
-                    self._line.text = self._line.text[:88] + self.cuss_list[0].msg
-                    if self.cuss_list[0].demand:
-                        # FIXME: THIS IS ALL WRONG
-                        self.rem_cn_err(popo)
-                        continue
-
-                    # If 1st cuss of page, left end of blots.
-                    left_end = 2
-
-                    # Apply serial number to cuss.
-                    self.numb_cuss()
-                    self.count_cus(left_end, 6)
-                    continue
+                self.un_las_rem(popo, card_type)
             else:
-                if self.cuss_list[0].demand:
-                    self.rem_cn_err(popo)
+                self.right_pq(popo, card_type)
 
-            # Procedure when last card was not left print remarks.
-            # Set up columns 1-7.
-            self._line.text = popo.card[:7] + self._line.text[7:]
-
-            # Branch if line affected by this revision
+    def un_las_rem(self, popo, card_type):
+        self._yul.switch &= ~SwitchBit.LAST_REM
+        # Branch if this card isnt right print.
+        if card_type == HealthBit.CARD_TYPE_RIGHTP:
+            # Branch if line unaffected by this rev.
             if popo.marked:
-                self._line.text = self._line.text[:7] + self._marker + self._line.text[8:]
+                self._old_line.text = self._old_line.text[:7] + self._marker + self._old_line.text[8:]
                 self._marker = '*'
 
-            # Maybe cuss card number sequence error.
-            if popo.health & Bit.BIT7:
-                self.cuss_list[0].demand = True
+            self.send_sypt(popo.card)
 
-            # Branch if card is not right print
-            if card_type == HealthBit.CARD_TYPE_RIGHTP:
-                # Print under 1st half of remarks field.
-                self._line.text = self._line.text[:80] + popo.card[8:48]
-                # Make right print a continuation card.
-                self._line.text = 'C' + self._line.text[1:]
-                self.no_loc_sym(popo)
-                continue
+            # Set right print remarks in print.
+            self._old_line.text = self._old_line.text[:80] + popo.card[8:48]
 
-            vert_format = ord(popo.card[7]) & 0xF
-            if vert_format == 8:
-                # Maybe set up skip bit.
-                self._line.spacing |= Bit.BIT1
-            else:
-                # Maybe set up space count.
-                self._line.spacing |= vert_format
+            # Branch if no right print cardno error.
+            if not popo.health & Bit.BIT7:
+                return self.cusser()
 
-            # Set up columns 9-80.
-            self._line.text = self._line.text[:48] + popo.card[8:]
+            # Make up card number error note.
+            self._line.text = self._line.text[:88] + self.cuss_list[0].msg
+            if self.cuss_list[0].demand:
+                return self.rem_cn_err(popo, card_type)
 
-            # Turn off leftover switch.
-            self._yul.switch &= ~SwitchBit.LEFTOVER
+            # If 1st cuss of page, left end of blots.
+            left_end = 2
 
-            # Set up branches on card type.
-            own_proc, ternary_key = self._card_typs[card_type // Bit.BIT6]
+            # Apply serial number to cuss.
+            self.numb_cuss()
+            return self.count_cus(left_end, 6)
 
-            # Use ternary key to check whether columns 1, 17, and 24 contain
-            # queer information.
-            if ternary_key == 3 or (ternary_key == 0 and popo.card[0] != 'J'):
-                if popo.card[0] != ' ':
-                    self.cuss_list[60].demand = True
-                if popo.card[16] != ' ':
-                    self.cuss_list[61].demand = True
-                if popo.card[23] != ' ':
-                    self.cuss_list[62].demand = True
+        if self.cuss_list[0].demand:
+            return self.rem_cn_err(popo, card_type)
+        else:
+            return self.right_pq(popo, card_type)
 
-            own_proc(popo)
+    def rem_cn_err(self, popo, card_type):
+        # Cuss crd number error in remarks card.
+        self.cuss_list[0].demand = 0
+        left_end = self.prin_cuss(self.cuss_list[0])
+
+        # Branch if this card is not right print.
+        if card_type != HealthBit.CARD_TYPE_RIGHTP:
+            self.count_cus(left_end, 10)
+            return self.right_pq(popo, card_type)
+
+        return self.count_cus(left_end, 6)
+
+    # Procedure when last card was not left print remarks.
+    def right_pq(self, popo, card_type):
+        # Set up columns 1-7.
+        self._line.text = popo.card[:7] + self._line.text[7:]
+
+        # Branch if line affected by this revision
+        if popo.marked:
+            self._line.text = self._line.text[:7] + self._marker + self._line.text[8:]
+            self._marker = '*'
+
+        # Maybe cuss card number sequence error.
+        if popo.health & Bit.BIT7:
+            self.cuss_list[0].demand = True
+
+        # Branch if card is not right print
+        if card_type == HealthBit.CARD_TYPE_RIGHTP:
+            # Print under 1st half of remarks field.
+            self._line.text = self._line.text[:80] + popo.card[8:48]
+            # Make right print a continuation card.
+            self._line.text = 'C' + self._line.text[1:]
+            self.no_loc_sym(popo)
+            return
+
+        vert_format = ord(popo.card[7]) & 0xF
+        if vert_format == 8:
+            # Maybe set up skip bit.
+            self._line.spacing |= Bit.BIT1
+        else:
+            # Maybe set up space count.
+            self._line.spacing |= vert_format
+
+        # Set up columns 9-80.
+        self._line.text = self._line.text[:48] + popo.card[8:]
+
+        # Turn off leftover switch.
+        self._yul.switch &= ~SwitchBit.LEFTOVER
+
+        # Set up branches on card type.
+        own_proc, ternary_key = self._card_typs[card_type // Bit.BIT6]
+
+        # Use ternary key to check whether columns 1, 17, and 24 contain
+        # queer information.
+        if ternary_key == 3 or (ternary_key == 0 and popo.card[0] != 'J'):
+            if popo.card[0] != ' ':
+                self.cuss_list[60].demand = True
+            if popo.card[16] != ' ':
+                self.cuss_list[61].demand = True
+            if popo.card[23] != ' ':
+                self.cuss_list[62].demand = True
+
+        own_proc(popo)
 
         return self.end_pass_2()
-
-    def rem_cn_err(self, popo):
-        pass
 
     def end_pass_2(self):
         pass
