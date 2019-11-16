@@ -2,8 +2,8 @@ from yul_system.types import ONES
 from yul_system.assembler.pass_2 import Pass2, Cuss
 
 class AGC4Pass2(Pass2):
-    def __init__(self, mon, yul, adr_limit):
-        super().__init__(mon, yul, adr_limit)
+    def __init__(self, mon, yul, adr_limit, m_typ_tab):
+        super().__init__(mon, yul, adr_limit, m_typ_tab)
 
         self.cuss_list = [
             # 0-2
@@ -165,3 +165,37 @@ class AGC4Pass2(Pass2):
 
         # Set location in print and exit.
         self._line.text = self._line.text[:42] + ('%04o' % location) + self._line.text[46:]
+
+    # Subroutine in pass 2 for AGC4 to set in print the location of an instruction or constant, with bank
+    # number if any and with a notation for end of block or bank if required. Blots out location field if bad loc.
+    def m_ploc_eb(self, location):
+        if location >= ONES:
+            self._line.text = self._line.text[:32] + '■■■■' + self._line.text[36:]
+            return
+
+        orig_loc = location
+
+        # Branch if location is not in a bank.
+        if location > 0o5777:
+            # Set bank number in print.
+            bank_no = location >> 10
+            self._line.text = self._line.text[:29] + ('%02o,' % bank_no) + self._line.text[32:]
+
+            # Put subaddress in the class 6000-7777.
+            location = (location | 0o6000) & 0o7777
+
+        if (location & 0o1777) == 0o1777:
+            # Mark line "EB" for end of block or bank.
+            self._line.text = self._line.text[:24] + '  EB' + self._line.text[28:]
+        else:
+            midx = 0
+            # Branch when memory type category found.
+            while orig_loc > self._m_typ_tab[midx][1]:
+                midx += 1
+            # Branch if not end of minor block.
+            if orig_loc == self._m_typ_tab[midx][1]:
+                # Mark line "MC" for memory type change.
+                self._line.text = self._line.text[:24] + '  MC' + self._line.text[28:]
+
+        # Set up location in print and exit.
+        self._line.text = self._line.text[:32] + ('%04o' % location) + self._line.text[36:]

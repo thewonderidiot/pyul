@@ -12,10 +12,11 @@ class Line:
         self.text = text
 
 class Pass2:
-    def __init__(self, mon, yul, adr_limit):
+    def __init__(self, mon, yul, adr_limit, m_typ_tab):
         self._mon = mon
         self._yul = yul
         self._adr_limit = adr_limit
+        self._m_typ_tab = m_typ_tab
         self._def_xform = 0o31111615554
         self._marker = '*'
         self._lin_count = 0
@@ -491,7 +492,7 @@ class Pass2:
         # Maybe cuss  D  error.
         if popo.health & Bit.BIT9:
             self.cuss_list[1].demand = True
-        
+
         # Maybe cuss nonblank loc field.
         if popo.health & Bit.BIT8:
             self.cuss_list[43].demand = True
@@ -561,7 +562,91 @@ class Pass2:
         return self.pag_loxim(popo)
 
     def erase(self, popo):
-        pass
+        # Maybe cuss  D  error.
+        if popo.health & Bit.BIT9:
+            self.cuss_list[1].demand = True
+
+        # Maybe cuss predefinition failure.
+        if popo.health & Bit.BIT10:
+            self.cuss_list[13].demand = True
+
+        # Maybe cuss meaningless address field.
+        if popo.health & Bit.BIT11:
+            self.cuss_list[8].demand = True
+
+        # Maybe cuss address size error.
+        if popo.health & Bit.BIT12:
+            self.cuss_list[10].demand = True
+
+        # Maybe cuss type error.
+        if popo.health & Bit.BIT13:
+            self.cuss_list[5].demand = True
+
+        # Branch if location is symbolic.
+        if popo.health & Bit.BIT8:
+            # Mabye cuss loc sym no fit in table.
+            if popo.health & Bit.BIT16:
+                self.cuss_list[14].demand = True
+            # Analyze and pre-process location symbol.
+            loc_symbol = self.loc_sym_1(popo)
+        else:
+            # Proclaim abscense of location symbol.
+            loc_symbol = None
+
+        no_eraloc = False
+
+        # Branch if erase is leftover.
+        if popo.health & Bit.BIT15:
+            # Branch if there is a location symbol.
+            if not popo.health & Bit.BIT8:
+                self.cuss_list[46].demand = True
+            # Branch if leftover is now defined.
+            elif loc_symbol.defined:
+                # Use location value found by pass 1.5 to
+                # form upper and lower erase addresses.
+                popo.health |= (symbol.value & 0xFFFF) << 16
+                upper_addr = (popo.health & 0xFFFF) + symbol.value
+                popo.health &= ~0xFFFF
+                popo.health |= upper_addr
+            else:
+                no_eraloc = True
+        else:
+            # Maybe cuss location conflict.
+            if popo.health & Bit.BIT14:
+                self.cuss_list[4].demand = True
+
+            if not popo.health & Bit.BIT8:
+                # Maybe cuss unsigned numeric loc
+                if popo.health & Bit.BIT16:
+                    self.cuss_list[52].demand = True
+                if popo.health & Bit.BIT17:
+                    no_eraloc = True
+
+            if (popo.health & (Bit.BIT11 | Bit.BIT12)) != 0:
+                no_eraloc = True
+
+        if no_eraloc:
+            # Show that there is no location value.
+            location = ONES
+        else:
+            location = (popo.health >> 16) & 0xFFFF
+
+        # Print or blot first location.
+        self.m_ploc_eb(location)
+
+        # Branch if there is no location value.
+        if location != ONES:
+            location = popo.health & 0xFFFF
+
+        # Print or blot second location.
+        self.m_ploc_is(location)
+
+        # Quick exit if no symbol.
+        if loc_symbol is None:
+            return self.no_loc_sym(popo)
+
+        # Call for location symbol cussing.
+        return self.health_cq(popo, loc_symbol)
 
     def _2octal(self, popo):
         pass

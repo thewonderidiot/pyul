@@ -149,7 +149,7 @@ class Pass1:
         try:
             comp_mod = importlib.import_module('yul_system.assembler.' + self._yul.comp_name.lower() + '.pass_2')
             comp_pass2_class = getattr(comp_mod, self._yul.comp_name + 'Pass2')
-            comp_pass2 = comp_pass2_class(self._mon, self._yul, self.adr_limit)
+            comp_pass2 = comp_pass2_class(self._mon, self._yul, self.adr_limit, self.m_typ_tab)
         except Exception as e:
             self._mon.mon_typer('UNABLE TO LOAD PASS 2 FOR COMPUTER %s: %s' % (self._yul.comp_name, e.text.upper()))
             self._yul.typ_abort()
