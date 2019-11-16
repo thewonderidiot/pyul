@@ -84,6 +84,7 @@ class SwitchBit:
     CONDISH_SYMBOL    = Bit.BIT19
     CONDISH_OCTAL     = Bit.BIT20
     BEGINNING_OF_EQU  = Bit.BIT29
+    BAD_ASSEMBLY      = Bit.BIT34
     PRINT             = Bit.BIT44
 
 class HealthBit:

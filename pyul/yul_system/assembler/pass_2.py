@@ -21,6 +21,7 @@ class Pass2:
         self._lin_count = 0
         self._page_no = 0
         self._user_page = 0
+        self._n_err_lins = 0
         self._field_cod = [None, None]
         self._head = ' '
         self._line = Line()
@@ -83,12 +84,16 @@ class Pass2:
                     # Make up card number error note.
                     self._line.text = self._line.text[:88] + self.cuss_list[0].msg
                     if self.cuss_list[0].demand:
+                        # FIXME: THIS IS ALL WRONG
                         self.rem_cn_err(popo)
                         continue
 
                     # If 1st cuss of page, left end of blots.
-                    self.go_num_cus()
-                    self.count_cus(6)
+                    left_end = 2
+
+                    # Apply serial number to cuss.
+                    self.numb_cuss()
+                    self.count_cus(left_end, 6)
                     continue
             else:
                 if self.cuss_list[0].demand:
@@ -184,7 +189,8 @@ class Pass2:
         pass
 
     def no_loc_sym(self, popo):
-        pass
+        self.print_lin()
+        return self.pag_loxim(popo)
 
     def memory(self, popo):
         pass
@@ -268,15 +274,27 @@ class Pass2:
 
         if loc_symbol.health >= 5:
             # Move location symbol for cussing by proc word, done for 5 through F.
-            return self.health_cq(loc_symbol)
+            return self.health_cq(popo, loc_symbol)
 
         # Select local cussing procedure on 1 - 4.
         if loc_symbol.health == 1:
-            # FIXME
-            pass
+            self.cuss_list[28].demand = True
+            self.sym_cuss(self.cuss_list[28], loc_symbol.name)
+            return self.no_loc_sym(popo)
+
+        elif loc_symbol.health == 2:
+            self.cuss_list[31].demand = True
+            self.sym_cuss(self.cuss_list[31], loc_symbol.name)
+            return self.no_loc_sym(popo)
+
         elif loc_symbol.health == 3:
             self.print_lin()
             return self.pag_loxim(popo, loc_symbol, adr_symbol)
+
+        else: #4
+            self.cuss_list[32].demand = True
+            self.sym_cuss(self.cuss_list[32], loc_symbol.name)
+            return self.no_loc_sym(popo)
 
     def pag_loxim(self, popo, loc_symbol=None, adr_symbol=None):
         page = self._page_no
@@ -313,9 +331,53 @@ class Pass2:
         self.send_sypt(popo)
         return self.cusser()
 
-    def health_cq(self):
-        # FIXME
-        pass
+    def health_cq(self, popo, symbol):
+        # Branch if symbol health is B or more.
+        if symbol.health >= 0xB:
+            # Cuss multiple definition.
+            self.cuss_list[22].demand = True
+            self.sym_cuss(self.cuss_list[22], symbol.name)
+
+        if symbol.health == 5:
+            # Indefinably leftover.
+            self.cuss_list[30].demand = True
+            self.sym_cuss(self.cuss_list[30], symbol.name)
+
+        elif symbol.health == 7:
+            # Multiple definition.
+            self.cuss_list[22].demand = True
+            self.sym_cuss(self.cuss_list[22], symbol.name)
+
+        elif symbol.health in (8, 0xB):
+            # Oversize location.
+            self.cuss_list[20].demand = True
+            self.sym_cuss(self.cuss_list[20], symbol.name)
+
+        elif symbol.health in (9, 0xC):
+            # Memory type error.
+            self.cuss_list[16].demand = True
+            self.sym_cuss(self.cuss_list[16], symbol.name)
+
+        elif symbol.health in (0xA, 0xD):
+            # Conflict of location contents.
+            self.cuss_list[18].demand = True
+            self.sym_cuss(self.cuss_list[18], symbol.name)
+
+        elif symbol.health == 0xE:
+            # Multiple errors.
+            self.cuss_list[24].demand = True
+            # Inhibit mult. def. cuss for healths E,F.
+            self.cuss_list[22].demand = False
+            self.sym_cuss(self.cuss_list[24], symbol.name)
+
+        elif symbol.health == 0xE:
+            # Miscellaneous trouble.
+            self.cuss_list[26].demand = True
+            # Inhibit mult. def. cuss for healths E,F.
+            self.cuss_list[22].demand = False
+            self.sym_cuss(self.cuss_list[26], symbol.name)
+
+        return self.no_loc_sym(popo)
 
     def fits_fitz(self, popo):
         sym_addr = (popo.health >> 16) & 0xFFFF
@@ -707,14 +769,61 @@ class Pass2:
     def send_sypt(self, card):
         pass
 
-    def go_num_cus(self):
-        pass
-
-    def count_cus(self, offset):
-        pass
-
     def cusser(self):
-        pass
+        line_cussed = False
+        left_end = 0
+
+        for cuss in self.cuss_list:
+            if cuss.demand:
+                cuss.demand = False
+                line_cussed = True
+                left_end = self.prin_cuss(cuss)
+
+        if line_cussed:
+            self.count_cus(left_end, 9)
+
+    def prin_cuss(self, cuss):
+        left_end = (16 + len(cuss.msg)) // 8
+        self._line.text = self._line.text[:16] + cuss.msg + self._line.text[left_end*8:]
+        # FIXME: If 1st cuss of page, left end of blots.
+
+        # Poison indicates fatal cuss (bad assy).
+        if cuss.poison:
+            # Effect conditional suppression.
+            self._yul.switch |= SwitchBit.SUPPRESS_INACTIVE
+            # Indicate that assembly is bad.
+            self._yul.switch |= SwitchBit.BAD_ASSEMBLY
+
+        self.numb_cuss()
+
+        return left_end
+
+    def numb_cuss(self):
+        # Form serial number for this cussed line.
+        cuss_no = self._n_err_lins + 1
+        self._line.text = 'E■■■■■■ ' + self._line.text[8:]
+
+        # Print serial "# NN  " and text of cuss.
+        serial_text = '# %d' % cuss_no
+        self._line.text = self._line.text[:8] + serial_text + self._line.text[8+len(serial_text):]
+        self.print_lin()
+
+    def count_cus(self, left_end, right_end):
+        self._n_err_lins += 1
+        if self._err_pages[0] is None:
+            # On first error, save page number.
+            self._err_pages[0] = self._yul.page_head[-4:]
+
+        # Branch if cussed line is first on page.
+        elif self._err_pages[1] != self._yul.page_head[-4:]:
+            prev_cuss = 'PRECEDING CUSSED LINE IS ON PAGE%s ■■■' % self._err_pages[1]
+            # Fill empty part of 1st cuss with blots.
+            blot_words = '■■■■■■■■' * (right_end - left_end)
+            end_idx = left_end*8 + len(blot_words) + len(prev_cuss)
+            self._old_line.text = self._old_line.text[:left_end*8] + blot_words + prev_cuss + self._old_line.text[end_idx:]
+
+        # Show latest page number with error.
+        self._err_pages[1] = self._yul.page_head[-4:]
 
     def print_lin(self):
         # New line ages suddenly.
@@ -1036,7 +1145,6 @@ class Pass2:
 
     def voidem(self, definer):
         # Void a definer thread.
-        definer.health = 0
         definer.analyzer = 2
         for definee in definer.definees:
             def_symbol = self._yul.sym_thr[definee]
@@ -1089,6 +1197,6 @@ class Pass2:
         self._n_word_recs = 0
         self._yul.switch &= ~SwitchBit.LAST_REM
 
-        self._err_pages = 0
+        self._err_pages = [None, None]
 
         return self.pass_2()

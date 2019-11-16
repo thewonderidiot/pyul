@@ -257,14 +257,14 @@ class Pass1:
 
         real_card_no = int(card_no, 10)
 
-        if real_card_no <= self._real_cdno:
+        if real_card_no <= (self._real_cdno & 0xFFFFFFFFF):
             # Disorder
             self._real.health |= Bit.BIT7
 
         # Keep normal form of card number on tape.
         self._real.card = self._real.card[0] + card_no + self._real.card[7:]
 
-        self.real_cdno = real_card_no
+        self._real_cdno = real_card_no
         return self._real.card
 
     def send_popo(self, popo):
@@ -914,7 +914,7 @@ class Pass1:
             else:
                 if subf[0] in '89':
                     # Set complaint when 8s or 9s and no D.
-                    if not self._field_cod[0] & FieldCodBit.DECIMAL:
+                    if subf[1:].isspace() and not self._field_cod[0] & FieldCodBit.DECIMAL:
                         popo.health |= Bit.BIT9
                     self._field_cod[0] |= FieldCodBit.DECIMAL
 
