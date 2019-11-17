@@ -1,9 +1,21 @@
-from yul_system.types import ONES
+from yul_system.types import ONES, BAD_WORD, Bit, SwitchBit
 from yul_system.assembler.pass_2 import Pass2, Cuss
 
 class AGC4Pass2(Pass2):
     def __init__(self, mon, yul, adr_limit, m_typ_tab):
         super().__init__(mon, yul, adr_limit, m_typ_tab)
+        
+        self._max_adres = 0
+
+        self._implads = [
+                0,
+                1,
+                2,
+                14,
+                15,
+                21,
+                3071
+        ]
 
         self.cuss_list = [
             # 0-2
@@ -137,15 +149,295 @@ class AGC4Pass2(Pass2):
             Cuss(''),
 
             # 78-80
-            Cuss('ASTERISK ILLEGAL ON THIS OP CODE', poison=True),
+            Cuss(''),
             Cuss(''),
             Cuss(''),
 
             # 81-83
+            Cuss(''),
+            Cuss(''),
+            Cuss(''),
+
+            # 84-86
+            Cuss(''),
+            Cuss(''),
+            Cuss(''),
+
+            # 87-89
+            Cuss(''),
+            Cuss(''),
+            Cuss(''),
+
+            # 90-92
+            Cuss('ASTERISK ILLEGAL ON THIS OP CODE', poison=True),
+            Cuss(''),
+            Cuss(''),
+
+            # 93-95
             Cuss('SUBROUTINE NAME NOT RECOGNIZED  ', poison=True),
             Cuss('MULTIPLE CALLS IN ONE PROGRAM OR SUBRO  '),
             Cuss('CONFLICT WITH EARLIER HEAD SPECIFICATION', poison=True),
         ]
+
+    # Subroutine in pass 2 for AGC4 to form a word from an operation code and an addess (basic instruction
+    # and address constants), or from two polish operator codes (polish operator words). The operation code(s)
+    # and some associated information bits are taken from the health word of the current POPO item. The address is
+    # obtained from the card via a general subroutine in pass 2 called PROC ADR. Implied addresses, bank errors, and
+    # inappropriate addresses are checked for, and address value cussing is done.
+    def m_proc_op(self, popo):
+        if popo.health & Bit.BIT32:
+            return self.polish_op(popo)
+
+        # Insert basic op code into word.
+        self._word = (popo.health >> 12) & (Bit.BIT34 | Bit.BIT35 | Bit.BIT36)
+
+        # Maybe cuss illegal op code asterisk.
+        if popo.health & Bit.BIT11:
+            self.cuss_list[90].demand = True
+
+        # Branch if no implied address.
+        if popo.health & Bit.BIT31:
+            # Proceed if address field is blank.
+            if not(popo.address_1().isspace() and popo.address_2().isspace()):
+                # Otherwise cuss mildly and proceed.
+                self.cuss_list[63].demand = True
+
+            # Supply implied address.
+            impl_idx = (popo.health >> 18) & 0xF
+            self._address = self._implads[impl_idx]
+
+            # Branch unless op code is "SQUARE".
+            if popo.health & Bit.BIT25:
+                # Br if extracode "SQUARE" is indexed.
+                if self._yul.switch & SwitchBit.PREVIOUS_INDEX:
+                    self.cuss_list[36].demand = True
+            else:
+                # Set current index bit for "EXTEND".
+                self._yul.switch &= ~SwitchBit.CURRENT_INDEX
+                self._yul.switch |= (popo.health >> 2) & SwitchBit.CURRENT_INDEX
+
+                # Cuss indexing on non-extracode implads.
+                if self._yul.switch & SwitchBit.PREVIOUS_INDEX:
+                    self.cuss_list[7].demand = True
+
+            # Clear false special condition flags.
+            popo.health &= ~0o77000000
+            return self.basic_sba(popo)
+        
+        # Branch if special condition is 5 or less, or 13 or more.
+        spec_cond = (popo.health >> 19) & 0x1F
+        if (spec_cond <= 5) or (spec_cond >= 13):
+            # Branch to permit negative address.
+            set_min = (self._word & (Bit.BIT34 | Bit.BIT35 | Bit.BIT36)) != Bit.BIT34
+            return self.non_const(popo, set_min)
+
+        dec6_flag = Bit.BIT2 | Bit.BIT3
+        # Put constant flag on address constant.
+        self._word |= dec6_flag
+
+        # Branch if code = ADRES or CADR.
+        if spec_cond <= 7:
+            return self.non_const(popo, set_min=False)
+
+        # Branch if code is not XCADR.
+        if spec_cond > 11:
+            # Set up 47777 in word and allow -address.
+            self._word &= ~0o77777
+            self._word |= 0o47777
+            return self.non_const(popo)
+
+        # FIXME: POL STORE
+
+
+    def non_const(self, popo, set_min=True):
+        if set_min:
+            self._min_adres = -0o7777
+        self._max_adres = 0o71777
+
+        # Translate address field.
+        self.proc_adr(popo)
+
+        # Restore min adr value.
+        self._min_adres = 0
+
+        # Cuss lack of "D" in decimal subfield.
+        if popo.health & Bit.BIT9:
+            self.cuss_list[1].demand = True
+
+        if self._address >= ONES:
+            # Meaningless or atrocious address.
+            return self.bad_basic(popo)
+
+        if self._address > self._max_adres:
+            # Print bad-size address if possible.
+            if self._address < 0o72000:
+                self.cuss_list[35].demand = True
+                self.prb_adres(self._address)
+            # Cuss range error in address value.
+            self.cuss_list[10].demand = True
+            return self.bad_basic(popo)
+
+        # Branch if no constant flag.
+        if self._word <= Bit.BIT17:
+            return self.instrop(popo)
+
+        # FIXME: CONSTANTS
+
+    # Specific processing for basic instructions.
+    def instrop(self, popo):
+        # Branch if positive address value.
+        if self._address < 0 and not self._yul.switch & SwitchBit.PREVIOUS_INDEX:
+            # Cuss if no index before minus address.
+            self.cuss_list[36].demand = True
+
+        # Branch if there are no special conds.
+        spec_cond = (popo.health >> 19) & 0x1F
+        if spec_cond == 0:
+            return self.basic_adr(popo)
+        # FIXME: special conditions!
+
+    def basic_adr(self, popo):
+        if self._address >= 0:
+            return self.basic_sba(popo)
+        # FIXME
+
+    def basic_sba(self, popo):
+        # Branch if address not in a bank.
+        adr_wd = self._address
+        if self._address <= 0o5777:
+            return self.gud_basic(popo, adr_wd=adr_wd)
+
+        # Put subaddress in 6000-7777 class.
+        adr_wd &= ~0o76000
+        adr_wd |= 0o6000
+
+        # Branch if location is not in a bank.
+        if self._location <= 0o5777:
+            return self.gud_basic(popo, adr_wd=adr_wd)
+
+        # Branch on bank error.
+        adr_bank = (self._address >> 10) & 0x1F
+        loc_bank = (self._location >> 10) & 0x1F
+        if adr_bank == loc_bank:
+            # Go to assemble word.
+            return self.gud_basic(popo, adr_wd=adr_wd)
+
+        # Set poison bit of bank cuss = -indexed.
+        cuss = self.cuss_list[33]
+        cuss.poison = not self._yul.switch & SwitchBit.PREVIOUS_INDEX
+        # Call for bank error cuss.
+        cuss.demand = True
+        # Insert bank number in bank cuss.
+        cuss.text = cuss.text[:19] + ('%02o' % adr_bank) + cuss.text[21:]
+        return self.gud_basic(popo, adr_wd=adr_wd)
+
+    # Printing procedures for basic instructions and address constants.
+
+    def gud_basic(self, popo, adr_wd=0):
+        # Put address or subaddress in word.
+        self._word += adr_wd
+
+        # Branch if no minus sign in column 17.
+        if popo.card[16] == '-':
+            # Complement negative instruction.
+            self._word ^= 0o77777
+
+        # Put basic code address into print image.
+        self._line.text = self._line.text[:40] + ('%04o' % (self._word & 0o7777)) + self._line.text[44:]
+
+        # Branch if word is an address constant.
+        dec6_flag = Bit.BIT2 | Bit.BIT3
+        first_digit = (self._word >> 12) & 0o7
+        if self._word >= dec6_flag:
+            # Print first digit of constant.
+            self._line.text = self._line.text[:39] + ('%o' % first_digit) + self._line.text[40:]
+        else:
+            # Print op code of instruction.
+            self._line.text = self._line.text[:38] + ('%o' % first_digit) + self._line.text[39:]
+            # Branch on indexed instruction.
+            if not self._yul.switch & SwitchBit.PREVIOUS_INDEX:
+                # Mark as subject to bad reference code.
+                dec48_flg = Bit.BIT2 | Bit.BIT5
+                self._word |= dec48_flg
+
+            # Supply bank indicator to simulator.
+            bank_no = self._address >> 10
+            self._word |= bank_no << 30
+            # Store it twice to make parity OK.
+            self._word |= bank_no << 24
+
+            # Move current index bit to previous.
+            self._yul.switch &= ~SwitchBit.PREVIOUS_INDEX
+            if self._yul.switch & SwitchBit.CURRENT_INDEX:
+                self._yul.switch |= SwitchBit.PREVIOUS_INDEX
+            # Clear current index bit.
+            self._yul.switch &= ~SwitchBit.CURRENT_INDEX
+
+        return self.bc_check(popo)
+
+    def bad_basic(self, popo):
+        self._line.text = self._line.text[:40] + '■■■■' + self._line.text[44:]
+
+        if self._word > Bit.BIT17:
+            # Blot first digit of bad constant.
+            self._line.text = self._line.text[:39] + '■' + self._line.text[40:]
+        else:
+            spec_cond = (popo.health >> 19) & 0x1F
+            if spec_cond == 4:
+                # Set previous index bit if index.
+                self._yul.switch |= SwitchBit.PREVIOUS_INDEX
+            else:
+                # Clear previous index bit.
+                self._yul.switch &= ~SwitchBit.PREVIOUS_INDEX
+            # Branch if no minus sign in column 17.
+            if popo.card[16] == '-':
+                # Complement good op of bad neg. instr.
+                self._word ^= 0o77777
+
+            # Print good op code in bad instruction.
+            first_digit = (self._word >> 12) & 0o7
+            self._line.text = self._line.text[:38] + ('%o' % first_digit) + self._line.text[39:]
+
+        self._word = BAD_WORD
+        return self.bc_check(popo)
+
+    def bc_check(self, popo):
+        if popo.card[16] == '-':
+            # Clear "should-be-indexed" cuss if minus.
+            self.cuss_list[36].demand = False
+        elif popo.card[16] != ' ':
+            # Cuss if neither blank nor minus in CC 17.
+            self.cuss_list[61].demand = True
+
+        if popo.card[0] == 'J':
+            # Clear "should-be-indexed" cuss if lftvr.
+            self.cuss_list[36].demand = False
+        elif popo.card[0] != ' ':
+            # Cuss if neither blank nor J in column 1.
+            self.cuss_list[60].demand = True
+
+        # Cuss if column 24 non-blank.
+        if popo.card[23] != ' ':
+            self.cuss_list[62].demand = True
+
+        # Return to general procedure.
+        return
+
+    def prb_adres(self, address):
+        # Set up address of adr cuss.
+        cuss = self.cuss_list[35]
+        # Branch if address is in a bank.
+        if address < 0o6000:
+            # Move up non-bank address.
+            cuss.text = cuss.text[:8] + ('=%04o  ' % address)
+        else:
+            bank_no = address >> 10
+            # Put subaddress in the range 6000-7777.
+            address = (address | 0o6000) & 0o7777
+            cuss.text = cuss.text[:8] + ('=%02o,%04o' % (bank_no, address))
+
+    def polish_op(self, popo):
+        pass
 
     # Subroutine in pass 2 for AGC4 to set in print a right-hand location for such as setloc.
     # Puts in the bank indicator, if any. Blots out an invalid location.

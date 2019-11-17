@@ -1,4 +1,4 @@
-from yul_system.types import ALPHABET, ONES, SwitchBit, HealthBit, Bit
+from yul_system.types import ALPHABET, ONES, Symbol, SwitchBit, HealthBit, FieldCodBit, Bit
 
 class Cuss:
     def __init__(self, msg, poison=False):
@@ -23,6 +23,7 @@ class Pass2:
         self._page_no = 0
         self._user_page = 0
         self._n_err_lins = 0
+        self._min_adres = 0
         self._field_cod = [None, None]
         self._head = ' '
         self._line = Line()
@@ -202,15 +203,18 @@ class Pass2:
     def disaster(self, popo):
         pass
 
-    def no_loc_sym(self, popo):
-        self.print_lin()
-        return self.pag_loxim(popo)
+    def no_loc_sym(self, popo, loc_symbol=None, print_line=True):
+        if print_line:
+            self.print_lin()
+        return self.pag_loxim(popo, loc_symbol)
 
     def memory(self, popo):
         pass
 
     def instruct(self, popo):
-        pass
+        loc_symbol = self.instront(popo)
+        self.m_proc_op(popo)
+        self.proc_word(popo, loc_symbol)
 
     def illegop(self, popo):
         pass
@@ -220,6 +224,70 @@ class Pass2:
 
     def octal(self, popo):
         pass
+
+    # Subroutine in pass 2 to process the location field of an instruction or constant. Cusses about location
+    # format and value, determines the value of a leftover location if required, and prints the location value
+    # with end of block or bank notation if required.
+    def instront(self, popo):
+        # Branch if location is symbolic.
+        if not popo.health & Bit.BIT8:
+            # Maybe cuss rejection of leftover status.
+            if popo.health & Bit.BIT13:
+                self.cuss_list[3].demand = True
+            # Maybe cuss "D" error, zero equaloc.
+            if popo.health & Bit.BIT9:
+                self.cuss_list[1].demand = True
+            loc_symbol = None
+        else:
+            # Maybe cuss loc sym no fit in table.
+            if popo.health & Bit.BIT15:
+                self.cuss_list[14].demand = True
+
+            # Analyze and pre-process location symbol.
+            loc_symbol = self.loc_sym_1(popo)
+
+        # Branch if loc symbol didn't fit in table.
+        if loc_symbol is not None:
+            # Maybe cuss wrongful predefinition.
+            if popo.health & Bit.BIT13:
+                self.cuss_list[51].demand = True
+            # Put location symbol into cuss in case it was wrongfully predefined.
+            self.sym_cuss(self.cuss_list[51], loc_symbol.name)
+
+        # Maybe cuss oversize location value.
+        if popo.health & Bit.BIT14:
+            self.cuss_list[6].demand = True
+
+        # Maybe cuss location memory type error.
+        if popo.health & Bit.BIT15:
+            self.cuss_list[5].demand = True
+
+        # Maybe cuss conflict in location content.
+        if popo.health & Bit.BIT16:
+            self.cuss_list[4].demand = True
+
+        no_loc_leftover = Bit.BIT8 | Bit.BIT12
+        # Branch if there's no good location valu.
+        if popo.health & Bit.BIT14:
+            location = ONES
+        # Branch if location not leftover or no location field symbol.
+        elif (popo.health & no_loc_leftover) == no_loc_leftover:
+            # Turn on leftover switch.
+            self._yul.switch |= SwitchBit.LEFTOVER
+            # Branch if the leftover was defined.
+            if loc_symbol.defined:
+                # Use value found by pass 1.5.
+                popo.health |= loc_symbol.value & 0xFFFF
+                self._location = popo.health & 0xFFFF
+            else:
+                self._location = ONES
+        else:
+            self._location = popo.health & 0xFFFF
+
+        # Print location value and return.
+        self.m_ploc_eb(self._location)
+
+        return loc_symbol
 
     # Procedure in pass 2 for IS,=,EQUALS cards. Prints value, cusses for format, value, and both symbols.
     def equals(self, popo):
@@ -272,19 +340,19 @@ class Pass2:
         # Branch if there is no address symbol.
         if adr_symbol is not None:
             # Call for address symbol cussing.
-            self.symb_fits(adr_symbol, True)
+            self.symb_fits(adr_symbol)
 
         # Exit when no location symbol.
         if loc_symbol is None:
             return self.form_locn(good_loc=False)
 
         if loc_symbol.defined:
-            location = loc_symbol.value
+            self._location = loc_symbol.value
         else:
-            location = ONES
+            self._location = ONES
 
         # Print location value.
-        self.m_ploc_is(location)
+        self.m_ploc_is(self._location)
 
         if loc_symbol.health >= 5:
             # Move location symbol for cussing by proc word, done for 5 through F.
@@ -294,12 +362,12 @@ class Pass2:
         if loc_symbol.health == 1:
             self.cuss_list[28].demand = True
             self.sym_cuss(self.cuss_list[28], loc_symbol.name)
-            return self.no_loc_sym(popo)
+            return self.no_loc_sym(popo, loc_symbol)
 
         elif loc_symbol.health == 2:
             self.cuss_list[31].demand = True
             self.sym_cuss(self.cuss_list[31], loc_symbol.name)
-            return self.no_loc_sym(popo)
+            return self.no_loc_sym(popo, loc_symbol)
 
         elif loc_symbol.health == 3:
             self.print_lin()
@@ -308,7 +376,7 @@ class Pass2:
         else: #4
             self.cuss_list[32].demand = True
             self.sym_cuss(self.cuss_list[32], loc_symbol.name)
-            return self.no_loc_sym(popo)
+            return self.no_loc_sym(popo, loc_symbol)
 
     def pag_loxim(self, popo, loc_symbol=None, adr_symbol=None):
         page = self._page_no
@@ -345,7 +413,21 @@ class Pass2:
         self.send_sypt(popo)
         return self.cusser()
 
-    def health_cq(self, popo, symbol):
+    # Routine in pass 2 to finish processing a word (either an instruction or constant). Releases the line
+    # for printing, transmits words to "SEND WORD" if the location is valid, sets up all cusses concerning the location
+    # symbol if any, restores "NO LOC SYM" as a general end procedure, releases the card for transmission to tape as a
+    # sypt or sylt record component, and proceeds to the universal cussing routine.
+    def proc_word(self, popo, loc_symbol):
+        # Release line for printing.
+        self.print_lin()
+
+        # Branch if there is no location symbol or loc sym not in symbol table.
+        if not popo.health & Bit.BIT8 or loc_symbol is None:
+            return self.no_loc_sym(popo, loc_symbol, print_line=False)
+
+        return self.health_cq(popo, loc_symbol, print_line=False)
+
+    def health_cq(self, popo, symbol, print_line=True):
         # Branch if symbol health is B or more.
         if symbol.health >= 0xB:
             # Cuss multiple definition.
@@ -391,7 +473,7 @@ class Pass2:
             self.cuss_list[22].demand = False
             self.sym_cuss(self.cuss_list[26], symbol.name)
 
-        return self.no_loc_sym(popo)
+        return self.no_loc_sym(popo, symbol, print_line)
 
     def fits_fitz(self, popo):
         sym_addr = (popo.health >> 16) & 0xFFFF
@@ -401,7 +483,76 @@ class Pass2:
         sym_keys = list(self._yul.sym_thr.keys())
         return self._yul.sym_thr[sym_keys[sym_addr-1]]
 
-    def symb_fits(self, symbol, ret_on_def=False):
+    def proc_adr(self, popo):
+        # Form subfields from address field.
+        adr_wd = self.adr_field(popo)
+
+        if self._field_cod[0] is None:
+            # Cuss and exit on meaningless field.
+            self.cuss_list[8].demand = True
+            self._address = ONES
+            return
+
+        if self._field_cod[0] == 0:
+            # Fake zero modifier when field is blank.
+            adr_wd[1] = 0
+        else:
+            unsigned_mask = FieldCodBit.UNSIGNED | FieldCodBit.NUMERIC
+            # Br if main part is not signed numeric, or if relative to leftover location.
+            if (self._field_cod[0] & unsigned_mask != FieldCodBit.NUMERIC) or self._yul.switch & SwitchBit.LEFTOVER:
+                # Branch if main part is symbolic.
+                if self._field_cod[0] == FieldCodBit.SYMBOLIC:
+                    sym_value = self.symbol_ad(popo, adr_wd)
+                    if sym_value is None:
+                        return
+                    else:
+                        adr_wd[0] = sym_value
+                if self._field_cod[1] != 0:
+                    adr_wd[0] += adr_wd[1]
+                return self.minad_chk(popo, adr_wd)
+
+            if self._field_cod[1] != 0:
+                # Add two signed numeric parts.
+                adr_wd[0] += adr_wd[1]
+
+            # Modifier relative current location.
+            adr_wd[1] = adr_wd[0]
+
+        adr_wd[0] = self._location
+        if adr_wd[0] == ONES:
+            # Cuss and exit when location is bad.
+            self.cuss_list[29].demand = True
+            self._address = ONES
+            return
+
+        adr_wd[0] += adr_wd[1]
+        return self.minad_chk(popo, adr_wd)
+
+    def minad_chk(self, popo, adr_wd):
+        # Branch if value not too negative or more than CAC3.
+        if (adr_wd[0] < self._min_adres) or (adr_wd[0] >= 0x10000):
+            # Cuss and exit when address value faulty.
+            self.cus_list[10].demand = True
+            self._address = ONES
+            return
+
+        # Normal exit.
+        sign = -1 if adr_wd[0] < 0 else 1
+        self._address = sign * (abs(adr_wd[0]) & 0xFFFF)
+
+    def symbol_ad(self, popo, adr_wd):
+        # Analyze history of symbol.
+        sym_name = adr_wd[0].strip()
+        symbol = self.anal_symb(sym_name)
+        if symbol is None:
+            # Cuss and exit when symbol dont fit.
+            self.cuss_list[15].demand = True
+            self.sym_cuss(cuss_list[15], sym_name) 
+            return None
+
+        return self.symb_fits(symbol)
+
+    def symb_fits(self, symbol):
         # Branch if health of symbol is B or more.
         if symbol.health >= 0xB:
             self.cuss_list[23].demand = True
@@ -411,59 +562,64 @@ class Pass2:
             # Undefined.
             self.cuss_list[9].demand = True
             self.sym_cuss(self.cuss_list[9], symbol.name)
+            self._address = ONES
             return None
 
         elif symbol.health == 1:
             # Nearly defined by equals.
             self.cuss_list[47].demand = True
             self.sym_cuss(self.cuss_list[47], symbol.name)
+            self._address = ONES
             return None
 
         elif symbol.health == 2:
             # Multiply defined including nearly by =.
             self.cuss_list[48].demand = True
             self.sym_cuss(self.cuss_list[48], symbol.name)
+            self._address = ONES
             return None
 
         elif symbol.health in (3, 6):
             # Defined by equals or defined (no cuss).
-            return self.symb_mod_q(ret_on_def)
+            return symbol.value
 
         elif symbol.health == 4:
             # Multiply defined including by equals.
             self.cuss_list[50].demand = True
             self.sym_cuss(self.cuss_list[50], symbol.name)
-            return self.symb_mod_q(ret_on_def)
+            return symbol.value
 
         elif symbol.health == 5:
             # Failed leftover.
             self.cuss_list[49].demand = True
             self.sym_cuss(self.cuss_list[49], symbol.name)
+            self._address = ONES
             return None
 
         elif symbol.health == 7:
             # Multiply defined.
             self.cuss_list[23].demand = True
             self.sym_cuss(self.cuss_list[23], symbol.name)
-            return self.symb_mod_q(ret_on_def)
+            return symbol.value
 
         elif symbol.health in (8, 0xB):
             # Oversize definition.
             self.cuss_list[21].demand = True
             self.sym_cuss(self.cuss_list[21], symbol.name)
+            self._address = ONES
             return None
 
         elif symbol.health in (9, 0xC):
             # Wrong memory type.
             self.cuss_list[17].demand = True
             self.sym_cuss(self.cuss_list[17], symbol.name)
-            return self.symb_mod_q(ret_on_def)
+            return symbol.value
 
         elif symbol.health in (0xA, 0xD):
             # Conflict.
             self.cuss_list[19].demand = True
             self.sym_cuss(self.cuss_list[19], symbol.name)
-            return self.symb_mod_q(ret_on_def)
+            return symbol.value
 
         elif symbol.health == 0xE:
             # Multiple errors.
@@ -480,11 +636,6 @@ class Pass2:
             self.cuss_list[23].demand = False
             self.sym_cuss(self.cuss_list[27], symbol.name)
             return None
-
-    def symb_mod_q(self, ret_on_def):
-        if ret_on_def:
-            return None
-        # FIXME
 
     # Procedure in pass 2 for SETLOC. Does not accept any changes in the status of an
     # address symbol.
@@ -536,7 +687,7 @@ class Pass2:
             self.cuss_list[45].demand = True
 
         # Modify and visit address symbol cusser.
-        self.symb_fits(adr_symbol, True)
+        self.symb_fits(adr_symbol)
 
         # Branch if no definition from pass 1.
         if (popo.health & (Bit.BIT11 | Bit.BIT12)) != 0:
@@ -1056,7 +1207,7 @@ class Pass2:
                 self._yul.switch &= ~SwitchBit.OWE_HEADS
 
                 # Add to line count from last line.
-                self._lin_count += old.spacing & ~Bit.BIT1
+                self._lin_count += old_line.spacing & ~Bit.BIT1
                 return self.print_old(old_line)
 
             # Exit at once if nor this nor last was E.
@@ -1109,7 +1260,7 @@ class Pass2:
 
         else:
             # If not, space this line 1 less.
-            self._line.spacing -= 1
+            self._line.spacing = old_line.spacing - 1
 
         # Make last line SP1.
         old_line.spacing = 1
@@ -1220,7 +1371,7 @@ class Pass2:
         self._yul.switch &= ~SwitchBit.OWE_HEADS
 
         # Add to line count from last line.
-        self._lin_count += old.spacing & ~Bit.BIT1
+        self._lin_count += old_line.spacing & ~Bit.BIT1
         return self.print_old(old_line)
 
     def endoform(self, old_line, check_cusses):

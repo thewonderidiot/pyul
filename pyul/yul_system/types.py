@@ -10,6 +10,9 @@ ALPHABET = '0123456789=\' +ABCDEFGHI.)-JKLMNOPQR$*/STUVWXYZ.('
 # H-1800 max word
 ONES = 0xFFFFFFFFFFFF
 
+# Bad word - original "BAD WORD" in H-1800 character set
+BAD_WORD = 0xBADBADBADBAD
+
 class Bit:
     BIT1  = (1 << 47)
     BIT2  = (1 << 46)
@@ -70,6 +73,7 @@ class SwitchBit:
     ANOTHER_TASK      = Bit.BIT4
     KNOW_SUBS         = Bit.BIT5
     SEGMENT           = Bit.BIT7
+    PREVIOUS_INDEX    = Bit.BIT7
     BEFORE            = Bit.BIT8
     LAST_REM          = Bit.BIT8
     SUBROUTINE        = Bit.BIT9
@@ -83,6 +87,7 @@ class SwitchBit:
     CONDISH_INACTIVE  = Bit.BIT18
     CONDISH_SYMBOL    = Bit.BIT19
     CONDISH_OCTAL     = Bit.BIT20
+    CURRENT_INDEX     = Bit.BIT28
     BEGINNING_OF_EQU  = Bit.BIT29
     BAD_ASSEMBLY      = Bit.BIT34
     PRINT             = Bit.BIT44
