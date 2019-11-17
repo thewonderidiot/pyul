@@ -1,4 +1,4 @@
-from yul_system.types import ALPHABET, ONES, Symbol, SwitchBit, HealthBit, FieldCodBit, Bit
+from yul_system.types import ALPHABET, ONES, BAD_WORD, Symbol, SwitchBit, HealthBit, FieldCodBit, Bit
 
 class Cuss:
     def __init__(self, msg, poison=False):
@@ -421,6 +421,8 @@ class Pass2:
         # Release line for printing.
         self.print_lin()
 
+        self.send_word(self._word)
+
         # Branch if there is no location symbol or loc sym not in symbol table.
         if not popo.health & Bit.BIT8 or loc_symbol is None:
             return self.no_loc_sym(popo, loc_symbol, print_line=False)
@@ -474,6 +476,27 @@ class Pass2:
             self.sym_cuss(self.cuss_list[26], symbol.name)
 
         return self.no_loc_sym(popo, symbol, print_line)
+
+    def send_word(self, word):
+        # Immediate exit for bad location.
+        if self._location >= ONES:
+            return
+
+        # FIXME: Set up substrand use bits and mark substrand bit
+
+        if word != BAD_WORD:
+            # Parity computation for good word only.
+            word *= 2
+            parity = 1
+            for i in range(16):
+                parity ^= ((word >> i) & 1)
+            # Put parity bit in word.
+            word |= parity
+            # Set parity bit in print.
+            self._old_line.text = self._old_line.text[:45] + ('%o' % parity) + self._old_line.text[46:]
+
+            # Branch if word is a constant.
+            # FIXME
 
     def fits_fitz(self, popo):
         sym_addr = (popo.health >> 16) & 0xFFFF

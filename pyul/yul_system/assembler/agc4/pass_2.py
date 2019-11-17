@@ -293,8 +293,48 @@ class AGC4Pass2(Pass2):
         # Branch if there are no special conds.
         spec_cond = (popo.health >> 19) & 0x1F
         if spec_cond == 0:
-            return self.basic_adr(popo)
-        # FIXME: special conditions!
+           pass
+
+        # CAF/OVIND
+        elif spec_cond <= 2:
+            # Warn of OVIND's coming obsolescence.
+            if popo.health & Bit.BIT28:
+                self.cuss_list[71].demand = True
+            # No check on indexed caf or ovind.
+            if not self._yul.switch & SwitchBit.PREVIOUS_INDEX:
+                # Branch if value correct for CAF, OVIND.
+                if self._address < 0o2000:
+                    # Cuss inappropriate address.
+                    self.cuss_list[34].demand = True
+        # CCS
+        elif spec_cond <= 3:
+            # No check on indexed CCS.
+            if not self._yul.switch & SwitchBit.PREVIOUS_INDEX:
+                # Branch if value is correct for CCS.
+                if self._address > 0o1777:
+                    # Cuss CCS reference to fixed.
+                    self.cuss_list[35].demand = True
+                    self.prb_adres(self._address)
+                    self.cuss_list[37].demand = True
+        # INDEX
+        elif spec_cond <= 4:
+            # Set current index bit.
+            self._yul.switch |= SwitchBit.CURRENT_INDEX
+        # TS
+        elif spec_cond <= 5:
+            # Bypass check if instruction is indexed.
+            if not self._yul.switch & SwitchBit.PREVIOUS_INDEX:
+                if self._address > 0o1777:
+                    # Fixed mem adres inappropriate for TS.
+                    self.cuss_list[34].demand = True
+        # XTRACODE
+        else:
+            if not self._yul.switch & SwitchBit.PREVIOUS_INDEX:
+                # Cuss unindexed extracode.
+                self.cuss_list[36].demand = True
+
+        return self.basic_adr(popo)
+
 
     def basic_adr(self, popo):
         if self._address >= 0:
@@ -328,7 +368,7 @@ class AGC4Pass2(Pass2):
         # Call for bank error cuss.
         cuss.demand = True
         # Insert bank number in bank cuss.
-        cuss.text = cuss.text[:19] + ('%02o' % adr_bank) + cuss.text[21:]
+        cuss.msg = cuss.msg[:19] + ('%02o' % adr_bank) + cuss.msg[21:]
         return self.gud_basic(popo, adr_wd=adr_wd)
 
     # Printing procedures for basic instructions and address constants.
@@ -429,12 +469,12 @@ class AGC4Pass2(Pass2):
         # Branch if address is in a bank.
         if address < 0o6000:
             # Move up non-bank address.
-            cuss.text = cuss.text[:8] + ('=%04o  ' % address)
+            cuss.msg = cuss.msg[:8] + ('=%04o  ' % address)
         else:
             bank_no = address >> 10
             # Put subaddress in the range 6000-7777.
             address = (address | 0o6000) & 0o7777
-            cuss.text = cuss.text[:8] + ('=%02o,%04o' % (bank_no, address))
+            cuss.msg = cuss.msg[:8] + ('=%02o,%04o' % (bank_no, address))
 
     def polish_op(self, popo):
         pass
