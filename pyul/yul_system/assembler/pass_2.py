@@ -223,7 +223,140 @@ class Pass2:
         pass
 
     def octal(self, popo):
-        pass
+        loc_symbol = self.instront(popo)
+        # Ensure delimiting of op field by asterisk.
+        card = self.delimit(popo)
+        number = self.oct_const(card, self.k1_max, 1)
+        self.m_proc_1p(popo, number)
+        self.proc_word(popo, loc_symbol)
+
+    # Subroutine in pass 2 to translate the address field of an octal constant. Expects to ifnd the field
+    # delimited by an asterisk. Delivers the result as an integer with sign in bit 1 in number, or delivers
+    # ..BAD WORD.. in number if the value cannot be determined. Expects the expression ot be an integer, and
+    # cusses if a fractional part is lost by truncation.
+    def oct_const(self, card, max_numbr, shift_limit):
+        # Initially assume integer.
+        exponent = 42
+        # Initially assume unsigned integer.
+        e_number = 0
+        # Initially assume plus.
+        m_positive = True
+        mantissa = 0
+        full_delt = 3
+        nful_delt = 0
+        n_digits = 0
+
+        con_word = card[24:].lstrip()
+        if con_word[0] in '+-':
+            if con_word[0] == '-':
+                m_positive = False
+            e_number = ONES
+            max_numbr >>= shift_limit
+            con_word = con_word[1:].lstrip()
+
+        while len(con_word) > 0:
+            # Cream last character and get next.
+            caracter = con_word[0]
+            con_word = con_word[1:].lstrip()
+
+            if caracter not in '01234567':
+                # Branch if a point has occurred or this is not a point.
+                if nful_delt == 0 and caracter == '.':
+                    # Signal point occurrence and get next.
+                    nful_delt = 3
+                    full_delt = 0
+                    continue
+                elif n_digits == 0:
+                    if caracter != 'B':
+                        return self.bad_const()
+                    mantissa = 1
+                    break
+                else:
+                    break
+            else:
+                if mantissa >= 0o10000000000000:
+                    exponent += full_delt
+                    # Cuss too many octal digits
+                    self.cuss_list[42].demand = True
+                    continue
+                num = ALPHABET.index(caracter)
+                mantissa = (mantissa << 3) | num
+                n_digits += 1
+                exponent -= nful_delt
+
+        if caracter == 'B':
+            # Initially assume plus B number.
+            b_sign = +1
+            b_number = 0
+            dec_digs = 0
+
+            if con_word[0] in '+-':
+                if con_word[0] == '-':
+                    b_sign = -1
+                con_word = con_word[1:].lstrip()
+
+            while len(con_word) > 0:
+                caracter = con_word[0]
+                con_word = con_word[1:].lstrip()
+
+                if not caracter.isdigit():
+                    # No digits after B is illegal.
+                    if dec_digs == 0:
+                        return self.bad_const()
+                    exponent += b_sign * b_number
+                    break
+                else:
+                    num = ALPHABET.index(caracter)
+                    b_number = b_number*10 + num
+                    dec_digs += 1
+                    if dec_digs > 2:
+                        return self.bad_const(ex_range=True)
+
+        # Only asterisk is OK here.
+        if caracter != '*':
+            return self.bad_const()
+
+        # Branch if value is integer.
+        while exponent < 42:
+            if mantissa & 0x1:
+                # Cuss lost fractional bits.
+                self.cuss_list[41].demand = True
+            # Discard lowest bit.
+            mantissa >>= 1
+            exponent += 1
+
+        # Branch if scaling is finished.
+        while exponent > 42:
+            mantissa <<= 1
+            exponent -= 1
+
+        if mantissa > max_numbr:
+            return self.bad_const(ex_range=True)
+
+        if m_positive:
+            mantissa |= Bit.BIT1
+
+        return mantissa
+
+    def bad_const(self, ex_range=False):
+        if not ex_range:
+            # Signal meaningless address format.
+            self.cuss_list[8].demand = True
+        else:
+            # Signal range error.
+            self.cuss_list[40].demand = True
+        return BAD_WORD
+
+    # Trivial subroutine to delimit a constant field by an asterisk, using the presence or abscence of an
+    # asterisk in the operation code field.
+    def delimit(self, popo):
+        # Test so-called indirect addressing bit.
+        if popo.health & Bit.BIT11:
+            # If one, there should be an explicit *.
+            return popo.card + '    **  '
+        else:
+            # If zero, field is 2 words long.
+            return popo.card[:40] + '********' + popo.card[48:]
 
     # Subroutine in pass 2 to process the location field of an instruction or constant. Cusses about location
     # format and value, determines the value of a leftover location if required, and prints the location value
@@ -570,7 +703,7 @@ class Pass2:
         if symbol is None:
             # Cuss and exit when symbol dont fit.
             self.cuss_list[15].demand = True
-            self.sym_cuss(cuss_list[15], sym_name) 
+            self.sym_cuss(cuss_list[15], sym_name)
             return None
 
         return self.symb_fits(symbol)

@@ -4,7 +4,10 @@ from yul_system.assembler.pass_2 import Pass2, Cuss
 class AGC4Pass2(Pass2):
     def __init__(self, mon, yul, adr_limit, m_typ_tab):
         super().__init__(mon, yul, adr_limit, m_typ_tab)
-        
+
+        self.k1_max = 0o77777
+        self.k2_max = 0o7777777777
+
         self._max_adres = 0
 
         self._implads = [
@@ -223,7 +226,7 @@ class AGC4Pass2(Pass2):
             # Clear false special condition flags.
             popo.health &= ~0o77000000
             return self.basic_sba(popo)
-        
+
         # Branch if special condition is 5 or less, or 13 or more.
         spec_cond = (popo.health >> 19) & 0x1F
         if (spec_cond <= 5) or (spec_cond >= 13):
@@ -531,3 +534,24 @@ class AGC4Pass2(Pass2):
 
         # Set up location in print and exit.
         self._line.text = self._line.text[:32] + ('%04o' % location) + self._line.text[36:]
+
+    # Subroutine in pass 2 for AGC4 to set up a single-precision constant in word and in print. This subroutine
+    # does not care whether the word is signed or not, but demands the output of dec/oct const in number.
+    def m_proc_1p(self, popo, number):
+        if number == BAD_WORD:
+            self._line.text = self._line.text[:39] + '■■■■■' + self._line.text[44:]
+            self._word = number
+            return
+
+        # Isolate magnitude
+        self._word = number & ~(Bit.BIT1)
+        if not number & Bit.BIT1:
+            # Complement negative word.
+            self._word ^= 0o77777
+
+        # Set word in print.
+        self._line.text = self._line.text[:39] + ('%05o' % self._word) + self._line.text[44:]
+
+        # Apply internal constant flag and exit
+        dec6_flag = Bit.BIT2 | Bit.BIT3
+        self._word |= dec6_flag
