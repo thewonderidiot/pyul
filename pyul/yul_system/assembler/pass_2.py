@@ -1,4 +1,5 @@
 from yul_system.types import ALPHABET, ONES, BAD_WORD, Symbol, SwitchBit, HealthBit, FieldCodBit, Bit
+from math import modf
 
 class Cuss:
     def __init__(self, msg, poison=False):
@@ -58,6 +59,14 @@ class Pass2:
             (self.count,       3),
             (self.segnum,      3),
         ]
+        self.pow_pow_2m = [.5, .25, .0625, .390625e-2,
+                           .1525878906e-4, .2328306437e-9,
+                           .5421010864e-19, .2938735877e-38,
+        ]
+        self.pow_pow_2p = [2.0, 4.0, 16.0, 256.0, 65536.0,
+                           .4294967296e10, .1844674407e20,
+                           .3402823669e39
+        ]
 
     def pass_2(self):
         for popo in self._yul.popos:
@@ -68,6 +77,9 @@ class Pass2:
                 self.un_las_rem(popo, card_type)
             else:
                 self.right_pq(popo, card_type)
+
+        self.print_lin()
+        return self.end_pass_2()
 
     def un_las_rem(self, popo, card_type):
         self._yul.switch &= ~SwitchBit.LAST_REM
@@ -168,8 +180,6 @@ class Pass2:
 
         own_proc(popo)
 
-        return self.end_pass_2()
-
     def end_pass_2(self):
         pass
 
@@ -220,15 +230,200 @@ class Pass2:
         pass
 
     def decimal(self, popo):
-        pass
+        loc_symbol = self.instront(popo)
+        # Ensure delimiting of field by asterisk.
+        card = self.delimit(popo)
+        # Translate constant.
+        number = self.dec_const(card, *self.d1_params)
+        self.m_proc_1p(popo, number)
+        self.proc_word(popo, loc_symbol)
 
     def octal(self, popo):
         loc_symbol = self.instront(popo)
-        # Ensure delimiting of op field by asterisk.
+        # Ensure delimiting of field by asterisk.
         card = self.delimit(popo)
+        # Translate constant and join decimal.
         number = self.oct_const(card, self.k1_max, 1)
         self.m_proc_1p(popo, number)
         self.proc_word(popo, loc_symbol)
+
+    # Subroutine in pass 2 to translate the address field of a decimal constant. Expects to find the field
+    # delimited by an asterisk. Delivers the result as an integer with sign in bit 1 in number, or delivers
+    # ..BAD WORD.. in number if the value cannot be determined. Approporiate cussing is done.
+    def dec_const(self, card, max_decml, iscale, max_numbr):
+        # Initially assume integer.
+        exponent = 0
+        # Initially assume plus.
+        m_sign = Bit.BIT1
+        mantissa = 0
+        # Expo increases when wd full, no point.
+        full_delt = -1
+        # But point moves down when wd not full.
+        nful_delt = 0
+        n_digits = 0
+
+        # Branch if cannot be a sign.
+        con_word = card[24:].lstrip()
+        if con_word[0] in '+-':
+            # Place explicit sign on mantissa.
+            if con_word[0] == '-':
+                m_sign = 0
+            con_word = con_word[1:].lstrip()
+
+        while len(con_word) > 0:
+            # Cream last character and get next.
+            caracter = con_word[0]
+            con_word = con_word[1:].lstrip()
+
+            if not caracter.isdigit():
+                # Branch if a point has occurred or this is not a point.
+                if nful_delt == 0 and caracter == '.':
+                    # Signal point occurrence and get next.
+                    nful_delt = -1
+                    full_delt = 0
+                    continue
+                else:
+                    break
+            else:
+                if mantissa >= 10000000000:
+                    exponent += full_delt
+                    self.cuss_list[39].demand = True
+                else:
+                    mantissa *= 10
+                    # Signal theres at least one digit.
+                    n_digits += 1
+                    exponent += nful_delt
+                    # Put digit into mantissa.
+                    num = ALPHABET.index(caracter)
+                    mantissa += num
+
+        # Test none/some digits indicator.
+        if n_digits == 0:
+            # Number = 1.0 if no digits before E or B.
+            number = 1.0
+        else:
+            # Float number before E or B adjust.
+            number = mantissa * 10**exponent
+
+        # Branch if not an E.
+        if caracter == 'E':
+            # Initially assume plus E number.
+            e_sign = +1
+            e_number = 0
+            dec_digs = 0
+
+            # Signal non-void field.
+            n_digits += 1
+
+            if con_word[0] in '+-':
+                # Put explicit sign on E number.
+                if con_word[0] == '-':
+                    b_sign = -1
+                con_word = con_word[1:].lstrip()
+
+            # Loop to deal with digits after E.
+            while len(con_word) > 0:
+                caracter = con_word[0]
+                con_word = con_word[1:].lstrip()
+
+                if not caracter.isdigit():
+                    # No digits after E is wrong.
+                    if dec_digs == 0:
+                        return self.bad_const()
+                    break
+                else:
+                    e_number *= 10
+                    num = ALPHABET.index(caracter)
+                    e_number += num
+                    dec_digs += 1
+                    if dec_digs > 3:
+                        return self.bad_const(ex_range=True)
+
+            # Add implicit and explicit exponents.
+            e_number = exponent + e_sign*e_number
+            # Negative result is wrong. 128 or more is wrong too.
+            if e_number <= 1 or e_number >= 128:
+                return self.bad_const(ex_range=True)
+
+            number *= 10**e_number
+
+        # Branch if character is not a B.
+        if caracter == 'B':
+            # Signal non-void field.
+            n_digits += 1
+
+            # Initially assume plus E number.
+            b_sign = +1
+            b_number = 0
+            dec_digs = 0
+
+            if con_word[0] in '+-':
+                # Put in explicit sign.
+                if con_word[0] == '-':
+                    b_sign = -1
+                con_word = con_word[1:].lstrip()
+
+            # Loop to deal with digits after E.
+            while len(con_word) > 0:
+                caracter = con_word[0]
+                con_word = con_word[1:].lstrip()
+
+                # Branch if not a digit.
+                if not caracter.isdigit():
+                    # No digits after B is wrong.
+                    if dec_digs == 0:
+                        return self.bad_const()
+                    break
+                else:
+                    b_number *= 10
+                    num = ALPHABET.index(caracter)
+                    b_number += num
+                    dec_digs += 1
+                    if dec_digs > 3:
+                        return self.bad_const(ex_range=True)
+
+            if b_number != 0:
+                # B number more than 209 is wrong.
+                if b_number >= 210:
+                    return self.bad_const(ex_range=True)
+                if b_sign < 0:
+                    l_powers_2 = self.pow_pow_2m
+                else:
+                    l_powers_2 = self.pow_pow_2p
+
+                pow_idx = 0
+                common = 1.0
+                while b_number != 0:
+                    if b_number & 1:
+                        common *= l_powers_2[pow_idx]
+                    b_number >>= 1
+                    pow_idx += 1
+
+                # Scale by B factor.
+                number *= common
+
+        if number >= 1.0:
+            # Error if too-big integer.
+            if number > max_decml:
+                return self.bad_const(ex_range=True)
+            fract = modf(number)[0]
+            # FIXME: epsilon?
+            if fract != 0.0:
+                self.cuss_list[41].demand = True
+            number = int(number)
+        else:
+            # Turn fraction into integer for machine.
+            number *= iscale
+            if number < 0.5 and number != 0.0:
+                # Inadvertant 0 is a scaling blunder.
+                self.cuss_list[41].demand = True
+            number = int(number)
+            if number > max_numbr:
+                number = max_numbr
+
+        # Attach sign.
+        number |= m_sign
+        return number
 
     # Subroutine in pass 2 to translate the address field of an octal constant. Expects to ifnd the field
     # delimited by an asterisk. Delivers the result as an integer with sign in bit 1 in number, or delivers
@@ -240,7 +435,7 @@ class Pass2:
         # Initially assume unsigned integer.
         e_number = 0
         # Initially assume plus.
-        m_positive = True
+        m_sign = Bit.BIT1
         mantissa = 0
         full_delt = 3
         nful_delt = 0
@@ -249,7 +444,7 @@ class Pass2:
         con_word = card[24:].lstrip()
         if con_word[0] in '+-':
             if con_word[0] == '-':
-                m_positive = False
+                m_sign = 0
             e_number = ONES
             max_numbr >>= shift_limit
             con_word = con_word[1:].lstrip()
@@ -333,10 +528,7 @@ class Pass2:
         if mantissa > max_numbr:
             return self.bad_const(ex_range=True)
 
-        if m_positive:
-            mantissa |= Bit.BIT1
-
-        return mantissa
+        return m_sign | mantissa
 
     def bad_const(self, ex_range=False):
         if not ex_range:

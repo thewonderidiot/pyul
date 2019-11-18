@@ -5,7 +5,9 @@ class AGC4Pass2(Pass2):
     def __init__(self, mon, yul, adr_limit, m_typ_tab):
         super().__init__(mon, yul, adr_limit, m_typ_tab)
 
+        self.d1_params = [16383.0, 16384.0, 16383]
         self.k1_max = 0o77777
+        self.d2_params = [268435455.0, 268435456.0, 268435455]
         self.k2_max = 0o7777777777
 
         self._max_adres = 0
