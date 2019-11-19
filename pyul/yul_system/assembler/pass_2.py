@@ -1400,6 +1400,7 @@ class Pass2:
 
                 subf = subf[1:] + ' '
 
+        decimal = False
         while subf[0] != ' ':
             if not subf[0].isnumeric():
                 if (subf[0] != 'D'):
@@ -1415,13 +1416,11 @@ class Pass2:
                     return common, subf
 
                 # Set up conversion, decimal to binary
-                self._field_cod[0] |= FieldCodBit.DECIMAL
+                decimal = True
                 break
             else:
                 if subf[0] in '89':
-                    # Set complaint when 8s or 9s and no D.
-                    if not self._field_cod[0] & FieldCodBit.DECIMAL:
-                        popo.health |= Bit.BIT9
+                    # Telltale bit for 8s and 9s.
                     self._field_cod[0] |= FieldCodBit.DECIMAL
 
                 if dig_file is None:
@@ -1432,7 +1431,12 @@ class Pass2:
 
             subf = subf[1:] + ' '
 
-        if self._field_cod[0] & FieldCodBit.DECIMAL:
+        # Set complaint when 8s or 9s and no D.
+        if not decimal and self._field_cod[0] & FieldCodBit.DECIMAL:
+            popo.health |= Bit.BIT9
+            decimal = True
+
+        if decimal:
             value = int(dig_file, 10)
         else:
             value = int(dig_file, 8)
