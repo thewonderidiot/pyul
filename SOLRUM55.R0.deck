@@ -1229,4 +1229,984 @@ L 001  2INTERRUPT TRANSFER ROUTINES
  0037            XCH    BANKREG
  0038  2         TC     KEYRUPTA
  0039   MODEBANK CADR   KEYRUPTA
+L 001  2FIXED-FIXED INTERPRETER SECTION
+ 0001  2         SETLOC 4000            SECOND HALF OF FIXED-FIXED.
+ 0002   INTPRET  CCS    Q               ENTRY TO INTERPRETER
+ 0003  2         TS     ADRLOC
+ 0004            CS     BANKREG         GET BANKBITS
+ 0005            TS     BANKSET
+ 0006  2         TC     +3
+ 0007   NEWEQUN  CS     BANKSET         HERE FOR NEW EQUATIONS
+ 0008            TS     BANKREG
+ 0009            CAF    ONE             SET NEWEQIND TO CALL LOAD
+ 0010            TS     NEWEQIND
+ 0011            AD     ADRLOC          C(ADRLOC) = LOCATION LAST ADDRESS USED
+ 0012            TS     LOC             FOR OPERATORS
+ 0013            INDEX  A               GET FIRST OP  AND NO. OF OPERATOR WORDS
+ 0014            CS     0
+ 0015            AD     MINUS1
+ 0016            TS     ORDER
+ 0017            MASK   LOW7            NUMBER OF ADDITIONAL OPERATOR WORDS
+ 0018            AD     LOC
+ 0019            TS     ADRLOC          AND SET ADRLOC
+ 0020            CAF    ZERO            TO SET ORDER TO ZERO
+ 0021  8         TC     IPROC2
+ 0022   DANZIG   CCS    NEWJOB          INTERPRETIVE INTERRUPT
+ 0023  2         TC     CHANG2          CALL IN BANK0 AND SWITCH JOBS
+ 0024            CS     BANKSET         RESET BANK BITS OF OBJECT PROGRAM
+ 0025  2         TS     BANKREG
+ 0026            CCS    ORDER           HAS NEXT OP CODE BEEN PROCESSED
+ 0027  2         TC     LOWWD           NEXT INSTRUCTION WAS RIGHT-HAND
+ 0028            INDEX  LOC             PICK UP POSSIBLE NEXT INSTRUCTION
+ 0029            CS     1
+ 0030            CCS    A
+ 0031            TC     IPROC           IT IS - GO PROCESS IT
+ 0032  2         TC     +1              IN CASE THE FIRST ADDRESS WAS INACTIVE
+ 0033            INDEX  ADRLOC          END OF EQUATION
+ 0034            CS     1
+ 0035            CCS    A               IS THERE ANOTHER ADDRESS
+ 0036            TC     PUSHDOWN        NO - INSERT IN PUSH-DOWN LIST
+ 0037  2D34      DEC    34              USED TO DISPATCH STORE OPERATIONS
+ 0038   STORADR  TS     POLISH          PROCESS STORE ADDRESSES
+ 0039            TC     INCADR          TO SHOW WE PICKED UP ANOTHER ADDRESS
+ 0040            CAF    D34             FORM CODES 32 - 34
+ 0041            AD     MODE
+ 0042            DOUBLE                 BECAUSE WE HAVE TO PUT IT INTO CYR
+ 0043            TS     CYR
+ 0044            CAF    LOW11
+ 0045            MASK   POLISH          SAVE ERASABLE PART PLUS POSSIBLE TAG
+ 0046            XCH    POLISH
+ 0047            AD     NEGIDEX         DIRECT OR INDEXED
+ 0048            CCS    A
+ 0049            TC     INDEX           IT IS INDEXED - PRESENT POLISH  OK
+ 0050   NEGIDEX  OCT    -33777          NEGATIVE OF STORE ADDRESS PREFIX +1
+ 0051            CS     BIT11
+ 0052            AD     POLISH
+ 0053            TS     POLISH
+ 0054  8         TC     NONINDEX
+ 0055   IPROC    TS     ORDER           OP CODE WORD WAS PICKED UP BY CCS
+ 0056            XCH    LOC
+ 0057            AD     ONE
+ 0058            XCH    LOC
+ 0059            MASK   LOW7            SAVE LOW ORDER CODE
+ 0060   IPROC2   XCH    ORDER           ENTRY FROM NEWEQUN
+ 0061            INDEX  OPOVF
+ 0062            MP     BIT8            SHIFT IT RIGHT SEVEN PLACES
+ 0063  2         TS     CYR             GETTING RID OF THE RIGHT-HAND OP
+ 0064   JUMPIT   CCS    CYR             LOOK AT LOW-ORDER PREFIX BIT
+ 0065            TC     ADDRESS         INDEXABLE - DECODE ADDRESS IMMEDIATELY
+ 0066  2LOADOP   OCT    43              USED BY UNARY LOAD
+ 0067            CCS    CYR             LOOK AT SECOND ONE HERE
+ 0068            TC     INCADR          PROCESS MISCELLANEOUS
+ 0069  2         TC     MISCPROC
+ 0070   UNAPROC  CCS    NEWEQIND        PROCESS UNARY REQUESTS
+ 0071  2         TC     UNALOAD         LOAD AN ACCUMULATOR AND RETURN
+ 0072            CAF    LOW7
+ 0073            TS     BANKREG         CALL IN BANK 0 WHERE UNARIES ARE
+ 0074            MASK   CYR             WITHOUT CLOBBERING
+ 0075            INDEX  A
+ 0076            TC     UNAJUMP
+P0077  2         PROCESS MISCELLANOUS OP CODES.
+ 0078   MISCPROC INDEX  A
+ 0079            CS     0               WE KNOW ITS AN ADDRESS
+ 0080            AD     ONE             TO FIT IN WITH THE POLISH ADDRESS SCHEME
+ 0081  2         TS     POLISH          SAVE ENTIRE ADDRESS
+ 0082            CCS    A
+ 0083            TC     ENDMISC
+ 0084   42K      OCT    42000
+ 0085            TC     +2
+ 0086            TC     MISCREL
+ 0087            AD     BANKMASK
+ 0088            CCS    A
+ 0089            AD     ONE
+ 0090            TC     +2
+ 0091  2         TC     MISC2
+ 0092            AD     42K
+ 0093            COM
+ 0094            TS     POLISH
+ 0095  2         TC     ENDMISC
+ 0096   MISC2    AD     RELTEST
+ 0097            CCS    A
+ 0098            CS     POLISH
+ 0099            TC     +3
+ 0100            CS     POLISH
+ 0101            TC     +2
+ 0102   MISCREL  AD     FIXLOC
+ 0103  2         TS     ADDRWD
+ 0104   ENDMISC  CAF    LOW7
+ 0105            TS     BANKREG         CALL IN BANK 0
+ 0106            MASK   CYR
+ 0107            INDEX  A
+ 0108  8         TC     NONJUMP
+ 0109   UNALOAD  CAF    LOW7            PROCESS LOADING REQUESTS FOR UNARY
+ 0110            MASK   CYR             OPERATIONS. START BY FINDING APPROPRIATE
+ 0111            CCS    A               MODE
+ 0112            TC     +3              TMOVE HAS CODE 0
+ 0113            CS     TWO
+ 0114            TC     MODESET
+ 0115            CS     A
+ 0116            AD     OCT40003
+ 0117            TS     MODE            SKIP IF SO AND SET A TO -1
+ 0118            CS     ZERO            IF WE DIDNT SKIP
+ 0119  2MODESET  TS     MODE
+ 0120            CAF    NEGSIGN         GET INDEXING BIT FROM UNARY OP CODE IN
+ 0121            MASK   CYR             CYR
+ 0122            AD     LOADOP          AD LOAD OPCODE = OCT 43
+ 0123   60K      DOUBLE                 DOUBLE OP CODE AND DUPLICATE SIGN IN
+ 0124            XCH    CYR             BIT 1 WHERE IT GOES INTO SIGN OF CYR
+ 0125            TS     SL              RE-EDIT, NOT BOTHERING ABOUT BITS 8-14
+ 0126  2         TC     ADDRESS         STANDARD ADDRESS ROUTINE
+ 0127   ULRET    TS     NEWEQIND        RETURN HERE AFTER LOADING
+ 0128            XCH    SL
+ 0129            TS     CYR             RESTORE ORIGINAL OP CODE
+ 0130  2         TC     UNAPROC +2      AND DISPATCH AS USUAL
+ 0131   LOWWD    CAF    ZERO            RIGHT HAND OP CODE HAS ALREADY BEEN SET
+ 0132            XCH    ORDER
+ 0133  8         TC     JUMPIT -1
+ 0134   LOAD     TS     NEWEQIND        LOADS FIRST ADDRESS OF NEW EQUATIONS
+ 0135            INDEX  MODE            TRIGGERS TYPE OF CLEAR-AND-ADD
+ 0136            TC     +3
+ 0137            TC     TCA1
+ 0138            TC     DCA1
+ 0139  2         TC     VCA1
+ 0140   LOADRET  CCS    NEWEQIND        IF A UNARY LOAD, THIS IS STILL ONE
+ 0141  2         TC     ULRET           NO SECOND ADDRESS FOR UNARY LOADS
+ 0142            CS     BANKSET
+ 0143  2         TS     BANKREG
+ 0144   ADDRESS  INDEX  ADRLOC          INDEXABLE ADDRESS ROUTINE
+ 0145            CS     1               PICK UP WHAT SHOULD BE THE NEXT ADDRESS
+ 0146            CCS    A
+ 0147            TC     PUSHUP          NO ADDRESS MEANS TAKE OFF TOP OF STACK
+ 0148            TC     PUSHUP2         INACTIVE ADDRESS MEANS JUST PUSHUP
+ 0149            XCH    ADRLOC          SAVE ADDRESS WHILE WE INCREMENT ADRLOC
+ 0150            AD     ONE
+ 0151            XCH    ADRLOC          NOW BRING IT BACK
+ 0152            TS     POLISH
+ 0153            CAF    NEGSIGN
+ 0154            MASK   CYR
+ 0155            CCS    A               INDEXED OR NOT
+ 0156   BUGMPAC  XCADR  MPAC
+ 0157            TC     NONINDEX
+P0158  2         PROCEDURE FOR INDXED ADDRESSES.
+ 0159   INDEX    XCH    POLISH
+ 0160            TS     SR              SR NOW CONTAINS SUB-ADDRESS
+ 0161            XCH    CYR             SAVE ORDER CODE
+ 0162            TS     CYL             TO PREPARE FOR RESTORING
+ 0163            TC     TAG
+ 0164            INDEX  TAG1
+ 0165            CS     X1              INDEX REGISTERS ARE SUBTRACTIVE, ALA 70X
+ 0166            AD     SR
+ 0167  2         XCH    POLISH          TS WOULD SKIP ON OVERFLOW
+ 0168            XCH    CYL             RESTORE OP CODE BITS IN CYR
+ 0169  2         TS     CYR
+ 0170            CCS    POLISH          SEE IF BIT 15 SHOULD BE ZERO.  IT SHOULD
+ 0171            TC     NONINDEX        IF THE ADDRESS IS LESS THAN ROUGHLY
+ 0172            TC     RELTOVAC +1     -1000D.
+ 0173            TC     +2
+ 0174  2         TC     RELTOVAC +1     QUICK ACTION ON THESE ZERO CASES.
+ 0175            AD     RELTEST         (-976D).
+ 0176            CCS    A
+ 0177            XCH    POLISH          LESS THAN -1000. GO DIRECTLY TO
+ 0178  8         TC     SWADDR          SWITCHED-BANK ADDRESS ROUTINE.
+ 0179   NONINDEX CS     POLISH          GET 14 BIT ADDRESS
+ 0180            AD     ERASTEST        SEE IF ERASABLE OR NOT
+ 0181            CCS    A
+ 0182            AD     RELTEST         YES - SEE IF IN TEMPORARY BLOCK
+ 0183            TC     TEST2
+ 0184            AD     STORTEST        NO - SEE IF STORE ADDRESS
+ 0185            CCS    A
+ 0186            TC     PUSHUP3         YES - PUSHUP
+ 0187            TC     +1              IN CASE THE STORED ADDRESS WAS 2000.
+ 0188            CAF    BIT15
+ 0189            AD     POLISH
+ 0190   SWADDR   TS     BANKREG
+ 0191            TS     POLISH
+ 0192            MASK   LOW10
+ 0193            AD     6K
+ 0194            TS     ADDRWD
+ 0195  2         TC     JUMP
+ 0196   TEST2    CCS    A               DOES THIS REFER TO THE TEMPORARY BLOCK
+ 0197            TC     RELTOVAC        ADDRESS IS RELATIVE TO VAC AREA.
+ 0198   LOW11    OCT    3777
+ 0199            XCH    POLISH          YES - FORM ADDRESS
+ 0200  2         TS     ADDRWD
+ 0201   JUMP     CAF    THREE           LOOK AT LOW-ORDER 2 BITS IN 5 BIT CODE
+ 0202            MASK   CYR
+ 0203            CCS    A               IF ZERO, LOAD NOW AND CALL IN BANK 0
+ 0204            TC     +3              NON-ZERO - GO ON.
+ 0205            TC     DPSET           LOAD DP IF NECESSARY
+ 0206            TS     BANKREG         CALL IN BANK 0
+ 0207            CAF    LOW7            BITS 6-13 ARE GUARANTEED TO BE ZERO
+ 0208            MASK   CYR
+ 0209            INDEX  A
+ 0210  8         TC     INDJUMP
+ 0211   PUSHDOWN XCH    PUSHLOC         NO STORE ADDRESS GIVEN - PUSH DOWN
+ 0212            TS     ADDRWD          STORED IN THE NEXT ENTRY
+ 0213            INDEX  MODE
+ 0214            AD     NO.WDS          2 FOR DP, 6 FOR VECTORS, 3 FOR TP
+ 0215            TS     PUSHLOC
+ 0216            INDEX  MODE
+ 0217  2         TC     INDJUMP +34D    DISPATCH TO CORRECT STORE INSTRUCTION
+ 0218   PUSHUP1  XCH    Q               THE PUSH-UP ROUTINE IS CALLED UNDER THE
+ 0219            TS     COMPON          FOLLOWING CIRCUMSTANCES:
+ 0220            CAF    LOW7               1. NO ADDRESS WORD IS FOUND.
+ 0221            MASK   CYR                2. A STORE ADDRESS IS FOUND.
+ 0222            AD     -VXSC           OR 3. AN INACTIVE ADDRESS IS FOUND.
+ 0223            CCS    A               IF THE REQUESTING OPERATION CODE IS VXSC
+ 0224            TC     PUSHUPOK        THE MODE MUST BE SWITCHED BEFORE PUSHING
+ 0225   MINUS1   OCT    -1              UP, SINCE VXSC DEMANDS AN ARGUMENT OF
+ 0226  2         TC     PUSHUPOK        THE OPPOSITE MODE (SCALAR NEEDS VECTOR,
+ 0227            CCS    MODE            ETC.)
+ 0228   MINUS2   OCT    -2              UNUSED CCS BRANCHES.
+ 0229   NEG3     OCT    -3
+ 0230            CS     FOUR
+ 0231            AD     NEG2
+ 0232            TC     +3
+ 0233   PUSHUPOK INDEX  MODE            DO PUSH-UP OPERATION.
+ 0234            CS     NO.WDS          2, 3, OR 6.
+ 0235            AD     PUSHLOC
+ 0236            TS     PUSHLOC
+ 0237            TS     ADDRWD          SET ADDRWD AND LEAVE ADDRESS IN A.
+ 0238  2         TC     COMPON
+ 0239  2-VXSC    EQUALS MINUS2
+ 0240  2PUSHUP2  TC     INCADR          SENT HERE ON INACTIVE ADDRESS
+ 0241   PUSHUP   TC     PUSHUP1         NO ADDRESS GIVEN SENDS US HERE
+ 0242  2         TC     JUMP            AND JUMP
+ 0243   PUSHUP3  CCS    ADRLOC          AN UNEXPECTED STORE ADDRESS SENDS US
+ 0244            TS     ADRLOC          HERE.
+ 0245  2         TC     PUSHUP
+ 0246   RELTOVAC XCH    POLISH          ADDRESS WAS LESS THAN 42, SO ADD
+ 0247            AD     FIXLOC          ADDRESS OF VAC AREA.
+ 0248  2         TC     JUMP -1
+ 0249   INCADR   CAF    ONE
+ 0250            AD     ADRLOC
+ 0251            TS     ADRLOC
+ 0252  8         TC     Q
+ 0253   IJUMP    TC     ITCF            INTERPRETIVE TRANSFER CONTROL
+ 0254            TC     VXSC1           VECTOR TIMES SCALAR
+ 0255            TC     VSU1            VECTOR SUBTRACT
+ 0256            TC     BMN1            BRANCH MINUS
+ 0257            TC     STZ1            STORE ZERO
+ 0258            TC     BOVF            BRANCH ON OVERFLOW
+ 0259            TC     DAD2            DOUBLE PRECISION ADD
+ 0260            TC     BHIZ1           BRANCH IF MAJOR PART ZERO
+ 0261            TC     DSU2            DP SUBTRACT
+ 0262            TC     DBSU            DP BACKWARDS SUBTRACT
+ 0263            TC     DMP2            DP MULTIPLY
+ 0264            TC     SHIFTL          TP LEFT SHIFT
+ 0265            TC     DDV             DP DIVIDE
+ 0266            TC     BDDV            DP BACKWARDS DIVIDE
+ 0267            TC     TRAD            TRIPLE PRECISION ADD
+ 0268            TC     TSLC            TP SHIFT LEFT AND COUNT
+ 0269            TC     SHIFTR1         TP SHIFT RIGHT
+ 0270            TC     DMP2            DP MULTIPLY AND THEN ROUND
+ 0271            TC     TSU1            TP SUBTRACT
+ 0272            TC     SIGN            AFFIX SIGN OF X TO MPAC
+ 0273            TC     MXV1            MATRIX TIMES VECTOR
+ 0274            TC     VXM1            VECTOR TIMES MATRIX
+ 0275            TC     VAD1            VECTOR ADD
+ 0276            TC     BZE1            BRANCH ON ZERO
+ 0277            TC     BVSU1           BACKWARDS VECTOR SUBTRACT
+ 0278            TC     VSRT1           VECTOR SHIFT RIGHT
+ 0279            TC     VSLT1           VECTOR SHIFT LEFT
+ 0280            TC     BPL1            BRANCH POSITIVE
+ 0281            TC     DOT1            VECTOR DOT PRODUCT
+ 0282            TC     CROSS1          VECTOR CROSS PRODUCT
+ 0283  2         TC     VPROJ1          VECTOR PROJECTION
+ 0284            TC     TTS1
+ 0285            TC     DTS1            DP TRANSFER TO STORAGE
+ 0286            TC     VTS1            VECTOR TS
+ 0287  2         TC     LOAD +1         LOADING
+ 0288  26K       EQUALS IJUMP +3        BMN STARTS AT LOCATION 6000
+ 0289  8INDJUMP  EQUALS IJUMP -1
+ 0290   NONJUMP  TC     EXIT
+ 0291            TC     AXT             ADDRESS TO INDEX TRUE
+ 0292            TC     LXA             LOAD INDEX FROM THE ADDRESS
+ 0293            TC     LXC             LOAD INDEX FROM ADDRESS COMPLEMENTED
+ 0294            TC     SXA             STORE INDEX IN THE ADDRESS
+ 0295            TC     XCHX            INDEX REGISTER EXCHANGE
+ 0296            TC     INCR            INDEX REGISTER INCREMENT
+ 0297            TC     XAD             INDEX REGISTER ADD FROM ERASABLE
+ 0298            TC     XSU             INDEX REGISTER SUBTRACT FROM ERASABLE
+ 0299            TC     AST             ADDRESS TO STEP TRUE
+ 0300            TC     AXC             ADDRESS TO INDEX COMPLEMENTED
+ 0301            TC     TIX             TRANSFER ON INDEX
+ 0302            TC     NOLOAD          LEAVE MPAC (OR VAC) LOADED
+ 0303            TC     ITA1            TRANSFER ADDRESS
+ 0304            TC     SWITCHEM        SWITCH AND TEST INSTRUCTIONS
+ 0305  2         TC     NEXT            LODON AND ITCQ
+ 0306   UNAJUMP  TC     TMOVE           FOR TP AS WELL
+ 0307            TC     VMOVE
+ 0308            TC     UNIT
+ 0309            TC     ABVAL1          ABVAL
+ 0310            TC     VSQ             SQUARE OF VECTOR LENGTH
+ 0311            TC     SSP             ABSOLUTE VALUE OF SCALAR
+ 0312            TC     ARCSIN1
+ 0313            TC     ARCCOS1
+ 0314            TC     SIN1
+ 0315            TC     COS1
+ 0316            TC     SQRTS
+ 0317            TC     SQUARE
+ 0318            TC     COMP            COMPLEMENT
+ 0319            TC     DMOVE
+ 0320            TC     SMOVE
+ 0321  8         TC     VDEF            VECTOR DEFINE
+ 0322   THREE    OCT    3
+ 0323            OCT    2
+ 0324  2NO.WDS   OCT    6               3, 2, 6 ORDER IMPORTANT FOR PUSH-DOWN.
+ 0325   POSMAX   OCT    37777           MUST BE 2 LOCATIONS BEFORE NEGMAX
+ 0326   FIVE     OCT    5
+ 0327  2LIMITS   EQUALS POSMAX +1       USED BY CDU COUNTER ARITHMETIC PROGRAMS.
+ 0328   BIT15    OCT    40000
+ 0329   BIT14    OCT    20000
+ 0330   BIT13    OCT    10000
+ 0331   BIT12    OCT    04000
+ 0332   BIT11    OCT    02000
+ 0333   BIT10    OCT    01000
+ 0334   BIT9     OCT    00400
+ 0335   BIT8     OCT    00200
+ 0336   BIT7     OCT    00100
+ 0337   BIT6     OCT    00040
+ 0338   BIT5     OCT    00020
+ 0339   BIT4     OCT    00010
+ 0340   BIT3     OCT    00004
+ 0341   BIT2     OCT    00002
+ 0342  2BIT1     OCT    00001
+ 0343   QUARTER  EQUALS BIT13
+ 0344   EIGHT    EQUALS BIT4
+ 0345   ONE      EQUALS BIT1
+ 0346   ERASTEST EQUALS BIT11
+ 0347   BUGBITS  EQUALS 5777
+ 0348   ATSBITS  EQUALS 5777
+ 0349   NEG2     EQUALS MINUS2
+ 0350   SIX      EQUALS NO.WDS
+ 0351   NEG1     EQUALS MINUS1
+ 0352  2NEGSIGN  EQUALS BIT15
+ 0353   RELTEST  DEC    -976
+ 0354   NEG1/2   2DEC   -.5
+ 0355   POS1/2   2DEC   .5
+ 0356  8HALF     EQUALS POS1/2
+ 0357   TCS1     CS     BUF +2          USED BY DMP, ETC
+ 0358            TS     MPAC +2
+ 0359            CS     BUF +1
+ 0360            TS     MPAC +1
+ 0361            CS     BUF
+ 0362            TS     MPAC
+ 0363  2         TC     Q
+ 0364   TCA1     INDEX  ADDRWD          TRIPLE PRECISION CLEAR AND ADD
+ 0365            CS     2
+ 0366            CS     A
+ 0367  2         TC     +2
+ 0368   DCA1     XCH    ZERO            DOUBLE PRECISION CLEAR AND ADD
+ 0369            TS     MPAC +2           (CLEARS MPAC +2)
+ 0370            INDEX  ADDRWD
+ 0371            CS     1
+ 0372            CS     A
+ 0373            TS     MPAC +1
+ 0374            INDEX  ADDRWD
+ 0375            CS     0
+ 0376            CS     A
+ 0377            TS     MPAC
+ 0378  2         TC     LOADRET         PREPARE TO DECODE NEXT ADDRESS
+ 0379   STORE3   CS     MPAC +2         TRIPLE PRECISION TRANSFER TO STORAGE
+ 0380            CS     A
+ 0381            INDEX  ADDRWD
+ 0382            TS     2
+ 0383   DTS1     CS     MPAC +1         DOUBLE PRECISION TRANSFER TO STORAGE
+ 0384            CS     A
+ 0385            INDEX  ADDRWD
+ 0386   TSQ      TS     1
+ 0387            CS     MPAC
+ 0388   MSIGN    CS     A
+ 0389            INDEX  ADDRWD
+ 0390            TS     0
+ 0391  2NEQRET   TC     NEWEQUN         START NEW EQUATION
+ 0392  8TTS1     EQUALS STORE3
+ 0393  9                35W
+ 0394   DOBR     XCH    POLISH          DOES BRANCHES
+ 0395  2         TC     DOBR2
+ 0396   EXIT2    CS     BANKSET         COMPLETE EXIT EXECUTION BY CALLING IN
+ 0397            TS     BANKREG         BANK OF OBJECT INTERPRETIVE PROGRAM.
+ 0398  2         TC     ADRLOC
+ 0399   SWF/F    CS     BANKSET         BRANCHING TEST INSTRUCTION
+ 0400            TS     BANKREG         RETURNS HERE TO PICK UP BRANCHING ADDRES
+ 0401            INDEX  ADRLOC
+ 0402            CAF    0               BRANCH IS ALWAYS TO FIXED.
+ 0403            AD     NEG1            UNDO YULISH INCREMENT.
+ 0404  2         AD     BIT15
+ 0405   DOBR2    TS     BANKREG
+ 0406            MASK   LOW10
+ 0407            AD     6K-1
+ 0408  2         TC     INTPRET +1
+ 0409   LOW10    OCT    1777
+ 0410   LOW9     OCT    777
+ 0411  26K-1     OCT    5777
+ 0412   VCA1     XCH    Q               VECTOR CLEAR-AND-ADD ROUTINE
+ 0413            TS     TEM5
+ 0414            CAF    NEGSIGN
+ 0415            TC     VECMOVE
+ 0416  2         TC     TEM5
+ 0417   VCS1     XCH    Q               DP VECTOR CLEAR-AND-SUBTRACT
+ 0418            TS     TEM5
+ 0419            CAF    NOOP
+ 0420  2         TC     VCA1 +3
+ 0421   VTS1     XCH    ADDRWD          TRANSFER TO STORAGE
+ 0422            XCH    VACLOC          EXCHANGE VACLOC AND ADDRWD AND DO AN
+ 0423            TS     ADDRWD          EFFECTIVE *CLEAR-AND-ADD*.
+ 0424            CAF    NEGSIGN
+ 0425            TC     VECMOVE
+ 0426            XCH    ADDRWD          RESTORE VACLOC
+ 0427            TS     VACLOC
+ 0428  8         TC     NEWEQUN         THIS ONLY HAPPENS AT END OF EQUATION
+ 0429   VECMOVE  TS     TEM2            MOVES A DP VECTOR IN THE FASTEST WAY
+ 0430            INDEX  ADDRWD          AVAILABLE. USED BY VCA, VCS, AND VTS.
+ 0431            CS     5
+ 0432            INDEX  TEM2
+ 0433            0      0               COM FOR VCA, VTS. NOOP FOR VCS.
+ 0434            INDEX  VACLOC
+ 0435  2         TS     5
+ 0436            INDEX  ADDRWD
+ 0437            CS     4
+ 0438            INDEX  TEM2
+ 0439            0      0
+ 0440            INDEX  VACLOC
+ 0441  2         TS     4
+ 0442            INDEX  ADDRWD
+ 0443   OCT40003 CS     3               CONSTANT USED BY UNARY LOAD ROUTINE.
+ 0444            INDEX  TEM2
+ 0445            0      0
+ 0446            INDEX  VACLOC
+ 0447  2         TS     3
+ 0448            INDEX  ADDRWD
+ 0449   OCT40002 CS     2
+ 0450            INDEX  TEM2
+ 0451            0      0
+ 0452            INDEX  VACLOC
+ 0453  2         TS     2
+ 0454            INDEX  ADDRWD
+ 0455   CSQ      CS     1               CONSTANT USED BY WAITLIST.
+ 0456            INDEX  TEM2
+ 0457            0      0
+ 0458            INDEX  VACLOC
+ 0459  2         TS     1
+ 0460            INDEX  ADDRWD
+ 0461            CS     0
+ 0462            INDEX  TEM2
+ 0463            0      0
+ 0464            INDEX  VACLOC
+ 0465  2         TS     0
+ 0466  8         TC     Q               DONE
+ 0467   STZ1     CAF    ZERO
+ 0468            INDEX  ADDRWD
+ 0469  2         TS     0
+ 0470   RE-ENTER CS     BANKSET         ROUTINE  SIMILAR TO *DANZIG* EXCEPT THAT
+ 0471  2         TS     BANKREG         NO PUSHING DOWN IS DONE AT END OF EQUN.
+ 0472            CCS    ORDER           IT IS USED BY MISCELLANEOUS INSTRUCTIONS
+ 0473  2         TC     LOWWD           AND BRANCHES WHICH FAILED
+ 0474            INDEX  LOC             IF WE HAD RETURNED DIRECTLY TO THE MAIN
+ 0475            CS     1
+ 0476            CCS    A
+ 0477            TC     IPROC           IT IS USED BY BRANCH INSTRUCTIONS WHICH
+ 0478  2NOOP     NOOP                   IN CASE THE FIRST ADDRESS WAS INACTIVE
+ 0479            INDEX  ADRLOC          SEE IF A LEFT-OVER ADDRESS
+ 0480            CS     1
+ 0481            CCS    A
+ 0482            TC     NEWEQUN         NO - START NEW EQUATION
+ 0483   LOW7     OCT    177
+ 0484  2         TC     STORADR         YES - MUST BE STORE ADDRESS
+ 0485  8STOR1    EQUALS STZ1 +1
+ 0486   TAG      CCS    CYR             SETS TAG1 ACCORDING TO SIGN BIT IN CYR
+ 0487            CAF    ZERO
+ 0488            CCS    A               SKIP NEXT INS WITHOUT CHANGING Q
+ 0489            CAF    ONE
+ 0490            AD     FIXLOC          INDEXES AND STEPS IN VAC AREA
+ 0491            TS     TAG1
+ 0492  2         TC     Q
+ 0493  2TCBUF    ADRES  BUF
+ 0494   DSU2     TC     DPSET           DP SUBTRACT
+ 0495            TC     ADDTOSUB
+ 0496  2         TC     DAD2 +1
+ 0497   DBSU     TC     DPSET
+ 0498            TC     DACCOM          COMPLEMENT DP ACCUM
+ 0499  2         TC     DAD2 +1         AND ADD
+ 0500   MPACCOM  CS     MPAC +2         COMPLEMENT MPAC
+ 0501            TS     MPAC +2
+ 0502   DACCOM   CS     MPAC +1
+ 0503            TS     MPAC +1
+ 0504            CS     MPAC
+ 0505            TS     MPAC
+ 0506  2         TC     Q
+ 0507   DPSET    CS     ONE             SET UP DP MODE AND LOAD IF NECESSARY
+ 0508            TS     MODE
+ 0509            CCS    NEWEQIND
+ 0510            TC     LOAD
+ 0511  2         TC     Q
+ 0512   VECSET   CS     ZERO            SIMILARLY FOR VECTORS
+ 0513            TS     MODE
+ 0514            CCS    NEWEQIND
+ 0515            TC     LOAD
+ 0516  2         TC     Q
+ 0517   TPSET    CS     TWO             AND FOR TP
+ 0518            TS     MODE
+ 0519            CCS    NEWEQIND
+ 0520            TC     LOAD
+ 0521  8         TC     Q
+ 0522   DAD2     TC     DPSET           DOUBLE PRECISION ADD INSTRUCTION
+ 0523            CAF    DAD2 +4
+ 0524            TC     DAD1            PROGRAM USES CLOSED SUBROUTINE DAD1,
+ 0525  2         TC     INT1            WITH ADDRESSES SET UP IN ADDRWD, TEM2
+ 0526  2+4       ADRES  MPAC
+ 0527   TSU1     TC     TPSET           TRIPLE PRECISION SUBTRACT INSTRUCTION
+ 0528            TC     ADDTOSUB
+ 0529  2         TC     TRAD +1
+ 0530   TRAD     TC     TPSET           TRIPLE PRECISION ADD INSTRUCTION
+ 0531            TC     +2
+ 0532  2         TC     INT1
+ 0533   +3       XCH    Q
+ 0534            TS     TEM5
+ 0535            CAF    DAD2 +4
+ 0536            TS     TEM2
+ 0537            INDEX  A
+ 0538            XCH    2
+ 0539            INDEX  ADDRWD
+ 0540            AD     2
+ 0541            INDEX  TEM2
+ 0542            TS     2               AGAIN SKIPPING, AS IN DAD1
+ 0543            CAF    ZERO
+ 0544            INDEX  TEM2
+ 0545            AD     1
+ 0546  2         TC     DAD1 +3         FINISH IN DAD1
+ 0547  8         TC     TEM5            AND RETURN
+ 0548   DAD1     TS     TEM2            DOUBLE PRECISION ADD ROUTINE
+ 0549            INDEX  TEM2            POLYNOMIAL EVALUATOR ENTERS HERE.
+ 0550            XCH    1
+ 0551   +3       INDEX  ADDRWD
+ 0552            AD     1
+ 0553            INDEX  TEM2
+ 0554            TS     1               SKIPS IF OVERFLOW WITH COUNT IN A
+ 0555            CAF    ZERO            NO OVERFLOW IF HERE
+ 0556            INDEX  TEM2            ARRIVE HERE WITH 1 OR -1 IN A IF OVERFLO
+ 0557            AD     0
+ 0558            INDEX  ADDRWD
+ 0559            AD     0
+ 0560            INDEX  TEM2
+ 0561            TS     0               AND AGAIN SKIP IF OVERFLOW
+ 0562            TC     Q               EXIT IF NONE
+ 0563            TS     OVFIND          SAVE ANY OVERFLOW FOR BOV TESTING
+ 0564  2         TC     Q
+ 0565   8TO2     TS     TEM8            MOVES THE DP WORD LOCATED AT THE ADDRESS
+ 0566            INDEX  A               IN A TO THE ADDRESS IN TEM2
+ 0567            CS     0
+ 0568            CS     A
+ 0569            INDEX  TEM2
+ 0570            TS     0
+ 0571            INDEX  TEM8
+ 0572            CS     1
+ 0573            CS     A
+ 0574            INDEX  TEM2
+ 0575            TS     1
+ 0576  2         TC     Q
+ 0577   ADDTOSUB XCH    ADDRWD          BY PUTTING THE APPROPRIATE BITS IN
+ 0578            AD     ATSBITS         ADDRWD, DAD1 DOES A DOUBLE SUBTRACT IN-
+ 0579            TS     ADDRWD          STEAD OF A DOUBLE ADD.
+ 0580  8         TC     Q
+ 0581   DMP2     TC     DPSET           DP MULTIPLY (AND ROUND) ROUTINE
+ 0582            XCH    ADDRWD
+ 0583            AD     BUGBITS         MAKE EXENDED CODE ADDRESS.
+ 0584   DSQ2     TS     TEM4            ENTRY FROM DSQ ROUTINE.
+ 0585            XCH    DAD2 +4         C(DAD2 +4) = TC MPAC
+ 0586            TC     DMP1            EXECUTE MULTIPLY AT DMP1, THEN EXIT
+ 0587            TC     TCS1            VIA TCS1 TO MOVE (BUF TO BUF+2)
+A0588  2                                INTO (MPAC TO MPAC+2).
+ 0589   OCT40020 CS     CYR
+ 0590            CCS    CYR
+ 0591   MPACRND  CAF    DAD2 +4         SET UP ROUND SUBROUTINE TO ROUND MPAC.
+ 0592            TC     PREROUND +1
+ 0593  2         TC     DANZIG
+ 0594   SHIFTR1  TC     DPSET           TSRT INSTRUCTION.
+ 0595            TS     BANKREG         SUBROUTINE IN BANK 0
+ 0596            TC     TRUE2           GET INTEGER ADDRESS BACK
+ 0597            TC     SHIFTR -1       WITH DECREMENTED COUNT IN A.
+ 0598  8         TC     DANZIG
+ 0599   DMP1     TS     TEM2            GENERAL PURPOSE DP MULTIPLICATION
+ 0600            INDEX  TEM2            POLYNOMIAL ENTERS HERE.
+ 0601            CS     1
+ 0602            TS     OVCTR           -N1 TO OVCTR
+ 0603            INDEX  TEM4
+ 0604            MP     1               -M1N1
+ 0605            XCH    OVCTR           -U(M1N1) TO OVCTR, -N1 TO A
+ 0606            INDEX  TEM4
+ 0607            MP     0               -M0N1
+ 0608            XCH    OVCTR           -U(M0N1) TO OVCTR, -U(M1N1) TO A
+ 0609            AD     LP              MAYBE INCREMENT -U(M0N1) IN OVCTR
+ 0610            XCH    BUF +1          -L(M0N1)-U(M1N1) TO BUF+1
+ 0611            INDEX  TEM2
+ 0612            CS     0
+ 0613            TS     BUF +2          -N0 TO BUF+2
+ 0614            INDEX  TEM4
+ 0615            MP     1               -M1N0
+ 0616            XCH    OVCTR           -U(M1N0) TO OVCTR, -U(M0N1) TO A
+ 0617            XCH    BUF +1          -U(M0N1) TO BUF+1, -L(M0N1)-U(M1N1) TO A
+ 0618            AD     LP              MAYBE INCREMENT -U(M1N0) IN OVCTR
+ 0619            XCH    BUF +2          -L(M1N0)-L(M0N1)-U(M1N1) TO BUF+2, -N0 T
+ 0620  9O A
+ 0621            INDEX  TEM4
+ 0622            MP     0               -M0N0
+ 0623            XCH    OVCTR           -U(M0N0) TO OVCTR, -U(M1N0) TO A
+ 0624            AD     LP
+ 0625            XCH    BUF +1
+ 0626            AD     BUF +1
+ 0627            XCH    BUF +1
+ 0628            XCH    OVCTR
+ 0629            TS     BUF
+ 0630  2         TC     Q
+R0631  8           TIMING:  86 MC +-2  OR 1.032 MS +-0.024
+ 0632  9                          30 WORDS
+ 0633   BDDV     TC     DPSET           BACKWARDS DP DIVIDE
+ 0634            CAF    ONE             SET SWITCH
+ 0635  2         TC     +2              AND GO ON AS USUAL
+ 0636   DDV      TC     DPSET           REGULAR DP DIVIDE
+ 0637            TS     DVSW            DPSET RETURNS WITH 0 IN A
+ 0638            CAF    LDANZIG         RETURN TO DANZIG
+ 0639            TS     TEMQ3
+ 0640            CAF    TCBUF
+ 0641            TS     TEM2
+ 0642            XCH    ADDRWD
+ 0643  2         TC     8TO2            X,X+1 INTO BUF, BUF+1
+ 0644            CAF    ZERO
+ 0645            TS     BANKREG         CALL IN BANK 0
+ 0646  2         TC     DDV0            TO BANK 0 PORTION
+ 0647   DMP      XCH    Q               DP MULTIPLY ROUTINE WHICH CAN BE CALLED
+ 0648            TS     TEM5            BY TC DMP, FOLLOWED BY A WORD CONTAINING
+ 0649            INDEX  A               THE ADDRESS OF THE MULTIPLIER WITH
+ 0650            CAF    0               BITS IN THE ORDER CODE TO CALL IN MP
+ 0651            TS     TEM4            IN THE EXTENDED CODE (UNKNOWN AS YET)
+ 0652            CAF    DAD2 +4
+ 0653            TC     DMP1
+ 0654            TC     TCS1
+ 0655            INDEX  TEM5            TIME IS 120 MC+-2, OR ABOUT 1.44 MS
+ 0656  2         TC     1               RETURN TO INSTRUCTION AFTER ADDRESS WORD
+ 0657   DAD      XCH    Q               DP ADD ROUTINE WORKING JUST AS MP ABOVE
+ 0658            TS     TEM5            HERE, HOWEVER, ONLY *ADRES X* IS NEEDED
+ 0659            INDEX  A               SINCE AD IS PART OF THE REGULAR CODE
+ 0660            CAF    0
+ 0661            TS     ADDRWD
+ 0662            CAF    DAD2 +4
+ 0663            TC     DAD1
+ 0664            INDEX  TEM5
+ 0665  8         TC     1               TIME IS 48+-2 MC OR 576 MICRO-SEC.
+ 0666   VACCOM   XCH    Q               COMPLEMENT THE APPROPRIATE VAC
+ 0667            TS     TEM5
+ 0668            CS     VACLOC
+ 0669            COM
+ 0670            XCH    ADDRWD
+ 0671            TS     TEM4
+ 0672  2         TC     VCS1 +2
+ 0673   VSU1     TC     VECSET          DP VECTOR SUBTRACT
+ 0674            TC     ADDTOSUB
+ 0675  2         TC     VAD1 +1         USES VAD ROUTINE WITH SUBS
+ 0676   BVSU1    TC     VECSET          DP VECTOR BACKWARDS SUBTRACT
+ 0677            TC     VACCOM          JUST COMPLEMENT VAC
+ 0678            XCH    TEM4
+ 0679            TS     ADDRWD
+ 0680  2         TC     VAD1 +1         AND ADD
+ 0681   VAD1     TC     VECSET
+ 0682            XCH    VACLOC          DP VECTOR ADD
+ 0683            TS     VACLOC
+ 0684            TC     DAD1
+ 0685            TC     AD2
+ 0686            TC     INCRT2
+ 0687            TC     DAD1
+ 0688            TC     AD2
+ 0689            TC     INCRT2
+ 0690            TC     DAD1
+ 0691  8         TC     INT1
+ 0692   DOT1     TC     VECSET          DP DOT PRODUCT ROUTINE
+ 0693            TC     DOT2
+ 0694            TC     MPACCOM
+ 0695   DPEXIT   CS     ONE             CHANGE MODE TO DOUBLE-PRECISION
+ 0696            TS     MODE
+ 0697  2         TC     DANZIG
+ 0698   AD2      XCH    ADDRWD
+ 0699            AD     TWO
+ 0700            TS     ADDRWD
+ 0701  2         TC     Q
+ 0702   DOT2     XCH    TWO             SUBROUTINE DOT2 COMPUTES THE TRIPLE-
+ 0703            TS     TEM11
+ 0704            XCH    TCBUF           SIGN, IN MPAC TO MPAC+2.
+ 0705            XCH    ADDRWD
+ 0706            AD     BUGBITS
+ 0707            TS     TEM4
+ 0708            XCH    Q
+ 0709            TS     TEM8
+ 0710            XCH    VACLOC
+ 0711            TS     VACLOC
+ 0712            TC     DMP1
+ 0713            XCH    BUF
+ 0714            TS     MPAC
+ 0715            XCH    BUF +1
+ 0716            TS     MPAC +1
+ 0717            XCH    BUF +2
+ 0718            TS     MPAC +2
+ 0719            TC     INCRT4
+ 0720            TC     INCRT2
+ 0721            TC     DMP1
+ 0722            TC     TRAD +3
+ 0723            TC     INCRT4
+ 0724            XCH    VACLOC
+ 0725            TS     VACLOC
+ 0726            AD     FOUR
+ 0727            TC     DMP1
+ 0728            TC     TRAD +3
+ 0729  8         TC     TEM8
+ 0730   INCRT4   XCH    TEM4
+ 0731            AD     TEM11
+ 0732            TS     TEM4
+ 0733  2         TC     Q
+ 0734   VXM1     TC     VECSET          DP VECTOR TIMES MATRIX
+ 0735            CS     ADDRWD
+ 0736            TS     TEM10
+ 0737            XCH    TWO
+ 0738            TS     TEM9
+ 0739            XCH    SIX
+ 0740            TC     DOT2 +1
+ 0741  2         TC     MXV2            REST OF OPERATION USES MXV ROUTINE
+ 0742   MXV1     TC     VECSET          MATRIX TIMES DP VECTOR
+ 0743            CS     ADDRWD
+ 0744            TS     TEM10
+ 0745            XCH    SIX             PROGRAM USES DOT PRODUCT ROUTINES TO
+ 0746            TS     TEM9
+ 0747  2         TC     DOT2
+ 0748   MXV2     CAF    K2              USES VBUF
+ 0749            TC     STORDAC
+ 0750            CS     TEM10
+ 0751            AD     TEM9
+ 0752            TS     TEM10
+ 0753            TS     ADDRWD
+ 0754  2         TC     DOT2 +2
+ 0755            CAF    K2 +1
+ 0756            TC     STORDAC
+ 0757            XCH    TEM10
+ 0758            AD     TEM9
+ 0759            TS     ADDRWD
+ 0760  8         TC     DOT2 +2
+ 0761            CAF    K2
+ 0762            TS     ADDRWD
+ 0763            AD     FOUR
+ 0764            TC     STORDAC
+ 0765            TC     VCA1
+ 0766  2         TC     DANZIG
+ 0767   STORDAC  TS     TEM4            SUBROUTINE TO STORE MPAC, MPAC+1 IN
+ 0768            CS     MPAC            ADDRESSES INDICATED BY C(A) AT ENTRY.
+ 0769            INDEX  TEM4
+ 0770            TS     0
+ 0771            CS     MPAC +1
+ 0772            INDEX  TEM4
+ 0773            TS     1
+ 0774  2         TC     Q
+ 0775   VXSC1    CCS    NEWEQIND        DP VECTOR TIMES SCALAR
+ 0776            TC     VECSET          LOAD INSTRUCTION
+ 0777            CCS    MODE            IF NOT, WHICH MODE ARE WE IN
+ 0778   SEVEN    OCT    7
+ 0779  2MINUS13  DEC    -13
+ 0780  2         TC     VECCHECK
+ 0781            XCH    ADDRWD
+ 0782            AD     BUGBITS         TO CALL IN MP
+ 0783  2         TC     VXSC2
+ 0784   VECCHECK TC     VCA1            USE ADDRWD TO LOAD VECTOR
+ 0785  8         CAF    BUGMPAC
+ 0786   VXSC2    TS     TEM4
+ 0787            CS     VACLOC
+ 0788            COM
+ 0789            TC     DMP1
+ 0790            TC     PREROUND
+ 0791            TC     STB
+ 0792            TC     INCRT2
+ 0793            TC     DMP1
+ 0794            TC     ROUND
+ 0795            TC     STB
+ 0796            TC     INCRT2
+ 0797            TC     DMP1
+ 0798            TC     ROUND
+ 0799            TC     STB
+ 0800   ZEROEXIT CS     ZERO            CHANGE MODE TO VECTOR
+ 0801  2         TC     DPEXIT +1
+ 0802  2INT1     EQUALS DANZIG
+ 0803   INCRT2   XCH    TEM2
+ 0804            AD     TWO
+ 0805            TS     TEM2
+ 0806  8         TC     Q
+ 0807   SHORTMP  XCH    MPAC +2         MULTIPLY THE CONTENTS OF MPAC,MPAC+1,
+ 0808            EXTEND                 MPAC+2 BY THE SINGLE PRECISION NUMBER
+ 0809            MP     MPAC +2         ARRIVING IN A.
+ 0810  2         XCH    MPAC +2
+ 0811   SHORTMP2 XCH    MPAC +1         FASTER BUT SLOPPIER VERSION FOR DP
+ 0812            EXTEND
+ 0813            MP     MPAC +1
+ 0814            TS     OVCTR
+ 0815            XCH    LP
+ 0816            AD     MPAC +2         THE SHORTMP2 RESULT WILL BE OFF IN THE
+ 0817            XCH    MPAC +2           LAST BIT IF THIS AD OVERFLOWS.
+ 0818            XCH    MPAC
+ 0819            EXTEND
+ 0820            MP     MPAC +1
+ 0821            XCH    OVCTR
+ 0822            AD     LP
+ 0823            XCH    MPAC +1
+ 0824            XCH    OVCTR           ARGUMENT IN OVCTR UPON EXIT
+ 0825            TS     MPAC
+ 0826  2         TC     Q
+ 0827   PREROUND CAF    TCBUF
+ 0828  2         TS     TEM8
+ 0829   ROUND    CAF    ZERO            ROUND THE TRIPLE-PRECISION NUMBER WHOSE
+ 0830            INDEX  TEM8            ADDRESS IS IN TEM8 TO DOUBLE-PRECISION,
+ 0831            XCH    2               SETING THE LOWEST ORDER OF THE THREE
+ 0832            DOUBLE                 WORDS TO ZERO IN THE PROCESS
+ 0833            TS     OVCTR
+ 0834  2         TC     Q               DONE IF DOESNT SKIP
+ 0835            INDEX  TEM8
+ 0836            AD     1
+ 0837            INDEX  TEM8
+ 0838            TS     1
+ 0839  2         TC     Q
+ 0840            INDEX  TEM8
+ 0841            AD     0
+ 0842            INDEX  TEM8
+ 0843            TS     0               ANY CARRIES BEYOND THIS POINT ARE
+ 0844  2         TC     Q               OVERFLOW
+ 0845            TS     OVFIND
+ 0846  8         TC     Q
+ 0847   STB      CS     BUF
+ 0848            INDEX  TEM2
+ 0849            TS     0
+ 0850            CS     BUF +1
+ 0851            INDEX  TEM2
+ 0852            TS     1
+ 0853  2         TC     Q
+ 0854   K2       0      VBUF
+ 0855            0      VBUF +2
+ 0856  2         0      VBUF +4
+ 0857  2STORTEST EQUALS K2 -2
+ 0858   SEQ      OCT    2
+ 0859   ZERO     OCT    0
+ 0860   FOUR     OCT    4
+ 0861   TWO      OCT    2
+ 0862  2NEG0     OCT    -0
+ 0863   VPROJ1   TC     VECSET          VECTOR PROJECT
+ 0864            TC     DOT2            LEAVES (VAC.X)VAC IN VAC
+ 0865            TC     DACCOM
+ 0866  2         TC     VXSC2 -1        FINISH IN VXSC (USING MPAC)
+ 0867   CROSS1   TC     VECSET          DP VECTOR CROSS PRODUCT (BOTH WAYS)
+ 0868            XCH    TCBUF
+ 0869            XCH    ADDRWD
+ 0870            AD     BUGBITS         AGAIN FOR MP
+ 0871            TS     BASE
+ 0872            AD     TWO             WHERE THE VECTOR X IS THAT ADDRESSED
+ 0873            TS     TEM4            BY THE ORDER, AND V IS C(VAC).
+ 0874  8         XCH    TWO
+ 0875   LUP      TS     IND
+ 0876            INDEX  IND
+ 0877            XCH    SEQ
+ 0878            AD     VACLOC
+ 0879            TC     DMP1
+ 0880            INDEX  IND
+ 0881            XCH    SEQ +2
+ 0882            AD     K2
+ 0883            TS     TEM6
+ 0884            TS     TEM2
+ 0885            TC     STB
+ 0886            INDEX  IND
+ 0887            XCH    SEQ
+ 0888            AD     BASE
+ 0889            TS     TEM4
+ 0890            INDEX  IND
+ 0891            XCH    SEQ +1
+ 0892            AD     VACLOC
+ 0893            TC     DMP1
+ 0894            XCH    TEM6
+ 0895            TC     DAD1
+ 0896            CCS    IND
+ 0897  2         TC     LUP
+ 0898   CREXIT   XCH    K2
+ 0899            TS     ADDRWD
+ 0900            TC     VCS1            VXV
+ 0901  8LDANZIG  TC     DANZIG
+R0902  2DOUBLE-PRECISION POLYNOMIAL EVALUATION ROUTINE.
+R0903  2PROGRAM ENTRY
+R0904   L        TC     POLY
+R0905                                                                N
+R0906   L+1      OCT    -2N             COMPUTES A  + A X + ... + A X , WHERE
+R0907                                             0    1           N
+R0908   L+2      D.P.   - A             X = C(MPAC).
+R0909  2                   0
+R0910  2-   -   -   -   -   -   -   -
+R0911   L+2+2N   D.P.   - A
+R0912  2                   N
+R0913  2L+4+2N   NEXT OPERATION
+ 0914   POLY     CAF    BUGBITS2        CONTAINS XCADR VBUF
+ 0915            TS     TEM4
+ 0916            CAF    ZERO            ZERO INTO BUF, BUF+1 TO START POLYLUP
+ 0917            TS     BUF
+ 0918  2         TS     BUF +1
+ 0919            XCH    MPAC            ARGUMENT  X  INTO 6T, 7T
+ 0920            TS     VBUF            TEMPORARY STORAGE
+ 0921            XCH    MPAC +1
+ 0922  2         TS     VBUF +1
+ 0923            CAF    DAD2 +4         ADDRESS OF MPAC
+ 0924  2         TS     TEM2
+ 0925            INDEX  Q               2N  INTO 10T
+ 0926            CAF    0
+ 0927            TS     TEM10
+ 0928            AD     Q               EXIT ADDRESS INTO 11T
+ 0929            AD     THREE
+ 0930            TS     TEM9
+ 0931  8         TC     POLYLUP +3
+ 0932   POLYLUP  TS     TEM10
+ 0933  2         TC     DMP1 +1
+ 0934            XCH    ADDRWD
+ 0935    +3      AD     NEG2            REDUCE COEFFICIENT INDEX BY 1
+ 0936            TS     ADDRWD          COEFFICIENT LOC IN ADDRWD FOR USE BY
+ 0937            TC     TCS1 +2         -BUF,BUF+1 INTO MPAC,MPAC+1
+ 0938  2         TC     DAD1 +1         - COEFF + (BUF) INTO BUF
+ 0939            CCS    TEM10
+ 0940            AD     NEG1            THE AD NEG1 ORDER, -0 WILL BE THE END
+ 0941  2         TC     POLYLUP
+ 0942  2BUGBITS2 XCADR  VBUF            USED BY POLY
+ 0943  8         TC     TEM9            RETURN
+ 0944   ITCF     CS     BANKSET         ITC - UNCONDITIONAL TRANSFER
+ 0945            XCH    ADRLOC          PLACE IN QPRET THE POLISH ADDRESS OF
+ 0946            MASK   LOW10           THE NEXT EQUATION. ITC MUST BE THE LAST
+ 0947            AD     ADRLOC          NON-BLANK OPERATOR IN AN EQUATION
+ 0948            AD     ONE
+ 0949            INDEX  FIXLOC
+ 0950            TS     QPRET
+ 0951            CCS    ADDRWD
+ 0952  2         TC     INTPRET +1      BANKREG IS ALREADY SET
+ 0953   BOVF     CCS    OVFIND          BRANCH IF OVERFLOW INDICATOR IS ON
+ 0954            TC     +2              OVFIND CAN BE EITHER -1, 0, OR +1
+ 0955            TC     DANZIG          IT WAS OFF - DISPATCH NEXT OPERATOR.
+ 0956            TS     OVFIND          IT WAS ON - SET TO 0 (OFF)
+ 0957  2         TC     DOBR            AND DO THE BRANCH
+ 0958   VSLT1    TC     VECSET          DP VECTOR SHIFT LEFT
+ 0959            TS     BANKREG
+ 0960  2         TC     VSLT2
+ 0961   VSRT1    TC     VECSET          DP VECTOR SHIFT RIGHT
+ 0962            TS     MPAC +1         SET SHIFTING BIT IN MPAC,MPAC+1
+ 0963            TS     BANKREG         CALL IN BANK ZERO.
+ 0964            TC     TRUE2           GET INTEGER ADDRESS
+ 0965            AD     NEG13
+ 0966            CCS    A
+ 0967            TC     VSRT3
+ 0968   NEG14    DEC    -14
+ 0969            TC     +1
+ 0970            INDEX  ADDRWD
+ 0971            CAF    BIT15
+ 0972            TS     MPAC
+ 0973  2         TC     VECCHECK +1     FINISH IN VXSC ROUTINE.
+ 0974   VSRT3    INDEX  A
+ 0975            CAF    BIT14
+ 0976            XCH    MPAC +1         WHICH PREVIOUSLY CONTAINED A ZERO
+ 0977  2         TC     VSRT3 -2
+ 0979  2         SETLOC 5777            STANDARD LOCATION FOR EXTENDING BITS
+ 0980   OPOVF    XCADR  0
 *       ENDOFJOB
