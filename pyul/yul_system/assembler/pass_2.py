@@ -234,7 +234,7 @@ class Pass2:
         # Ensure delimiting of field by asterisk.
         card = self.delimit(popo)
         # Translate constant.
-        number = self.dec_const(card, *self.d1_params)
+        number,_ = self.dec_const(card, *self.d1_params)
         self.m_proc_1p(popo, number)
         self.proc_word(popo, loc_symbol)
 
@@ -243,7 +243,7 @@ class Pass2:
         # Ensure delimiting of field by asterisk.
         card = self.delimit(popo)
         # Translate constant and join decimal.
-        number = self.oct_const(card, self.k1_max, 1)
+        number,_ = self.oct_const(card, self.k1_maxnum, 1)
         self.m_proc_1p(popo, number)
         self.proc_word(popo, loc_symbol)
 
@@ -255,6 +255,7 @@ class Pass2:
         exponent = 0
         # Initially assume plus.
         m_sign = Bit.BIT1
+        e_number = ONES
         mantissa = 0
         # Expo increases when wd full, no point.
         full_delt = -1
@@ -264,6 +265,7 @@ class Pass2:
 
         # Branch if cannot be a sign.
         con_word = card[24:].lstrip()
+        print(con_word)
         if con_word[0] in '+-':
             # Place explicit sign on mantissa.
             if con_word[0] == '-':
@@ -318,7 +320,7 @@ class Pass2:
             if con_word[0] in '+-':
                 # Put explicit sign on E number.
                 if con_word[0] == '-':
-                    b_sign = -1
+                    e_sign = -1
                 con_word = con_word[1:].lstrip()
 
             # Loop to deal with digits after E.
@@ -329,7 +331,7 @@ class Pass2:
                 if not caracter.isdigit():
                     # No digits after E is wrong.
                     if dec_digs == 0:
-                        return self.bad_const()
+                        return self.bad_const(), e_number
                     break
                 else:
                     e_number *= 10
@@ -337,15 +339,13 @@ class Pass2:
                     e_number += num
                     dec_digs += 1
                     if dec_digs > 3:
-                        return self.bad_const(ex_range=True)
+                        return self.bad_const(ex_range=True), e_number
 
             # Add implicit and explicit exponents.
-            e_number = exponent + e_sign*e_number
+            number *= 10**(e_sign*e_number)
             # Negative result is wrong. 128 or more is wrong too.
-            if e_number <= 1 or e_number >= 128:
-                return self.bad_const(ex_range=True)
-
-            number *= 10**e_number
+            if e_number <= -63 or e_number >= 63:
+                return self.bad_const(ex_range=True), e_number
 
         # Branch if character is not a B.
         if caracter == 'B':
@@ -370,9 +370,9 @@ class Pass2:
 
                 # Branch if not a digit.
                 if not caracter.isdigit():
-                    # No digits after B is wrong.
+                    # No digits after E is wrong.
                     if dec_digs == 0:
-                        return self.bad_const()
+                        return self.bad_const(), e_number
                     break
                 else:
                     b_number *= 10
@@ -380,12 +380,12 @@ class Pass2:
                     b_number += num
                     dec_digs += 1
                     if dec_digs > 3:
-                        return self.bad_const(ex_range=True)
+                        return self.bad_const(ex_range=True), e_number
 
             if b_number != 0:
                 # B number more than 209 is wrong.
                 if b_number >= 210:
-                    return self.bad_const(ex_range=True)
+                    return self.bad_const(ex_range=True), e_number
                 if b_sign < 0:
                     l_powers_2 = self.pow_pow_2m
                 else:
@@ -405,8 +405,8 @@ class Pass2:
         if number >= 1.0:
             # Error if too-big integer.
             if number > max_decml:
-                return self.bad_const(ex_range=True)
-            fract = modf(number)[0]
+                return self.bad_const(ex_range=True), e_number
+            fract, integer = modf(number)
             # FIXME: epsilon?
             if fract != 0.0:
                 self.cuss_list[41].demand = True
@@ -417,13 +417,19 @@ class Pass2:
             if number < 0.5 and number != 0.0:
                 # Inadvertant 0 is a scaling blunder.
                 self.cuss_list[41].demand = True
-            number = int(number)
+            fract, integer = modf(number)
+            number = int(integer)
+            if fract >= 0.5:
+                number += 1
             if number > max_numbr:
                 number = max_numbr
 
         # Attach sign.
         number |= m_sign
-        return number
+        # Declare number to be signed, exit.
+        e_number = ONES
+
+        return number, e_number
 
     # Subroutine in pass 2 to translate the address field of an octal constant. Expects to ifnd the field
     # delimited by an asterisk. Delivers the result as an integer with sign in bit 1 in number, or delivers
@@ -463,7 +469,7 @@ class Pass2:
                     continue
                 elif n_digits == 0:
                     if caracter != 'B':
-                        return self.bad_const()
+                        return self.bad_const(), e_number
                     mantissa = 1
                     break
                 else:
@@ -497,7 +503,7 @@ class Pass2:
                 if not caracter.isdigit():
                     # No digits after B is illegal.
                     if dec_digs == 0:
-                        return self.bad_const()
+                        return self.bad_const(), e_number
                     exponent += b_sign * b_number
                     break
                 else:
@@ -505,11 +511,11 @@ class Pass2:
                     b_number = b_number*10 + num
                     dec_digs += 1
                     if dec_digs > 2:
-                        return self.bad_const(ex_range=True)
+                        return self.bad_const(ex_range=True), e_number
 
         # Only asterisk is OK here.
         if caracter != '*':
-            return self.bad_const()
+            return self.bad_const(), e_number
 
         # Branch if value is integer.
         while exponent < 42:
@@ -526,9 +532,9 @@ class Pass2:
             exponent -= 1
 
         if mantissa > max_numbr:
-            return self.bad_const(ex_range=True)
+            return self.bad_const(ex_range=True), e_number
 
-        return m_sign | mantissa
+        return m_sign | mantissa, e_number
 
     def bad_const(self, ex_range=False):
         if not ex_range:
@@ -1148,10 +1154,45 @@ class Pass2:
         return self.health_cq(popo, loc_symbol)
 
     def _2octal(self, popo):
-        pass
+        loc_symbol = self.instront(popo)
+        # Ensure delimiting of field by asterisk.
+        card = self.delimit(popo)
+        # Translate and join 2DECIMAL.
+        number, e_number = self.oct_const(card, self.k2_maxnum, 2)
+        return self.l_fini_2p(popo, loc_symbol, number, e_number)
 
     def _2decimal(self, popo):
-        pass
+        loc_symbol = self.instront(popo)
+        # Ensure delimiting of field by asterisk.
+        card = self.delimit(popo)
+        # Translate constant.
+        number, e_number = self.dec_const(card, *self.d2_params)
+        return self.l_fini_2p(popo, loc_symbol, number, e_number)
+
+    def l_fini_2p(self, popo, loc_symbol, number, e_number):
+        # Finish words according to machine.
+        sec_half, sec_alf = self.m_proc_2p(popo, number, e_number)
+        # Print first line.
+        self.print_lin()
+        # Send word that has valid location.
+        self._line.text = self._old_line.text[:8] + self._line.text[8:]
+        self.send_word(self._word)
+        # Set up continuation line.
+        self._line.text = 'C' + self._line.text[1:]
+
+        # Branch if both locations are bad.
+        if self._location != ONES:
+            # Branch if both locations are good.
+            if not popo.health & Bit.BIT14:
+                self._location += 1
+            else:
+                self._location = ONES
+
+        # Print second location.
+        self.m_ploc_eb(self._location)
+        self._line.text = self._line.text[:self.con_mask[0]] + sec_alf + self._line.text[self.con_mask[1]:]
+        self._word = sec_half
+        self.proc_word(popo, loc_symbol)
 
     def block(self, popo):
         pass

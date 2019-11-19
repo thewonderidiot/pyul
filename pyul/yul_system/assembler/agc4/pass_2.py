@@ -6,9 +6,10 @@ class AGC4Pass2(Pass2):
         super().__init__(mon, yul, adr_limit, m_typ_tab)
 
         self.d1_params = [16383.0, 16384.0, 16383]
-        self.k1_max = 0o77777
+        self.k1_maxnum = 0o77777
         self.d2_params = [268435455.0, 268435456.0, 268435455]
-        self.k2_max = 0o7777777777
+        self.k2_maxnum = 0o7777777777
+        self.con_mask = [39, 44]
 
         self._max_adres = 0
 
@@ -557,3 +558,47 @@ class AGC4Pass2(Pass2):
         # Apply internal constant flag and exit
         dec6_flag = Bit.BIT2 | Bit.BIT3
         self._word |= dec6_flag
+
+    # Subroutine in pass 2 for AGC4 to process a single-precision constant. Using the output of DEC CONST or
+    # OCT CONST, and distinguishing between the signed and unsigned possibilities (for octal constants only),
+    # sets up the high-order part in word and the low-order part in sec_half, sets the high-order part in print,
+    # and sets up hte low-order part in printable form in sec_alf.
+    def m_proc_2p(self, popo, number, e_number):
+        # Branch if constant is valid.
+        if number == BAD_WORD:
+            # Prepare blots for low-order part.
+            sec_alf = '■■■■■'
+            self._line.text = self._line.text[:39] + '■■■■■' + self._line.text[44:]
+            self._word = number
+            return BAD_WORD, sec_alf
+
+        # Branch if number is signed.
+        if e_number != 0:
+            # Set up unsigned constant.
+            self._word = (number >> 14) & 0o37777
+            common = 0o37777
+        else:
+            # Set up signed constant.
+            self._word = (number >> 15) & 0o77777
+            common = 0o77777
+
+        # Isolate low-order part.
+        sec_half = number & common
+
+        # Branch if no minus sign.
+        if not number & Bit.BIT1:
+            # Complement halves of negative constant.
+            self._word ^= 0o77777
+            sec_half ^= 0o77777
+
+        # Make printable version of low-order part
+        sec_alf = '%05o' % sec_half
+
+        # Set word in print.
+        self._line.text = self._line.text[:39] + ('%05o' % self._word) + self._line.text[44:]
+
+        # Apply internal constant flag and exit
+        dec6_flag = Bit.BIT2 | Bit.BIT3
+        self._word |= dec6_flag
+
+        return sec_half, sec_alf
