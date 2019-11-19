@@ -71,6 +71,7 @@ class Pass2:
     def pass_2(self):
         for popo in self._yul.popos:
             card_type = popo.health & HealthBit.CARD_TYPE_MASK
+            self._adr_symbol = None
 
             # Branch if last card wasnt remarks
             if self._yul.switch & SwitchBit.LAST_REM:
@@ -265,7 +266,6 @@ class Pass2:
 
         # Branch if cannot be a sign.
         con_word = card[24:].lstrip()
-        print(con_word)
         if con_word[0] in '+-':
             # Place explicit sign on mantissa.
             if con_word[0] == '-':
@@ -667,11 +667,11 @@ class Pass2:
             return self.form_locn(good_loc=False)
 
         # Recover address symbol information
-        adr_symbol = self.fits_fitz(popo)
+        self._adr_symbol = self.fits_fitz(popo)
         # Branch if there is no address symbol.
-        if adr_symbol is not None:
+        if self._adr_symbol is not None:
             # Call for address symbol cussing.
-            self.symb_fits(adr_symbol)
+            self.symb_fits(self._adr_symbol)
 
         # Exit when no location symbol.
         if loc_symbol is None:
@@ -702,14 +702,14 @@ class Pass2:
 
         elif loc_symbol.health == 3:
             self.print_lin()
-            return self.pag_loxim(popo, loc_symbol, adr_symbol)
+            return self.pag_loxim(popo, loc_symbol)
 
         else: #4
             self.cuss_list[32].demand = True
             self.sym_cuss(self.cuss_list[32], loc_symbol.name)
             return self.no_loc_sym(popo, loc_symbol)
 
-    def pag_loxim(self, popo, loc_symbol=None, adr_symbol=None):
+    def pag_loxim(self, popo, loc_symbol=None):
         page = self._page_no
         if self._yul.switch & SwitchBit.OWE_HEADS:
             # Compensates if page heads are owed.
@@ -721,21 +721,21 @@ class Pass2:
             loc_symbol.def_page = page
 
         # Branch if no address symbol in sym tab.
-        if adr_symbol is not None:
-            adr_symbol.ref_pages.append(page)
+        if self._adr_symbol is not None:
+            self._adr_symbol.ref_pages.append(page)
 
             # Branch if this is not the first ref or doing a suppressed subroutine.
-            if len(adr_symbol.ref_pages) > 1 and self._yul.switch & SwitchBit.PRINT:
+            if len(self._adr_symbol.ref_pages) > 1 and self._yul.switch & SwitchBit.PRINT:
                 # Set in print page of last ref in alpha.
-                self._old_line.text = (self._old_line.text[:16] + 'LAST' + ('%4d' % adr_symbol.ref_pages[-2]) +
+                self._old_line.text = (self._old_line.text[:16] + 'LAST' + ('%4d' % self._adr_symbol.ref_pages[-2]) +
                                     self._old_line.text[24:])
 
             ref_str = 'REF '
-            if len(adr_symbol.ref_pages) > 999:
+            if len(self._adr_symbol.ref_pages) > 999:
                 # If over 999 references, set up "REF >1K".
                 ref_str += '>1K '
             else:
-                ref_str += '%3d ' % len(adr_symbol.ref_pages)
+                ref_str += '%3d ' % len(self._adr_symbol.ref_pages)
 
             # Set in print serial no. of ref in alpha.
             self._old_line.text = self._old_line.text[:8] + ref_str + self._old_line.text[16:]
@@ -897,14 +897,14 @@ class Pass2:
     def symbol_ad(self, popo, adr_wd):
         # Analyze history of symbol.
         sym_name = adr_wd[0].strip()
-        symbol = self.anal_symb(sym_name)
-        if symbol is None:
+        self._adr_symbol = self.anal_symb(sym_name)
+        if self._adr_symbol is None:
             # Cuss and exit when symbol dont fit.
             self.cuss_list[15].demand = True
             self.sym_cuss(cuss_list[15], sym_name)
             return None
 
-        return self.symb_fits(symbol)
+        return self.symb_fits(self._adr_symbol)
 
     def symb_fits(self, symbol):
         # Branch if health of symbol is B or more.
@@ -1024,24 +1024,24 @@ class Pass2:
             self.cuss_list[15].demand = True
             return self.form_locn(good_loc=False)
 
-        adr_symbol = self.fits_fitz(popo)
+        self._adr_symbol = self.fits_fitz(popo)
         # Branch if no address symbol.
-        if adr_symbol is None:
+        if self._adr_symbol is None:
             return self.form_locn(popo)
 
         if popo.health & Bit.BIT11:
             # Undefined setloc symbol is fatal.
-            self.sym_cuss(self.cuss_list[44], adr_symbol.name)
+            self.sym_cuss(self.cuss_list[44], self._adr_symbol.name)
             # Cuss no define by pass 1.
             self.cuss_list[44].demand = True
 
         if popo.health & Bit.BIT12:
-            self.sym_cuss(self.cuss_list[45], adr_symbol.name)
+            self.sym_cuss(self.cuss_list[45], self._adr_symbol.name)
             # Cuss near define by pass 1.
             self.cuss_list[45].demand = True
 
         # Modify and visit address symbol cusser.
-        self.symb_fits(adr_symbol)
+        self.symb_fits(self._adr_symbol)
 
         # Branch if no definition from pass 1.
         if (popo.health & (Bit.BIT11 | Bit.BIT12)) != 0:

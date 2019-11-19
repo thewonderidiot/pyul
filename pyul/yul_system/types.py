@@ -111,7 +111,7 @@ class HealthBit:
     CARD_TYPE_EQUALS =        0 |        0 | Bit.BIT3 | Bit.BIT4 | Bit.BIT5 |        0 # 16
     CARD_TYPE_SETLOC =        0 |        0 | Bit.BIT3 | Bit.BIT4 | Bit.BIT5 | Bit.BIT6 # 17
     CARD_TYPE_ERASE  =        0 | Bit.BIT2 |        0 |        0 |        0 |        0 # 20
-    CARD_TYPE_2CTAL  =        0 | Bit.BIT2 |        0 |        0 |        0 | Bit.BIT6 # 21
+    CARD_TYPE_2OCTAL =        0 | Bit.BIT2 |        0 |        0 |        0 | Bit.BIT6 # 21
     CARD_TYPE_2DECML =        0 | Bit.BIT2 |        0 |        0 | Bit.BIT5 |        0 # 22
     CARD_TYPE_BLOCK  =        0 | Bit.BIT2 |        0 |        0 | Bit.BIT5 | Bit.BIT6 # 23
     CARD_TYPE_HEAD   =        0 | Bit.BIT2 |        0 | Bit.BIT4 |        0 |        0 # 24
