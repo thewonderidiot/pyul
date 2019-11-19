@@ -232,7 +232,7 @@ class AGC4Pass2(Pass2):
 
         # Branch if special condition is 5 or less, or 13 or more.
         spec_cond = (popo.health >> 19) & 0x1F
-        if (spec_cond <= 5) or (spec_cond >= 13):
+        if (spec_cond <= 5) or (spec_cond >= 0o13):
             # Branch to permit negative address.
             set_min = (self._word & (Bit.BIT34 | Bit.BIT35 | Bit.BIT36)) != Bit.BIT34
             return self.non_const(popo, set_min)
@@ -246,7 +246,7 @@ class AGC4Pass2(Pass2):
             return self.non_const(popo, set_min=False)
 
         # Branch if code is not XCADR.
-        if spec_cond > 11:
+        if spec_cond > 0o11:
             # Set up 47777 in word and allow -address.
             self._word &= ~0o77777
             self._word |= 0o47777
@@ -287,7 +287,22 @@ class AGC4Pass2(Pass2):
         if self._word <= Bit.BIT17:
             return self.instrop(popo)
 
-        # FIXME: CONSTANTS
+        # Branch if code is "ADRES".
+        spec_cond = (popo.health >> 19) & 0x1F
+        if spec_cond <= 6:
+            return self.basic_sba(popo)
+
+        # Use address as is for CADR.
+        if spec_cond <= 7:
+            self._word |= self._address & 0o77777
+            return self.gud_basic(popo)
+
+        # Branch if code is XCADR.
+        if spec_cond >= 0o12:
+            return self.basic_adr(popo)
+
+        # FIXME: PO STOR AD
+
 
     # Specific processing for basic instructions.
     def instrop(self, popo):
