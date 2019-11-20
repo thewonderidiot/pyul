@@ -219,16 +219,53 @@ class Pass2:
             self.print_lin()
         return self.pag_loxim(popo, loc_symbol)
 
+    # Procedure in pass 2 for memory cards.
     def memory(self, popo):
-        pass
+        self._location = ONES
+        # Maybe cuss  D  error.
+        if popo.health & Bit.BIT9:
+            self.cuss_list[1].demand = True
 
-    def instruct(self, popo):
-        loc_symbol = self.instront(popo)
+        # Maybe cuss illegal location format.
+        if popo.health & Bit.BIT8:
+            self.cuss_list[55].demand = True
+
+        # Maybe cuss meaningless address field.
+        if popo.health & Bit.BIT11:
+            self.cuss_list[8].demand = True
+
+        # Maybe cuss address size error.
+        if popo.health & Bit.BIT12:
+            self.cuss_list[10].demand = True
+
+        # Maybe cuss oversize memory type table.
+        if popo.health & Bit.BIT13:
+            self.cuss_list[57].demand = True
+
+        # Branch if illegal loc field format or address field unusable.
+        if popo.health & (Bit.BIT8 | Bit.BIT11 | Bit.BIT12 | Bit.BIT13) == 0:
+            self._location = (popo.health >> 16) & 0xFFFF
+
+        # Set first location in print.
+        self.m_ploc_eb(self._location)
+
+        return self.form_locn(popo, good_loc=(self._location != ONES))
+
+
+    def instruct(self, popo, do_instront=True):
+        if do_instront:
+            loc_symbol = self.instront(popo)
+        else:
+            loc_symbol = None
         self.m_proc_op(popo)
         self.proc_word(popo, loc_symbol)
 
     def illegop(self, popo):
-        pass
+        # Cuss illegal or mis-spelled op code.
+        self.cuss_list[2].demand = True
+        loc_symbol = self.instront(popo)
+        self.m_proc_1p(popo, BAD_WORD)
+        self.proc_word(popo, loc_symbol)
 
     def decimal(self, popo):
         loc_symbol = self.instront(popo)
@@ -1194,23 +1231,86 @@ class Pass2:
         self._word = sec_half
         self.proc_word(popo, loc_symbol)
 
+    # Procedure in pass 2 for BLOCK cards.
     def block(self, popo):
-        pass
+        self._location = ONES
+
+        # Maybe cuss  D  error.
+        if popo.health & Bit.BIT9:
+            self.cuss_list[1].demand = True
+
+        # Maybe cuss addr relative to bad loc.
+        if popo.health & Bit.BIT14:
+            self.cuss_list[29].demand = True
+
+        # Maybe cuss meaningless address field.
+        if popo.health & Bit.BIT12:
+            self.cuss_list[8].demand = True
+
+        # Maybe cuss fullness of block.
+        if popo.health & Bit.BIT10:
+            self.cuss_list[54].demand = True
+
+        # Maybe cuss no such block.
+        if popo.health & Bit.BIT11:
+            self.cuss_list[53].demand = True
+
+        # Maybe cuss memory type error.
+        if popo.health & Bit.BIT13:
+            self.cuss_list[5].demand = True
+
+        # Maybe cuss nonblank location.
+        if popo.health & Bit.BIT8:
+            self.cuss_list[43].demand = True
+
+        # Branch if no location value.
+        if popo.health & (Bit.BIT11 | Bit.BIT12) != 0:
+            return self.form_locn(popo, good_loc=False)
+
+        # Maybe cuss location in wrong mem type.
+        if self.cuss_list[5].demand or self.cuss_list[29].demand:
+            return self.form_locn(popo, good_loc=False)
+
+        # Test fullness of block.
+        return self.form_locn(popo, good_loc=(popo.health & Bit.BIT10 == 0))
 
     def head_tail(self, popo):
-        pass
+        self._head = ALPHABET[popo.health & 0x3F]
+        return self.no_loc_sym(popo)
 
     def too_late(self, popo):
-        pass
+        self.cuss_list[56].demand = True
+        self.m_proc_1p(popo, BAD_WORD)
+        self.proc_word(popo, None)
 
     def subro(self, popo):
         pass
 
     def instruct_p1(self, popo):
-        pass
+        self.instruct(popo, do_instront=False)
 
     def even(self, popo):
-        pass
+        # Maybe cuss non-blank location field.
+        if popo.health & Bit.BIT8:
+            self.cuss_list[43].demand = True
+
+        # Cuss oversize loc, wrong memory type.
+        if popo.health & Bit.BIT14:
+            self.cuss_list[6].demand = True
+
+        if popo.health & Bit.BIT10:
+            self.cuss_list[5].demand = True
+
+        # Maybe cuss non-blank address field.
+        if popo.health & Bit.BIT13:
+            self.cuss_list[63].demand = True
+
+        # Maybe cuss location in wrong mem type.
+        if not popo.health & Bit.BIT14 and not self.cuss_list[5].demand:
+            return self.form_locn(popo)
+
+        # Show lack of location value.
+        return self.form_locn(popo, good_loc=False)
 
     def count(self, popo):
         pass

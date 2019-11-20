@@ -1587,7 +1587,7 @@ class Pass1:
         pass
 
     def late_mem(self, popo):
-        popo.heatlh |= HealthBit.CARD_TYPE_2LATE
+        popo.health |= HealthBit.CARD_TYPE_2LATE
         return self.send_popo(popo)
 
 def inish_p1(mon, yul):
