@@ -616,7 +616,7 @@ A0260   UPLOCK   EQUALS 14D             UPLINK INTERLOCK (ACTIVATED BY RECPTION
 A0261  2                                OF A BAD CODE IN UPLINK)
  02615  INRLSW   EQUALS 15D             PROGSTALL NOT USED DURING ENTRY.
  0262  2PRGSW    EQUALS 15D             USED BY PRGSTALL.
- 0263   COASTFLG EQUALS 17D                 17 TO 47 ARE 501 SEQUENCE CONTROL FLAGS.
+ 0263   COASTFLG EQUALS 17D             17 TO 47 ARE 501 SEQUENCE CONTROL FLAGS.
  0264   UPDATFLG EQUALS 18D
  0265   SOAKFLAG EQUALS 19D
  0266   SHTDNFLG EQUALS 20D
@@ -2209,4 +2209,840 @@ R0913  2L+4+2N   NEXT OPERATION
  0977  2         TC     VSRT3 -2
  0979  2         SETLOC 5777            STANDARD LOCATION FOR EXTENDING BITS
  0980   OPOVF    XCADR  0
+L 001  2BANK 03 INTERPRETER SECTION
+ 0001  2         SETLOC 6000
+ 0002   BMN1     TC     BRANCH          BRANCH MINUS
+ 0003            TC     RE-ENTER
+ 0004            TC     RE-ENTER
+ 0005  2         TC     DOBR
+ 0006   BPL1     TC     BRANCH          BRANCH PLUS
+ 0007            TC     DOBR
+ 0008            TC     DOBR
+ 0009  2         TC     RE-ENTER
+ 0010   BZE1     TC     BRANCH          BRANCH ZERO
+ 0011            TC     RE-ENTER
+ 0012            TC     DOBR
+ 0013  2         TC     RE-ENTER
+ 0014   BHIZ1    CCS    MPAC            BRANCH ON HIGH ORDER ZERO
+ 0015            TC     RE-ENTER        PNZ
+ 0016            TC     DOBR
+ 0017            TC     RE-ENTER
+ 0018  2         TC     DOBR
+ 0019   BRANCH   XCH    Q
+ 0020            TS     BRANCHQ
+ 0021            CCS    MPAC
+ 0022            TC     BRANCHQ
+ 0023            TC     +2
+ 0024  2         TC     MINUS
+ 0025            CCS    MPAC +1
+ 0026            TC     BRANCHQ
+ 0027            TC     +2
+ 0028  2         TC     MINUS
+ 0029            CCS    MPAC +2
+ 0030            TC     BRANCHQ
+ 0031            TC     +2
+ 0032   MINUS    CAF    ONE
+ 0033            AD     ONE
+ 0034            AD     BRANCHQ
+ 0035  8         XAQ
+ 0036   TRUE2    CS     FIXLOC          RESTORES INTEGER ADDRESSES
+ 0037            AD     ADDRWD
+ 0038            TS     ADDRWD
+ 0039            CCS    A               WE MUST ELIMINATE THE MINUS ZERO CASE
+ 0040            TC     Q               OK HERE
+ 0041            TC     CCSHOLE
+ 0042            TC     +2              IF ADDRESS WAS NEGATIVE
+ 0043            TC     DANZIG          FAST EXIT FOR ZERO SHIFT COUNTS
+ 0044            INDEX  MODE            RIGHT SHIFT INSTEAD OF A LEFT ONE
+ 0045            TC     +3              CCS  FOLLOWED BY ADD LEFT THE COUNT POS.
+ 0046            TC     SHIFTR1 +3      SO WE NEED ONLY CALL THE APPROPRIATE
+ 0047            TC     SHIFTR1 +3      SHIFT RIGHT INSTRUCTION.
+ 0048            CS     ADDRWD          PUT POSITIVE COUNT IN ADDRWD.
+ 0049            TS     ADDRWD
+ 0050            AD     NEG1            DECREMENT LIKE CCS BEFORE RETURNING.
+ 0051  2         TC     VSRT1 +4
+ 0052   AST      TC     TAG
+ 0053            CS     POLISH
+ 0054   SSTORE   INDEX  TAG1
+ 0055            XCH    40D             STEP REGISTER
+ 0056  2         TC     RE-ENTER
+ 0057   AXC      TC     TAG             ADDRESS TO INDEX COMPLEMENTED
+ 0058            XCH    POLISH
+ 0059  2         TC     XSTORE
+ 0060   AXT      TC     TAG
+ 0061            CS     POLISH
+ 0062   XSTORE   INDEX  TAG1
+ 0063            XCH    38D             MAY HAVE OVERFLOWED
+ 0064  2         TC     RE-ENTER
+ 0065   LXA      TC     TAG
+ 0066            INDEX  ADDRWD          MUST BE ERASABLE - NOT NEEDED OTHERWISE
+ 0067            CS     0
+ 0068   +3       CS     A
+ 0069  2         TC     XSTORE
+ 0070   LXC      TC     TAG             LOAD INDEX FROM ADDRESS COMPLEMENTED
+ 0071            INDEX  ADDRWD
+ 0072            CS     0
+ 0073  2         TC     XSTORE
+ 0074   SXA      TC     TAG
+ 0075            INDEX  TAG1
+ 0076            CS     38D             GET INDEX
+ 0077            CS     A
+ 0078  8         TC     STOR1
+ 0079   TIX      TC     TAG
+ 0080            INDEX  TAG1            GET APPROPRIATE STEP REGISTER
+ 0081            CS     40D             STEP REGISTER
+ 0082            INDEX  TAG1
+ 0083            AD     38D
+ 0084            TS     TEM2            TO TEMPORARY
+ 0085            CCS    A
+ 0086            XCH    TEM2            DECREMENT INDEX AND BRANCH
+ 0087            TC     TIXBR
+ 0088            TC     RE-ENTER        INDEX LEFT ALONE AND NO BRANCH
+ 0089  2LNOBR    TC     RE-ENTER
+ 0090   TIXBR    INDEX  TAG1
+ 0091            TS     38D
+ 0092            CS     POLISH
+ 0093  2         TC     DOBR2
+ 0094   INCR     TC     TAG
+ 0095            CS     POLISH
+ 0096            INDEX  TAG1
+ 0097            AD     38D
+ 0098  2         TC     XSTORE
+ 0099   XCHX     TC     TAG
+ 0100            INDEX  ADDRWD
+ 0101            XCH    0
+ 0102            INDEX  TAG1
+ 0103            XCH    38D
+ 0104  2         TC     STOR1
+ 0105   XSU      TC     TAG             INDEX REGISTER SUBTRACT FROM ERASABLE
+ 0106            INDEX  ADDRWD
+ 0107            CS     0
+ 0108  2         TC     INCR +2
+ 0109   XAD      TC     TAG             INDEX REGISTER ADD FROM ERASABLE
+ 0110            INDEX  ADDRWD
+ 0111            CS     0
+ 0112            COM
+ 0113  8         TC     INCR +2
+ 0114   VDEF     CAF    ZERO
+ 0115            AD     VACLOC          USES MPAC AS V0, PUSHES UP FOR V1, AND
+ 0116            TS     TEM2            PUSHES UP AGAIN FOR V2. THE RESULTING
+ 0117            CAF    DAD2 +4         VECTOR IS LEFT IN VAC
+ 0118            TC     8TO2
+ 0119            TC     INCRT2
+ 0120            TC     PUSHUP1
+ 0121            TC     8TO2
+ 0122            TC     INCRT2
+ 0123            TC     PUSHUP1
+ 0124            TC     8TO2
+ 0125  2         TC     ZEROEXIT        T0 DECLAIN MO45 IS VECTOR
+ 0126   ITA1     CCS    CYR
+ 0127            TC     +6              FOR ITA
+ 0128            TC     CCSHOLE
+ 0129            INDEX  ADDRWD          PICK UP ADDRESS
+ 0130            CS     0
+ 0131            COM
+ 0132  2         TC     DOBR2           AND DO THE BRANCH
+ 0133   +6       INDEX  FIXLOC
+ 0134            CS     QPRET
+ 0135  2         TC     SXA +3          COMPLEMENT AND DEPOSIT
+ 0136   EXIT     CCS    CYR             RETURN TO BASIC
+ 0137  2         TC     EXIT2           EXIT.
+ 0138  2         TC     CCSHOLE
+ 0139            CS     POLISH          HERE TO RETURN TO BASIC AT X
+ 0140  2         TC     SWCALL
+ 0141   SIGN     INDEX  ADDRWD          AFFIX SIGN OF X TO MPAC OR VAC
+ 0142            CCS    0               MUST BE NON-ZERO
+ 0143            TC     DANZIG
+ 0144            TC     +2              EXAMINE MINOR PART
+ 0145  2         TC     COMP            COMPLEMENT VECTOR OR SCALAR.
+ 0146            INDEX  ADDRWD
+ 0147            CCS    1
+ 0148            TC     DANZIG
+ 0149            TC     DANZIG          NO OPERATION IF C(ADDRWD,ADDRWD+1) = 0
+ 0150            TC     COMP
+ 0151  8         TC     DANZIG
+ 0152   VSQ      CS     VACLOC          TAKE SQUARE OF LENGTH OF VECTOR IN VAC.
+ 0153            COM
+ 0154            TS     ADDRWD
+ 0155  2         TC     DOT1 +1         FINISH IN DOT PRODUCT ROUTINE.
+ 0156  2         AD     ONE             FROM TRUE2
+ 0157   SHIFTR   XCH    Q
+ 0158            TS     TEM5            SHIFT TP MPAC RIGHT ACCORDING TO INTEGER
+ 0159            CCS    Q               PICK UP COUNT, SUBTRACTING ONE
+ 0160   +3       AD     NEG13           RETURNS HERE FROM SR14
+ 0161            CCS    A
+ 0162            AD     ONE             SHIFT COUNT MORE THAN 14 - DECREMENT BY
+ 0163            TC     SR14            14 AND EXCHANGE
+ 0164            TC     +2              REMAINING SHIFT COUNT BETWEEN 1 AND 13
+ 0165            TC     SR14            MULTIPLES OF 14 END UP HERE
+ 0166            COM
+ 0167            INDEX  A               PICK UP PROPER SHIFTING BIT
+ 0168            CAF    BIT2
+ 0169            TC     SHORTMP         DO SHIFT BY MULTIPLICATION
+ 0170  2         TC     TEM5            (TEM5 CONTAINS SQRT RETURN IF SQRT CALL)
+ 0171   SR14     XCH    MPAC            SAVE REDUCED COUNT
+ 0172            XCH    MPAC +1
+ 0173            XCH    MPAC +2
+ 0174            CAF    ZERO
+ 0175            XCH    MPAC            NOW BRING IT BACK
+ 0176            CCS    A               SEE IF REMAINING COUNT IS ZERO
+ 0177            TC     SHIFTR +3       NON-ZERO - BACK TO SHIFT LOOP
+ 0178  8         TC     TEM5            FINISHED
+ 0179   ABVAL1   TC     ABVAL
+ 0180  2         TC     DPEXIT          MODE IS NOW DP
+ 0181   ABVAL    XCH    Q               TAKES HALF THE LENGTH OF THE VECTOR IN
+ 0182            TS     TEM10           VAC
+ 0183            TC     VSR1            SHIFT VECTOR RIGHT ONE
+ 0184            TC     DOT2            TAKE THE SQUARE OF ITS LENGTH
+ 0185            CS     FOUR            STORE SQUARE OF LENGTH IN REGISTERS 28
+ 0186            AD     VACLOC          AND 29 OF VAC AREA.
+ 0187            TC     STORDAC
+ 0188            TC     MPACCOM
+ 0189            TC     SQRT3           TAKE A TRIPLE-PRECISION SQRT (DP ANSWER)
+ 0190  2         TC     TEM10           AND EXIT
+ 0191   VSR1     XCH    Q               SUBROUTINE WHICH SHIFTS VECTOR IN VAC
+ 0192            TS     TEM9            RIGHT ONE PLACE. USED BY ABVAL AND UNIT
+ 0193            CAF    FOUR
+ 0194            AD     VACLOC          USED BY ABVAL AND UNIT
+ 0195            TC     SR1             VECTOR IS SHIFTED RIGHT SO DOT PRODUCT
+ 0196            XCH    TEM11           WONT OVERFLOW.
+ 0197            AD     MINUS2
+ 0198            TC     SR1
+ 0199            XCH    TEM11
+ 0200            AD     MINUS2
+ 0201            TS     ADDRWD          FOR THE DOT ROUTINE.
+ 0202  2         TC     SR1             VECTOR IS NOW SHIFTED RIGHT
+ 0203  2         TC     TEM9
+ 0204   SSM      TC     BRANCH          SET SIGN OF MPAC,MPAC+1 MINUS. USED BY
+ 0205            TC     MPACCOM         SIGN INSTRUCTION
+ 0206            TC     DANZIG
+ 0207  2         TC     DANZIG
+ 0208   SSP      TC     BRANCH
+ 0209            TC     DANZIG
+ 0210            TC     DANZIG
+ 0211            TC     MPACCOM
+ 0212  8         TC     DANZIG
+ 0213   SQUARE   CAF    BUGMPAC         SQUARE MPAC AND LEAVE RESULT IN MPAC, +2
+ 0214  2         TC     DSQ2            CONTINUE AS IN DMP.
+ 0215   COMP     CS     MODE
+ 0216            DOUBLE
+ 0217            INDEX  A
+ 0218            TC     +1
+ 0219            TC     VACCOM
+ 0220            TC     DANZIG
+ 0221            TC     MPACCOM         FOR TP
+ 0222            TC     DANZIG
+ 0223  2         TC     -2
+ 0224   SMOVE    CAF    ZERO
+ 0225            TS     MPAC +1
+ 0226  2         TC     DANZIG
+ 0227   NEXT     CCS    CYR             NEXT AND ITCQ OPERATORS
+ 0228            CCS    ADRLOC          NEXT - KNOCK DOWN ADRLOC BY ONE
+ 0229            TC     +4              AND BEGIN NEXT EQUN IMMEDIATELY
+ 0230            INDEX  FIXLOC          ITCQ - PICK UP QPRET AND BRANCH
+ 0231            XCH    QPRET
+ 0232  2         TC     DOBR2
+ 0233   +4       TS     ADRLOC
+ 0234            CAF    ONE             TURN ON LOAD INDICATOR
+ 0235  2         TC     SWLODIND
+ 0236   NOLOAD   CCS    ADRLOC          NOLOD AND ROUND OPERATORS. DECREMENT
+ 0237            TS     ADRLOC          ADRLOC SINCE WE SHOULDNT HAVE TAKEN AN
+ 0238            CCS    CYR             ADDRESS. SEE IF NOLOD OR ROUND
+ 0239            CAF    ZERO            NOLOD - SET NEWEQIND TO ZERO
+ 0240            TC     +4
+ 0241            CS     ONE             MODE IS NOW DP
+ 0242            TS     MODE
+ 0243  2         TC     MPACRND         GO ROUND MPAC AND RETURN TO DANZIG
+ 0244   SWLODIND TS     NEWEQIND
+ 0245  8         TC     DANZIG
+ 0246   SL1      XCH    MPAC +2         ROUTINE WHICH SHIFTS TRIPLE ACCUMULATOR
+ 0247            DOUBLE                 LEFT ONE PLACE. IT IS USED BY TSLT AND
+ 0248            TS     MPAC +2         TSLC
+ 0249            CAF    ZERO
+ 0250            AD     MPAC +1
+ 0251            AD     MPAC +1
+ 0252            TS     MPAC +1
+ 0253            CAF    ZERO
+ 0254            AD     MPAC
+ 0255            AD     MPAC
+ 0256            TS     MPAC
+ 0257            TC     Q
+ 0258            TS     OVFIND          SET OVFIND IF ENTIRE WORD OVERFLOWS
+ 0259  2         TC     Q
+ 0260   SHIFTL   TC     TRUE2           TP LEFT SHIFT - GET INTEGER ADDRESS
+ 0261            TC     +3
+ 0262   LEFTLOOP TS     ADDRWD
+ 0263            TC     SL1
+ 0264   +3       CCS    ADDRWD
+ 0265            TC     LEFTLOOP
+ 0266  2         TC     DANZIG
+ 0267   TSLC     CAF    ZERO            NORMALIZATION - START BY SETTING COUNT
+ 0268            TS     TEM2            TO ZERO
+ 0269            TC     BRANCH
+ 0270            TC     +2
+ 0271  2         TC     SLCANS
+ 0272   RETRN    CS     MPAC            HERE FOR NON-ZERO
+ 0273            DOUBLE
+ 0274            OVSK                   SKIP ON OVERFLOW
+ 0275            TC     +2              NO OVERFLOW - SHIFT AGAIN
+ 0276            TC     SLCANS          DONE - WE OVERFLOWED
+ 0277            XCH    TEM2
+ 0278            AD     ONE
+ 0279            TS     TEM2
+ 0280            TC     SL1             DO THE SHIFT
+ 0281  2         TC     RETRN           AND LOOP
+ 0282   SLCANS   CS     TEM2            STORE COMPLEMENT OF COUNT
+ 0283            INDEX  ADDRWD
+ 0284            TS     0
+ 0285  8         TC     DANZIG
+ 0286   SWITCHEM CS     POLISH          SWITCH AND TEST INSTRUCTIONS.
+ 0287            TS     ADDRWD          DECOMPOSE ADDRESS INTO SWITCH WORD AND
+ 0288            MASK   SBITMASK        BIT. MULTIPLES OF 16 ARE EXCLUDED.
+ 0289            XCH    ADDRWD
+ 0290            EXTEND
+ 0291            MP     BIT11
+ 0292  2         TS     TEM8            0, 1, OR 2.
+ 0293            INDEX  ADDRWD          PICK UP A 1 IN SPECIFIED SWITCH POS.
+ 0294            CAF    BIT15 -1        SWITCHES ARE NUMBERED 1 - 15 D.
+ 0295            TS     TEM4
+ 0296            INHINT
+ 0297            INDEX  TEM8
+ 0298            MASK   STATE           GET BS WHERE B IS BIT AND S IS *STATE*
+ 0299  2         TS     TEM5             - THE WORD CONTAINING THE 15 SWITCHES
+ 0300            CCS    CYR             DECIDE WHETHER INST. IS *SWITCH* OR TEST
+ 0301            TC     INCADR          TO PICK UP NEXT ADDRESS
+ 0302            TC     +3
+ 0303            CS     TEM4
+ 0304  2         TC     SWITCHIT        SWITCH BIT.
+ 0305            RELINT
+ 0306            CCS    TEM5            TEST SWITCH
+ 0307            TC     RE-ENTER        IT WAS ON - DONT BRANCH
+ 0308            TC     SWF/F           OFF - GO TO FIXED-FIXED TO PICK UP ADR.
+ 0309  2         TC     RE-ENTER        COMES HERE IF BIT 15 WAS ON
+ 0310   SWITCHIT INDEX  TEM8            WE DESIRE THE LOGICAL EXCLUSIVE OR OF B
+ 0311            MASK   STATE
+ 0312            TS     Q               SET THIS BIT TO 0SO AD IS OR.
+ 0313            INDEX  TEM8
+ 0314            CS     STATE
+ 0315            MASK   TEM4            COMPLEMENT OF SWITCH BIT.
+ 0316            AD     Q               OR
+ 0317            INDEX  TEM8
+ 0318            TS     STATE
+ 0319            RELINT
+ 0320  8         TC     RE-ENTER        DONT PUSH-DOWN IF AT END.
+ 0321   VSLT2    TS     MPAC +1         SET TO ZERO IN CASE OF RIGHT SHIFT.
+ 0322  2         TC     TRUE2           RETURNS TO CALLER IF COUNT PNZ.
+ 0323            TC     VSLTEST
+ 0324   VSLTLOOP TS     ADDRWD
+ 0325            CAF    ZERO
+ 0326            AD     VACLOC
+ 0327            TS     TEM2
+ 0328            TC     VSL1
+ 0329            TC     INCRT2
+ 0330            TC     VSL1
+ 0331            TC     INCRT2
+ 0332            TC     VSL1
+ 0333   VSLTEST  CCS    ADDRWD
+ 0334            TC     VSLTLOOP
+ 0335  2         TC     DANZIG
+ 0336   VSL1     INDEX  TEM2
+ 0337            XCH    1
+ 0338            DOUBLE
+ 0339            INDEX  TEM2
+ 0340            TS     1
+ 0341            CAF    ZERO
+ 0342            INDEX  TEM2
+ 0343            AD     0
+ 0344            INDEX  TEM2
+ 0345            AD     0
+ 0346            INDEX  TEM2
+ 0347            TS     0
+ 0348            TC     Q
+ 0349            TS     OVFIND
+ 0350  8         TC     Q
+R0351  2DOUBLE-PRECISION SINE-COSINE ROUTINES.
+R0352   THESE PROGRAMS ARE ENTERED AND EXIT IN THE INTERPRETIVE MODE, WITH
+R0353   THE ARGUMENT IN MPAC AT ENTRY AND THE ANSWER IN MPAC AT EXIT.  THEY
+R0354   COMPUTE, RESPECTIVELY, (1/2) COS (PI X)  AND  (1/2) SIN (PI X) WHERE
+R0355  2X = C(MPAC) RANGES OVER THE INTERVAL (-1, +1).
+R0356   PROGRAM USES THE SERIES
+R0357                               3       5       7        9
+R0358   (1/2) SIN(PI X) = C X + 4C X + 16C X + 64C X + 256C X .
+R0359                      1      3       5       7        9
+R0360   WHERE THE C COEFFICIENTS ARE FROM HASTINGS SERIES
+R0361                          3     5     7     9
+R0362   SIN(PI X/2) = C X + C X + C X + C X + C X .
+R0363  2               1     3     5     7     9
+ 0364   COSINE   XCH    Q               CLOSED COSINE ROUTINE
+ 0365            TS     TEM8
+ 0366            TC     TSGNABS         FORM 1/2 - (ABS(X)) AND COMPUTE SINE
+ 0367            TC     DACCOM+
+ 0368  2         TC     SINE +2
+ 0369   SINE     XCH    Q               CLOSED SINE ROUTINE
+ 0370            TS     TEM8
+ 0371            TC     PARTSL1         DOUBLE ARGUMENT
+ 0372            TS     MPAC
+ 0373            TC     +2              IF DIDNT SKIP
+ 0374  2         TC     DACCOM          IF SO, WE WANT -SIN(X) = SIN(-X)
+ 0375            CS     MPAC
+ 0376            TS     VBUF +2         SAVE NEGATIVE OF ARGUMENT
+ 0377            TS     TEM2
+ 0378            DOUBLE
+ 0379            TS     Q
+ 0380  2         TC     SN1             IF ABS(X) LESS THAN 1/2
+ 0381            INDEX  A               CONTAINS +-1
+ 0382            CS     NEG1/2 +1
+ 0383            XCH    TEM2
+ 0384            AD     TEM2
+ 0385            AD     TEM2            (ADD +-1/2 TWICE TO MAKE +-1.0)
+ 0386            TS     MPAC
+ 0387            CS     MPAC +1
+ 0388            TS     MPAC +1
+ 0389            CS     MPAC
+ 0390  8         TS     VBUF +2
+ 0391   SN1      CS     MPAC +1         SAVE REST OF ARGUMENT
+ 0392            TS     VBUF +3
+ 0393            CAF    BUGMPAC         ADDRESS OF MPAC WITH MP BITS
+ 0394            TS     TEM4
+ 0395            CAF    DAD2 +4         SQUARE MPAC
+ 0396            TC     DMP1
+ 0397  2         TC     TCS1 +2
+ 0398            TC     POLY
+ 0399            DEC    8
+ 0400            2DEC   -0.3926990796          (   C /4)
+A0401  2                                            1
+ 0402            2DEC   +0.6459637111          (  4C /4)
+A0403  2                                            3
+ 0404            2DEC   -0.318758717           ( 16C /4)
+A0405  2                                            5
+ 0406            2DEC   +0.074780249           ( 64C /4)
+A0407  2                                            7
+ 0408            2DEC   -0.009694988           (256C /4)
+A0409  2                                            9
+ 0410            TC     DMP             DMP BY X
+ 0411            XCADR  VBUF +2
+ 0412            TC     SL1             AND SHIFT LEFT 2
+ 0413            TC     SL1
+ 0414  2         TC     TEM8            DONE
+ 0415   SIN1     TC     SINE            INTERPRETER LINKAGE
+ 0416  2         TC     DANZIG
+ 0417   COS1     TC     COSINE
+ 0418  8         TC     DANZIG
+ 0419   ARCSIN   CAF    TCTAG+1         PICK UP ARCSIN BRANCH
+ 0420            AD     POSMAX          TO FORCE OVERFLOW
+ 0421  2         OVSK                   SKIP AND RESTORE NON-OVERFLOW
+ 0422   ARCCOS   CAF    TCEX            SET ARCCOS SWITCH
+ 0423            XCH    ESCAPE          NO SKIP, PLEASE
+ 0424            XCH    Q               ONLY HAVE TO SAVE Q IN ONE PLACE
+ 0425            TS     ARETURN
+ 0426            TC     TPAGREE         FORCE SIGN AGREEMENT SO WE CAN CHECK
+ 0427            CCS    A               SIZE OF ARGUMENT (SIGNUM RETURNS IN A).
+ 0428            TC     ACOSST          POSITIVE
+ 0429            TC     +2              ARCCOS = PI/2
+ 0430  2         TC     NEGARGU
+ 0431            CAF    QUARTER         ARCCOS(0) = .25(2PI).
+ 0432            TS     MPAC             (MPAC +1 IS ALREADY ZERO).
+ 0433  2         TC     ESCAPE
+ 0434   ACOSST   TC     PARTSL1         DOUBLE ARGUMENT
+ 0435            XCH    MPAC            NO SKIP, BUT EXAMINE ORIGINAL MPAC
+ 0436            AD     NEG1/2          MUST BE LESS THAN OR EQUAL TO 1/2
+ 0437            CCS    A
+ 0438            TC     ABORT           MAJOR PART GREATER THAN 1/2. NOTE THAT
+ 0439  2         OCT    01301           MPAC+1 IS NOT CHECKED SO A MARGIN EXISTS
+ 0440            TC     +4              NORMAL CASE
+ 0441            TS     MPAC            ARGUMENT WAS 1 (SCALED). LEAVE ZERO
+ 0442            TS     MPAC +1         AS RESULT AND EXIT
+ 0443  8         TC     ESCAPE
+ 0444   +4       CS     MPAC +1
+ 0445            TS     MPAC +1
+ 0446            TS     B +1
+ 0447            CS     MPAC
+ 0448            TS     B
+ 0449            AD     HALF
+ 0450            AD     HALF
+ 0451  2         TS     MPAC            SQRT ARGUMENT IS NOW READY
+ 0452  2         TC     +6              NORMAL PATH.
+ 0453            CAF    POSMAX          WE HAVE FALSE OVERFLOW PRESENT AND IT
+ 0454            TS     MPAC             MUST BE CORRECTED. MAJOR PART WAS ZERO
+ 0455            AD     MPAC +1          AND MINOR PART PNZ, SO FORM 1.0 - MPAC
+ 0456            AD     ONE              PROPERLY FOR THIS CASE.
+ 0457  2         TS     MPAC +1         GUARANTEED NO OVERFLOW.
+ 0458  2 +6      TC     SQRT2           GO TAKE THE SQUARE ROOT.
+ 0459            CS     B +1
+ 0460            XCH    MPAC +1
+ 0461            TS     B +1
+ 0462            CS     B
+ 0463            XCH    MPAC
+ 0464  8         TS     B
+ 0465            TC     POLY            EVALUATE HASTINGS POLYNOMIAL/2PI
+ 0466            DEC    14
+ 0467            2DEC*   .49999 99920   B-1*      HASTINGS COEFFICIENTS/2PI
+ 0468            2DEC*  -.06830 89201   B-1*
+ 0469            2DEC*   .02832 28913   B-1*
+ 0470            2DEC*  -.01597 09772   B-1*
+ 0471            2DEC*   .00983 31911   B-1*
+ 0472            2DEC*  -.00543 93193   B-1*
+ 0473            2DEC*   .00212 31556   B-1*
+ 0474            2DEC*  -.00040 18634   B-1*
+ 0475            TC     DMP             INTERPRETER SUBROUTINE ONLY
+ 0476            XCADR  B
+ 0477  2         TC     ESCAPE          GO TO ARCSIN/ARCCOS SWITCH (OR NEGARGU)
+ 0478   TAGIT    TC     DACCOM+
+ 0479            TC     ARETURN
+ 0480   PARTSL1  XCH    MPAC +1         DOES A DOUBLE SHIFT LEFT EXCEPT FOR THE
+ 0481            DOUBLE                 FINAL TS. USED BY SIN, COS, ASIN, AND
+ 0482            TS     MPAC +1         ACOS.
+ 0483            CAF    ZERO
+ 0484            AD     MPAC
+ 0485            AD     MPAC
+ 0486  2         TC     Q               POSSIBLY WITH OVERLOW PRESENT
+ 0487   NEGARGU  TC     DACCOM          ARCCOS(-X)=PI-ARCCOS(X)
+ 0488            CAF    TCSUBTR         SET SWITCH TO PERFORM ABOVE
+ 0489            XCH    ESCAPE
+ 0490            TS     ESCAPE2         ADDITIONAL SWITCH HERE.
+ 0491  8         TC     ACOSST
+ 0492   SUBTR    CS     MPAC
+ 0493            AD     HALF
+ 0494            TS     MPAC
+ 0495            CS     MPAC +1
+ 0496            TS     MPAC +1
+ 0497  4         TC     ESCAPE2         THIS IS NOW THE ARCSIN/ARCCOS SWITCH
+ 0498   TCTAG+1  TC     TAGIT +1
+ 0499   TCEX     EQUALS TCTAG+1
+ 0500  2TCSUBTR  TC     SUBTR
+ 0501   ARCSIN1  TC     ARCSIN
+ 0502  2         TC     DANZIG
+ 0503   ARCCOS1  TC     ARCCOS
+ 0504  2         TC     DANZIG
+ 0505   DACCOM+  CS     MPAC +1         USED BY SIN-COS AND ARCSIN-ARCCOS
+ 0506            TS     MPAC +1
+ 0507            CS     MPAC
+ 0508            AD     QUARTER
+ 0509            TS     MPAC
+ 0510  8         TC     Q
+ 0511   MBXCH    XCH    BUF             TO EXCHANGE MPAC AND BUF
+ 0512            XCH    MPAC
+ 0513            TS     BUF
+ 0514            XCH    BUF +1
+ 0515            XCH    MPAC +1
+ 0516            TS     BUF +1
+ 0517  2         TC     Q
+ 0518   DDV0     TS     MPAC +2         SET MPAC+2 TO ZERO TO RESUME DDV
+ 0519            TC     TSGNABS         SIGN AGGREMENT ETC
+ 0520            TS     TEM2            SAVE SGN
+ 0521            TC     MBXCH           SWITCH CONTENTS
+ 0522            TC     TSGNABS         SAME FOR ARGUMENT
+ 0523            AD     TEM2
+ 0524            CCS    A               TO GET SIGN OF RESULT
+ 0525            TC     +3
+ 0526            TC     DPDOFLO +1      HERE FOR 0/0 CASE
+ 0527            TC     +1
+ 0528            TS     TEM2
+ 0529            CCS    DVSW
+ 0530  2         TC     MBXCH           INTERCHANGE OLD DIVISOR AND DIVIDEND
+ 0531            CS     BUF             CHECK TO SEE IF C(BUF,BUF+1) LESS
+ 0532            AD     MPAC            THAN C(MPAC,MPAC+1). OVERFLOW CONDITION
+ 0533            CCS    A               IF NOT
+ 0534            TC     DDVOK           SCALING OK
+ 0535            TC     CCSHOLE
+ 0536            TC     DPDOFLO         TROUBLE HERE
+ 0537            CS     BUF +1          CHECK MINOR PARTS IF MAJORS EQUAL
+ 0538            AD     MPAC +1
+ 0539            CCS    A
+ 0540            TC     DDVOK
+ 0541            TC     CCSHOLE
+ 0542            TC     DPDOFLO         TROUBLE HERE
+ 0543  2         TC     DPDOFLO         AS WELL AS WHEN C(BUF,BUF+1)=C(MPAC,+1)
+ 0544   DDVOK    CAF    ZERO
+ 0545            AD     MPAC
+ 0546  8         TC     DPDNORT         TO NORMALIZE
+ 0547   SQRTDIV  XCH    Q               ENTRY FROM SQRT ROUTINE
+ 0548            TS     TEMQ3
+ 0549  2         TC     DVSTART
+ 0550   DPDNORM  XCH    BUF +1
+ 0551            DOUBLE
+ 0552            TS     BUF +1
+ 0553            CAF    ZERO
+ 0554            AD     BUF
+ 0555            AD     BUF
+ 0556            TS     BUF
+ 0557  2         TC     SL1 +3          TO DOUBLE MPAC
+ 0558   DPDNORT  TS     CYL             TO LOOK AT BIT 14
+ 0559            CCS    CYL
+ 0560            TC     DPDNORM
+ 0561            TC     +2
+ 0562            TC     DVSTART
+ 0563            XCH    BUF +1          HIGH ORDER ZERO
+ 0564            XCH    BUF
+ 0565            XCH    MPAC +1         SET MPAC +1 TO ZERO
+ 0566            TS     MPAC
+ 0567  8         TC     DPDNORT         AND TRY AGAIN
+ 0568   DVSTART  XCH    BUF             OK
+ 0569            INDEX  OPOVF
+ 0570            DV     MPAC
+ 0571            TS     OVCTR
+ 0572            INDEX  OPOVF
+ 0573            MP     MPAC +1
+ 0574   -1/2+2   AD     Q               COMPLIMENT OF REMAINDER.
+ 0575            CS     A
+ 0576            AD     BUF +1
+ 0577            OVSK
+ 0578            TC     +3              IF NOT
+ 0579            INDEX  OPOVF           IF OVERFLEW
+ 0580            SU     MPAC
+ 0581   +3       TS     BUF
+ 0582            CCS    A
+ 0583            AD     ONE
+ 0584            TC     +2
+ 0585            AD     ONE
+ 0586   +2       EXTEND                 WE NOW HAVE ABS(CORRECT BUF)
+ 0587            SU     MPAC
+ 0588            CCS    A
+ 0589            AD     ONE
+ 0590            TC     +2
+ 0591            TC     +4
+ 0592   +2       XCH    BUF
+ 0593            DOUBLE
+ 0594            CCS    A
+ 0595   +4       XCH    BUF
+ 0596            TC     +2
+ 0597            CS     BUF
+ 0598            INDEX  OPOVF
+ 0599  8         DV     MPAC
+ 0600   DPDSGNT  TS     MPAC +1
+ 0601            CCS    TEM2
+ 0602            TC     POSQUOT
+ 0603            CS     MPAC +1
+ 0604            TS     MPAC +1
+ 0605            CS     OVCTR
+ 0606            TS     MPAC
+ 0607  2         TC     TEMQ3
+ 0608   POSQUOT  XCH    OVCTR
+ 0609  2         TC     -3
+ 0610   DPDOFLO  CCS    TEM2
+ 0611            CAF    TWO
+ 0612            AD     NEG1
+ 0613            TS     OVFIND
+ 0614            EXTEND                 SET MPAC = +- POSMAX
+ 0615            MP     POSMAX
+ 0616            XCH    LP
+ 0617            TS     MPAC +1
+ 0618  8         TC     POSQUOT -2
+ 0619   TSGNABS  XCH    Q               SIGNUM AND ABSOLUTE VALUE
+ 0620            TS     TEMQ2
+ 0621  2         TC     TPAGREE
+ 0622            CCS    A               TEST SIGNUM
+ 0623            AD     ONE
+ 0624  2         TC     TEMQ2
+ 0625            TC     MPACCOM         COMPLEMENT IF NEGATIVE
+ 0626            CS     ONE
+ 0627  2         TC     TEMQ2
+ 0628   TPAGREE  XCH    Q               FORCE SIGN AGREEMENT IN TP WORD IN MPAC
+ 0629            TS     TEMQ
+ 0630            TC     BRANCH
+ 0631            TC     SGN=+
+ 0632  2         TC     SGN=0
+ 0633            CS     POSMAX
+ 0634            TS     SGNDMAX
+ 0635            CS     ONE
+ 0636  2         TC     SGFORCE
+ 0637   SGN=0    CAF    ZERO
+ 0638            TS     MPAC
+ 0639            TS     MPAC +1
+ 0640            TS     MPAC +2
+ 0641  2         TC     TEMQ
+ 0642   SGN=+    CAF    POSMAX
+ 0643            TS     SGNDMAX
+ 0644  8         CAF    ONE
+ 0645   SGFORCE  AD     MPAC +2
+ 0646            AD     SGNDMAX
+ 0647            TS     MPAC +2
+ 0648  2         CAF    ZERO
+ 0649            AD     MPAC +1
+ 0650            AD     SGNDMAX
+ 0651            TS     MPAC +1
+ 0652  2         CAF    ZERO
+ 0653            AD     MPAC
+ 0654            AD     SGNDMAX
+ 0655            TS     MPAC
+ 0656   SBITMASK OCT    17
+ 0657  8         TC     TEMQ
+ 0658   UNIT     TC     ABVAL           UNIT VECTOR ROUTINE - START BY GETTING
+A0659                                   LENGTH
+ 0660  2         TC     VSR1            LEAVES 1/2 UNIT VECTORS
+ 0661            CCS    NEWJOB          ALLOW FOR INTERRUPTS
+ 0662  2         TC     UNITRUPT        SO WE CAN RETURN IN BASIC
+ 0663   UNITRSM  AD     VACLOC          RETURNS HERE FROM BREAKPOINT IF CALLED.
+ 0664            TS     ADDRWD
+ 0665            CAF    TWO
+ 0666            TS     DVSW            NON-ZERO FOR BACKWARDS DIVIDE
+ 0667   UNITLOOP TS     COMPON
+ 0668            CS     MPAC
+ 0669            CS     A
+ 0670            INDEX  ADDRWD
+ 0671            XCH    0               LENGTH TO COMPONENT AND COMPONENT TO BUF
+ 0672            TS     BUF
+ 0673            CS     MPAC +1
+ 0674            CS     A
+ 0675            INDEX  ADDRWD
+ 0676            XCH    1
+ 0677  2         TS     BUF +1
+ 0678            CAF    +4              CALL BACKWARDS DIVIDE
+ 0679            TS     TEMQ3
+ 0680            CAF    ZERO
+ 0681            TC     DDV0
+ 0682  2         TC     +1
+ 0683            XCH    MPAC            RESULT BACK TO COMPONENT BRINGING BACK
+ 0684            INDEX  ADDRWD          LENGTH
+ 0685            XCH    0
+ 0686            TS     MPAC
+ 0687            XCH    MPAC +1
+ 0688            INDEX  ADDRWD
+ 0689            XCH    1
+ 0690  2         TS     MPAC +1
+ 0691            TC     AD2             INCREMENT ADDRWD
+ 0692            CCS    COMPON
+ 0693            TC     UNITLOOP
+ 0694            CS     TWO             STORE LENGTH OF ARGUMENT IN REGISTERS 30
+ 0695            AD     VACLOC
+ 0696            TS     TEM2            AND 31 OF VAC AREA.
+ 0697            CAF    DAD2 +4
+ 0698            TC     8TO2
+ 0699  8         TC     DANZIG
+ 0700   UNITRUPT CS     BANKSET         REQUESTS FOR INTERPRETIVE INTERRUPT
+ 0701            TS     MPAC +2         COME HERE DURING THE UNIT OPERATION.
+ 0702            XCH    LOC             SINCE WE DESIRE TO RETURN IN BASIC BUT
+ 0703            INDEX  FIXLOC          BUT STILL SAVE THE INTERPRETER CENTRALS
+ 0704            TS     30D             (BANKSET AND LOC)
+ 0705  2         TC     CHANG1
+ 0706            CS     MPAC +2         ON RETURN, RESTORE AS BEFORE
+ 0707            TS     BANKSET
+ 0708            INDEX  FIXLOC
+ 0709            XCH    30D
+ 0710            TS     LOC
+ 0711            CAF    ZERO
+ 0712            TC     UNITRSM         ENTER UNIT DIVIDE LOOP.
+ 0713  2MPACSR1  CAF    DAD2 +4
+ 0714   SR1      TS     TEM11           SHIFTS RIGHT ONE USING ADDRESS IN A
+ 0715            INDEX  A
+ 0716            XCH    0
+ 0717            INDEX  OPOVF
+ 0718            MP     HALF
+ 0719            INDEX  TEM11
+ 0720            TS     0
+ 0721            INDEX  TEM11
+ 0722            XCH    1
+ 0723            TS     SR
+ 0724            XCH    SR
+ 0725            AD     LP
+ 0726            INDEX  TEM11
+ 0727            TS     1
+ 0728  8         TC     Q
+ 0729   SQRT2    CAF    ZERO            ENTRY TO IGNORE C(MPAC+2)
+ 0730  2         TS     MPAC +2
+ 0731   SQRT3    XCH    Q               HERE TO TREAT TRIPLE-PRECISION CASES
+ 0732            TS     TEMQ2
+ 0733            TC     TPAGREE         FORCE SIGN AGREEMENT
+ 0734            CCS    A               TEST SIGNUM
+ 0735            TC     SETNORM         PNZ - OK.
+ 0736            TC     TEMQ2           FAST EXIT FOR ZERO ARGUMENT
+ 0737  2         CCS    MPAC            IF ARGUMENT WAS NEGATIVE BUT MAJOR PART
+ 0738            TC     ABORT           (MPAC IS NEGATIVE) IS ZERO, ANSWER IS
+ 0739            OCT    01302           TAKEN AS ZERO WITH NO FURTHER ACTION.
+ 0740            TC     -2              IF NON-ZERO, IT IS ASSUMED A TRANSIENT
+A0741  2                                ERROR HAS PRODUCED THE BAD DATA.
+ 0742            TS     MPAC +1         ARGUMENT NEGATIVE BUT MORE THAN -10-4.
+ 0743  2         TC     TEMQ2           SET MPAC,+1 TO ZERO AND EXIT.
+ 0744   SETNORM  TS     ADDRWD          SET NORMALIZATION COUNT TO ZERO
+ 0745            CS     MPAC
+ 0746            TS     CYL             WE WILL USE A/2, SO MUST CHECK FOR
+ 0747            CCS    CYL             NORMALIZATION FIRST
+ 0748            TC     MPACSR1         NORMALIZED - SHIFT RIGHT ONE.
+ 0749  2         TC     ARGHI
+ 0750  2         TC     SRTEST          LESS THAN 1/2 - SEE IF AT LEAST 1/8.
+ 0751  2         TC     A0=0            MAJOR PART (POSSIBLY MINOR PART) = 0.
+ 0752   SRTEST   AD     -1/2+2          SEE IF ARG GREATER THAN OR EQUAL TO 1/4.
+ 0753            CCS    A
+ 0754            TC     MPACSR1         IT IS - SHIFT RIGHT ONE AND GO TO ARGLO.
+ 0755  2         TC     ARGLO           (+0 WAS IMPOSSIBLE THIS CCS.)
+ 0756            TC     SQRTNORM +1     LESS THAN 1/4 - PUT IN EFFECTIVE RIGHT
+A0757                                   BY SHIFTING LEFT ONLY ONCE WHEN ADDING
+A0758  8                                ONE TO THE RIGHT SHIFT COUNT.
+ 0759   A0=0     XCH    MPAC +2         MOVE ARGUMENT UP
+ 0760            XCH    MPAC +1
+ 0761            XCH    MPAC
+ 0762            AD     ADDRWD
+ 0763            AD     SEVEN           INCREASE SHIFT COUNT BY 14/2 = 7
+ 0764  2         TC     SETNORM
+ 0765   SQRTNORM TC     SL1
+ 0766            CAF    ONE             ARGUMENT LESS THAN 1/8, SO SHIFT IT LEFT
+ 0767            AD     ADDRWD          TWO PLACES AND INCREASE SHIFT COUNT FOR
+ 0768            TS     ADDRWD          RESULT
+ 0769            TC     SL1
+ 0770            TS     CYL
+ 0771  8         CS     CYL
+ 0772   NORMTEST CCS    CYL
+ 0773            CCS    CYL
+ 0774            TC     SQRTNORM        HERE IF LESS THAN 1/8
+ 0775  2         TC     ARGHI           HERE IF AT LEAST 1/4, LESS THAN 1/2
+ 0776   ARGLO    CAF    SLOPELO         HERE IF AT LEAST 1/8, LESS THAN 1/4
+ 0777            INDEX  OPOVF
+ 0778            MP     MPAC
+ 0779            AD     BIASLO          X0/2 = .8324(A0/2) + .2974/2
+ 0780  2         TC     ARGHI +4
+ 0781   SLOPELO  DEC    .8324
+ 0782   BIASLO   DEC    .2974 B-1
+ 0783   SLOPEHI  DEC    .5884
+ 0784  2BIASHI   DEC    .4192 B-1
+ 0785   ARGHI    CAF    SLOPEHI
+ 0786            INDEX  OPOVF
+ 0787            MP     MPAC
+ 0788            AD     BIASHI
+ 0789   +4       XCH    MPAC            X0/2 TO MPAC
+ 0790            TS     BUF             A0/2 TO BUF
+ 0791            TS     TEM2            SET UP POSITIVE QUOTIENT SIGNAL AND
+ 0792            CAF    ZERO
+ 0793            XCH    MPAC +1         ZERO LOW-ORDER DIVIDEND FOR DP DIVIDE
+ 0794            TS     BUF +1          A1/2 TO BUF+1. A2 NOW DISCARDED
+ 0795            CS     BUF
+ 0796            INDEX  OPOVF
+ 0797            DV     MPAC            -(A0/2)/(X0/2).
+ 0798            TS     SR
+ 0799            CS     SR
+ 0800            AD     MPAC            X1 IS GOOD TO 14 BITS
+ 0801            TS     MPAC            X1 = X0/2 + ((A0/2)/(X0/2))/2
+ 0802            TS     TEM3            SAVE X1 FOR ADDITION
+ 0803            TC     SQRTDIV         GO TO FORM DP QUOTIENT OF A0/2, A1/2
+ 0804            XCH    TEM3            OVER X1, 0. RESULT IN MPAC, MPAC +1
+ 0805            INDEX  OPOVF
+ 0806            MP     HALF
+ 0807            AD     MPAC
+ 0808  8         TS     OVCTR           AND MAYBE SKIP, IF ARG WAS NEAR POSMAX
+ 0809            TC     +4              IF NO OVERFLOW
+ 0810            CAF    POSMAX
+ 0811            TS     MPAC +1
+ 0812  2         TC     +5
+ 0813   +4       XCH    LP              FOR NORMAL CASES
+ 0814            AD     MPAC +1         ABOVE AND X1/2
+ 0815            XCH    MPAC +1
+ 0816            XCH    OVCTR
+ 0817  2+5       TS     MPAC
+ 0818            CAF    ZERO            ZERO MPAC+2 SO SHIFT LEFT MAKES SENSE.
+ 0819  2         TS     MPAC +2
+ 0820            CCS    ADDRWD          RE-NORMALIZE IF COUNT NON-ZERO
+ 0821            TC     SHIFTR +3       FITS IN WITH MAIN SHIFT LOOP
+ 0822  2         TC     TEMQ2           NO RE-SCALING REQUIRED
+ 0823   SQRTS    CS     MODE            INTERPRETER LINKAGE
+ 0824            DOUBLE                 TAKE APPROPRIATE SQRT
+ 0825            INDEX  A
+ 0826  2         TC     -1
+ 0827            TC     SQRT2           FOR DP
+ 0828  2         TC     DANZIG
+ 0829            TC     SQRT3
+ 0830  2         TC     DANZIG
+ 0831   NEG13    EQUALS MINUS13
+ 0832   DMOVE    EQUALS DANZIG          LOADING ONLY
+ 0833   VMOVE    EQUALS DANZIG
+ 0834   TMOVE    CS     TWO             SET MODE TO TRIPLE FOR TP OPERATIONS
+ 0835            TC     DPEXIT +1
 *       ENDOFJOB
