@@ -3423,4 +3423,273 @@ P0345  2LIST OF PROGRAM PRIORITIES
  0376   PRIO35   OCT    35000
  0377   PRIO36   OCT    36000
  0378   PRIO37   OCT    37000
+L      2WAITLIST
+R0001  2CHECK-OUT STATUS - UNIT VERIFICATION COMPLETE MAY, 1965
+ 0002  9EXCEPT LONGCALL SECTION.
+R0003  2DO NOT CHANGE THIS SECTION WITHOUT PRB APPROVAL.
+R0004  2GROUNDRULE....DELTA T SHOULD NOT EXCEED 12000 (= 2 MINUTES)
+ 0005            BANK   1
+ 0006   WAITLIST TS     DELT            STORE DELTA T = TD - T (TD = DESIRED
+ 0007            XCH    Q                 TIME FOR FUTURE ACTION).
+ 0008            TC     EXECCOM         PICK UP TASK ADDRESS AND SAVE BANKREG.
+ 0009  2         TC     WTLST3
+ 0010            BANK   4
+ 0011   WTLST3   CS     TIME3
+ 0012            AD     +1              CCS  A  = + 1/4
+ 0013            CCS    A               TEST  1/4 - C(TIME3).  IF POSITIVE,
+A0014   IT MEANS THAT TIME3 OVERFLOW HAS OCCURRED PRIOR TO CS  TIME3 AND THAT
+A0015   C(TIME3) = T - T1, INSTEAD OF 1.0 - (T1 - T).  THE FOLLOWING FOUR
+A0016   ORDERS SET C(A) = TD - T1 + 1 IN EITHER CASE.  C(CSQ) = CS  Q = 40001
+A0017  2AND  C(TSQ) = TS  Q = 50001   NOTATION...   1 - 00001,  1.0 = 37777+1
+ 0018            AD     CSQ             OVERFLOW HAS OCCURRED.  SET C(A) =
+ 0019  2         CS     A               T - T1 + 3/4 - 1
+R0020  2NORMAL CASE (C(A) MINUS) YIELDS SAME C(A)  -(-(1.0-(T1-T))+1/4)-1
+ 0021            AD     TSQ             TS  Q  = - 3/4 + 2
+ 0022  8         AD     DELT            RESULT = TD - T1 + 1
+ 0023  9            10 W
+ 0024  2         CCS    A               TEST TD - T1 + 1
+ 0025            AD     LST1            IF TD - T1 POS, GO TO WTLST5 WITH
+ 0026  2         TC     WTLST5          C(A) = (TD - T1) + C(LST1) = TD-T2+1
+ 0027            TC     +1
+ 0028  2         CS     DELT
+R0029   NOTE THAT THIS PROGRAM SECTION IS NEVER ENTERED WHEN T-T1 G/E -1,
+R0030   SINCE TD-T1+1 = (TD-T) + (T-T1+1), AND DELTA T = TD-T G/E +1 .  (G/E
+R0031   SYMBOL MEANS GREATER THAN OR EQUAL TO).  THUS THERE NEED BE NO CON-
+R0032  2CERN OVER A PREVIOUS OR IMMINENT OVERFLOW OF TIME3 HERE.
+ 0033            AD     POS1/2          WHEN TD IS NEXT, FORM QUANTITY
+ 0034            AD     POS1/2            1.0 - DELTA T = 1.0 - (TD - T)
+ 0035            XCH    TIME3
+ 0036            AD     MSIGN
+ 0037            AD     DELT
+ 0038            TS     DELT
+ 0039            CAF    ZERO
+ 0040            XCH    DELT
+ 0041   WTLST4   XCH    LST1
+ 0042            XCH    LST1 +1
+ 0043            XCH    LST1 +2
+ 0044            XCH    LST1 +3
+ 0045            XCH    LST1 +4
+ 00453           XCH    LST1 +5
+ 00456           XCH    LST1 +6
+ 0046            XCH    EXECTEM2        TASK ADDRESS.
+ 0047            INDEX  NVAL
+ 0048            TC     +1
+ 0049            XCH    LST2
+ 0050            XCH    LST2 +1
+ 0051            XCH    LST2 +2
+ 0052            XCH    LST2 +3
+ 0053            XCH    LST2 +4
+ 0054            XCH    LST2 +5         AT END, CHECK THAT C(LST2+5) IS STD
+ 00543           XCH    LST2 +6
+ 00546           XCH    LST2 +7
+ 0055            AD     ENDTASK           END ITEM, AS CHECK FOR EXCEEDING
+A0056                                     THE LENGTH OF THE LIST.
+ 0057            CCS    A
+ 0058            TC     ABORT           WAITLIST OVERFLOW.
+ 0059            OCT    01203
+ 0060  2         TC     -2
+ 0061            XCH    EXECTEM1        RETURN TO CALLER.
+ 0062  8         TC     LVWTLIST        SAME ROUTINE AS FINDVAC, ETC., EXIT.
+ 0063   WTLST5   CCS    A               TEST  TD - T2 + 1
+ 0064            AD     LST1 +1
+ 0065            TC     +4
+ 0066            AD     ONE
+ 0067            TC     WTLST2
+ 0068  2         OCT    1
+ 0069   +4       CCS    A               TEST  TD - T3 + 1
+ 0070            AD     LST1 +2
+ 0071            TC     +4
+ 0072            AD     ONE
+ 0073            TC     WTLST2
+ 0074  2         OCT    2
+ 0075   +4       CCS    A               TEST  TD - T4 + 1
+ 0076            AD     LST1 +3
+ 0077            TC     +4
+ 0078            AD     ONE
+ 0079            TC     WTLST2
+ 0080  2         OCT    3
+ 0081   +4       CCS    A               TEST  TD - T5 + 1
+ 0082            AD     LST1 +4
+ 0083            TC     +4
+ 0084            AD     ONE
+ 0085            TC     WTLST2
+ 0086  2         OCT    4
+ 0087   +4       CCS    A               TEST  TD - T6 + 1
+ 008705          AD     LST1 +5
+ 00871           TC     +4
+ 008715          AD     ONE
+ 00872           TC     WTLST2
+ 0087258         OCT    5
+ 00873   +4      CCS    A
+ 008735          AD     LST1 +6
+ 00874           TC     +4
+ 008745          AD     ONE
+ 00875           TC     WTLST2
+ 0087552         OCT    6
+ 00876   +4      CCS    A
+ 0088            TC     WTALARM
+ 0089            NOOP
+ 0090            AD     ONE
+ 0091            TC     WTLST2
+ 0092  2         OCT    7
+ 0093   WTALARM  TC     ABORT
+ 0094  2         OCT    01204
+ 0095  2LVWTLIST EQUALS FOUNDVAC
+ 0096   SVCT3X   CCS    FLAGWRD2        IF DURING FREE-FALL AND AFTER
+ 0097            TC     TASKOVER        PLATFORM HAS BEEN ALIGNED, COMPENSATE
+ 0098            TC     TASKOVER        FOR GYRO BIAS DRIFT.
+ 0099  2         TC     +1
+ 0100            CAF    PRIO35
+ 0101            TC     NOVAC
+ 0102            CADR   BIASONLY
+ 0103   LTSKOV   TC     TASKOVER        USED BY LONGCALL.
+R0104  2C(TIME3) = 1.0 - (T1 - T)
+R0105   C(LST1  ) = - (T2 - T1) + 1
+R0106   C(LST1+1) = - (T3 - T2) + 1
+R0107   C(LST1+2) = - (T4 - T3) + 1
+R0108   C(LST1+3) = - (T5 - T4) + 1
+R0109  2C(LST1+4) = - (T6 - T5) + 1
+R0110   C(LST2  ) = TC  TASK1
+R0111   C(LST2+1) = TC  TASK2
+R0112   C(LST2+2) = TC  TASK3
+R0113   C(LST2+3) = TC  TASK4
+R0114   C(LST2+4) = TC  TASK5
+R0115  8C(LST2+5) = TC  TASK6
+ 0116  9            11 W
+R0117   THE ENTRY TO WTLST2 JUST PRECEDING OCT  N  IS FOR T  LE TD LE T   -1.
+R0118  2                                                   N           N+1
+R0119   (LE MEANS LESS THAN OR EQUAL TO).  AT ENTRY, C(A) = -(TD - T   + 1)
+R0120  2                                                            N+1
+R0121   THE LST1 ENTRY -(T   - T +1) IS TO BE REPLACED BY -(TD - T + 1), AND
+R0122  2                  N+1   N                                 N
+R0123   THE ENTRY -(T   - TD + 1) IS TO BE INSERTED IMMEDIATELY FOLLOWING.
+R0124  2             N+1
+ 0125   WTLST2   XCH    Q               NEW C(Q) = -(TD - T   + 1)
+ 0126            INDEX  A                                  N+1
+ 0127            CAF    0
+ 0128  2         TS     NVAL            VALUE OF N INTO NVAL
+ 0129            CAF    ONE
+ 0130            AD     Q
+ 0131            INDEX  NVAL            C(A) = -(TD - T ) + 1.
+ 0132  2         AD     LST1 -1                        N
+ 0133            INDEX  NVAL
+ 0134  2         TS     LST1 -1
+ 0135            CS     Q               -C(Q) = -(T    - TD) + 1
+ 0136            INDEX  NVAL                       N+1
+ 0137            TC     WTLST4
+P0138   THIS ROUTINE HANDLES TASKS MORE THAN 120 SECS IN THE FUTURE. IT REQUIRES
+ 0139  9 CALL TIME IN LONGTIME, +1 SCALED SAME
+R0140   AS TIME2, 1 AND THE TASK ADDRESS IN CALLCADR. ENTER WITH
+R0141                                                              TC IBNKCALL
+R0142                                                            CADR LONGCALL
+R0143  4THE ROUTINE ONLY HANDLES ONE CALL AT A TIME
+ 0144   LONGCALL XCH    Q
+ 0145  2         TS     LONGEXIT
+ 0146            XCH    LONGTIME +1
+ 0147            DOUBLE
+ 0148            TS     LONGTIME +1
+ 0149            CAF    ZERO
+ 0150            AD     LONGTIME
+ 0151            AD     LONGTIME
+ 0152            TS     LONGTIME
+ 0153            TC     +2
+ 0154  2         TC                     ERROR TRAP.   DT TOO BIG
+ 0155            CAF    ONE
+ 0156            AD     LONGTIME +1
+ 0157            AD     POSMAX
+ 0158            TS     LONGTIME +1
+ 0159  2         CAF    ZERO
+ 0160            AD     LONGTIME
+ 0161            AD     POSMAX
+ 0162            TS     LONGTIME
+ 0163  2         TC     CCSHOLE
+ 0164            CAF    BIT14
+ 0165            EXTEND
+ 0166            MP     LONGTIME +1
+ 0167  2         TS     LONGTIME +1
+ 0168   LONGCYCL CCS    LONGTIME
+ 0169  2         TC     LOOPAGIN
+ 0170            CCS    LONGTIME +1     TEST FOR LOWER ORDER ZERO
+ 0171            TC     +2
+ 0172  2         TC     GETCADR
+ 0173            XCH    LONGTIME +1
+ 0174            TC     WAITLIST
+ 0175  2         CADR   GETCADR
+ 0176            TC     LONGC1
+ 0177   LOOPAGIN TS     LONGTIME
+ 0178            CAF    BIT14
+ 0179            TC     WAITLIST
+ 0180  2         CADR   LONGCYCL
+ 0181   LONGC1   CAF    LTSKOV
+ 0182            XCH    LONGEXIT
+ 0183  2         XAQ
+ 0184   GETCADR  XCH    CALLCADR
+ 0185            TC     BANKJUMP
+P0187  2         ENTERS HERE ON T3 RUPT TO DISPATCH WAITLISTED TASK.
+ 0188  2         SETLOC WAITLIST +4     BACK TO FF.
+ 0189   T3RUPT   XCH    BANKREG          TIME 3 OVERFLOW INTERRUPT PROGRAM
+ 0190            TS     BANKRUPT
+ 0191            XCH    OVCTR           1.  PICK UP CONTENTS OF THE OVERFLOW
+ 0192  2         TS     OVRUPT             AND SAVE IN OVRUPT FOR ENTIRE T3RUPT.
+ 0193   T3RUPT2  CS     ZERO            SET RUPTAGN TO -0 INITIALLY, AND SET
+ 0194            TS     RUPTAGN         T3 TO -0 WHILE WE MAKE UP ITS NEW
+ 0195            XCH    TIME3           CONTENTS SO WE CAN DETECT AN INCREMENT
+ 0196  2         TS     Q               OCCURING IN THE PROCESS.
+ 0197            CAF    NEG1/2
+ 01973           XCH    LST1 +6
+ 01976           XCH    LST1 +5
+ 0198            XCH    LST1 +4         3.  MOVE UP LST1 CONTENTS, ENTERING
+ 0199            XCH    LST1 +3             A VALUE OF 1/2 +1 AT THE BOTTOM
+ 0200            XCH    LST1 +2             FOR T6-T5, CORRESPONDING TO THE
+ 0201            XCH    LST1 +1             INTERVAL 81.93 SEC FOR ENDTASK.
+ 0202            XCH    LST1
+ 0203            AD     POSMAX          4. SET T3 = 1.0 - T2 -T USING LIST 1.
+ 0204            AD     Q               SAMPLED T3.
+ 0205            TS     A               SEE IF NEW T3 HAS OVERFLOW. IF SO, NEXT
+ 0206            TC     +4              TASK IS DUE THIS T3 RUPT AND SET RUPTAGN
+ 0207            XCH    RUPTAGN         ACCORDINGLY.
+ 0208            CAF    ONE
+ 0209  2         XCH    RUPTAGN
+ 0210    +4      XCH    TIME3
+ 0211            CCS    A               T3 IS ALMOST ALWAYS -0 UNLESS AN
+ 0212            CAF    ONE             INCREMENT OCCURRED IN WHICH CASE WE MUST
+ 0213            AD     TIME3           ADD IT TO THE NEW T3.
+ 0214  8         TC     XTRAINC
+ 0215   T3DSP    CS     ENDTASK
+ 02153           XCH    LST2 +7
+ 02156           XCH    LST2 +6
+ 0216            XCH    LST2 +5             ENTERING THE ENDTASK AT BOTTOM.
+ 0217            XCH    LST2 +4
+ 0218            XCH    LST2 +3
+ 0219            XCH    LST2 +2
+ 0220            XCH    LST2 +1
+ 0221  2         XCH    LST2            9.  PICK UP TOP TASK ON LIST
+ 0222            TS     BANKREG         SWITCH BANKS IF NECESSARY
+ 0223            TS     ITEMP1
+ 0224            MASK   70K
+ 0225            CCS    A
+ 0226            TC     +2              IF +
+ 0227            TC     ITEMP1
+ 0228            XCH    ITEMP1
+ 0229            MASK   LOW10
+ 0230            INDEX  A
+ 0231  4         TC     6000
+R0232  2RETURN, AFTER EXECUTION OF TIME3 OVERFLOW TASK.
+ 0233   TASKOVER CCS    RUPTAGN         IF +1 RETURN TO T3RUPT, IF -0 RESUME.
+ 0234  2         TC     T3RUPT2         DISPATCH NEXT TASK IF IT WAS DUE.
+ 0235   ENDTASK -CADR   SVCT3
+ 0236  2BANKMASK OCT    76000
+ 0237   OVRESUME XCH    OVRUPT          OVCTR RESTORE AND BANKREG RESTORE.
+ 0238  2         TS     OVCTR
+ 0239   RESUME   XCH    BANKRUPT        STANDARD BANK-SWITCH RESUME.
+ 0240  2         TS     BANKREG
+ 0241   NBRESUME XCH    QRUPT           NO-BANK-SWITCH RESUME.
+ 0242            TS     Q
+ 0243            XCH    ARUPT
+ 0244  2         RESUME
+R0245  2         FINISH UP RARE EVENT OF EXTRA INCREMENT TO T3.
+ 0246   XTRAINC  TS     TIME3
+ 0247            TC     T3DSP           USUAL CASE.
+ 0248            TS     RUPTAGN         EVEN MORE RARE - THE NEXT TASK IS DUE
+ 0249            TC     T3DSP           THIS T3RUPT.
 *       ENDOFJOB
