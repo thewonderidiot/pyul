@@ -3692,4 +3692,145 @@ R0245  2         FINISH UP RARE EVENT OF EXTRA INCREMENT TO T3.
  0247            TC     T3DSP           USUAL CASE.
  0248            TS     RUPTAGN         EVEN MORE RARE - THE NEXT TASK IS DUE
  0249            TC     T3DSP           THIS T3RUPT.
+L      2RESTART CONTROL
+ 0001            BANK   1
+R0002  2OF THE PHASE TABLE IN ALMOST CONTSTANT AGREEMENT. CALLING SEQUENCES ARE
+ 0003  9AS FOLLOWS:
+A0004            TC     PHASCHNG        CHANGE GROUP G TO PHASE PPP (127 MAX).
+A0005  2         OCT    PPP0G           (CALL UNDER EXECUTIVE ONLY)
+A0006            CAF    --              CHANGE GROUP G TO THE PHASE ARRIVING IN
+A0007            TC     NEWPHASE        A (MAY BE CALLED ANYTIME).
+A0008  2         OCT    0000G
+R0009            IN EACH CASE THE OLD PHASE IS RETURNED TO THE CALLER IN A. IF T
+ 0010  9HE OLD PHASE WAS +0, CONTROL IS
+R0011  2GIVEN TO A ROUTINE SPECIFIED IN A CADR TABLE. THIS ROUTINE MAY EXIT OR R
+ 0012  9ETURN TO CALLER VIA SWRETURN.
+ 0013   PHASCHNG XCH    Q
+ 0014            INHINT
+ 0015            TS     RUPTREG4
+ 0016            INDEX  A
+ 0017            CAF    0
+ 0018            TS     PHASDATA
+ 0019            MASK   LOW5            (MAY WANT MORE GROUPS SOME DAY)
+ 0020            XCH    PHASDATA
+ 0021            EXTEND
+ 0022            MP     -BIT9           NOTE LP NOT SAVED.
+ 0023  2         TC     PHASCH2
+ 0024  2-BIT9    OCT    -400
+ 0025   NEWPHASE INHINT
+ 0026            XCH    Q
+ 0027            TS     RUPTREG4
+ 0028            INDEX  A
+ 0029            CAF    0
+ 0030  2         TS     PHASDATA
+ 0031            CS     Q
+ 0032   PHASCH2  INDEX  PHASDATA
+ 0033            TS     -PHASE1 - 1     PHASE1 IS FOR PROG NUM 1.
+ 0034            COM
+ 0035            INDEX  PHASDATA
+ 0036  2         XCH    PHASE1 - 1      INTO PHASE1 FOR PROG 1.
+ 0037            CCS    A
+ 0038  2         TC     +3
+ 0039  2         TC     UPT             ON +0.
+ 0040            CS     TWO             -1 IS INACTIVE STATE
+ 0041  2 +3      AD     ONE
+ 0042   PHASEXIT XCH    RUPTREG4
+ 0043            AD     ONE
+ 0044            TS     Q               WE MUST RELINT BEFORE RETURN.
+ 0045            XCH    RUPTREG4        OLD PHASE BITS.
+ 0046            RELINT
+ 0047  2         TC     Q
+ 0048   UPT      INDEX  PHASDATA
+ 0048            CAF    UPTCADR -1
+ 0050  2         TC     SWCALL
+ 0051            CAF    ZERO            IF RETURN
+ 0052            TC     PHASEXIT
+P0053  2         MAJOR MODE LIGHT MAINTENANCE ROUTINES.
+R0054            ROUTINE TO CHECK EQUALITY BETWEEN THE MAJOR MODE DISPLAY AND TH
+ 0055  9E ARGUMENT AT CALLER +1. RETURNS TO
+R0056  2CALLER +2 IF NOT AND CALLER +3 IF SO.
+ 0057   CHECKMM  CAF    ONE
+ 0058            AD     Q
+ 0059            XCH    Q
+ 0060            INDEX  A
+ 0061            CS     0
+ 0062            AD     MODREG
+ 0063            CCS    A
+ 0064            TC     Q
+ 0065   FINEMASK OCT    17
+ 0066            TC     Q
+ 0067            INDEX  Q
+ 0068  2         TC     Q
+R0069  2         TO UPDATE THE MAJOR MODE LIGHTS:
+ 0070   NEWMODE  INDEX  Q
+ 0071            CAF    0
+ 0072            TS     MODREG
+ 0073            CAF    GRABUSY +1      CADR OF BANK CONTAINING DSPMM.
+ 0074            XCH    BANKREG
+ 0075            TS     MPAC +1         MPACS NOT USED BY DSPMM.
+ 0076            XCH    Q
+ 0077            TS     MPAC
+ 0078  2         TC     DSPMM
+ 0079            XCH    MPAC +1
+ 0080            TS     BANKREG
+ 0081            INDEX  MPAC
+ 0082            TC     1
+P0084   PROGRAM PRGSTALL IS AN EXECUTIVE INTERLOCK ROUTINE. REQUESTING PROGS DO
+R0085            TC     BANKCALL
+R0086            CADR   PRGSTALL
+R0087  4RETURN IS TO L+2 AFTER TWO PROGS HAVE CALLED.
+ 0088            BANK   4
+ 0089   PRGSTALL INHINT
+ 0090            CS     STATE
+ 0091            MASK   PRGBIT
+ 0092            TS     Q
+ 0093            CS     PRGBIT
+ 0094            MASK   STATE
+ 0095            AD     Q
+ 0096            TS     STATE
+ 0097            CCS    Q
+ 0098            TC     PRGSLEEP
+ 0099            CAF    LPRGRET
+ 0100            TC     JOBWAKE
+ 0101            RELINT
+ 0102  2         TC     SWRETURN
+ 0103   PRGSLEEP TC     MAKECADR
+ 0104            XCH    ADDRWD
+ 0105            TS     MPAC +2
+ 0106            CAF    LPRGRET
+ 0107  2         TC     JOBSLEEP
+ 0108   PRGRET   XCH    MPAC +2
+ 0109  2         TC     BANKJUMP
+ 0110   LPRGRET  CADR   PRGRET
+ 0111  2PRGBIT   EQUALS BIT1
+ 0112   UPTCADR  CADR
+P0113            PINBALL COMES TO MODROUT ON RECEIVING THE NEW MODE REQUESTED BY
+ 0114  9 VERB 37. THE DESIRED MODE IN IS A
+R0115  2ON ARRIVAL.
+ 0116   MODROUT  INHINT
+ 0117            AD     NEG3            FOR FLIGHT 501, ONLY MODES 01 AND 03 MAY
+ 0118            CCS    A               BE INITIATED BY VERB 37.
+ 0119            TC     V37BAD
+ 0120            TC     CCSHOLE
+ 0121  2         TC     1CHECK          SEE IF 01 CALLED FOR.
+ 0122            TC     CHECKMM         MODE 03 REQUESTED - DEMANDS MODE 02
+ 0123            OCT    02              PRESENTLY.
+ 0124  2         TC     V37BAD
+ 0125            CAF    PRIO14          START OPTICAL CHECK.
+ 0126            TC     FINDVAC
+ 0127            CADR   CHKOPT
+ 0128  2         TC     ENDOFJOB
+ 0129   1CHECK   AD     MINUS1          SEE IF 01 REQUESTED.
+ 0130            CCS    A
+ 0131            TC     V37BAD
+ 0132            TC     CCSHOLE
+ 0133  2         TC     V37BAD
+ 0134            CCS    MODREG          DEMAND IDLE MODE.
+ 0135  2         TC     V37BAD
+ 0136            CAF    PRIO20
+ 0137            TC     FINDVAC
+ 0138            CADR   TOP1
+ 0139  2         TC     ENDOFJOB
+ 0140   V37BAD   TC     FALTON          ILLEGAL REQUEST.
+ 0141            TC     ENDOFJOB
 *       ENDOFJOB
