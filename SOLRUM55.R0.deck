@@ -4332,4 +4332,326 @@ R0406  2 ROUTINE TO GENERATE  NEW DELTA T (LONGTIME) FOR LONGCALL.
  0428            TS     LONGTIME + 1
  0429            TC     ISWRETRN        ...AND EXIT.
 R0430      THIS COULD BE MODIFIED EASILY TO CHANGE BAD DT POLICY.
+L      2FRESH START AND RESTART
+ 0001            BANK   4
+R0002  2         FRESH START - A KEYBOARD REQUEST TO INITIALIZE THE SYSTEM.
+ 0003   SLAP1    INHINT                 COMES HERE FROM THE PINBALL VERB FAN.
+ 0004            CAF    ZERO             (ZERO FAILREG IN FRESH START ONLY).
+ 0005            TS     FAILREG
+ 0006            TS     MODREG
+ 00065 2         TS     REDOCNTR        ZERO ONLY DURING FRESH START.
+ 0007            CAF    BIT4            DISABLE IMU FAIL FOR 5 SECS.
+ 0008   SLAP2    TS     OLDERR           CURTAINS ENTERS HERE FROM THATSALL.
+A0009                                   DSPLOCK (BIT4 OF STATE), UPLOCK (BIT2 OF
+A0010                                   STATE), EXTVBACT (BIT3 OF STATE) ARE
+A0011                                   ZEROED BELOW (FRESH START ONLY).
+ 0012            CAF    ZERO
+ 0013  2         TS     ERCOUNT
+ 0014  2         TC     STARTSUB        SUBROUTINE DOES MOST OF THE WORK.
+ 0015   NOGO     CAF    MAXPROG         MAKE ALL RESTART GROUPS INACTIVE.
+ 0016            TS     BUF
+ 0017            CS     ONE
+ 0018            INDEX  BUF
+ 0019            TS     PHASE1
+ 0020            COM
+ 0021            INDEX  BUF
+ 0022  2         TS     -PHASE1
+ 0023            CCS    BUF
+ 0024  2         TC     NOGO +1
+ 00248           TS     OUT1            RESET OUT1 HERE INSTEAD OF IN STARTSUB.
+ 0025  2         TS     SMODE           DISABLE SELF-CHECK.
+ 0026            CAF    BIT15           TELL T4RUPT TO TURN OFF ALL C RELAYS.
+ 0027   DSP12D   TS     DSPTAB +12D
+ 0028  2DSP13D   TS     DSPTAB +13D
+ 0029            CAF    OCT40010
+ 0030  2DSP11D   TS     DSPTAB +11D     LEAVE IMU IN FINE ALIGN
+ 0031  2         TS     WASKSET         DISABLE KSAMP DURING INITIAL TRANSIENT.
+ 0032            CAF    BIT5            FOR 160 MS.
+ 0033            TC     WAITLIST
+ 0034  2         CADR   KENABLE
+ 0035            XCH    IN3
+ 0036            XCH    IN3
+ 0037            MASK   OPTMODES
+ 0038  2         TS     WASOPSET
+ 0039            CAF    SWINIT          INITIALIZE SWITCH BIT AREA ON FRESH
+ 0040            TS     STATE           START ONLY.
+ 0041            CAF    SWINIT +1
+ 0042            TS     STATE +1
+ 0043            CAF    SWINIT +2
+ 0044  2         TS     STATE +2
+ 0045            CS     OLDERR          SEE IF CURTAINS CALLED FRESH START.
+ 0046            MASK   BIT5
+ 0047            CCS    A
+ 0048  2         TC     STARTSW
+ 0049            TC     ALARM
+ 0050  2         OCT    00301
+ 0051   STARTSW  TC     ENDFRESH
+ 0052   ESTART   CAF    PRIO25          FIRE UP INITIALIZATION JOB.
+ 0053            TC     FINDVAC
+ 0054  2         CADR   BEGIN501
+ 0055  2         TC     ENDFRESH
+ 0056   KENABLE  CAF    OCT50           COMMANDED FINE ALIGN.
+ 0057            TS     WASKSET
+ 0058            CAF    BIT10           REMOVE IMU FAIL INHIBIT IN 5 SECS.
+ 0059            TC     WAITLIST
+ 0060  2         CADR   IFAILOK
+ 0061  2         TC     TASKOVER
+ 0062   THATSALL TS     SFAIL           CURTAINS - FLUSH MISSION PROGRAM.
+ 0063            INHINT
+ 0064            CAF    BITS4&5         DO FRESH START AND PROGRAM ALARM.
+ 0065  2         TC     SLAP2
+ 0066   MAXPROG  EQUALS FIVE
+ 0067  2BITS4&5  OCT    30
+ 00671  BITS5&7  OCT    120
+P0068            WHENEVER A GO SEQUENCE (GOJAM) IS FIRED,  GOPROG  IS CALLED TO
+ 0069  9RESTART ANY COMPUTER ACTIVITY THAT
+R0070   MAY HAVE BEEN GOING ON AT THE TIME. (A NUMBER OF ALARMS SUCH AS PARITY F
+ 0071  9AILURE OR POWER FAILURE CAUSE GOJAM).
+R0072   THE FUNCTION OF GOPROG IS TO INITIALIZE THE COMPUTER SUB-SYSTEM (I. E.,
+ 0073  9NO C RELAYS ARE CHANGED, ETC.) AND
+R0074  2RESTART ALL MAJOR ROUTINES WHOSE PHASE BITS INDICATE ACTIVITY.
+ 00741  GOPROG   CCS    ERESTORE        RESTORE TWO ERASABLE REGISTERS IF
+ 00742           TC     +2              RESTART OCCURS WHILE SELF-CHECK HAS
+ 00743           TC     GOPROG2         REMOVED CONTENTS OF THESE REGISTERS.
+ 00744           CS     1776
+ 00745           CS     A
+ 00746           NDX    1777
+ 00747           TS     0001            RESTORE C(X)
+ 00748           CS     1775
+ 00749           CS     A
+ 007491          NDX    1777
+ 007492          TS     0000            RESTORE C(X-1)
+ 0075   GOPROG2  CAF    DVMONMSK        SHOULD BE SYS FLAG FOR ENGINE ON.
+ 00751           MASK   FLAGWRD1
+ 00752           CCS    A               SEE IF ENGINE WAS ON.
+ 00753           CAF    BIT13           YES..PUT IT BACK ON.
+ 00754 2         TS     OUT1            NO...ZERO IT.
+ 00759           CAF    TWO             SET RESTART FAIL INDICATION, WHICH WILL
+ 0076            TS     OLDERR          BE REMOVED AFTER SUCCESSFUL VERIFICATION
+ 0077  2         TC     STARTSUB        OF PHASE TABLE AGREEMENT.
+ 0078            XCH    IN0             IF BOTH ERROR RESET AND MARK ARE
+ 0079            MASK   HUNGMASK        DEPRESSED, FALL INTO FRESH START TO
+ 0080            AD     HUNGCODE        HOPEFULLY PREVENT OR STOP RECURRING GOS.
+ 0081            CCS    A
+ 0082            TC     PHASECHK -1     RESTART
+ 0083   HUNGCODE OCT    37755           COMPLEMENT OF IN0 HUNG SETTING.
+ 0084            TC     PHASECHK -1     RESTART
+ 0085  2         TC     NOGO
+ 0086            CAF    MAXPROG         PHASE BITS ARE KEPT IN TWO COPIES,
+ 0087   PHASECHK TS     MPAC            ONE DIRECT AND ONE COMPLEMENTED. THIS
+ 0088            INDEX  A               SECTION MAKES SURE ALL ENTRIES IN EACH
+ 0089            CS     PHASETAB        SATISFIES THIS RULE AS AN INDICATION OF
+ 0090            TS     BUF             THE GOODNESS OF ERASABLE MEMORY. IF THE
+ 0091            COM                    TEST FAILS, DO A FRESH START WITH THE
+ 0092            INDEX  MPAC            MODE LIGHTS SET TO 00 TO TELL THE STORY.
+ 0093            MASK   PHASEBAR
+ 0094            TC     ZEROTEST        P.(-P) AND (-P).(--P) SHOULD BOTH BE
+ 0095            INDEX  MPAC            +0 FOR A LOGICAL MATCH.
+ 0096            CS     PHASEBAR
+ 0097            MASK   BUF
+ 0098  2         TC     ZEROTEST
+ 0099            CCS    MPAC
+ 0100  2         TC     PHASECHK
+ 01005           TS     DISPCNTR        ENABLE VG DISPLAY GRAB
+ 0101            TS     OLDERR          NO RESTART FAIL.
+ 01011           CAF    ONE             INCREMENT REDOCNTR.
+ 01012           AD     REDOCNTR
+ 01013 2         TS     REDOCNTR
+ 01016           CS     BIT15
+ 01017           MASK   DSPTAB + 13D    PICK UP ALL BUT BIT 15.
+ 01018           AD     BIT15           SET BIT 15 TO FORCE RESETTING RELAYS.
+ 01019 2         TS     DSPTAB + 13D    MIGHT TAKE A WHILE TO GET OUT.
+ 0102   CHECKIN3 XCH    IN3             PUT PRESENT MODES INTO WAS  REGISTERS.
+ 0103            XCH    IN3
+ 0104            TS     WASKSET
+ 0105            MASK   LOW7
+ 0106            XCH    WASKSET
+ 0107            MASK   OPTMODES
+ 01075 2         TS     WASOPSET
+ 0108            CAF    BITS5&7         IMU ATTITUDE CONTROL OR ENTRY MODE.
+ 01081           MASK   WASKSET
+ 01082           CCS    A               IS IT IN ONE OF THESE MODES.
+ 01083           CS     ZERO            YES.. PUT +0 INTO CDUIND.
+ 01084           COM                    NO... PUT -0 INTO CDUIND.
+ 01085 2         TS     CDUIND
+ 0109            CCS    IN0
+ 0110            TC     GOJUMP
+ 0111            TC     GOJUMP
+ 0112            TC     +1
+ 0113            CS     BIT12
+ 0114            MASK   WASOPSET
+ 0115  8         TS     WASOPSET
+ 0116   GOJUMP   CAF    MAXPROG         SCAN PHASE TABLE FOR ACTIVITY.
+ 0117  2         TS     LOC
+ 0118            RELINT                 OPEN THE INTERRUPT GATE SO THAT EACH
+ 0119  2         INHINT                 GO DISPATCH HAS 10 MS.
+ 0120            AD     ONE             GROUP NUMBER IN PROG.
+ 0121            TS     PROG
+ 0122            INDEX  A               SEE IF GROUP ACTIVE.
+ 0123            CCS    PHASE1 -1
+ 0124            TC     PROGON          VALID IF PHASE LESS THAN 127.
+ 0125            TC     GOTERM          DO REQUESTED PHASE TERMINATE.
+ 0126            CCS    A               INACTIVE IF PHASE = -1.
+ 0127            TC     RSTFAIL2        BAD DATA IF -0.
+ 0128   GORETURN CCS    LOC
+ 0129  2         TC     GOJUMP +1
+ 0130            CAF    PRIO37          FIRE UP JOB TO DISPLAY FAILREG
+ 0131            TC     NOVAC
+ 0132  2         CADR   DOALARM
+ 0133   ENDFRESH RELINT
+ 0134            TC     BANKCALL        DISPLAY MAJOR MODES.
+ 0135  2         CADR   DSPMM
+ 0136            TC     POSTJUMP
+ 0137  2         CADR   DUMMYJOB        THIS REVERTS TO THE IDLING JOB.
+ 0138   ZEROTEST CCS    A
+ 0139            TC     NOGO            RESTART FROM GO IMPOSSIBLE.
+ 0140            TC     Q               OK SO FAR
+ 0141            TC     NOGO
+ 0142            TC     NOGO
+P01421 2  INTERNAL RESTART BY PROGRAM CONTROL TO FLUSH OUT WAITLIST AND EXEC.
+ 01422  ENEMA    INHINT                 A STRANGE INSTRUCTION TO BEAR THIS NAME.
+ 01423 2         TC     STARTSUB
+ 01427           CS     ZERO            ALL 7 IN SFAIL DENOTES PROGRAMMED REDO.
+ 01428 2         TS     SFAIL
+ 01429           TC     CHECKIN3
+P0143  2         DISPATCH OR TERMINATE RESTART GROUPS.
+ 0144   PROGON   AD     ONE             PHASE BITS TO MPAC.
+ 0145            TS     MPAC
+ 0146            CS     LOW7            CHECK SIZE.
+ 0147            MASK   MPAC
+ 0148            CCS    A
+ 0149  2         TC     RSTFAIL2        RESTART FAIL - OUT OF RANGE.
+ 0150            INDEX  LOC             JUMP TO GOCADR LOC.
+ 0151            CAF    GOCADR
+ 0152  2         TC     SWCALL
+ 0153  2         TC     GORETURN        ON RETURN FROM SWCALL.
+ 0154   GOTERM   CS     ONE             IF A RESTART GROUP HAD BEEN REQUESTED TO
+ 0155            INDEX  LOC             TERMINATE, DO THE TERMINATE NOW.
+ 0156            TS     PHASE1
+ 0157            COM
+ 0158            INDEX  LOC
+ 0159            TS     -PHASE1
+ 0160  2         TC     GORETURN
+ 0161   RSTFAIL2 CAF    TWO             BAD DATA IN RESTART TABLES - FAIL.
+ 0162            TS     OLDERR
+ 0163            TC     NOGO
+P0164            INITIALIZATION SUBROUTINE, CONTAINING INITIALIZATION COMMON TO
+ 0165  9BOTH FRESH START (KEYBOARD REQUEST) AND
+R0166  2RESTART (IN RESPONSE TO A GO SEQUENCE).
+ 0167   STARTSUB XCH    Q
+ 0168  2         TS     BUF             EXEC TEMPS ARE AVAILABLE TO US.
+ 0169            CAF    POSMAX          T3 AND T4 OVERFLOW AS SOON AS POSSIBLE.
+ 0170            TS     TIME3             (POSMAX IS PSEUDO INTERRUPT SIGNAL IN
+ 0171  2         TS     TIME4             CASE RUPT SIGNALLED BEFORE TS TIME3).
+ 0172            CAF    NEG1/2          INITIALIZE WAITLIST DELTA-TS.
+ 01723           TS     LST1 +6
+ 01726           TS     LST1 +5
+ 0173            TS     LST1  +4
+ 0174            TS     LST1  +3
+ 0175            TS     LST1  +2
+ 0176            TS     LST1  +1
+ 0177  2         TS     LST1
+ 0178            CS     ENDTASK         SET ALL TASKS TO DUMMY TASK.
+ 01783           TS     LST2 +7
+ 01786           TS     LST2 +6
+ 0179            TS     LST2  +5
+ 0180            TS     LST2  +4
+ 0181            TS     LST2  +3
+ 0182            TS     LST2  +2
+ 0183            TS     LST2  +1
+ 0184  2         TS     LST2
+ 0185            CS     ZERO            MAKE ALL EXECUTIVE REGISTER SETS
+ 0186            TS     PRIORITY +8D    AVAILABLE (EXCEPT THIS ONE).
+ 0187            TS     PRIORITY +16D
+ 0188            TS     PRIORITY +24D
+ 0189            TS     PRIORITY +32D
+ 0190            TS     PRIORITY +40D
+ 0191            TS     PRIORITY +48D
+ 0192  2         TS     PRIORITY +56D
+ 0193            TS     DSRUPTSW        -0 GIVES US 40 MS TO GET READY FOR T4.
+ 0194            TS     CDUIND          MAKE IMU AND OPTICS AVAILABLE.
+ 0195  8         TS     OPTIND
+ 0196            CAF    VAC1ADRC        MAKE ALL VAC AREAS AVAILABLE.
+ 0197            TS     VAC1USE
+ 0198            AD     LTHVACA
+ 0199            TS     VAC2USE
+ 0200            AD     LTHVACA
+ 0201            TS     VAC3USE
+ 0202            AD     LTHVACA
+ 0203            TS     VAC4USE
+ 0204            AD     LTHVACA
+ 0205  2         TS     VAC5USE
+ 0206            CAF    BIT10           THIS REGISTER SET BECOMES DUMMY JOB.
+ 0207  2         TS     PRIORITY
+ 0210            CAF    TEN             TURN OFF ALL DISPLAY SYSTEM RELAYS.
+ 0211   DSPOFF   TS     MPAC
+ 0212            CS     BIT12
+ 0213            INDEX  MPAC
+ 0214            TS     DSPTAB
+ 0215            CCS    MPAC
+ 0216  2         TC     DSPOFF
+ 02165           TS     ERESTORE
+ 0217            TS     UPLINK          THESE MIGHT PICK UP AN INCREMENT DURING
+ 0218            TS     56              A GO.
+ 0219            TS     DSPCNT          SKIPS TO HERE WHEN FINISHED WITH C(A)=0.
+ 0220            TS     NEWJOB
+ 0222            TS     CADRSTOR
+ 0223            TS     REQRET
+ 0224            TS     CLPASS
+ 0225            TS     MONSAVE         KILL MONITOR
+ 0226            TS     MONSAVE1
+ 0227            TS     GRABLOCK
+ 0228            TS     VERBREG
+ 0229            TS     NOUNREG
+ 0230            TS     DSPLIST
+ 0231            TS     DSPLIST +1
+ 0232  8         TS     DSPLIST +2
+ 0233            TS     LGYRO           MAKE GYRO ROUTINES AVAILABLE.
+ 0234            TS     GCOMP           ZERO COMPENSATING GYRO TORQUES.
+ 0235            TS     GCOMP +1
+ 0236            TS     GCOMP +2
+ 0237            TS     GCOMP +3
+ 0238            TS     GCOMP +4
+ 0239            TS     GCOMP +5
+ 0240            TS     DESKSET         NO COMPUTER COMMAND.
+ 0241            TS     DESOPSET        (SAME AS IMU).
+ 0242            TS     IMUCADR         INITIALIZE MODE-SWITCHING.
+ 0243            TS     OPTCADR
+ 0244            TS     TMMARKER
+ 0245  2         TS     MARKSTAT        MAKE MARK SYSTEM AVAILABLE.
+ 02465           CS     TIME1           SAVE TIME OF LAST RESTART. (MINUS VALUE)
+ 02466 2         TS     REDOTIME + 1
+ 0247            CAF    SIX             (MAY NOT GET ANY ENDPULSES BEFORE T4).
+ 0248  2         TS     TELCOUNT
+ 0249            CAF    LPHASE1
+ 0250  2         TS     DNTMGOTO
+ 0251            CAF    LDNLST1
+ 0252  2         TS     DNLSTADR
+ 0253            CAF    NOUTCON
+ 0254  2         TS     NOUT
+ 0255            CS     BIT3/4          ZERO ONLY DSPLOCK (BIT4 OF STATE) AND
+ 0256            MASK   STATE           EXTVBACT (BIT3 OF STATE) FOR RESTART.
+ 0257            TS     STATE           UPLOCK (BIT2 OF STATE) IS ZEROED ONLY
+ 0258                                   IN FRESH START.
+ 0259            CS     VD1
+ 0260            TS     DSPCOUNT
+ 0261  8         TC     BUF             DONE.
+ 0262   HUNGMASK OCT    40037           KEYCODE AND MARK BUTTON ONLY
+ 0263  2OPTMODES OCT    35000
+ 0264   OCT50    OCT    50              FINE ALIGN + TRANSFER SWITCH.
+ 0265   OCT40010 OCT    40010           IMU FINE ALIGN C-RELAY SETTING.
+ 0266   LPHASE1  ADRES  DNPHASE1
+ 0267   BIT3/4   OCT    14
+ 0268  4NOUTCON  DEC    11
+ 0269   GOCADR   CADR   ENDOFJOB        FOR 501 ONLY
+ 0270            CADR   RESTARTS        GROUP 2 RESTARTS.
+ 0271            CADR   RESTARTS        GROUP 3 RESTARTS.
+ 0272            CADR   RESTARTS        GROUP 4 RESTARTS.
+ 0273            CADR   RESTARTS        GROUP 5 RESTARTS.
+ 0274  2         CADR   RESTARTS        GROUP 6 RESTARTS.
+ 0275   VAC1ADRC ADRES  VAC1USE
+ 0276  2LTHVACA  DEC    44
+ 0277   SWINIT   OCT    01340
+ 0278            OCT    00000           STATE +1
+ 0279            OCT    00000           STATE +2
 *       ENDOFJOB
