@@ -3741,7 +3741,7 @@ R0011  2GIVEN TO A ROUTINE SPECIFIED IN A CADR TABLE. THIS ROUTINE MAY EXIT OR R
  0046            RELINT
  0047  2         TC     Q
  0048   UPT      INDEX  PHASDATA
- 0048            CAF    UPTCADR -1
+ 0049            CAF    UPTCADR -1
  0050  2         TC     SWCALL
  0051            CAF    ZERO            IF RETURN
  0052            TC     PHASEXIT
@@ -3833,4 +3833,503 @@ R0115  2ON ARRIVAL.
  0139  2         TC     ENDOFJOB
  0140   V37BAD   TC     FALTON          ILLEGAL REQUEST.
  0141            TC     ENDOFJOB
+L      2501 RESTART TABLES AND ROUTINES
+R0001    RESTART  TABLES
+R0002  2 ----------------
+R0003       THESE CONTROL RESTART OPERATION.
+R0004  4
+R0005  2  ...IMPORTANT...   DO NOT MOVE THIS SECTION FROM BEGINNING OF BANK. DJL
+ 0006            SETLOC 26000           START OF BANK 13.
+ 0007   WTDTTAB  DEC    0               WAITLIST DT FOR  RESTART 1.0
+ 0008   WCADRTAB CADR   0               WAITLIST CADR.
+ 0009   PRIOTAB  OCT    0               PRIORITY VALUE.
+ 0010  2CADRTAB  CADR   0               CADR OF CURRENT JOB
+R0011  2 ANY JOB 1 RESTARTS SHOULD GO HEFE.
+ 0012   2.1SPOT  2DEC   0.0             2.1 RESTART
+ 0015            2DEC   0.0
+ 0016   2.2SPOT  OCT    0               RESTART 2.2 VALUES.
+ 0017            OCT    0
+ 0018            OCT    12000           PRIO12
+ 0019  2         CADR   SOAKINIT
+ 0020   2.3SPOT  OCT    0               2.3 RESTART
+ 0021            OCT    0
+ 0022            OCT    12000
+ 0023            CADR   ATTIJOB1 - 1
+ 0024   2.4SPOT  OCT    0               RESTART 2.4
+ 0025            OCT    0
+ 0026            OCT    12000
+ 0027  2         CADR   ATTIJOB
+ 00271  2.5SPOT  2DEC   0               2.5 RESTART.
+ 002715          2DEC   0
+R0028    ANY MORE GROUP 2 RESTART VALUES SHOULD GO HERE.
+R0029
+ 0030   3.1SPOT  OCT    77777           3.1 RESTART.
+ 0031            OCT    77777
+ 0032            CADR   TROLL +1        CONTAINS DT
+ 0033  2         CADR   MON1TASK
+ 0034   3.2SPOT  OCT    77777           3.2 RESTART
+ 0035            OCT    77777
+ 0036            CADR   TTUMON
+ 0037  2         CADR   TUMBTSK1
+ 0038            OCT    0               3.3 RESTART
+ 0039            OCT    0
+ 0040            OCT    77777
+ 0041  2         CADR   REDO3.3
+ 0042            DEC    700             3.4 RESTART.
+ 0043            CADR   GIMPOWOF
+ 0044            OCT    0
+ 0045  2         OCT    0
+ 0046            DEC    1050            3.5 RESTART
+ 0047            CADR   DVMODOFF
+ 0048            OCT    0
+ 0049  2         OCT    0
+ 0050            DEC    1075            3.6 RESTART.
+ 0051            CADR   ATTCONON
+ 0052            OCT    0
+ 0053  2         OCT    0
+ 0054            DEC    75              3.7RESTART
+ 0055            CADR   CGTASK
+ 0056            OCT    0
+ 0057  2         OCT    0
+ 0058            DEC    200             3.8 RESTART.
+ 0059            CADR   GMPOFF3
+ 0060            OCT    0
+ 0061  2         OCT    0
+ 0062            OCT    0               3.9 REATART.
+ 0063            OCT    0
+ 0064            OCT    77777
+ 0065  2         CADR   SETMOD23
+ 0066            OCT    0               3.10 RESTART.
+ 0067            OCT    0
+ 0068            OCT    27000
+ 0069  2         CADR   SHUTJOB
+ 0070            DEC    500             3.11 RESTART.
+ 0071            CADR   CDUXTASK        5SECS FROM TBASE3
+ 0072            OCT    0
+ 0073  2         OCT    0
+ 0074   3.12SPOT DEC    1000            3.12 RESTART.
+ 0075            CADR   CM/SMTSK        10SECS FROM TBASE3
+ 0076            OCT    20000
+ 0077  2         CADR   CDUXJOB
+ 0078            DEC    1000            3.13 RESTART.
+ 0079            CADR   CM/SMTSK
+ 0080            OCT    20000
+ 0081  2         CADR   REDO3.13
+ 0082            DEC    1000            3.14 RESTART.
+ 0083            CADR   CM/SMTSK
+ 0084            OCT    0
+ 0085  2         OCT    0
+ 0086   3.15SPOT DEC    1500            3.15 RESTART
+ 0087            CADR   ENTATASK        15SECS FROM TBASE3
+ 0088            OCT    0
+ 0089  2         OCT    0
+ 0090   3.16SPOT OCT    0               3.16 RESTART.
+ 0091            OCT    0
+ 0092            OCT    15000           PRIO TO REDO HUNTEST.
+ 0093  2         CADR   PREHUNT
+ 0094   3.17SPOT 2DEC   0               3.17 RESTART.  ...PRELAUNCH...
+ 0095            OCT    20000
+ 0096  2         CADR   REPL11
+ 0097            2DEC   0               3.18 RESTART.  ...PRELAUNCH...
+ 0098            OCT    20000
+ 0099  2         CADR   REPL12
+ 0100            2DEC   0.0             3.19 RESTART ...PRELAUNCH...
+ 0101            OCT    20000
+ 0102  2         CADR   REDO3.21
+ 0103            2DEC   0               3.20 RESTART.  ...PRELAUNCH...
+ 0104            OCT    77777
+ 0105  2         CADR   REDO3.20
+ 0106            DEC    50              3.21 RESTART. ...PRELAUNCH...
+ 0107            CADR   REPRELAL
+ 0108            OCT    21000
+ 0109  2         CADR   REDO3.21
+ 01095           DEC    50              3.22 RESTART. ...PRELAUNCH
+ 0110            CADR   REPRELAL
+ 0111            2DEC   0.0
+ 01111  3.23SPOT DEC    200             3.23 RESTART
+ 01112           CADR   GMPOFF2
+ 01113           2DEC   0.0
+ 01114  3.24SPOT DEC    350             3.24 RESTART
+ 01115           CADR   DVMODOF2
+ 01116           2DEC   0.0
+ 01117           DEC    550             3.25 RESTART
+ 01118           CADR   DVMODOF2
+ 01119           2DEC   0.0
+R0112    ANY MORE GROUP 3 RESTART VALUES SHOULD GO HERE.
+ 01121           2DEC   0.0             3.26 RESTART
+ 01122           OCT    05000
+ 01123 2         CADR   MONITJOB
+ 01124           2DEC   0.0             3.27 RESTART
+ 01125           OCT    77777
+ 01126 2         CADR   TUMBTSK1
+R0113  2         ANY MORE GROUP 3 RESTARTS GO IN HERE
+ 0114   4.1SPOT  OCT    0               4.1 RESTART.
+ 0115            OCT    0
+ 0116            OCT    34000           HIGH PRIO.  (WATCH THIS.)
+ 0117  2         CADR   REDO4.1
+ 0118   4.2SPOT  OCT    77777           4.2 RESTART.
+ 0119            OCT    77777
+ 0120            CADR   LONGTIME + 1
+ 0121  2         CADR   ENGINOFF
+ 0122   4.3SPOT  DEC    1050            4.3 RESTART.
+ 0123            CADR   COASTPHS
+ 0124            OCT    77777
+ 0125  2         CADR   REDO4.3
+ 0126   4.4SPOT  2DEC   -30000          4.4 RESTART
+ 0127            2DEC   0
+ 0128            DEC    14616           4.5 RESTART  (DT = 146.16 SEC
+ 0129            CADR   FDAOFTSK           (310 - 163.84 SEC.)
+ 0130            2DEC   0
+ 0131            OCT    77777           4.6 RESTART
+ 0132            CADR   TCOAST          TCOAST = TIME FORM CUTOFF TO UPTASK.
+ 0133            2DEC   0
+ 0134            OCT    0               4.7 RESTART
+ 0135            OCT    0
+ 0136            OCT    77777
+ 0137  2         CADR   UPTASK
+ 0138            DEC    11500           4.8 RESTART
+ 0139            CADR   PREAVGON
+ 0140            OCT    06000
+ 0141  2         CADR   UPJOB
+ 0142            DEC    11500           4.9 RESTART
+ 0143            CADR   PREAVGON
+ 0144            OCT    06000
+ 01445 2         CADR   REDO4.9
+ 0145            DEC    600             4.10 RESTART
+ 0146            CADR   GIMPOWON
+ 0147            OCT    77777
+ 0148  2         CADR   REDO4.10
+ 0149            DEC    200             4.11 RESTART.
+ 0150            CADR   TARGTASK
+ 0151            2DEC   0
+ 0152            DEC    170             4.12 RESTART.
+ 0153            CADR   ABRTWAIT         IN 1.7 SEC.
+ 0154            OCT    25000
+ 0155  2         CADR   SETS4SEP
+ 0156            DEC    9950            4.13 RESTART
+ 0157            CADR   ATTCNOFF        IN 95.5 SEC.
+ 0158            OCT    77777
+ 01585 2         CADR   REDO4.13
+ 0159   4.14SPOT DEC    600             4.14 RESTART.
+ 0160            CADR   GIMPOWON
+ 0161            OCT    77777
+ 0162  2         CADR   REDO4.14
+ 0163            DEC    250             4.15 RESTART.
+ 0164            CADR   ATTCNOFF        IN 2.5 SEC
+ 0165            OCT    25000
+ 0166  2         CADR   ABORTRPT - 3     WATCH THIS LOC.
+ 0167            DEC    550             4.16 RESTART
+ 0168            CADR   ATTCNOFF
+ 0169            OCT    25000
+ 0170  2         CADR   REDO4.16
+ 0171            DEC    10800           4.17 RESTART
+ 0172            CADR   GIMPOWON
+ 0173            2DEC   0
+ 0174            2DEC   0               4.18 RESTART.
+ 0175            OCT    77777
+ 0176  2         CADR   ATTCNOFF
+ 0177            DEC    25              4.19 RESTART.
+ 0178            CADR   DVMODEON
+ 0179            2DEC   0
+ 0180            DEC    50              4.20 RESTART.
+ 0181            CADR   ENGINEON
+ 0182            2DEC   0
+ 0183   4.21SPOT DEC    1000            4.21 RESTART
+ 0184            CADR   PLUSXOFF
+ 0185            OCT    25000
+ 0186  2         CADR   REDO4.21
+ 0187            2DEC   0               4.22 RESTART.
+ 0188            OCT    77777
+ 0189  2         CADR   REDO4.22
+ 0190            DEC    350             4.23 RESTART
+ 0191            CADR   ENGINOFF
+ 0192            OCT    77777
+ 0193  2         CADR   STEEROFF
+ 0194            2DEC   0               4.24 RESTART.
+ 0195            OCT    77777
+ 0196  2         CADR   GIMPOWON
+ 0197            DEC    1150            4.25 RESTART
+ 0198            CADR   ATTCNOFF
+ 0199            2DEC   0
+ 0200   4.26SPOT 2DEC   0               4.26 RESTSRT.
+ 0201            OCT    12000           LOWERED.
+ 0202  2         CADR   UPTHETA1
+ 0203   4.27SPOT DEC    12000           4.27 RESTART
+ 0204            CADR   AVGON           120 SEC FROM UPTASK.
+ 0205            2DEC   0
+ 02051  4.28SPOT 2DEC   0               4.28 RESTART SAVES ENGIN OFF SEQUENCE
+ 02052           OCT    77777           WHILE TBASE4 UPDATED
+ 02053 2         CADR   SPS1TEST
+ 020532 4.29SPOT DEC    11500           4.29 RESTART
+ 020534          CADR   PREAVGON
+ 020536          OCT    06000
+ 0205382         CADR   REDO4.29
+ 02054  4.30SPOT DEC    9000            4.30 RESTART
+ 020542          CADR   PLUSX2
+ 020544          2DEC   0.0
+ 020546 4.31SPOT 2DEC   0.0             4.31 RESTART
+ 020548          OCT    77777
+ 02055 2         CADR   REDO4.31
+ 020552 4.32SPOT 2DEC   0.0             4.32 RESTART
+ 020553          OCT    77777
+ 0205542         CADR   REDO4.32
+ 020555 4.33SPOT 2DEC   0.0             4.33 RESTART
+ 020556          OCT    77777
+ 0205572         CADR   ENGINOFF
+R0206    ANY MORE GROUP 4 RESTART VALUES SHOULD GO HERE.
+R0207
+ 0208   5.1SPOT  DEC    200             5.1 RESTART
+ 0209            CADR   REREADAC
+ 0210            2DEC   0
+ 0211    5.2SPOT 2DEC   0
+ 0212            OCT    77777
+ 0213  2         CADR   REDO5.2
+ 0214            DEC    200             5.3 RESTART
+ 0215            CADR   REREADAC
+ 0216            OCT    17000
+ 0217  2         CADR   REDO5.3
+ 0218            DEC    200             5.4 RESTART
+ 0219            CADR   REREADAC
+ 0220            OCT    17000
+ 0221  2         CADR   REFAZE6
+ 0222            DEC    200             5.5 RESTART.
+ 0223            CADR   REREADAC
+ 0224            OCT    17000
+ 0225  2         CADR   REDO5.5
+ 0226            DEC    200             5.6 RESTART
+ 0227            CADR   REREADAC
+ 0228            OCT    35000
+ 0229  2         CADR   MODE26
+ 0230   5.7SPOT  2DEC   0               5.7 RESTART
+ 0231            OCT    77777
+ 0232  2         CADR   REDO5.7
+ 0233            DEC    200             5.8 RESTART
+ 0234            CADR   SOAKTSK1
+ 0235            OCT    14000
+ 0236  2         CADR   SOAKJOB
+ 0237            DEC    200             5.9 RESTART.
+ 0238            CADR   SOAKTSK1
+ 0239            OCT    13000
+ 0240  2         CADR   REFAZE6
+ 0241            2DEC   0               5.10 RESTART.
+ 0242            OCT    12000
+ 0243  2         CADR   REDO5.10
+ 0244            DEC    200             5.11 RESTART
+ 0245            CADR   SOAKTSK1
+ 0246            2DEC   0
+ 0247   5.12SPOT DEC    200             5.12 RESTART.
+ 0248            CADR   REPIPUP
+ 0249            2DEC   0
+ 0250            2DEC   0               5.13 RESTART.
+ 0251            OCT    77777
+ 0252  2         CADR   REDO5.13
+ 0253            DEC     200
+ 0254            CADR   REPIPUP
+ 0255            OCT    17000
+ 0256  2         CADR   ENTRYTOP + 3
+ 0257            DEC    200             5.15 RESTART.
+ 0258            CADR   REPIPUP
+ 0259            OCT    17000
+ 0260  2         CADR   REFAZE4
+ 0261            DEC    200             5.16
+ 0262            CADR   REPIPUP
+ 0263            OCT    16000
+ 0264  2         CADR   REFAZE6
+ 0265            DEC    200             5.17 RESTART.
+ 0266            CADR   REPIPUP
+ 0267            OCT    17000
+ 0268  2         CADR   REFAZE8
+ 0269   5.18SPOT DEC    200             5.18 RESTART
+ 0270            CADR   REPIPUP
+ 0271            OCT    17000
+ 0272  2         CADR   REFAZE10
+ 0273   5.19SPOT DEC    200             5.19 RESTART.  (PIPUP IN 2 SEC.)
+ 0274            CADR   REPIPUP
+ 0275            OCT    17000
+ 0276  2         CADR   NUMODE63        SETS MODE 63 AND FINISHES ENTRY INITIAL.
+ 02761  5.20SPOT 2DEC   0.0             5.20 RESTART FOR VERB 76
+ 02762           OCT    34000
+ 02763 2         CADR   REDO5.20
+ 02764  5.21SPOT DEC    0.              5.21 RESTART IS SPARE
+ 027645          CADR
+ 02765           OCT    0
+ 02766 2         CADR
+ 02767  5.22SPOT DEC    0.0             5.22 RESTART IS SPARE
+ 027675          CADR
+ 02768           OCT    0
+ 02769 2         CADR
+ 027691 5.23SPOT DEC    200             5.23 RESTART
+ 027692          CADR   REREADAC
+ 027693          OCT    17000
+ 0276942         CADR   REDO5.23
+ 0277            DEC    200             REDO POINT AFTER AVG STATE VECTOR UPDATE
+ 02771           CADR   REREADAC
+ 02772           OCT    17000
+ 02773 2         CADR   REDO5.24
+ 02774           DEC    200
+ 02775           CADR   REREADAC
+ 02776           OCT    17000
+ 02777 2         CADR   REFAZE6
+R02778 2         ANY MORE GROUP 5 RESTARTS GO HERE.
+R0278
+ 0279  46.1SPOT  DEC    0               6.1 RESTART  (UNDEFINED)
+R0280
+R0281    ANY MORE GROUP 6 RESTART VALUES SHOULD GO HERE.
+R0282  4
+ 0283   SIZETAB  DEC    0               0 INCREMENT FOR GROUP 1.
+ 0284            TC     2.1SPOT -26004  INCREMENT TO INDEX GROUP 2 TABLE
+ 0285            TC     3.1SPOT -26004  INCREMENT TO INDEX GROUP 3
+ 0286            TC     4.1SPOT -26004  INCREMENT TO INDEX GROUP 4 TABLE.
+ 0287            TC     5.1SPOT -26004  INCREMENT TO INDEX GROUP 5 TABLE.
+ 0288            TC     6.1SPOT -26004  INCREMENT TO INDEX GROUP 6 TABLE.
+P0289  4   GENERALIZED RESTART ROUTINE.
+R0290    FOR EACH FAZEBIT VALUE , THE ASUMPTION IS MADE THAT THERE MAY EXIST
+R0291     ONE WAITLIST OR LONGCALL TASK TO BE RECALLED.  AND ONE CURRENT TASK OR
+R0292     JOB TO BE RESTARTED.  (SPECIAL RESTARTS ARE POSSIBLE FOR SITUATIONS
+R0293     WHICH DONOT FIT THE GENERAL FORM.)  FOR THE GENERAL CASE,  FOUR TABLES
+R0294     ARE USED.
+R0295        (RATHER,  ONE TABLE WITH 4 ENTRIES PER FAZEBIT VALUE.)
+R0296                   1.  WTDTTAB.  WAITLIST DT TABLE.
+R0297                   2.  WCADRTAB  WAITLIST CADR TABLE.
+R0298                   3.  PRIOTAB  CURRENT JOB PRIORITY. (NEG NUMB IF TASK.)
+R0299                   4.  CADRTAB  CURRENT JOB (OR TASK) RESTART LOCATION.
+R0300     IN ADDITION, THERE EXISTS A SIZE TABLE THAT LISTS THE NUMBER OF
+R0301     LOCATIONS USED BY EACH PROFRAM FOR RESTARTS.
+R0302  4         ...MORE TO COME LATER...                  (DJL)
+ 0303   RESTARTS XCH    MPAC            FAZE BITS FOR THIS PROG IN MPAC.
+ 0304            DOUBLE
+ 0305            DOUBLE                 MULTILY BY 4.  (4 ITEMS PER ENTRY.)
+ 0306            INDEX  LOC             LOC CONTAINS THE PROGRAM NUMBER-1. (0-5)
+ 0307            AD     SIZETAB
+ 0308            TS     POINTER
+ 0309            CAF    TCURRENT
+ 0310            TS     GOLOC + 1       EXIT LOCATION.
+ 0311            CAF    TCWAIT          SET A WAITLIST CALL IN ERASABLE.
+ 0312  2         TS     GOLOC - 1
+ 0313            INDEX  POINTER
+ 0314            CAF    WTDTTAB
+ 0315            CCS    A
+ 0316            TC     WTCALL          +N = WAITLIST CALL
+ 0317            TC     CURNTJOB        +0 = NO CALL
+ 0318            TC     LONGCLER        -N = LONGCALL
+ 0319            INDEX  POINTER         -0 = INDIRECT (PROBABLY)
+ 0320            CAF    WCADRTAB
+ 0321            CCS    A
+ 0322            TC     INDIRECT
+ 0323   TCURRENT TC     CURNTJOB        NO ZERO CALLS
+ 0324            TC     LONGCLER - 1    NEG OF TIME FOR SHORT LONG.
+ 0325  2         TC     SINDIR
+ 0326            CS     ONE
+ 0327   LONGCLER AD     ONE             RESTORE LONGTIME
+ 0328            TS     RECALL
+ 0329            INDEX  POINTER
+ 0330            CS     WCADRTAB        STORED NEGATIVELY.
+ 0331            TS     RECALL + 1
+ 0332            TC     IBNKCALL
+ 0333            CADR   NULONGDT
+ 0334            TC     IBNKCALL
+ 0335            CADR   LONGCALL
+ 0336  4         TC     CURNTJOB
+R0337  4
+R0338    INDIRECT SECTION TAKES THE DP TIME FRON THE ERASABLE LOCATIONS BY THE
+R0339  2    NUMBER IN THE WCADRTAB.    (WTDTTAB = -0.)
+ 0340   INDIRECT TS     ECADTEM         CADR-1 IS STORED.  (DUE TO CCS.)
+ 0341            INDEX  A
+ 0342            CS     1               (1 NOT 0 BECAUSE CADR OFF BY 1.)
+ 0343            COM                    (NOT NEEDED IF NEG TIME STROED.USAGE..)
+ 0344            TS     RECALL          AND STORE MAJOR PART.
+ 0345            INDEX  ECADTEM
+ 0346            CS     2               AGAIN ONE MORE THAN USUAL.
+ 0347            COM
+ 0348  4         TC     LONGCLER + 4    STORE MINOR PART THERE
+R0349  2ASSIGNMENTS ETC.
+ 0350   GOLOC    EQUALS OVFIND          USES ONE LOCATION ON EACH SIDE OF IT.
+ 0351   TEMDT    EQUALS MPAC + 2
+ 0352   RECALL   EQUALS MPAC + 1        MUNTZ NOW USINF LOC IN RESTART CONTROL.
+ 0353   ECADTEM  EQUALS RECALL + 1      LOOKS OK.
+ 0354   POINTER  EQUALS MPAC
+R0355  2  MPAC + 1 SAVED BECAUSE OF USE IN RESTART CONTROL.  (CCS MPAC + 1)
+R0356  2   THIS ROUTINE LEAVES THE WITLIST CALL AS GIVEN BY WCADRTAB.
+ 0357   WTCALL   AD     ONE             DT-1 IN A ON ENTRY.  (FROM CCS.)
+ 03572           COM                    STORE NEGATIVE OF DT IN TEMDT.
+ 0358            TS     TEMDT
+ 0359            INDEX  POINTER
+ 0360            CAF    WCADRTAB        PICK UP CADR FOR THIS CALL.
+ 0361  2         TS     GOLOC           GOLOC+1 AND -1 ALREADY SET-UP.
+ 0362   WTCALL2  INDEX  LOC             FIRST GET TBASE - TIME1
+ 03625           CS     TBASE2 -1       TBASE STORED NEGATIVELY
+ 0363            EXTEND
+ 03635           SU     TIME1           TBASE - TIME1
+ 0364            CCS    A               THIS SHOULD BE NEGATIVE IF ALL OK.
+ 03645           COM                    GET POSMAX - A.
+ 0365            AD     OCT37776        1 BIT SHY OF POSMAX.
+ 03655           AD     ONE             RESTORE BIT LOST BY CCS.
+ 0366            AD     TEMDT           TIME1 - TBASE - DT  NOW IN  A.
+ 0367            CCS    A               TEST IT.  SHOULD BE NEGATIVE.
+ 0368            CAF    ZERO            EXCEEDED TIME.  BAD,BAD...
+ 0369            TC     +2              (+0 JUST POSSIBLE.)
+ 0370            TC     +1              YES, EVERYTHING OK.
+ 0371            AD     ONE             NOW IS THE TIME.
+ 0372  4         TC     GOLOC - 1
+ 03725 4OCT37776 OCT    37776           POSMAX - 1
+ 0373   SINDIR   CAF    TCSWRET
+ 0374            TS     GOLOC + 1
+ 0375            INDEX  POINTER
+ 0376            CAF    CADRTAB         PICK UP CADR TO GO TO.
+ 0377  2         TS     GOLOC
+ 0378            INDEX  POINTER
+ 0379            INDEX  PRIOTAB         IT POINTS AT THE ERASABLE LOCATION OF DT
+ 0380            CS     0               NEG OF DT IN A.
+ 03805           TS     TEMDT
+ 0381            TC     WTCALL2         JOIN THERE TO RECOMPUTE TIME REMAINING.
+P0382  2 GETS CURRENT JOB (OR TASK) RERUNNING.
+ 0383   CURNTJOB INDEX  POINTER
+ 0384            CAF    CADRTAB
+ 0385            TS     GOLOC           PUT ADDRESS THERE (CADR)
+ 0386            CAF    TCSWRET
+ 0387            TS     GOLOC + 1       WHERE TO WHEN DONE.
+ 0388            INDEX  POINTER
+ 0389            CAF    PRIOTAB         PRIORITY TABLE.
+ 0390            CCS    A               TEST IT.
+ 0391            TC     ITSAPRIO        +N = PRIORITY.
+ 0392   TCSWRET  TC     SWRETURN        +0 = NO JOB OR TASK.
+ 0393            TC     SHINDIRT        -N = SHORT INDIRECT FORM.
+ 0394            AD     ONE             -0 = IMMEDIATE WAITLIST CALL.
+ 0395  2         TC     GOLOC -1        -0 WILL CRASH OUT HERE...
+ 0396   ITSAPRIO AD     ONE             RESTORE CORRECT PRIORITY VALUE.
+ 0397            TS     GOLOC - 1       SAVE THERE TEMPORARILY.
+ 0398            CAF    TCFINDVC        N3 RPOVISION FOR NOVAC.
+ 0399            XCH    GOLOC - 1       PICKING UP PRIORITY AGAIN.
+ 0400  4         TC     GOLOC - 1       AND GET THE JOB STARTED. (EXIT VIA SWRET
+R0401  2  SHORT INDIRECT SECTION IS NOT USED AS YET.
+ 0402   SHINDIRT INDEX  A
+ 0403            CS     1               CCS DECREASED ADDRESS BY 1 OF DT LOC.
+ 04035           TS     TEMDT
+ 0404  4         TC     WTCALL2         -DT IN A WHEN REJOINING WTCALL.
+R0405  2 TBASE REGISTERS CONTAIN NEGATIVE OF TIME AT START OF SEQUENCE.
+R0406  2 ROUTINE TO GENERATE  NEW DELTA T (LONGTIME) FOR LONGCALL.
+ 0407   NULONGDT TC     READTIME + 1    GET TIME.  (ALREADY INHIBITTED.)
+ 0408            CAF    ZERO
+ 0409            AD     TCUTOFF + 1      (POSITIVE NUMBER)
+ 0410            AD     RUPTSTOR + 1    (NEGATIVE NUMBER)
+ 0411            AD     RECALL + 1
+ 0412            TS     LONGTIME + 1    (COULD OVERFLOW)
+ 0413            CAF    ZERO
+ 0414            AD     TCUTOFF
+ 0415            AD     RUPTSTOR
+ 0416            AD     RECALL
+ 0417            XCH    LONGTIME        NO OVERFLOW.
+ 0418            CCS    LONGTIME        TEST FOR POSITIVE DT.
+ 0419            TC     ISWRETRN        (DONT HAVE TO USE ICALLS IF SAME BANK.)
+ 0420            TC     +2
+ 0421            TC     BADLONG
+ 0422            CCS    LONGTIME + 1
+ 0423            TC     ISWRETRN
+ 0424            TC     +1
+ 0425   BADLONG  CAF    ZERO
+ 0426            TS     LONGTIME
+ 0427            CAF    ONE             LEAVE A CALL FOR 1 DT.
+ 0428            TS     LONGTIME + 1
+ 0429            TC     ISWRETRN        ...AND EXIT.
+R0430      THIS COULD BE MODIFIED EASILY TO CHANGE BAD DT POLICY.
 *       ENDOFJOB
