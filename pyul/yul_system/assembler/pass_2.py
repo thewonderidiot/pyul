@@ -1737,7 +1737,7 @@ class Pass2:
         if not self._line.text[0] in 'EC':
             return self.ask_skip(old_line)
 
-        if self._lin_count != self._yul.n_lines:
+        if self._lin_count == self._yul.n_lines:
             # Keep "E" and "C" lines on same page.
             self._lin_count -= 1
 
@@ -1748,8 +1748,8 @@ class Pass2:
 
         # Branch if last line is SP1.
         elif old_line.spacing <= 1:
-            # Make last line SP1.
-            old_line.spacing = 1
+            # If last line is SP1, so is this E-line.
+            self._line.spacing = 1
 
         else:
             # If not, space this line 1 less.
