@@ -4632,7 +4632,7 @@ R0166  2RESTART (IN RESPONSE TO A GO SEQUENCE).
  0255            CS     BIT3/4          ZERO ONLY DSPLOCK (BIT4 OF STATE) AND
  0256            MASK   STATE           EXTVBACT (BIT3 OF STATE) FOR RESTART.
  0257            TS     STATE           UPLOCK (BIT2 OF STATE) IS ZEROED ONLY
- 0258                                   IN FRESH START.
+A0258                                   IN FRESH START.
  0259            CS     VD1
  0260            TS     DSPCOUNT
  0261  8         TC     BUF             DONE.
@@ -6478,4 +6478,253 @@ R0664  2         WAKE UP THE JOB AND SET THE ACTIVITY FLAG.
  0674            XCH    MPAC +1
  0675            TS     TEMQS
  0676            TC     MPAC +2
+L      2IMU COMPENSATION PACKAGE
+R0001            THE FOLLWOING ROUTINE IS DESIGNED TO COMPENSATE FOR PIPA BIAS A
+ 0002  9ND SCALE FACTOR ERROR. AT THE SAME TIME,
+R0003   IT ACCUMULATES GYRO TORQUE COMMANDS NECESSARY TO COMPENSATE FOR THE ASSO
+ 0004  9CIATED BIAS AND ACCELERATION-CAUSED GYRO
+R0005   DRIFTS. THIS ROUTINE EXPECTS TO FIND PIPA READINGS IN THE MAJOR PARTS OF
+ 0006  9 DELV (DELVX, DELVY, DELVZ), WITH THE
+R0007   MINOR PARTS IRRELEVANT. OUTPUT FROM 1/PIPA IS DOUBLE PRECISION COMPENSAT
+ 0008  9ED DATA, THE MINOR PART OF WHICH USUALLY
+R0009   CONTAINS ALL THE COMPENSATION. 1/PIPA MUST BE CALLED AT LEAST EVERY 2.56
+ 0010  9 SECONDS, DUE TO SCALING CONSIDERATIONS.
+R0011  2SPECIFICALLY, THE CORRECTION IS:
+R0012            PIPA  = PIPA (1 + SCALE FACTOR ERROR) - BIAS DELTAT
+R0013  2             C       I
+R0014   WHERE PIPA  IS THE COMPENSATED DATA OBTAINED FROM THE SAMPLED PIPA .
+R0015  4          C                                                       I
+ 0016            BANK   14
+ 0017   1/PIPA   CAF    FOUR            LOOP TO PROCESS INPUT PIPA DATA.
+ 0018    +1      TS     BUF +2
+ 0019            INDEX  A
+ 0020            CS     DELVX           SAMPLED PIPA INTO MPAC
+ 0021            TS     MPAC
+ 0022            INDEX  BUF +2          SUBTRACT BIAS TERM (LESS THAN 1 BIT).
+ 0023            CS     PIPABIAS
+ 0024            EXTEND
+ 0025            MP     1/PIPADT        SUPPLIED BY USER SCALED AT CS 2(-8).
+ 0026  2         TS     MPAC +1
+ 0027            CS     MPAC            SHIFT THE PIPA READING LEFT THREE PLACES
+ 0028            TS     MPAC
+ 0029            EXTEND                 IN PREPARATION FOR SCALE FACTOR
+ 0030            MP     BIT4            CORRECTION. IF IT OVERFLOWS, SHIFT THE
+ 0031            CCS    A               SCALE FACTOR ERROR RIGHT 11 PLACES
+ 0032  2         TC     PIPOVF          TAKING A LOSS IN PRECISION.
+ 0033            TC     +2              THE ABOVE HAPPENS AT DELTA VS OF OVER
+ 0034            TC     PIPOVF          12 G-SECS., RESULTING IN A SCALE FACTOR
+ 0035            INDEX  BUF +2          CORRECTION GOOD ONLY TO 60 PPM.
+ 0036            CS     PIPASCF
+ 00365           COM
+ 0037            EXTEND
+ 0038            MP     LP
+ 0039            AD     MPAC +1         ADD TO BIAS CORRECTION.
+ 0040            INDEX  BUF +2
+ 0041            TS     DELVX +1        AND MAYBE SKIP.
+ 0042  2         CAF    ZERO
+ 0043            AD     MPAC
+ 0044            INDEX  BUF +2
+ 0045  2         TS     DELVX
+ 0046   PIPJUMP  CCS    BUF +2          LOOP TO PROCESS NEXT COMPONENT.
+ 0047            AD     NEG1
+ 0048            TC     1/PIPA +1
+ 0049   LGCOMP   ADRES  GCOMP
+P0050            THE FOLLOWING ROUTINE COMPUTES THE GYRO TORQUES NECESSARY TO CO
+ 0051  9MPENSATE FOR THE ACCELERATION-SENSITIVE
+R0052  2DRIFTS DUE TO THE DATA JUST PROCESSED, AND SUMS THEM INTO THE GCOMP REGI
+ 0053  9STERS.
+ 0054            TS     GCOMPSW         SET GYRO TORQUE INDICATOR TO ZERO.
+ 0055  2         TS     BUF             RELATIVE ADDRESS OF PRESENT COMPONENT.
+ 0056            CS     DELVX           PROCESS X COMPONENT.
+ 0057            TS     MPAC
+ 0058            CS     DELVX +1
+ 0059            TS     MPAC +1
+ 0060            CS     ADIAX
+ 0061  2         TC     GCOMPSUB -1
+ 0062            CS     DELVY
+ 0063            TS     MPAC
+ 0064            CS     DELVY +1
+ 0065            TS     MPAC +1
+ 0066            CS     ADSRAX
+ 0067  2         TC     GCOMPSUB
+ 0068            CS     GBIASX          ADD IN BIAS DRIFTS.
+ 0069  2         TC     DRIFTSUB
+ 0070            CS     DELVY           COMPUTE Y GYRO COMPENSATION.
+ 0071            TS     MPAC
+ 0072            CS     DELVY +1
+ 0073            TS     MPAC +1
+ 0074            CS     ADIAY
+ 0075  2         TC     GCOMPSUB -1
+ 0076            CS     DELVZ
+ 0077            TS     MPAC
+ 0078            CS     DELVZ +1
+ 0079            TS     MPAC +1
+ 0080            CS     ADSRAY
+ 0081  2         TC     GCOMPSUB
+ 0082            CS     GBIASY
+ 0083  8         TC     DRIFTSUB
+ 0084            CS     DELVY           CORRESPONDING PATTERN FOR Z GYRO.
+ 0085            TS     MPAC
+ 0086            CS     DELVY +1
+ 0087            TS     MPAC +1
+ 0088            CS     ADSRAZ
+ 0089  2         TC     GCOMPSUB -1
+ 0090            CS     DELVZ
+ 0091            TS     MPAC
+ 0092            CS     DELVZ +1
+ 0093            TS     MPAC +1
+ 0094            CS     ADIAZ
+ 0095  2         TC     GCOMPSUB -1
+ 0096            CS     GBIASZ
+ 0097  2         TC     DRIFTSUB
+ 0098            CCS    GCOMPSW         NON-ZERO IF TIME TO PUT OUT COMPENSATION
+ 0099            TC     +2
+ 0100  2         TC     SWRETURN        TORQUES NOT BIG ENOUGH YET.
+ 0101            INHINT
+ 0102            CAF    PRIO35          REQUEST COMPENSATION JOB
+ 0103            TC     NOVAC
+ 0104  2         CADR   1/GYRO
+ 0105            TC     MODEEXIT        RELINT AND RETURN TO SWRETURN.
+P0106  2         SUBROUTINES USED TO ACCUMULATE GYRO COMPENSATION COMMANDS.
+ 0107    -1      COM                    (ENTERS HERE TO RE-COMPLEMENT INPUT).
+ 0108   GCOMPSUB XCH    MPAC +1         DOES DP BY SINGLE MULTIPLY WITH DP ADD
+ 0109            EXTEND                 TO STORAGE.
+ 0110            MP     MPAC +1
+ 0111            XCH    MPAC +1
+ 0112            EXTEND
+ 0113            MP     MPAC
+ 0114            TS     OVCTR
+ 0115            XCH    LP
+ 0116  2         AD     MPAC +1         (AND MAYBE INCREMENT OVCTR).
+ 0117   BIASCOMP INDEX  BUF             BIAS COMPENSATION ENTERS HERE.
+ 0118            AD     GCOMP +1
+ 0119            INDEX  BUF
+ 0120            XCH    GCOMP +1
+ 0121            XCH    OVCTR
+ 0122            INDEX  BUF
+ 0123            AD     GCOMP
+ 0124            INDEX  BUF
+ 0125  2         TS     GCOMP
+ 0126            TC     Q
+P0127            SUBROUTINE WHICH ADDS IN GYRO BIAS DRIFT, TESTS TORQUE SIZE TO
+ 0128  9SEE IF COMMANDS SHOULD BE PUT OUT, AND
+R0129  2ADVANCES GCOMP POINTER.
+ 0130   DRIFTSUB XCH    Q
+ 0131            TS     BUF +1
+ 0132            XCH    Q
+ 0133            EXTEND
+ 0134            MP     1/PIPADT
+ 0135            EXTEND                 RESULT WAS IN GYRO PULSES X 2(+2).
+ 0136            MP     FOUR            RE-SCALE TO ADD INTO GCOMP REGISTER.
+ 0137            TS     OVCTR
+ 0138            XCH    LP              GO TO STANDARD INCREMENT ROUTINE.
+ 0139  2DRFTSUB2 TC     BIASCOMP
+ 0140            CAF    TWO             INCREMENT POINTER AND
+ 0141            AD     BUF
+ 0142            XCH    BUF             CHECK MAGNITUDE OF TORQUE COMMAND. IF
+ 0143            INDEX  A               SUFFICIENTLY LARGE, SET GCOMPSW PNZ TO
+ 0144            CCS    GCOMP           CALL FOR COMPENSATION JOB, 1/GYRO.
+ 0145            TC     +2              GETS DABS OF COMMAND.
+ 0146  2         TC     BUF +1
+ 0147            MASK   COMPCHK
+ 0148            CCS    A
+ 0149            TS     GCOMPSW
+ 0150            TC     BUF +1          RETURN.
+P0151  2         (1/PIPA COMES HERE IF PIPA COUNTER SHOWED A DELTA V OF OVER 12
+ 0152  9G-SEC.)
+ 0153   PIPOVF   INDEX  BUF +2          SHIFT THE SCALE FACTOR RIGHT 11 ON OVF.
+ 0154            CS     PIPASCF
+ 01545           COM
+ 0155            EXTEND
+ 0156            MP     BIT4
+ 0157            EXTEND                 FORM DP INCREMENT TO DELV IN THIS CASE.
+ 0158            MP     MPAC
+ 0159  2         TS     OVCTR
+ 0160            XCH    LP
+ 0161            AD     MPAC +1         MAYBE INCREMENTING OVCTR.
+ 0162            INDEX  BUF +2
+ 0163            XCH    DELVX +1        NO SKIP SINCE OVCTR SET.
+ 0164            XCH    OVCTR
+ 0165            AD     MPAC
+ 0166            INDEX  BUF +2
+ 0167            XCH    DELVX
+ 0168            TC     PIPJUMP         JUMP ON LOOP COUNTER.
+P0169  2         THE FOLLOWING JOB IS INITIATED BY 1/PIPA TO PUT OUT COMPENSATIN
+ 0170  9G GYRO TORQUE COMMANDS.
+ 0171   1/GYRO   CAF    BIT11           IF MODE SWITCH IN PROGRESS, DONT PUT
+ 01711           MASK   FLAGWRD1        OUT COMPENSATION THIS TIME.
+ 01712           CCS    A
+ 01713 2         TC     ENDOFJOB
+ 01714           TC     FLAG1UP         SHOW IMU ACTIVITY
+ 01715 2         OCT    02000           FLAG TURNED OFF BY GYRO ROUTINES.
+ 0173            CAF    LGCOMP          DISABLE THE T4RUPT CDU DRIVE THEMSELVES.
+ 0174            TC     BANKCALL
+ 0175  2         CADR   GYROSPNT        NO TWITCH (2+2-) ON ZERO INPUT.
+ 0176            TC     BANKCALL
+ 0177            CADR   IMUSTALL
+ 0178  2         TC     CURTAINS
+ 0181            CAF    ZERO            ZERO GCOMP REGSITERS SINCE COMMANDS HAVE
+ 0182            TS     GCOMP           BEEN PUT OUT.
+ 0183            TS     GCOMP +2
+ 0184  2         TS     GCOMP +4
+ 0185  2         TC     ENDOFJOB
+ 0186   COMPCHK  OCT    -37             COMMANDS MUST BE AT LEAST 32 PLS.
+P0187            THE FOLLOWING ROUTINE SUPPLIES GYRO DRIFT COMPENSATION DURING T
+ 0188  9HOSE PORTIONS OF A MISSION WHICH DO NOT
+R0189  2USE PIPA DATA. THIS JOB IS CALLED EVERY 81.93 SECONDS (WHEN APPROPRIATE)
+ 0190  9 BY THE IDLE TASK.
+ 0191   BIASONLY CS     TIME1           COMPUTE TIME DIFFERENCE (ALMOST ALWAYS
+ 0192            COM                    81.93 SECS.).
+ 0193            XCH    OLDBT1
+ 0194            COM
+ 0195            AD     OLDBT1
+ 0196   BONLY2   CCS    A               LASTBIAS ENTERS HERE.
+ 0197            AD     ONE
+ 0198            TC     BONLY3
+ 0199            TC     +2
+ 0200  2         TC     ENDOFJOB        MAY HAVE A COMPUTED DIFF = 0.
+ 0201            COM
+ 0202  2         AD     POSMAX
+ 0203   BONLY3   EXTEND                 FORM DELTA-T AT 2(+8) CS.
+ 0204            MP     BIT9            SHIFT RIGHT 6.
+ 0205            TS     MPAC
+ 0206            TS     TEM9
+ 0207            XCH    LP
+ 0208            TS     MPAC +1
+ 0209            TS     TEM10
+ 0210            CAF    ZERO
+ 0211            TS     GCOMPSW
+ 0212  2         TS     BUF
+ 0213            CS     GBIASX          DO X, Y, AND THEN Z.
+ 0214  2         TC     FBIASSUB
+ 0215            CS     TEM9            RELOAD DT.
+ 0216            TS     MPAC
+ 0217            CS     TEM10
+ 0218            TS     MPAC +1
+ 0219            CS     GBIASY
+ 0220  2         TC     FBIASSUB -1
+ 0221            CS     TEM9
+ 0222            TS     MPAC
+ 0223            CS     TEM10
+ 0224            TS     MPAC +1
+ 0225            CS     GBIASZ
+ 0226  8         TC     FBIASSUB -1
+ 0227            CCS    GCOMPSW         PUT OUT COMPENSATION IF CALLED FOR.
+ 0228            TC     1/GYRO
+ 0229  2         TC     ENDOFJOB
+ 0230    -1      COM
+ 0231   FBIASSUB XCH    Q
+ 0232            TS     BUF +1
+ 0233            CAF    ZERO
+ 0234            TS     MPAC +2
+ 0235            XCH    Q
+ 0236            TC     SHORTMP
+ 0237            XCH    MPAC
+ 0238            TS     OVCTR
+ 0239            XCH    MPAC +1
+ 0240  2         TC     DRFTSUB2        RETURN TO CALLER VIA BUF +1.
+ 0241   LASTBIAS XCH    OLDBT1          COMES HERE FOR TRANSITION TO PIPA READ-
+ 0242            COM                    ING MODE. NEW VALUE OF 1/PIPADT ARRIVES
+ 0243            AD     MPAC            IN A WITH WITH TIME1 AT PIPA ZEROING IN
+ 0244            TC     BONLY2          MPAC. EXITS VIA ENDOFJOB.
 *       ENDOFJOB
