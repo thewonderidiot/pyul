@@ -6727,4 +6727,308 @@ R0189  2USE PIPA DATA. THIS JOB IS CALLED EVERY 81.93 SECONDS (WHEN APPROPRIATE)
  0242            COM                    ING MODE. NEW VALUE OF 1/PIPADT ARRIVES
  0243            AD     MPAC            IN A WITH WITH TIME1 AT PIPA ZEROING IN
  0244            TC     BONLY2          MPAC. EXITS VIA ENDOFJOB.
+L      2IRIG PULSE-TORQUING ROUTINES
+R0001  2         THE FOLLOWING PULSE-TORQUING OPTIONS ARE AVAILABLE:
+R0002            GYROSPNT               SINGLE PRECISION INPUTS WITH NO TWITCH (
+ 0003  9IE ZERO OUTPUT ON ZERO COMMAND).
+R0004            GYROSPTW               SINGLE PRECISION INPUT WITH TWITCH ON ZE
+ 0005  9RO (2+ THEN 2-).
+R0006  2         GYRODPNT               DOUBLE PRECISION INPUTS (SIGN AGREEMENT
+ 0007  9UNNECESSARY) WITH NO TWITCH.
+R0008  4ALL OF THE ABOVE SHOULD BE FOLLOWED EVENTUALLY BY A CALL TO IMUSTALL.
+ 0009            BANK   14
+ 0010   GYROSPNT TS     MPAC            ADDRESS OF THREE REGISTER COMMAND SET
+ 0011            CCS    LGYRO           ARRIVES IN A. SEE IF GYRO ROUTINES BUSY.
+ 0012  2         TC     GYROBUSY        (AND RETURN WHEN AVAILABLE.)
+ 0013   SPNT     CAF    TWO             SET UP LOOP TO AUGMENT (+ OR -) EACH
+ 0014            TS     MPAC +1         COMMAND BY TWO IF NON-ZERO.
+ 0015            DOUBLE
+ 0016            AD     MPAC
+ 0017            TS     BUF
+ 0018            INDEX  A
+ 0019            CCS    0
+ 0020            CAF    TWO
+ 0021            TC     +2              (NO INCREMENT IF +-0).
+ 0022            CS     TWO
+ 0023            INDEX  BUF
+ 0024            AD     0
+ 0025            INDEX  BUF
+ 0026  2         XCH    0               (JUST TO BE SAFE).
+ 0027            CCS    MPAC +1
+ 0028  2         TC     SPNT +1
+ 0029   SPGYREX  INHINT
+ 0030            CAF    ONE
+ 0031            TC     WAITLIST
+ 0032  2         CADR   DOGYROSP
+ 0033   GYROEX2  CS     THREE           INITIALIZE CDUIND TO START GYRO TASKS
+ 0034            TS     CDUIND          AT Y GYRO (ORDER IS YZX).
+ 0035            CS     FOUR
+ 0036            AD     MPAC            SET LGYROD PNZ TO INDICATE GYRO ACTIVITY
+ 0037            TS     LGYRO           AND USE LGYRO TO STORE THE ADDRESS OFF
+ 0038            TC     MODEEXIT        THE COMMANDS.
+P0039  2         SINGLE PRECISION WITH TWITCH.
+ 0040   GYROSPTW TS     MPAC
+ 0041            CCS    LGYRO           SAME PROLOGUE AS GYROSPNT
+ 0042  2         TC     GYROBUSY
+ 0043   SPTW     CAF    TWO             SET UP LOOP TO AUGMENT BY 2 (+ OR-),
+ 0044            TS     MPAC +1         WITH A PLUS TWO AUGMENT ON +-0.
+ 0045            DOUBLE
+ 0046            AD     MPAC
+ 0047            TS     BUF
+ 0048            INDEX  A
+ 0049            CCS    0
+ 0050            TC     +3
+ 0051            TC     +2
+ 0052  2         TC     +3
+ 0053            CAF    TWO
+ 0054  2         TC     +2
+ 0055    +3      CS     TWO
+ 0056            INDEX  BUF
+ 0057            AD     0
+ 0058            INDEX  BUF
+ 0059  2         XCH    0
+ 0060            CCS    MPAC +1
+ 0061  2         TC     SPTW +1
+ 0062            TC     SPGYREX         SET UP PULSE-TORQUING TASKS.
+P0063  2         DOUBLE PRECISION INPUTS WITH NO TWITCH ON ZERO.
+ 0064   GYRODPNT TS     ARETURN         SAVE ADDRESS OF INPUT COMMANDS.
+ 0065            TC     MAKECADR        SAVE RETURN ADDRESS SINCE WE MUST
+ 0066            XCH    ADDRWD          DO A BANKCALL TO TPAGREE.
+ 0067            TS     TEM11
+ 0068            CAF    ZERO
+ 0069            TS     MPAC +2
+ 0070  2DPNT     CAF    TWO
+ 0071            TS     BUF             THIS LOOP FORCES SIGN AGREEMENT IN THE
+ 0072            DOUBLE                 DP INPUT COMMANDS, AUGMENTING ON
+ 0073            AD     ARETURN         NON-ZERO.
+ 0074            TS     BUF +1
+ 0075            INDEX  A
+ 0076            XCH    0
+ 0077            TS     MPAC
+ 0078            INDEX  BUF +1
+ 0079            XCH    1
+ 0080            TS     MPAC +1
+ 0081            TC     BANKCALL
+ 0082  2         CADR   TPAGREE
+ 0083            CCS    A               AUGMENT BY TWO IF NON-ZERO. TPAGREE
+ 0084            CAF    TWO             RETURNS +1,-0,-1.
+ 0085            AD     TWO
+ 0086  2         AD     NEG2
+ 0087            AD     MPAC +1         DIVIDE BY POSMAX - IE PLACE IN THE MAJOR
+ 0088            AD     MPAC            PART OF EACH COMMAND THE NUMBER OF
+ 0089            INDEX  BUF +1          POSMAX PULSE TRAINS TO BE PUT OUT,
+ 0090            TS     1               LEAVING THE REMAINDER IN THE MINOR PART.
+ 0091  2         TC     +8D
+ 0092            TS     Q               ON OVERFLOW, ADD +-1 TO THE MINOR PART
+ 0093            INDEX  BUF +1          AS WELL AS THE MAJOR PART.
+ 0094            AD     1
+ 0095            INDEX  BUF +1          NO OVERFLOW HERE.
+ 0096            TS     1
+ 0097            XCH    Q
+ 0098  2         TC     +2
+ 0099    +8D     CAF    ZERO
+ 0100            AD     MPAC
+ 0101            INDEX  BUF +1
+ 0102  8         XCH    0
+ 0103            CCS    BUF
+ 0104  2         TC     DPNT +1
+ 0105            XCH    ARETURN         PREPARE FOR POSSIBLE GYROBUSY CALL.
+ 0106            TS     MPAC
+ 0107            CCS    LGYRO
+ 0108  2         TC     GYROBSY2
+ 0109            CAF    BANKMASK
+ 0110            MASK   TEM11
+ 0111            TS     BANKTEM
+ 0112            CAF    LOW10
+ 0113            MASK   TEM11
+ 0114            AD     6K
+ 0115            TS     TEMQS
+ 0116            INHINT
+ 0117            CAF    ONE
+ 0118            TC     WAITLIST
+ 0119  2         CADR   DOGYRO
+ 0120            TC     GYROEX2
+P0121  2         GYRO STALLING ROUTINES - CALLED VERY RARELY BY AT MOST ONE ROUT
+ 0122  9INE AT A TIME.
+ 0123   GYROBUSY XCH    Q               RETURN ADDRESS TO MPAC.
+ 0124  2         TS     MPAC +2
+ 0125            TC     MAKECADR        CALLERS RETURN CADR TO MPAC +1.
+ 0126            XCH    ADDRWD
+ 0127            TS     MPAC +1
+ 0128   REGSLEEP CAF    CADRNEWG
+ 0129  2         TC     JOBSLEEP        AT STANDARD LOCATION.
+ 0130   NEWGYRO  CCS    LGYRO           SEE IF ROUTINES STILL AVAILABLE (SHOULD
+ 0131  2         TC     REGSLEEP        BE). IF NOT, WAIT SOME MORE.
+ 0132            XCH    MPAC +1         RESTORE RETURN CADR TO STANDARD SWCALL
+ 0133            TS     BANKTEM         (BANKCALL) FORM.
+ 0134            MASK   LOW10
+ 0135            AD     6K
+ 0136            TS     TEMQS
+ 0137  2         TC     MPAC +2
+ 0138   GYROBSY2 XCH    Q               DP WAIT.
+ 0139            TS     MPAC +2
+ 0140            XCH    TEM11
+ 0141  2         TC     REGSLEEP -1
+ 0142   CADRNEWG CADR   NEWGYRO
+P0144  2         TASKS FOR SENDING OUT SINGLE PRECISION COMMANDS.
+ 0145            BANK   10
+ 0146   DOGYROSP TC     SETUPSUB        COMMON INITIALIZATION SUBROUTINE.
+ 0147            INDEX  RUPTREG3
+ 0148            CCS    0               PUT OUT NEXT COMMAND.
+ 0149            TC     POSGOUTS
+ 0150            TC     GYROADVS        NO COMMAND IF +-0.
+ 0151  2         TC     NEGGOUTS
+ 0152   GYROADVS CS     CDUIND          ADVANCE TO NEXT GYRO IN ORDER YZX.
+ 0153            INDEX  A
+ 0154            TC     -1
+ 0155            TC     ENDGYRO
+ 0156            CAF    SIX
+ 0157            AD     NEG2
+ 0158            COM
+ 0159            TS     CDUIND
+ 0160  2         TC     DOGYROSP
+ 0161   POSGOUTS AD     ONE
+ 0162            TS     OVCTR
+ 0163            TC     OUT2SUB         PUT OUT COMMAND, SAVING COMMAND FOR
+ 0164            TC     GETDT           DT COMPUTATION.
+ 0165            XCH    LPRUPT
+ 0166            TC     WAITLIST
+ 0167            CADR   TWEAKSP         PUT OUT 2- WHEN COMMAND IS OUT.
+ 0168  2         TC     TASKOVER        ALL FOR NOW.
+ 0169   TWEAKSP  TC     SETUPSUB        INITIALIZE.
+ 0170            CS     TWO             PUT OUT 2- AND ADVANCE TO NEXT GYRO.
+ 0171            TC     OUT2SUB
+ 0172  2         TC     GYROADVS
+ 0173   NEGGOUTS AD     ONE             GET ABS OF COMMAND AND SAVE IN OVCTR.
+ 0174  2         TS     OVCTR
+ 0175            CAF    TWO             PUT OUT 2+ BEFORE NEGATIVE PULSE TRAIN.
+ 0176            TC     OUT2SUB
+ 0177  2         TC     GETDT           COMPUTE WAITLIST DELTA T.
+ 0178            CAF    SEVEN           PUT IN A DELAY TO ALLOW 2+ PULSES
+ 0179            CCS    A               ENOUGH TIME TO GET OUT (3 PULSE TIMES).
+ 0180  2         TC     -1
+ 0181            CS     OVCTR           PUT OUT NEGATIVE COMMAND.
+ 0182  2         TC     OUT2SUB
+ 0183            XCH    LPRUPT          CALL WAITLIST FOR TASK DUE WHEN PULSE
+ 0184            TC     WAITLIST        TRAIN COMPLETE.
+ 0185            CADR   GYROADVS
+ 0186            TC     TASKOVER
+P0187  2         WAITLIST TASKS TO SEND OUT DP PULSE TRAINS TO THE GYROS.
+ 0188   TWEAKGY  TC     SETUPSUB        FINISHED WITH POSITIVE TRAINS TO A GYRO.
+ 0189            CS     TWO              SEND OUT 2- TO LEAVE GYRO IN - STATE.
+ 0190  2         TC     OUT2SUB
+ 0191   GYROADV  CS     CDUIND          ADVANCE TO THE NEXT GYRO IN ORDER YZX.
+ 0192            MASK   LOW7            BIT 14 IS 1 IF 2+ PULSES HAD BEEN SENT
+ 0193            INDEX  A                BEFORE A NEGATIVE COMMAND.
+ 0194            TC     -1
+ 0195            TC     ENDGYRO1
+ 0196            CAF    SIX
+ 0197            AD     NEG2            (CAME HERE FROM TC WITH C(A)=4.)
+ 0198            COM
+ 0199  2         TS     CDUIND
+ 0200   DOGYRO   TC     SETUPSUB        SERVICE GYRO WHOSE *NUMBER* IS IN CDUIND
+ 0201            INDEX  RUPTREG3
+ 0202            CCS    0               MAJOR PART IS POSMAX COUNT.
+ 0203            TC     DOPOSMAX        PUT OUT POSMAX.
+ 0204            TC     DOMINOR
+ 0205  2         TC     DONEGMAX
+ 0206   DOMINOR  INDEX  RUPTREG3        SEND OUT REMAINDER OF COMMAND.
+ 0207            CCS    1
+ 0208            TC     POSGOUT
+ 0209            TC     TWEAKGY +1      FINISHED WITH LONG + PULSE TRAIN.
+ 0210            TC     NEGGOUT
+ 0211  2         TC     GYROADV         DONE WITH LONG - TRAIN OR ZERO INPUT.
+ 0212   DOPOSMAX INDEX  RUPTREG3        PUT AWAY DECREMENTED POSMAX COUNT.
+ 0213            TS     0
+ 0214            CAF    POSMAX
+ 0215   DOMAX    TC     OUT2SUB
+ 0216  2         CAF    FULLDT
+ 0217   GYROWAIT TC     WAITLIST
+ 0218            CADR   DOGYRO
+ 0219  8         TC     TASKOVER
+ 0220   DONEGMAX COM
+ 0221            INDEX  RUPTREG3
+ 0222            TS     0               DECREMENTED POSMAX (NEGMAX) COUNT.
+ 0223            CS     CDUIND          SEE IF 2+ PULSES HAVE BEEN PUT OUT YET,
+ 0224            MASK   NEG1/2           LEAVING WORD THAT THEY WILL BE OUT
+ 0225            AD     BIT14            BY TASKOVER TIME.
+ 0226            COM
+ 0227            XCH    CDUIND
+ 0228            MASK   BIT14
+ 0229            CCS    A
+ 0230            TC     +2
+ 0231  2         TC     NEGMAX2         ALREADY OUT.
+ 0232            CAF    TWO             NOT OUT YET - DO SO.
+ 0233            TC     OUT2SUB
+ 0234            CAF    TWO             WAIT FOR THEM TO GET OUT BEFORE DELIVER-
+ 0235            CCS    A                ING THE REAL COMMAND.
+ 0236  2         TC     -1
+ 0237   NEGMAX2  CS     POSMAX
+ 0238  2         TC     DOMAX
+ 0239   POSGOUT  AD     ONE             FRACTIONAL POSITIVE COMMAND.
+ 0240            TS     OVCTR
+ 0241            TC     OUT2SUB         DELIVER COMMAND.
+ 0242            TC     GETDT           GET TIME TO END OF PULSE TRAIN.
+ 0243            XCH    LPRUPT          (ANSWER LEFT IN LPRUPT).
+ 0244            TC     WAITLIST
+ 0245            CADR   TWEAKGY         SUPPLY 2- PULSES AT END.
+ 0246  2         TC     TASKOVER
+ 0247   NEGGOUT  AD     ONE             FRACTIONAL NEGATIVE COMMAND.
+ 0248            TS     OVCTR
+ 0249            CS     CDUIND          SEE IF 2+ PULSES ALREADY OUT.
+ 0250            MASK   BIT14
+ 0251            CCS    A
+ 0252  2         TC     NEGGOUT2
+ 0253            CAF    TWO
+ 0254  2         TC     OUT2SUB
+ 0255            CAF    SEVEN           ALLOW AT LEAST 3 PULSE TIMES FOR THE 2+
+ 0256            CCS    A               PULSES TO GET OUT.
+ 0257  2         TC     -1
+ 0258   NEGGOUT2 TC     GETDT
+ 0259            CS     OVCTR           DELIVER COMMAND.
+ 0260            TC     OUT2SUB
+ 0261            XCH    LPRUPT          GET WAITLIST DT LEFT BY  GETDT  .
+ 0262            TC     WAITLIST
+ 0263            CADR   GYROADV
+ 0264            TC     TASKOVER
+P0265  2         SUBROUTINES USED BY TASKS.
+ 0266   GETDT    XCH    LP              COMPUTE NUMBER OF 10 MS TICKS IT WILL
+ 0267            TS     LPRUPT           TAKE THE PULSE TRAIN WHOSE MAGNITUDE IS
+ 0268            CAF    BIT10            IN OVCTR TO BE DELIVERED AT A RATE OF
+ 0269            EXTEND                  3200 PPS.
+ 0270            MP     OVCTR
+ 0271            AD     TWO             INTERRUPT AND ROUND-OFF UNCERTAINTIES.
+ 0272            XCH    LPRUPT          LEAVE ANSWER IN LPRUPT.
+ 0273            EXTEND
+ 0274            MP     ONE
+ 0275  4         TC     Q
+ 0276   SETUPSUB CAF    ZERO            SETS UP MISCELLANEOUS REGISTERS.
+ 0277            TS     RUPTREG2        USED BY OUT2SUB.
+ 0278            CS     CDUIND
+ 0279            MASK   LOW7            KILL 2+ BIT.
+ 0280            TS     RUPTREG1
+ 0281            DOUBLE
+ 0282            AD     LGYRO
+ 0283            TS     RUPTREG3        USED FOR INDEXING GYROD SET.
+ 0284  2         TC     Q
+ 0285   ENDGYRO1 CAF    ONE             SPLIT INTO TWO TASKS SO IT WONT LAST TOO
+ 0286            TC     WAITLIST        LONG IN ANY ONE INTERRUPT.
+ 0287            CADR   ENDGYRO
+ 0288  2         TC     TASKOVER
+ 0289   ENDGYRO  CAF    ZERO            SHOW THAT THE GYROS ARE NOW AVAILABLE.
+ 0290  2         TS     LGYRO
+ 02901           XCH    IN3             RESTORE CDUIND
+ 02902           XCH    IN3             BY CHECKING IMU MODE
+ 02903           MASK   OCT122          IMUCOARS, IMUATTC, IMUREENT MASK
+ 02904           CCS    A
+ 02905           CS     ZERO            TO +0 IF MODES ACTIVE
+ 02906           COM                    TO -0 IF INACTIVE
+ 02907 2         TS     CDUIND
+ 0291            CAF    LNEWGYRO        WAKE UP ANY JOB WHICH MIGHT BE WAITING
+ 0292  2         TC     JOBWAKE         FOR THE GYROS (AT MOST ONE).
+ 0293            TC     POSTJUMP        RETURN TO ENDIMU SEQUENCE IN MAIN MODE
+ 0294  2         CADR   IMUFINED        BANK (CHECKS IMU AND CDU FAIL SIGNALS).
+ 0295   LNEWGYRO CADR   NEWGYRO         STANDARD SLEEPING LOCATION FOR GYROBUSY.
+ 02955  OCT122   OCT    122
+ 0296   FULLDT   DEC    5.13 E 2
 *       ENDOFJOB
