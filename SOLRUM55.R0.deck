@@ -7880,4 +7880,1085 @@ P0681   THE FOLLOWING PROGRAM IMPLEMENTS MAJOR MODE 27 OF FLIGHT 501 - STATE VEC
  07647           OCT    24
  07648           TC     ENDOFJOB
  0765   ENDEXTVS =
+L      2AGC SELF-CHECK
+ 0001  2         SETLOC 22000
+R0002   NEXT THREE CONSTANTS ARE USED IN RUPTCHK SUBROUTINE
+ 0003   OVCON    OCTAL  37767
+ 0004   TM1WAIT  OCTAL  00320
+ 0005  2ZRUPTCON ADRES  TSKADRS         MUST BE ADDRESS OF TSKADRS
+R0006   NEXT SIX CONSTANTS ARE USED IN ERASCHK, CNTRCHK, AND CYCLSHF SUBROUTINES
+ 0007   CONCNTR1 EQUALS BIT5            00020
+ 0008   CONERAS1 OCTAL  00060
+ 0009   CONERAS2 OCTAL  01774
+ 0010   CONC+S1  OCTAL  25252
+ 0011  2CONC+S2  EQUALS CSQ             40001
+R0012   NEXT 3 CONSTANTS ARE USED IN SHOWSUM ROUTINE
+ 0013   SUMADRS  ADRES  SKEEP1          SKEEP1 HOLDS SUM OF BANK
+ 0014   VNCON    OCTAL  00501           DISPLAY CONTENTS OF THREE ADDRESSES
+ 0015   SCADR    CADR   SDISPLAY
+R0016   THE FOLLOWING CONSTANTS ARE USED THROUGHOUT SELF-CHECK
+ 0017   SCON0    EQUALS ZERO            +0
+ 0018   SCON1    EQUALS BIT1            +1
+ 0019   SCON2    EQUALS BIT2            +2
+ 0020   SCON4    EQUALS BIT3            +4
+ 0021   SCON64   EQUALS BIT7            00100
+ 0022   SCON1/4  EQUALS BIT13           10000
+ 0023   SCON1/2  EQUALS BIT14           20000
+ 0024   SCON+MAX EQUALS POSMAX          37777
+ 0025   SCON-2   EQUALS MINUS2          77775
+ 0026   SCON-1   EQUALS MINUS1          77776
+ 0027  2SCONMAX  EQUALS NEG0            77777
+ 0028    -2      XCH    QADRS           ENTRY HERE FROM -ZEROCHK AND -ONECHK
+ 0029  2         TC     +2
+ 0030   ERRORS   XCH    Q               FAILURE DETECTED - ALARM.
+ 0031            TS     SFAIL           SAVE CALLING Q FOR POSSIBLE FAILURE LOC.
+ 0032            TC     ALARM
+ 0033            OCT    01102
+ 0034            XCH    ERCOUNT         ADD +1 TO ERCOUNT REGISTER EVERY TIME
+ 0035            AD     SCON1           THERE IS AN ERROR IN SELF-CHECK
+ 0036            XCH    ERCOUNT
+ 0037  2         TC     SMODECHK        START    SELF-CHECK AGAIN
+ 0038   -ZEROCHK XCH    Q
+ 0039            TS     QADRS           HOLDS ADDRESS THAT WAS IN Q REGISTER
+ 0040            XCH    Q
+ 0041            CCS    A
+ 0042            TC     ERRORS -2
+ 0043            TC     ERRORS -2
+ 0044            TC     ERRORS -2
+ 0045  3         TC     Q
+ 0046            CS     A
+ 0047   -ONECHK  XCH    Q
+ 0048            TS     QADRS           HOLDS ADDRESS THAT WAS IN Q REGISTER
+ 0049            XCH    Q
+ 0050            CCS    A
+ 0051            TC     ERRORS -2
+ 0052            TC     ERRORS -2
+ 0053            CCS    A
+ 0054            TC     ERRORS -2
+ 0055  3         TC     Q
+R0056   CHECKS MOST CCS PULSES
+ 0057   CCSCHK   RELINT                 COMES HERE FROM INHIBIT LOOP AT SMODECHK
+ 0058            CS     SCON2           -2
+ 0059            CCS    A               C(A) = -2
+ 0060            TC     ERRORS
+ 0061            TC     ERRORS
+ 0062            TC     +2
+ 0063            TC     ERRORS
+ 0064            CCS    A               C(A) = +1, RESULT OF CCS -NUMBER
+ 0065            TC     +4
+ 0066            TC     ERRORS
+ 0067            TC     ERRORS
+ 0068            TC     ERRORS
+ 0069            CCS    A               C(A) = +0, RESULT OF CCS + NUMBER
+ 0070            TC     ERRORS
+ 0071            TC     +3
+ 0072            TC     ERRORS
+ 0073            TC     ERRORS
+ 0074            CS     A
+ 0075            CCS    A               C(A) = -0, RESULT OF CCS +0
+ 0076            TC     ERRORS
+ 0077            TC     ERRORS
+ 0078            TC     ERRORS
+ 0079            CCS    A               RESULT OF CCS -0
+ 0080            TC     ERRORS
+ 0081            TC     +3
+ 0082            TC     ERRORS
+ 0083            TC     ERRORS
+R0084   SPECIFICALLY CHECKS RSC PULSE OF TC INSTRUCTION (ALSO MOST OF TC
+R0085   PULSES)
+ 0086            TC     +2
+ 0087            TC     +2              NEXT SUBROUTINE
+ 0088  3         TC     Q
+R0089   CHECKS WP, GP, TP - WP2, RP2 - RG, WP, OF CCS1
+R0090   CHECKS RB, WG PULSES (READ BACK INTO ERASABLE)
+ 0091   PTY+ERAS CAF    5777            47777
+ 0092            TS     SKEEP1
+ 0093            MASK   SKEEP1
+ 0094            XCH    SKEEP1
+ 0095            AD     SKEEP1
+ 0096            INDEX  5777
+ 0097            4      SKEEP1          MP SKEEP1
+ 0098            INDEX  5777
+ 0099            5      SKEEP1          DV SKEEP1
+ 0100            CS     SKEEP1
+ 0101            TS     SKEEP2          30000
+ 0102            INDEX  SKEEP1          TROUBLE IF C(SKEEP1) NOT 47777
+ 0103            6      SKEEP2          SU SKEEP2, C(A) = -0
+ 0104            TS     SKEEP2          -0
+ 0105            CCS    SKEEP2
+ 0106            TC     ERRORS
+ 0107            TC     ERRORS
+ 0108            TC     ERRORS
+ 0109            CCS    SKEEP2
+ 0110            TC     ERRORS
+ 0111            TC     ERRORS
+ 0112            TC     ERRORS
+R0113   START ERASABLE INSTRUCTION CHECK
+ 0114            CAF    EINST1
+ 0115            TS     SKEEP1
+ 0116            CAF    EINST2
+ 0117            TS     SKEEP2
+ 0118            CAF    EINST3
+ 0119            TS     SKEEP3
+ 0120            CAF    EINST4
+ 0121            TS     SKEEP4
+ 0122            CAF    EINST5
+ 0123            TS     SKEEP5
+ 0124            CAF    EINST6
+ 0125            TS     SKEEP6
+ 0126            CAF    SCON1/2
+ 0127            TC     SKEEP1
+ 0128   EINST1   INDEX  5777
+ 0129   EINST2   4      SCON2           MP, C(A) = +1, THEN +0
+ 0130   EINST3   AD     A               CHECKS ST2 PARITY
+ 0131   EINST4   CCS    A
+ 0132   EINST5   TC     SKEEP1
+ 0133  3EINST6   TC     +1              NEXT SUBROUTINE
+R0134   CHECKS RSC, WSC PULSES
+R0135   NO WSC PULSE IN MASK INSTRUCTION
+ 0136   SCCHK    CAF    SCON64          00100
+ 0137            XCH    LP              00040
+ 0138            XCH    LP
+ 0139            TS     LP              00020
+ 0140            AD     LP              00010
+ 0141            INDEX  LP              00004
+ 0142            2      5767            INDEX 5777
+ 0143            6      0003            SU LP, 00002
+R0144   NEXT 4 INSTRUCTIONS CHECK RSC PULSE IN MASK INSTRUCTION
+ 0145            CS     LP              C(A) = -2, C(LP) = +1
+ 0146            MASK   LP              C(A) = +1, C(LP) = +1
+ 0147            CS     A
+ 0148            TC     -ONECHK
+ 0149            CCS    LP
+ 0150            TC     +4
+ 0151            TC     ERRORS
+ 0152            TC     ERRORS
+ 0153            TC     ERRORS
+ 0154            CCS    LP
+ 0155            TC     ERRORS
+ 0156            TC     ERRORS
+ 0157            TC     +2
+ 0158            TC     ERRORS
+ 0159            CCS    LP
+ 0160            TC     ERRORS
+ 0161            TC     +3              NEXT SUBROUTINE
+ 0162            TC     ERRORS
+ 0163            TC     ERRORS
+R0164   CHECKS MOST OF MP PULSES
+ 0165   MPCHK    CAF    SCON4
+ 0166            TS     LP
+ 0167   MP++     CAF    SCON+MAX
+ 0168            INDEX  5777
+ 0169            4      LP              C(A) = +1, CHECKS RSC PULSE
+ 0170            AD     LP              C(LP) = +37776
+ 0171            TS     SKEEP1          37777
+ 0172   MP+-     CAF    SCON+MAX
+ 0173            INDEX  5777
+ 0174            4      SCON-2
+ 0175            AD     LP              C(LP) = -37776
+ 0176            AD     SKEEP1
+ 0177            TC     -ZEROCHK
+ 0178   MP--     CS     SCON+MAX
+ 0179            INDEX  5777
+ 0180            4      SCON-2          C(A) = +1
+ 0181            AD     LP              C(LP) = +37776
+ 0182            TS     SKEEP1          37777
+ 0183   MP-+     CS     SCON+MAX
+ 0184            INDEX  5777
+ 0185            4      SCON2           C(A) = -1
+ 0186            AD     LP              C(LP) = -37776
+ 0187            AD     SKEEP1
+ 0188  3         TC     -ZEROCHK
+R0189   CHECKS MOST OF SU PULSES
+ 0190   SUCHK    CAF    SCON+MAX
+ 0191            INDEX  5777
+ 0192            6      SCONSU          SU 37776, C(A) = +1
+ 0193  2         TC     -ONECHK -1
+R0194   CHECKS MOST OF DV PULSES (ALL EXCEPT WP, GP, TP)
+R0195   DIVIDE USES ST2
+R0196   ++ AND --, C(A) = 25252, C(Q) = 67777, C(LP) = +1
+R0197   +- AND -+ , C(A) = 52525, C(Q) = 67777, C(LP) = 40000 AND 40001
+ 0198   DVCHK    CAF    SCON3/8
+ 0199            TS     Q
+ 0200   DV++     CAF    SCON1/4
+ 0201            INDEX  5777
+ 0202            5      Q               C(A) = 25252, CHECKS RSC PULSE
+ 0203            TS     SKEEP1
+ 0204            XCH    LP
+ 0205            TS     SKEEP2
+ 0206   DV+-     CS     Q               +1/4
+ 0207            INDEX  5777
+ 0208            5      SCON-3/8        C(A) = 52525
+ 0209            AD     SKEEP1          C(A) = -0
+ 0210            TS     SKEEP5          SHOULD BE -0
+ 0211            XCH    LP
+ 0212            TS     SKEEP3
+ 0213   DV--     XCH    Q               -1/4
+ 0214            INDEX  5777
+ 0215            5      SCON-3/8        C(A) = 25252
+ 0216            TS     SKEEP1
+ 0217            XCH    LP
+ 0218            TS     SKEEP4
+ 0219   DV-+     XCH    Q               -1/4
+ 0220            INDEX  5777
+ 0221            5      SCON3/8
+ 0222            AD     SKEEP1          C(A) = -0
+ 0223            TS     SKEEP1
+ 0224            CS     LP              C(A) = 37776
+ 0225            AD     SKEEP1          C(A) = 37776
+ 0226            AD     SKEEP2          C(A) = 37777
+ 0227            AD     SKEEP3          C(A) = -0
+ 0228            AD     SKEEP4          C(A) = +1
+ 0229            AD     SKEEP5          C(A) = +1
+ 0230  3         TC     -ONECHK -1
+R0231   CHECKS MOST TS PULSES
+R0232   CHECKS ALL OF PINC AND MINC PULSES EXCEPT WOVR
+ 0233   TS+-CHK  CAF    SCON1
+ 0234            TS     OVCTR
+ 0235            AD     SCON+MAX        C(A) = + WITH OVERFLOW
+ 0236            TS     SKEEP1
+ 0237            TC     ERRORS
+ 0238            AD     SKEEP1          C(A) = +1
+ 0239            AD     OVCTR           C(A) = +3
+ 0240            TS     OVCTR
+ 0241            CS     A               C(A) = 77774
+ 0242            INDEX  5777
+ 0243            6      SCONTS          C(A) = -0 WITH UNDERFLOW
+ 0244            TS     SKEEP1
+ 0245            TC     ERRORS
+ 0246            AD     SKEEP1          C(A) = -1
+ 0247            AD     OVCTR           C(A) = -1+2
+ 0248  2         TC     -ONECHK -1
+R0249   NOT POSSIBLE TO CHECK WOVI PULSE IN NXI1
+R0250   START WOVI PULSE CHECK AND INHINT RELINT CHECK
+ 0251   RUPTCHK  INDEX  INHINT
+ 0252            CAF    SCON0
+ 0253            TS     0024            ZRUPT
+ 0254            INDEX  RELINT
+ 0255            AD     TIME1
+ 0256            TS     SKEEP1
+ 0257   TENMS    CS     SKEEP1          CHECK FOR NEXT PULSE TP TIME1
+ 0258            AD     TIME1
+ 0259            CCS    A
+ 0260            CCS    A
+ 0261            TC     RUPTCHK         START AGAIN, TIMING IS OFF DUE TO RUPT
+ 0262            TC     +2              10 MS PULSE HAS ARRIVED AT TIME1
+ 0263            TC     TENMS
+ 0264            CAF    TM1WAIT         START 7 TO 8 MS WAIT
+ 0265   7-8WAIT  CCS    A
+ 0266            TC     7-8WAIT
+ 0267            INDEX  INHINT
+ 0268            CCS    0024            ZRUPT
+ 0269            TC     RUPTCHK         THERE WAS AN INTERRUPT. START AGAIN
+ 0270            CAF    SCON1
+ 0271            TC     WAITLIST
+ 0272            CADR   TSKADRS
+ 0273            XCH    SCON+MAX
+ 0274            AD     OVCON           WILL STAY IN OVERFLOW, UNDERFLOW FOR
+ 0275            INDEX  RELINT          APPROXIMATELY 3 MS
+ 0276   WAIT1    CCS    A
+ 0277            AD     SCON2
+ 0278            TC     +2
+ 0279            TC     WOVIRPT
+ 0280            INDEX  5777
+ 0281            6      SCONMAX         SU -0
+ 0282            XCH    A
+ 0283            INDEX  SCON0
+ 0284            CS     A
+ 0285            MASK   A
+ 0286            CS     A
+ 0287            TS     A
+ 0288            TC     ERRORS
+ 0289            TC     WAIT1
+ 0290   WOVIRPT  INDEX  INHINT
+ 0291            TS     SKEEP1
+ 0292   SCONTS   OCTAL  37775
+ 0293            INDEX  RELINT
+R0294   INTERRUPT SHOULD APPEAR BEFORE NEXT INSTRUCTION
+ 0295            TC     SOPTION1        END OF PULSES CHECK
+ 0296   TSKADRS  CS     0024            C(ZRUPT) = ADDRESS OF TSKADRS
+ 0297            AD     ZRUPTCON
+ 0298            TC     -ZEROCHK
+ 0299            XCH    SCOUNT          ADD +1 TO SCOUNT REGISTER AT THIS
+ 0300            AD     SCON1           POINT OF SELF-CHECK.
+ 0301            XCH    SCOUNT
+ 0302  3         TC     TASKOVER
+ 0303   SOPTION1 CCS    SMODE           3 OPTIONS OF SELF-CHECK
+ 0304            TC     SMODECHK        END OF PULSES ONLY CHECK
+ 0305            TC     SMODECHK
+ 0306  2         TC     +1              CONTINUE IF C(SMODE) IS A NEG. NUMB5R
+R0307   COUNTS DOWN 15 BIT NUMBER (APPROXIMATELY 10 SECONDS)
+ 0308   COUNTCHK CS     SCON+MAX
+ 0309            TS     SKEEP5
+ 0310   COUNTS   TS     Q
+ 0311            CCS    Q
+ 0312            TC     -NMBR
+ 0313   SCONSU   OCTAL  37776
+ 0314            TC     +2
+ 0315            TC     OFCOUNT
+ 0316            AD     SKEEP5
+ 0317            TC     -ONECHK
+ 0318            CCS    NEWJOB
+ 0319            TC     DUMEXIT
+ 0320            CS     SKEEP5
+ 0321            AD     SCONMAX         -0
+ 0322            TS     SKEEP4
+ 0323            TC     COUNTS
+ 0324   -NMBR    CS     A
+ 0325            TS     SKEEP5
+ 0326            AD     SKEEP4
+ 0327            TC     -ONECHK -1
+ 0328            CS     SKEEP5
+ 0329            CS     A
+ 0330  2         TC     COUNTS
+R0331   COUNTS DOWN OVERFLOW NUMBER (APPROXIMATELY 3.5 SECONDS)
+ 0332   OFCOUNT  TS     SKEEP7          +0
+ 0333            CAF    SCON+MAX
+ 0334            AD     A
+ 0335   COUNTSOF AD     SCON1
+ 0336            INHINT
+ 0337            XCH    Q
+ 0338            CCS    Q
+ 0339            TS     SKEEP6
+ 0340            TC     ENDOF
+ 0341            RELINT
+ 0342            AD     SKEEP7
+ 0343            TS     SKEEP7
+ 0344            TC     +2
+ 0345            TC     ERRORS
+ 0346            CCS    NEWJOB
+ 0347            TC     DUMEXIT
+ 0348            CAF    SCON+MAX
+ 0349            AD     SKEEP6
+ 0350            TC     COUNTSOF
+ 0351   ENDOF    CS     A
+ 0352            RELINT
+ 0353            AD     SKEEP7
+ 0354  2         TC     -ZEROCHK
+R0355   REGISTER 1777 ALWAYS HOLDS LOWEST (X-1) ADDRESS JUST CHECKED
+R0356   REGISTER 1776 HOLDS BEFORE CONTENTS OF X
+R0357   REGISTER 1775 HOLDS BEFORE CONTENTS OF X-1
+R0358   REGISTER 1774 IS STARTING ADDRESS
+R0359   PUTS OWN ADDRESS IN REGISTERS OCT 1774 THROUGH OCT 60 (APPROX.  1.2 SEC)
+ 0360   ERASCHK  CAF    CONERAS2        01774
+ 0361            TS     1777
+ 0362   ERASLOOP RELINT
+ 0363            CCS    1777
+ 0364            TS     1777
+ 03645           INHINT
+ 0365            NDX    1777
+ 0366            CS     0001
+ 0367            CS     A
+ 0368            TS     1776            PUT C(X) IN 1776
+ 0370            NDX    1777
+ 0371            CS     0000
+ 0372            CS     A
+ 03721           TS     1775            PUT C(X-1) IN 1775
+ 03722           CS     1777
+ 03723           CS     A
+ 03724           TS     ERESTORE        IF RESTART, RESTORE C(X) AND C(X-1)
+ 03725           NDX    1777
+ 03726           TS     0000            PUT OWN ADDRESS IN X-1
+ 03727           AD     SCON1
+ 03728           NDX    1777
+ 0373            TS     0001            PUT OWN ADDRESS IN X
+ 0374            INDEX  1777
+ 0375            CS     0001
+ 0376            INDEX  1777
+ 0377            AD     0000
+ 0378            TC     -ONECHK
+ 0379   COMPLMNT CS     1777
+ 0380            INDEX  1777
+ 0381            TS     0000            PUTS COMPLEMENT OF ADDRESS IN X-1
+ 0382            AD     SCON-1
+ 0383            INDEX  1777
+ 0384            TS     0001            PUTS COMPLEMEMT OF ADDRESS IN X
+ 0385            INDEX  1777
+ 0386            CS     0000
+ 0387            INDEX  1777
+ 0388            AD     0001
+ 0389            TC     -ONECHK
+ 0390            CS     1776
+ 0391            CS     A
+ 0392            NDX    1777
+ 0393            TS     0001            RESTORE C(X)
+ 0394            CS     1775
+ 0395            CS     A
+ 03951           NDX    1777
+ 03952           TS     0000            RESTORE C(X-1)
+ 03953           CS     SCONMAX
+ 0396            TS     ERESTORE        IF RESTART, DO NOT RESTORE C(X), C(X-1).
+ 0397            CCS    NEWJOB
+ 0398            TC     DUMEXIT
+ 0399   ENDERAS  CS     1777
+ 0400            AD     CONERAS1        +60 OCT
+ 0401            CCS    A
+ 0402   SCON3/8  OCTAL  14000
+ 0403   SCON-3/8 OCTAL  63777
+ 0404            TC     ERASLOOP
+ 0405  2         INDEX  RELINT
+R0406   CS ALL REGISTERS FROM OCT 57 THROUGH OCT 20
+R0407   ALL COUNTERS, PLUS 4 SPARES, PLUS 4 RUPT REGISTERS,
+R0408   PLUS CYCLE AND SHIFT REGISTERS
+ 0409   CNTRCHK  CAF    LOW5
+ 0410   CNTRLOOP TS     SKEEP1
+ 0411            AD     CONCNTR1        +20 OCT
+ 0412            INDEX  A
+ 0413            CS     0000
+ 0414            CCS    SKEEP1
+ 0415  2         TC     CNTRLOOP
+ 0416   CYCLSHFT CAF    CONC+S1
+ 0417            TS     CYR             C(CYR) = 12525
+ 0418            TS     CYL             C(CYL) = 52524
+ 0419            TS     SR              C(SR) = 12525
+ 0420            TS     SL              C(SL) = 12524
+ 0421            AD     CYR
+ 0422            AD     CYL
+ 0423            AD     SR
+ 0424            AD     SL
+ 0425            AD     CONC+S2         C(A) = -1
+ 0426  2         TC     -ONECHK
+ 0427            XCH    SCOUNT +1       ADD +1 TO SCOUNT +1 REGISTER AT THIS
+ 0428            AD     SCON1           POINT OF SELF-CHECK
+ 0429            XCH    SCOUNT +1
+ 0430   SOPTION2 CCS    SMODE           TWO OPTIONS LEFT
+ 0431            TC     COUNTCHK
+ 0432            TC     SMODECHK
+ 0433            TC     SMODECHK        END OF PULSES + SC + ERASABLE CHECK
+ 0434  2         TC     ROPECHK         CONTINUE WITH SELF-CHECK
+R0435   THE BNKCON CONSTANTS (BANK NUMBERS) ARE USED BY ROPECHK AND SHOWSUM
+R0436   THEY MUST BE IN THE FOLLOWING TABLE FORM
+ 0437   BNKCON1  OCTAL  02000
+ 0438   BNKCON2  OCTAL  04000
+ 0439   BNKCON3  OCTAL  06000
+ 0440   BNKCON4  OCTAL  10000
+ 0441   BNKCON5  OCTAL  12000
+ 0442   BNKCON6  OCTAL  14000
+ 0443   BNKCON7  OCTAL  16000
+ 0444   BNKCON10 OCTAL  20000
+ 0445   BNKCON11 OCTAL  22000
+ 0446   BNKCON12 OCTAL  24000
+ 0447   BNKCON13 OCTAL  26000
+ 0448   BNKCON14 OCTAL  30000
+ 0449   BNKCON21 OCTAL  42000
+ 0450   BNKCON22 OCTAL  44000
+ 0451   BNKCON23 OCTAL  46000
+ 0452   BNKCON24 OCTAL  50000
+ 0453   BNKCON25 OCTAL  52000
+ 0454   BNKCON26 OCTAL  54000
+ 0455   BNKCON27 OCTAL  56000
+ 0456   BNKCON30 OCTAL  60000
+ 0457   BNKCON31 OCTAL  62000
+ 0458   BNKCON32 OCTAL  64000
+ 0459   BNKCON33 OCTAL  66000
+ 0460   BNKCON34 OCTAL  70000
+ 0461  2BANKSTOP OCTAL  00000           PUT +0 AFTER LAST BANK TO BE CHECKED
+R0462   TAKES BETWEEN 17 AND 20 SECONDS FOR ROPECHK TO GO THROUGH  ALL BANKS.
+R0463   INITIALIZE 2OPTIONS TO -1 TO PERFORM ROPECHK
+R0464   SKEEP1 HOLDS SUM
+R0465   SKEEP2 HOLDS PRESENT CONTENTS OF ADDRESS IN ROPCHEK AND SHOWSUM ROUTINES
+R0466   SKEEP2 HOLDS ACTUAL BANK NUMBER USED IN THE BANK REGISTER BUT CYCLED 5
+R0467   PLACES LEFT FOR DISPLAY IN SHOWSUM ROUTINE
+R0468   SKEEP3 HOLDS PRESENT ADDRESS (02000 TO 05777 IN FXFX BANKS)
+R0469                                (00000 TO 01777 IN FXSW BANKS)
+R0470   SKEEP3 HOLDS BUGGER WORD FOR DISPLAY IN SHOWSUM ROUTINE
+R0471   SKEEP4 HOLDS ADDRESS OF BANK NUMBER
+R0472   SKEEP5 COUNTS TWO SUCCESSIVE TC SELF WORDS
+R0473   SKEEP6 HOLDS END OF BANK NUMBERS
+R0474   SKEEP7 COUNTS DOWN FIXED FIXED BANKS
+ 0475   ROPECHK  CS     SCON1
+ 0476            TS     2OPTIONS
+ 0477   FXFXCHK  CAF    FXCON1          43776
+ 0478            TS     SKEEP6
+ 0479            CAF    BNKCON1         02000
+ 0480            TS     SKEEP3
+ 0481            CAF    STBNKCON
+ 0482            TS     SKEEP4
+ 0483            CAF    SCON1
+ 0484            TS     SKEEP7
+ 0485   FXFXBNKS CAF    SCON0
+ 0486            TS     SKEEP1
+ 0487            CAF    SCON2
+ 0488            TS     SKEEP5          COUNTS DOWN TWO TC SELF WORDS
+ 0489   FXADRS   INDEX  SKEEP3
+ 0490            CAF    0000
+ 0491            TC     ADSUM
+ 0492  2         TC     ADRSCHK
+ 0493   BANK2    TS     SKEEP7
+ 0494            CAF    FXCON2          45776
+ 0495            TS     SKEEP6
+ 0496            CAF    BNKCON2         04000
+ 0497            TS     SKEEP3
+ 0498  2         TC     FXFXBNKS
+ 0499   FXSWBNKS CAF    SCON2
+ 0500            TS     SKEEP5          COUNTS DOWN TWO TC SELF WORDS
+ 0501            CAF    SCON0
+ 0502            TS     SKEEP1
+ 0503            TS     SKEEP3
+ 0504   SWADRS   AD     SKEEP3
+ 0505            INDEX  SKEEP4
+ 0506            AD     0000
+ 0507            TC     DATACALL
+ 0508            TC     ADSUM
+ 0509            AD     BNKCON3         06000
+ 0510  2         TC     ADRSCHK
+R0511   SUBROUTINES ADRS+1, ADRSCHK, OPTION, NXTBNK, ADSUM, AND BNKCHK ARE
+R0512   USED BY BOTH FXFX AND FXSW BANKS
+ 0513   ADRS+1   XCH    SKEEP3
+ 0514            AD     SCON1
+ 0515            TS     SKEEP3
+ 0516            CCS    SKEEP7
+ 0517            TC     FXADRS
+ 0518            TC     FXADRS
+ 0519  2         TC     SWADRS
+ 0520   ADRSCHK  CCS    A
+ 0521            TC     CONTINU
+ 0522            TC     CONTINU
+ 0523            TC     CONTINU
+ 0524            CCS    SKEEP5
+ 0525            TS     SKEEP5
+ 0526            TC     CONTINU +5
+ 0527   CONTINU  CCS    SKEEP5
+ 0528            TC     +2
+ 0529            TC     SOPTION
+ 0530            CAF    SCON2
+ 0531            TS     SKEEP5          MAKES SURE TWO CONSECUTIVE TC SELF WORDS
+ 0532            CCS    NEWJOB
+ 0533            TC     DUMEXIT
+ 0534            CS     SKEEP3
+ 0535            AD     SKEEP6
+ 0536            TS     A               UNDERFLOW AT END OF BANK
+ 0537  2         TC     ADRS+1          STAY IN SAME BANK
+ 0538   SOPTION  CCS    2OPTIONS
+ 0539            TC     SDISPLAY
+ 0540            TC     NXTBNK
+ 0541            TC     BNKCHK
+ 0542  2         TC     -ONECHK
+ 0543   NXTBNK   XCH    SKEEP4
+ 0544            AD     SCON1
+ 0545            TS     SKEEP4
+ 0546            CCS    SKEEP7
+ 0547            TC     BANK2
+ 0548            TC     +1
+ 0549            CS     SCON1
+ 0550            TS     SKEEP7
+ 0551            CAF    SWCON           41776
+ 0552            TS     SKEEP6
+ 0553   ENDBANKS INDEX  SKEEP4
+ 0554            CS     0000
+ 0555            CCS    A
+ 0556            TC     FXSWBNKS
+ 0557   STBNKCON ADRES  BNKCON1         CONSTANT. STARTING ADDRESS OF BANK LIST
+ 0558            TC     FXSWBNKS
+ 0559            CCS    2OPTIONS        END OF FIXED MEMORY CHECKING
+ 0560            TC     SHOWSUM         END OF SHOWSUM, START AGAIN
+ 0561   SWCON    OCTAL  41776           CONSTANT
+ 0562  2         TC     1/2OPTN         END OF BANK SUMCHECKING SUBROUTINE
+ 0563   ADSUM    TS     SKEEP2
+ 0564            AD     SKEEP1
+ 0565            TS     SKEEP1
+ 0566            CAF    SCON0
+ 0567            AD     SKEEP1
+ 0568            TS     SKEEP1
+ 0569            CS     SKEEP2
+ 0570            AD     SKEEP3
+ 0571  3         TC     Q
+ 0572   BNKCHK   XCH    Q
+ 0573            TS     QADRS
+ 0574            CCS    SKEEP1
+ 0575            TC     +4
+ 0576            TC     ERRORS
+ 0577            TC     +2
+ 0578            TC     ERRORS
+ 0579            TS     SKEEP1
+ 0580            INDEX  SKEEP4
+ 0581            CAF    0000
+ 0582            TC     LEFT5           CYCLES LEFT 5 PLACES
+ 0583            CS     A
+ 0584            AD     SKEEP1
+ 0585            TC     QADRS
+ 0586   FXCON1   OCTAL  43776           CONSTANT
+ 0587  2FXCON2   OCTAL  45776           CONSTANT
+R0588   INITIALIZE 2OPTIONS TO +1 TO PERFORM SHOWSUM
+R0589   START OF ROUTINE THAT DISPLAYS SUM OF EACH BANK
+ 0590   SHOWSUM  CAF    SCON1
+ 0591            TS     2OPTIONS        SHOWSUM OPTION
+ 0592            CAF    SCON0
+ 0593            TS     SMODE           PUT SELF-CHECK TO SLEEP
+ 0594            INDEX  INHINT
+ 0595            CAF    PRIO2
+ 0596            TC     NOVAC
+ 0597            CADR   FXFXCHK
+ 0598            INDEX  RELINT
+ 0599            TC     ENDOFJOB
+ 0600   SDISPLAY INDEX  SKEEP4
+ 0601            CAF    0000
+ 0602            TC     LEFT5           CYCLES LEFT 5 PLACES
+ 0603            TS     SKEEP2          HOLDS BANK NUMBER FOR DSKY DISPLAY
+ 0604            CCS    SKEEP7          12 INSTRUCTIONS TO PUT BUGGER WORD
+ 0605            TC     FXFXWORD        IN SKEEP3.
+ 0606            TC     FXFXWORD
+ 0607            CS     SKEEP3          GETS FXSW BUGGER WORD
+ 0608            CS     A
+ 0609            INDEX  SKEEP4
+ 0610            AD     0000
+ 0611            TC     DATACALL
+ 0612            TC     +3
+ 0613   FXFXWORD INDEX  SKEEP3          GETS FXFX BUGGER WORD
+ 0614            CAF    0000
+ 0615            TS     SKEEP3          SKEEP3 NOW HOLDS BUGGER WORD
+ 0616            TC     GRABDSP
+ 0617            TC     PREGBSY
+ 0618   NOKILL   CAF    SUMADRS
+ 0619            TS     MPAC +2
+ 0620            CAF    VNCON
+ 0621            TC     NVSUB
+ 0622            TC     SBUSY
+ 0623            TC     BANKCALL
+ 0624            CADR   FLASHON
+ 0625            TC     ENDIDLE
+ 0626            TC     +3              FINISHED WITH SHOWSUM
+ 0627            TC     SALLOW          PROCEED TO NEXT BANK
+ 0628            TC     NOKILL          SO CAN LOAD WITHOUT KILLING SHOWSUM.
+ 0629            TC     FREEDSP
+ 0630  2         TC     ENDOFJOB
+ 0631   SALLOW   TC     FREEDSP         ALLOWS ANOTHER JOB TO DISPLAY. LEAVES
+ 0632  2         TC     NXTBNK          SUM IN DSKY FOR 10 SEC. AFTER PROC. VERB
+ 0633   SBUSY    CAF    SCADR
+ 0634  2         TC     NVSUBUSY
+ 0635   1/2OPTN  CCS    SMODE
+ 0636            TC     +4              STAY IN ROPECHK LOOP
+ 0637            TC     SOPTION3 -3
+ 0638            TC     SMODECHK        SHOULD NOT COME HERE
+ 0639            TC     MPNMBRS         CONTINUE WITH SELF-CHECK
+ 0640            XCH    SCOUNT +2
+ 0641            AD     SCON1
+ 0642            XCH    SCOUNT +2
+ 0643  2         TC     ROPECHK
+R0644   MULTIPLY SUBROUTINES TAKE APPROXIMATELY 30 SECONDS
+R0645   (37777) X (37777 THROUGH 00001)
+R0646   C(A) COUNTS DOWN. C(LP) COUNTS UP.
+ 0647   MPNMBRS  CAF    SCON+MAX
+ 0648            TS     SKEEP2
+ 0649            CAF    SCON+MAX
+ 0650            EXTEND
+ 0651            MP     SKEEP2
+ 0652            AD     LP              C(A) = 37777
+ 0653            CS     A
+ 0654            AD     SCON+MAX
+ 0655            TC     -ZEROCHK
+ 0656            CCS    NEWJOB
+ 0657            TC     DUMEXIT
+ 0658            CCS    SKEEP2
+ 0659            TS     SKEEP2
+ 0660            CCS    SKEEP2
+ 0661            TC     MPNMBRS +2
+R0662   (-1) X (37777 THROUGH 00001)
+ 0663            CAF    SCON+MAX
+ 0664            TS     SKEEP2
+ 0665   MPHIGH1  CAF    SCON-1
+ 0666            EXTEND
+ 0667            MP     SKEEP2          C(A) = -0
+ 0668            AD     LP
+ 0669            AD     SKEEP2
+ 0670            TC     -ZEROCHK
+ 0671            CCS    NEWJOB
+ 0672            TC     DUMEXIT
+ 0673            CCS    SKEEP2
+ 0674            TS     SKEEP2
+ 0675            CCS    SKEEP2
+ 0676  2         TC     MPHIGH1
+R0677   INTERCHANGE MULTIPLIER AND MULTIPLICAND
+R0678   (37777 THROUGH 00001) X (37777)
+R0679   C(A) COUNTS DOWN. C(LP) COUNTS UP.
+ 0680            CAF    SCON+MAX
+ 0681            TS     SKEEP1
+ 0682   MPAGAIN  CS     SKEEP1
+ 0683            CS     A
+ 0684            EXTEND
+ 0685            MP     SCON+MAX
+ 0686            AD     LP              C(A) = 37777
+ 0687            CS     A
+ 0688            AD     SCON+MAX
+ 0689            TC     -ZEROCHK
+ 0690            CCS    NEWJOB
+ 0691            TC     DUMEXIT
+ 0692            CCS    SKEEP1
+ 0693            TS     SKEEP1
+ 0694            CCS    SKEEP1
+ 0695            TC     MPAGAIN
+R0696   (37777 THROUGH 00001) X (-1)
+ 0697            CAF    SCON+MAX
+ 0698            TS     SKEEP1
+ 0699   MPHIGH2  CS     SKEEP1
+ 0700            CS     A
+ 0701            EXTEND
+ 0702            MP     SCON-1
+ 0703            AD     LP
+ 0704            AD     SKEEP1
+ 0705            TC     -ZEROCHK
+ 0706            CCS    NEWJOB
+ 0707            TC     DUMEXIT
+ 0708            CCS    SKEEP1
+ 0709            TS     SKEEP1
+ 0710            CCS    SKEEP1
+ 0711            TC     MPHIGH2
+ 0712  2         TC     DV1
+R0713   THESE 2 CONSTANTS USED BY DIVIDE SUBROUTINES
+ 0714   DVCON1   OCTAL  37776
+ 0715   DVCON2   OCTAL  50001
+R0716   DIVIDE 1/4 BY 3/8
+R0717   ONCE THROUGH ALL DEVIDE SUBROUTINES TAKES APPROX. 0.012 SECONDS
+R0718   TOTAL TIME IN DEVIDE SUBROUTINES IS APPROX. 20 SECONDS
+ 0719   DV1      CAF    CONERAS2        01774
+ 0720            TS     SKEEP7
+ 0721   DV1++    CAF    SCON3/8
+ 0722            TS     Q
+ 0723            CAF    SCON1/4
+ 0724            EXTEND
+ 0725            DV     Q               C(A) = 25252
+ 0726            TS     SKEEP1
+ 0727            XCH    LP
+ 0728            TS     SKEEP2
+ 0729   DV1+-    CS     Q               +1/4
+ 0730            EXTEND
+ 0731            DV     SCON-3/8        C(A) = 52525
+ 0732            AD     SKEEP1          C(A) = -0
+ 0733            TS     SKEEP5
+ 0734            XCH    LP
+ 0735            TS     SKEEP3
+ 0736   DV1--    XCH    Q               -1/4
+ 0737            EXTEND
+ 0738            DV     SCON-3/8
+ 0739            TS     SKEEP1
+ 0740            XCH    LP
+ 0741            TS     SKEEP4
+ 0742   DV1-+    XCH    Q
+ 0743            EXTEND
+ 0744            DV     SCON3/8
+ 0745            AD     SKEEP1          C(A) = -0
+ 0746            TS     SKEEP1
+ 0747            CS     LP              C(A) = 37776
+ 0748            AD     SKEEP1          C(A) = 37776
+ 0749            AD     SKEEP2          C(A) = 37777
+ 0750            AD     SKEEP3          C(A) = -0
+ 0751            AD     SKEEP4          C(A) = +1
+ 0752            AD     SKEEP5          C(A) = +1
+ 0753  2         TC     -ONECHK -1
+R0754   DIVIDE INCREASING BIT POSITIONS BY 1/2  (13 DEVISIONS)
+ 0755   DV2      CAF    SCON1
+ 0756   DV2LOOP  TS     SKEEP2
+ 0757            EXTEND
+ 0758            DV     SCON1/2
+ 0759            TS     SKEEP3
+ 0760            AD     Q               Q = -0
+ 0761            TS     CYR
+ 0762            CS     CYR
+ 0763            AD     SKEEP2
+ 0764            AD     LP
+ 0765            TC     -ONECHK -1
+ 0766            CS     SKEEP3
+ 0767            AD     A
+ 0768            TS     A               OVERFLOW AT END OF DV2 SUBROUTINE
+ 0769            TC     +2
+ 0770            TC     DV3
+ 0771            XCH    SKEEP3
+ 0772            AD     SCON1
+ 0773  2         TC     DV2LOOP
+R0774   DIVIDE SEPARATE DECREASING BIT POSITIONS BY 37777 (14DEVISIONS)
+R0775   AFTER C(A) = BEFORE C(A) AND AFTER C(Q) = -C(A)
+ 0776   DV3      CS     SCON+MAX
+ 0777            TS     CYR             C(CYR) = 20000
+ 0778   DV3LOOP  CS     CYR
+ 0779            CS     A
+ 0780            EXTEND
+ 0781            DV     SCON+MAX
+ 0782            TS     SKEEP4
+ 0783            AD     Q
+ 0784            TC     -ZEROCHK
+ 0785            CCS    SKEEP4
+ 0786            CCS    A
+ 0787  2         TC     DV3LOOP
+R0788   DEVIDE 37776 BY 37776
+R0789   C(A) = +MAX FOR POSITIVE SIGN AND -MAX FOR NEGATIVE SIGN
+R0790   C(Q) = - ABSOLUTE VALUE OF DEVISOR = 40001
+ 0791   DV4++    CAF    DVCON1          37776
+ 0792            EXTEND
+ 0793            DV     DVCON1          C(A) = 37777    C(Q) = -37776
+ 0794            AD     Q
+ 0795            TC     -ONECHK -1
+ 0796            XCH    LP              C(LP) = +1
+ 0797            TS     SKEEP5
+ 0798            CS     DVCON1
+ 0799            TS     SKEEP4
+ 0800   DV4+-    CAF    DVCON1
+ 0801            EXTEND
+ 0802            DV     SKEEP4          C(A) = 40000  C(Q) = -37776
+ 0803            CS     A
+ 0804            AD     Q
+ 0805            TC     -ONECHK -1
+ 0806            AD     LP              C(LP) = 40000
+ 0807            AD     SKEEP5
+ 0808            TS     SKEEP5          -37776
+ 0809   DV4-+    CS     DVCON1
+ 0810            EXTEND
+ 0811            DV     DVCON1          C(A) = 40000  C(Q) = -37776
+ 0812            CS     A
+ 0813            AD     Q
+ 0814            TC     -ONECHK -1
+ 0815            CS     LP              C(LP) = 40001
+ 0816            AD     SKEEP5
+ 0817            TS     SKEEP5          -0
+ 0818   DV4--    CS     DVCON1
+ 0819            TS     SKEEP4
+ 0820            EXTEND
+ 0821            DV     SKEEP4          C(A) = 37777  C(Q) = -37776
+ 0822            AD     Q
+ 0823            TC     -ONECHK -1
+ 0824            CS     LP              C(LP) = +1
+ 0825            AD     SKEEP5
+ 0826            TC     -ONECHK
+ 0827            CCS    NEWJOB
+ 0828            TC     DUMEXIT
+ 0829            CCS    SKEEP7
+ 0830            TC     +2
+ 0831            TC     SOPTION3 -3
+ 0832            TS     SKEEP7
+ 0833  2         TC     DV1++           BACK TO DEVIDE LOOP
+ 0834            XCH    SCOUNT +2       ADD +1 TO SCOUNT +2 REGISTER AT THIS
+ 0835            AD     SCON1           POINT OF SELF-CHECK
+ 0836            XCH    SCOUNT +2
+ 0837   SOPTION3 CCS    SMODE
+ 0838            TC     MPNMBRS         STAY IN MPNMBRS LOOP
+ 0839            TC     SMODECHK
+ 0840            TC     SMODECHK        SHOULD NOT COME HERE
+ 0841  2         TC     SMODECHK        END OF SELF-CHECK. START AGAIN
+ 0843            BANK   1
+P0844  2COMPUTER ACTIVITY LIGHT (GREEN LIGHT) MAINTENANCE.
+ 0846   SMODECHK CCS    NEWJOB          SEE IF ITS TIME FOR A CHANGE.
+ 0847  2         TC     DUMEXIT
+ 0848   ADVAN    CCS    SMODE           SEE IF SELF-CHECK IS WANTED
+ 0849            TC     CCSCHK          YES PULSES ONLY
+ 0850            TC     SMODECHK
+ 0851            TC     CCSCHK          YES PULSES + SC + ERASABLE
+ 0852  2         TC     CCSCHK          YES ALL OF SELF-CHECK
+ 0858            BANK   11
+ 0859   DUMEXIT  XCH    Q
+ 0860            TS     QADRS           STORE RETURN ADDRESS
+ 0861            CS     TWO             TURN ON GREEN LIGHT (COMP ACT) AND
+ 0862            INHINT
+ 0863            MASK   OUT1            GO TO CHANG1.
+ 0864            AD     TWO
+ 0865            TS     OUT1
+ 0866  2         TC     CHANG1
+ 0867   DUMYJOB  CS     TWO             IDLING AGAIN- TURN OFF ACTIVITY LIGHT
+ 0868            INHINT
+ 0869            MASK   OUT1            LIGHT.
+ 0870            TS     OUT1
+ 0871            RELINT
+ 0872  2         TC     QADRS           BACK TO CHECKING COMPUTER
+ 0873   DUMMYJOB CAF    SMODECON        ENTER AT SMODECHK IF THERE IS A
+ 0874            TS     QADRS           FRESH START OR A GOJAM
+ 0875            TC     DUMYJOB
+ 0876   SMODECON ADRES  SMODECHK
+P0877  2C-RELAY TESTER
+ 0878   CCHK     CAF    BIT15
+ 0879            TS     DSPTAB +11D
+ 0880            TS     DSPTAB +12D
+ 0881  2         TS     DSPTAB +13D
+ 0882            CAF    BIT7
+ 0883            INHINT
+ 0884            TC     WAITLIST
+ 0885            CADR   CCHKA
+ 0886            CAF    LCCHKB
+ 0887  2         TC     JOBSLEEP
+ 0888   CCHKA    CAF    LCCHKB
+ 0889            TC     JOBWAKE
+ 0890  2         TC     TASKOVER
+ 0891   CCHKB    CAF    TWO
+ 0892  2         TS     MPAC
+ 0893            CAF    TEN
+ 0894  2CCHK0    TS     MPAC +1
+ 0895            INDEX  A
+ 0896            CAF    BIT11
+ 0897            AD     BIT15
+ 0898            INDEX  MPAC
+ 0899  2         TS     DSPTAB +11D
+ 0900            CAF    BIT8
+ 0901            INHINT
+ 0902            TC     WAITLIST
+ 0903  2         CADR   CCHK1
+ 0904            CAF    LCCHK2
+ 0905  2         TC     JOBSLEEP
+ 0906   CCHK1    CAF    LCCHK2
+ 0907            TC     JOBWAKE
+ 0908  2         TC     TASKOVER
+ 0909   CCHK2    XCH    IN3
+ 0910            CCS    IN3
+ 0911            TC     CCHKALM
+ 0912            TC     CCHKALM
+ 0913            TC     +2
+ 0914  2         TC     CCHKALM
+ 0915            CCS    MPAC +1
+ 0916  2         TC     CCHK0
+ 0917            CAF    BIT15           TURN OFF LAST RELAY.
+ 0918            INDEX  MPAC
+ 0919  2         TS     DSPTAB +11D
+ 0920            CCS    MPAC
+ 0921            TC     CCHK0 -2
+ 0922            CAF    BIT7
+ 0923            INHINT
+ 0924            TC     WAITLIST
+ 0925            CADR   CCHKC
+ 0926            CAF    LCCHKD
+ 0927  2         TC     JOBSLEEP
+ 0928   CCHKC    CAF    LCCHKD
+ 0929            TC     JOBWAKE
+ 0930  2         TC     TASKOVER
+ 0931   CCHKD    XCH    IN3
+ 0932            CCS    IN3
+ 0933            TC     +4
+ 0934            TC     +3
+ 0935            TC     CCHKALM
+ 0936  2         TC     CCHKALM
+ 0937            CAF    SEVEN
+ 0938            TS     MPAC +2
+ 0939            CAF    CCHKNV
+ 0940            TC     NVSUB
+ 0941            TC     PRENVBSY
+ 0942   TSTOUT   TC     FREEDSP
+ 0943            TC     NEWMODE         REVERT TO MODE 00.
+ 0944            OCT    0
+ 0945  2         TC     ENDOFJOB
+ 0946   CCHKALM  TC     ALARM
+ 0947            OCT    1104
+ 0948  2         TC     ENDOFJOB
+ 0949   LCCHKB   CADR   CCHKB
+ 0950   LCCHK2   CADR   CCHK2
+ 0951   CCHKNV   OCT    00101
+ 0952   LCCHKD   CADR   CCHKD
+P0953  2DSKY TESTER
+ 0954   DCHECK   CAF    TEN
+ 0955   DC9      TS     MPAC
+ 0956            INDEX  MPAC
+ 0957            CAF    DSKYCODE
+ 0958            TS     MPAC +1
+ 0959            INHINT
+ 0960            COM
+ 0961            TS     DSPTAB +9D
+ 0962            CS     MID5
+ 0963            MASK   MPAC +1
+ 0964            COM
+ 0965            TS     DSPTAB +7
+ 0966            CS     BIT11
+ 0967            MASK   MPAC +1
+ 0968            COM
+ 0969            TS     DSPTAB
+ 0970            TS     DSPTAB +1
+ 0971            TS     DSPTAB +2
+ 0972            TS     DSPTAB +3
+ 0973            TS     DSPTAB +4
+ 0974            TS     DSPTAB +5
+ 0975            TS     DSPTAB +6
+ 0976            TS     DSPTAB +8D
+ 0977            TS     DSPTAB +10D
+ 0978            CAF    DCNOUT
+ 0979            TS     NOUT
+ 0980   DCWAIT   CAF    BIT11           10.24 SEC WAIT
+ 0981            TC     WAITLIST
+ 0982            CADR   DC10
+ 0983            CAF    LDC11
+ 0984  2         TC     JOBSLEEP
+ 0985   DC10     CAF    LDC11
+ 0986            TC     JOBWAKE
+ 0987  2         TC     TASKOVER
+ 0988   DC11     CCS    MPAC
+ 0989  2         TC     DC9
+ 0990            TC     +2
+ 0991  2         TC     DC+
+ 0992            INHINT
+ 0993            CS     6K              - SIGNS.
+ 0994            TS     DSPTAB
+ 0995            TS     DSPTAB +3
+ 0996            TS     DSPTAB +5
+ 0997            TS     MPAC
+ 0998            CAF    THREE
+ 0999            TS     NOUT
+ 1000  2         TC     DCWAIT
+ 1001   DC+      INHINT
+ 1002            CS     6K
+ 1003            TS     DSPTAB +1
+ 1004            TS     DSPTAB +4
+ 1005            TS     DSPTAB +6
+ 1006            CS     BIT12
+ 1007            TS     DSPTAB
+ 1008            TS     DSPTAB +3
+ 1009            TS     DSPTAB +5
+ 1010            CAF    SIX
+ 1011            TS     NOUT
+ 1012            CAF    LOW5
+ 1013            TS     OUT1            TURNS ON DSKY LAMPS.
+ 1014            RELINT
+ 1015            CAF    BIT9
+ 1016   DC++     TS     MPAC            KEEP GLIT ON FOR A WHILE.
+ 1017            CAF    BIT11           LOOPS FOR ABOUT 40 MS.
+ 1018            CCS    A
+ 1019            TC     -1
+ 1020            CCS    NEWJOB
+ 1021            TC     CHANG1
+ 1022            CCS    MPAC
+ 1023            TC     DC++
+ 1024  2         TC     TSTOUT
+ 1025   DSKYCODE OCT    04000           BLANKS
+ 1026            OCT    07265           00
+ 1027            OCT    06143           11
+ 1028            OCT    07471           22
+ 1029            OCT    07573           33
+ 1030            OCT    06757           44
+ 1031            OCT    07736           55
+ 1032            OCT    07634           66
+ 1033            OCT    07163           77
+ 1034            OCT    07675           88
+ 1035            OCT    07777           99
+ 1036   DCNOUT   DEC    11
+ 1037   LDC11    CADR   DC11
+P1038  2ENGINE-ON PROGRAM    FOLLOWING A +XXX.XX SECOND DELAY OF LESS THAN 2 MIN
+ 1039  9UTES, ENGINE WILL REMAIN ON FOR +XXX.XX
+ 1040   BROKYPRG TC     GRABDSP
+ 1041            TC     PREGBSY
+ 1042            CAF    ONE
+ 1043            TS     CUSSANG
+ 1044            CAF    V21N24G
+ 1045            TC     NVSUB
+ 1046            TC     PRENVBSY
+ 1047            TC     ENDIDLE
+ 1048            TC     ENDOFJOB
+ 1049            TC     -5
+ 1050            XCH    DSPTEM1
+ 1051            XCH    LONGTIME
+ 1052            XCH    DSPTEM1 +1
+ 1053            XCH    LONGTIME +1
+ 1054            TS     PLOW
+ 1055            CCS    CUSSANG
+ 1056            TC     BROKYPRG +3
+ 1057            XCH    PLOW
+ 1058            TC     WAITLIST
+ 1059            CADR   ENGNON
+ 1060            TC     FREEDSP
+ 1061            TC     ENDOFJOB
+ 1062   ENGNON   CS     BIT13
+ 1063            MASK   OUT1
+ 1064            AD     BIT13
+ 1065            TS     OUT1
+ 1066            CAF    ENGOFLOC
+ 1067            TS     CALLCADR
+ 1068            TC     IBNKCALL
+ 1069            CADR   LONGCALL
+ 1070            TC     TASKOVER
+ 1071   ENGNOFF  CS     BIT13
+ 1072            MASK   OUT1
+ 1073            TS     OUT1
+ 1074            TC     TASKOVER
+ 1075   V21N24G  OCT    02124
+ 1076   ENGOFLOC CADR   ENGNOFF
 *       ENDOFJOB
