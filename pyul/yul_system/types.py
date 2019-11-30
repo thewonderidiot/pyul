@@ -84,11 +84,12 @@ class SwitchBit:
     SUPPRESS_SYMBOL   = Bit.BIT15
     SUPPRESS_OCTAL    = Bit.BIT16
     FREEZE            = Bit.BIT17
+    BEGINNING_OF_EQU2 = Bit.BIT17
     CONDISH_INACTIVE  = Bit.BIT18
     CONDISH_SYMBOL    = Bit.BIT19
     CONDISH_OCTAL     = Bit.BIT20
     CURRENT_INDEX     = Bit.BIT28
-    BEGINNING_OF_EQU  = Bit.BIT29
+    BEGINNING_OF_EQU1 = Bit.BIT29
     BAD_ASSEMBLY      = Bit.BIT34
     PRINT             = Bit.BIT44
 

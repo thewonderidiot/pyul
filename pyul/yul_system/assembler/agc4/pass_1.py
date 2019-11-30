@@ -1,5 +1,5 @@
 from yul_system.assembler.pass_1 import Pass1
-from yul_system.types import MemType, SwitchBit, Bit, HealthBit
+from yul_system.types import MemType, SwitchBit, Bit, HealthBit, FieldCodBit
 
 class AGC4Pass1(Pass1):
     def __init__(self, mon, yul):
@@ -199,23 +199,23 @@ class AGC4Pass1(Pass1):
                 return
 
             # Reset indicator, exit.
-            self._yul.switch &= ~SwitchBit.BEGINNING_OF_EQU
+            self._yul.switch &= ~SwitchBit.BEGINNING_OF_EQU1
             return
-
+        
         # Send equivalent of left operator.
         b18t24m = (Bit.BIT18 * 2 - 1) - (Bit.BIT25 * 2 - 1)
         popo.health |= (opcode << 21) & b18t24m
         # Indicate polish operator word.
         popo.health |= HealthBit.POLISH
 
-        two_polop_7 = (0o7 << 14)
+        two_polop_7 = (0o7 << 17)
 
         # Branch if not beginning of equation.
-        if not self._yul.switch & SwitchBit.BEGINNING_OF_EQU:
+        if not self._yul.switch & SwitchBit.BEGINNING_OF_EQU1:
             # Send indication to pass 2.
             popo.health |= two_polop_7
             # Set indicator and exit.
-            self._yul.switch |= SwitchBit.BEGINNING_OF_EQU
+            self._yul.switch |= SwitchBit.BEGINNING_OF_EQU1
             return
 
         # Decode address field.
@@ -225,15 +225,14 @@ class AGC4Pass1(Pass1):
             return
 
         # Branch if address field is not symbolic.
-        if self._field_cod != FieldCodBit.SYMBOLIC:
+        if self._field_cod[0] != FieldCodBit.SYMBOLIC:
             # Send indication to pass 2.
             popo.health |= two_polop_7
             # Set indicator and exit.
-            self._yul.switch |= SwitchBit.BEGINNING_OF_EQU
+            self._yul.switch |= SwitchBit.BEGINNING_OF_EQU1
             return
 
         # Branch if no modifier.
-        two_polop_17 = (0o17 << 14)
         if self._field_cod[1] != 0:
             # Indicate improper address field, exit.
             popo.health |= two_polop_17
@@ -241,11 +240,13 @@ class AGC4Pass1(Pass1):
 
         # FIXME: Handle detached asterisk?
 
+        adr_wd = adr_wd.strip()
+
         if adr_wd[-1] == '*':
             # Blank out attached asterisk.
             adr_wd = adr_wd[:-1]
 
-        two_polop_27 = (0o27 << 14)
+        two_polop_27 = (0o27 << 17)
         # Branch if more than six characters or polish operator not found.
         if len(adr_wd) > 6 or adr_wd not in self.op_thrs:
             # Indicate failure and exit.

@@ -923,7 +923,7 @@ class Pass2:
         # Branch if value not too negative or more than CAC3.
         if (adr_wd[0] < self._min_adres) or (adr_wd[0] >= 0x10000):
             # Cuss and exit when address value faulty.
-            self.cus_list[10].demand = True
+            self.cuss_list[10].demand = True
             self._address = ONES
             return
 

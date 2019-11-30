@@ -252,14 +252,92 @@ class AGC4Pass2(Pass2):
             self._word |= 0o47777
             return self.non_const(popo)
 
-        # FIXME: POL STORE
+        additive = 1
 
+        # Go fish for ",1" or ",2"
+        rite_norm = (popo.address_1() + popo.address_2()).rstrip()
+        if len(rite_norm) >= 2 and rite_norm[-1] in '12' and rite_norm[-2] == ',':
+            # Indicate indexing and remove comma.
+            additive |= Bit.BIT1
+            rite_norm = rite_norm[:-2]
+        else:
+            additive = 1
+
+        if spec_cond != 0o11:
+            return self.polish_ad(popo, additive)
+
+        # Add 32000 (direct) or 34000 (indexed)
+        additive += 0o32000
+        if additive & Bit.BIT1:
+            additive += 0o2000
+
+        # Set max, check op word count if needed
+        self._max_adres = 0o1776
+        return self.op_ck_stor(popo, additive)
+
+    # Inactive address check and limit setup for polish addresses.
+    def polish_ad(self, popo, additive):
+        # Branch if no minus in col 17.
+        if popo.card[16] == '-':
+            # Cuss minus if first address of equation.
+            if self._yul.switch & SwitchBit.BEGINNING_OF_EQU2:
+                self.cuss_list[66].demand = True
+
+            # Minimum magnitude is one if minus.
+            self._min_adres = 1
+
+        # Branch if not first address of equation.
+        if self._yul.switch & SwitchBit.BEGINNING_OF_EQU2:
+            # Branch if last operator word count ok.
+            if self._op_count != 0:
+                self.cuss_list[70].demand = True
+
+            # Reset permission bit for minus polads.
+            self._yul.switch &= ~SwitchBit.BEGINNING_OF_EQU2
+
+        # Test for inactive address if unindexed.
+        if additive <= Bit.BIT1:
+            # Maximum value for polish unindexed.
+            self._max_adres = 0o77776
+            rite_norm = (popo.address_1() + popo.address_2()).rstrip()
+            if rite_norm == '':
+                # Polad w/ bl adr fld may be blank card.
+                self.cuss_list[34].demand = True
+
+            if rite_norm == '-':
+                self._word |= 0o77777
+                return self.gud_basic(popo)
+
+            self._min_adres = -0o77777
+            return self.max_ad_set(popo, additive)
+
+        # Maximum augmenter for polish indexed.
+        self._max_adres = 0o57776
+        return self.pol_sign_t(popo, additive)
+
+    def pol_sign_t(self, popo, additive):
+        # Force range error if minus sign here.
+        if popo.card[16] == '-':
+            self._min_adres = 0o72000
+        return self.max_ad_set(popo, additive)
+
+    def op_ck_stor(self, popo, additive):
+        # Exit if not beginning of equation.
+        if self._yul.switch & SwitchBit.BEGINNING_OF_EQU2:
+            if self._op_count <= 0:
+                # Cuss bad operator word count.
+                self.cuss_list[70].demand = True
+
+        return self.pol_sign_t(popo, additive)
 
     def non_const(self, popo, set_min=True):
         if set_min:
             self._min_adres = -0o7777
         self._max_adres = 0o71777
 
+        return self.max_ad_set(popo, 0)
+
+    def max_ad_set(self, popo, additive):
         # Translate address field.
         self.proc_adr(popo)
 
@@ -275,13 +353,7 @@ class AGC4Pass2(Pass2):
             return self.bad_basic(popo)
 
         if self._address > self._max_adres:
-            # Print bad-size address if possible.
-            if self._address < 0o72000:
-                self.cuss_list[35].demand = True
-                self.prb_adres(self._address)
-            # Cuss range error in address value.
-            self.cuss_list[10].demand = True
-            return self.bad_basic(popo)
+            return self.rng_error(popo)
 
         # Branch if no constant flag.
         if self._word <= Bit.BIT17:
@@ -301,7 +373,35 @@ class AGC4Pass2(Pass2):
         if spec_cond >= 0o12:
             return self.basic_adr(popo)
 
-        # FIXME: PO STOR AD
+        if not ((self._address <= 0o1777) or # Interpretive may address erasable ....
+                ((additive >= Bit.BIT1) and (self._address <= 0o17777)) or # With some latitude if indexed....
+                (self._address > 0o37777)): # ... or upper half of switched banks.
+            return self.range_error(popo)
+
+        # Use additive on polish or store address.
+        self._word &= ~0o37777
+        self._word |= (self._address + additive) & 0o37777
+
+        if additive >= Bit.BIT1:
+            # Use 2 x address if indexed.
+            self._word += self._address
+
+        # Branch if no minus sign in column 17.
+        if popo.card[16] == '-':
+            # Since interpreter does not ccs these.
+            self._word -= 2
+
+        return self.gud_basic(popo)
+            
+
+    def rng_error(self, popo):
+        # Print bad-size address if possible.
+        if self._address < 0o72000:
+            self.cuss_list[35].demand = True
+            self.prb_adres(self._address)
+        # Cuss range error in address value.
+        self.cuss_list[10].demand = True
+        return self.bad_basic(popo)
 
 
     # Specific processing for basic instructions.
@@ -360,7 +460,9 @@ class AGC4Pass2(Pass2):
     def basic_adr(self, popo):
         if self._address >= 0:
             return self.basic_sba(popo)
-        # FIXME
+
+        # Add in negative address and go to print.
+        return self.gud_basic(popo, adr_wd=self._address)
 
     def basic_sba(self, popo):
         # Branch if address not in a bank.
@@ -498,7 +600,142 @@ class AGC4Pass2(Pass2):
             cuss.msg = cuss.msg[:8] + ('=%02o,%04o' % (bank_no, address))
 
     def polish_op(self, popo):
-        pass
+        # Set up 7-bit left operator.
+        self._word = (popo.health >> 17) & 0o37600
+
+        # Revoke permission for minus addresses.
+        self._yul.switch |= SwitchBit.BEGINNING_OF_EQU2
+        
+        # Branch on type of first operator.
+        op_type = (popo.health >> 24) & 0x3
+        if op_type == 0:
+            # Move index bit to general operator.
+            if popo.health & Bit.BIT11:
+                self._word |= Bit.BIT40
+        elif op_type == 1:
+            # Cuss indexing of miscellaneous operator.
+            if popo.health & Bit.BIT11:
+                self.cuss_list[67].demand = True
+        elif op_type == 3:
+            # Move index bit to unary operator.
+            if popo.health & Bit.BIT11:
+                self._word |= Bit.BIT39
+
+        # Branch unless second half is op word ct.
+        sec_polop = (popo.health >> 17) & 0o177
+        if sec_polop == 7:
+            # Translate address field.
+            self.proc_adr(popo)
+            self._op_count = self._address
+
+            # Maybe cuss "D" error.
+            if popo.health & Bit.BIT9:
+                self.cuss_list[1].demand = True
+
+            # Branch if meaningless or atrocious adr.
+            if self._address >= ONES:
+                return self.two_poles(popo, bad=True)
+
+            # Branch if count is 127 or less.
+            if self._address <= 0o177:
+                self._word |= self._address
+                return self.sel_star_2(popo)
+
+            # Branch if address is unprintable.
+            if self._address < 0o72000:
+                # Print oversize address.
+                self.cuss_list[35].demand = True
+                self.prb_adres(self._address)
+
+            # Guarantee op count cuss.
+            self._op_count = -1
+
+            # Cuss range error in address value.
+            self.cuss_list[10].demand = True
+            return self.two_poles(popo, bad=True)
+
+        # Branch if op count might still make it.
+        if self._op_count != 0:
+            self._op_count -= 1
+        else:
+            # Guarantee bad count if twas too small.
+            self._op_count = ONES
+
+        if sec_polop == 0o17:
+            # Cuss meaningless address field.
+            self.cuss_list[8].demand = True
+            return self.two_poles(popo, bad=True)
+
+        if sec_polop == 0o27:
+            # Cuss unpolish address field symbol.
+            self.cuss_list[64].demand = True
+            return self.two_poles(popo, bad=True)
+
+        return self.two_poles(popo)
+
+    # General processing of right operator.
+    def two_poles(self, popo, bad=False):
+        if bad:
+            # Indicate badness of right operator.
+            self._word |= Bit.BIT1
+
+        # Set up 7-bit right operator.
+        self._word |= ((popo.health >> 17) & 0o177)
+
+        # Right-normalize address field and skip.
+        addr = (popo.address_1() + popo.address_2()).rstrip()
+
+        # Branch if operator 2 is not indexed.
+        if len(addr) > 0 and addr[-1] == '*':
+            # Branch on type of second operator
+            sec_type = self._word & 3
+            if sec_type == 0:
+                # Apply index bit to general operator
+                self._word |= 2
+            elif sec_type == 1:
+                # Cuss indexing of miscellaneous operator
+                self.cuss_list[68].demand = True
+            elif sec_type == 3:
+                # Apply index bit to unary operator
+                self._word |= 4
+
+        return self.sel_star_2(popo)
+
+    def sel_star_2(self, popo):
+        # Add one and complement.
+        word = ((self._word & 0o77777) + 1) ^ 0o77777
+        self._word &= ~0o77777
+        self._word |= word
+
+        # Br if both ops = 177 (very queer).
+        if word <= 0o37777:
+            # Cuss overflow of operator word.
+            self.cuss_list[65].demand = True
+            
+            # Set to plot out word like constant.
+            self._word = Bit.BIT1
+            return self.bad_basic(popo)
+
+        # Complement word if "-" in col 17.
+        if popo.card[16] == '-':
+            self._word ^= 0o77777
+
+        # Print left operator.
+        self._line.text = self._line.text[:39] + ('%03o' % ((self._word >> 6) & 0o777)) + self._line.text[42:]
+
+        # Branch if 2nd operator is bad.
+        if self._word >= Bit.BIT1:
+            # Blot out right operator, join main proc.
+            self._line.text = self._line.text[:42] + '■■' + self._line.text[44:]
+            self._word = BAD_WORD
+            return self.bc_check(popo)
+
+        # Print rest of operator word.
+        self._line.text = self._line.text[:42] + ('%02o' % (self._word & 0o77)) + self._line.text[44:]
+
+        # Plant flag of poland, join main proc.
+        self._word |= (0x5 << 7*6)
+        return self.bc_check(popo)
 
     # Subroutine in pass 2 for AGC4 to set in print a right-hand location for such as setloc.
     # Puts in the bank indicator, if any. Blots out an invalid location.
