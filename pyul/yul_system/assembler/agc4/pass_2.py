@@ -659,7 +659,7 @@ class AGC4Pass2(Pass2):
             self._op_count -= 1
         else:
             # Guarantee bad count if twas too small.
-            self._op_count = ONES
+            self._op_count = -1
 
         if sec_polop == 0o17:
             # Cuss meaningless address field.
