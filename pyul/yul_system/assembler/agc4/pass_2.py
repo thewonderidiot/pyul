@@ -264,7 +264,7 @@ class AGC4Pass2(Pass2):
             additive = 1
 
         if spec_cond != 0o11:
-            return self.polish_ad(popo, additive)
+            return self.polish_ad(popo, rite_norm, additive)
 
         # Add 32000 (direct) or 34000 (indexed)
         additive += 0o32000
@@ -273,10 +273,10 @@ class AGC4Pass2(Pass2):
 
         # Set max, check op word count if needed
         self._max_adres = 0o1776
-        return self.op_ck_stor(popo, additive)
+        return self.op_ck_stor(popo, rite_norm, additive)
 
     # Inactive address check and limit setup for polish addresses.
-    def polish_ad(self, popo, additive):
+    def polish_ad(self, popo, rite_norm, additive):
         # Branch if no minus in col 17.
         if popo.card[16] == '-':
             # Cuss minus if first address of equation.
@@ -299,7 +299,6 @@ class AGC4Pass2(Pass2):
         if additive <= Bit.BIT1:
             # Maximum value for polish unindexed.
             self._max_adres = 0o77776
-            rite_norm = (popo.address_1() + popo.address_2()).rstrip()
             if rite_norm == '':
                 # Polad w/ bl adr fld may be blank card.
                 self.cuss_list[34].demand = True
@@ -309,37 +308,37 @@ class AGC4Pass2(Pass2):
                 return self.gud_basic(popo)
 
             self._min_adres = -0o77777
-            return self.max_ad_set(popo, additive)
+            return self.max_ad_set(popo, rite_norm, additive)
 
         # Maximum augmenter for polish indexed.
         self._max_adres = 0o57776
-        return self.pol_sign_t(popo, additive)
+        return self.pol_sign_t(popo, rite_norm, additive)
 
-    def pol_sign_t(self, popo, additive):
+    def pol_sign_t(self, popo, rite_norm, additive):
         # Force range error if minus sign here.
         if popo.card[16] == '-':
             self._min_adres = 0o72000
-        return self.max_ad_set(popo, additive)
+        return self.max_ad_set(popo, rite_norm, additive)
 
-    def op_ck_stor(self, popo, additive):
+    def op_ck_stor(self, popo, rite_norm, additive):
         # Exit if not beginning of equation.
         if self._yul.switch & SwitchBit.BEGINNING_OF_EQU2:
             if self._op_count <= 0:
                 # Cuss bad operator word count.
                 self.cuss_list[70].demand = True
 
-        return self.pol_sign_t(popo, additive)
+        return self.pol_sign_t(popo, rite_norm, additive)
 
     def non_const(self, popo, set_min=True):
         if set_min:
             self._min_adres = -0o7777
         self._max_adres = 0o71777
 
-        return self.max_ad_set(popo, 0)
+        return self.max_ad_set(popo, None, 0)
 
-    def max_ad_set(self, popo, additive):
+    def max_ad_set(self, popo, rite_norm, additive):
         # Translate address field.
-        self.proc_adr(popo)
+        self.proc_adr(popo, rite_norm)
 
         # Restore min adr value.
         self._min_adres = 0
@@ -380,7 +379,7 @@ class AGC4Pass2(Pass2):
 
         # Use additive on polish or store address.
         self._word &= ~0o37777
-        self._word |= (self._address + additive) & 0o37777
+        self._word |= (abs(self._address) + abs(additive)) & 0o37777
 
         if additive >= Bit.BIT1:
             # Use 2 x address if indexed.

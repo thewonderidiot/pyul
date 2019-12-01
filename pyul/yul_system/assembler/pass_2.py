@@ -874,9 +874,9 @@ class Pass2:
         sym_keys = list(self._yul.sym_thr.keys())
         return self._yul.sym_thr[sym_keys[sym_addr-1]]
 
-    def proc_adr(self, popo):
+    def proc_adr(self, popo, temp_adr=None):
         # Form subfields from address field.
-        adr_wd = self.adr_field(popo)
+        adr_wd = self.adr_field(popo, temp_adr)
 
         if self._field_cod[0] is None:
             # Cuss and exit on meaningless field.
@@ -1333,7 +1333,7 @@ class Pass2:
     #  _field_cod[1] indicates signed num    Modifier given in adr_wd[1]
     #  _field_cod[0] indicates symbolic      Address symbol in adr_wd[0]
     #  _field_cod[0] indicates S or US num   Value given in adr_wd[0]
-    def adr_field(self, popo):
+    def adr_field(self, popo, temp_adr=None):
         adr_wd = [None, None]
 
         if popo.address_1().isspace() and popo.address_2().isspace():
@@ -1341,7 +1341,10 @@ class Pass2:
             self._field_cod[0] = 0
             return adr_wd
 
-        afield = popo.address_1() + popo.address_2() + ' '*8
+        if temp_adr is None:
+            afield = popo.address_1() + popo.address_2() + ' '*8
+        else:
+            afield = ' '*(16-len(temp_adr)) + temp_adr + ' '*8
 
         # Initially assume no modifier.
         self._field_cod[1] = 0
