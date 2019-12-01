@@ -26,6 +26,7 @@ class Pass2:
         self._n_err_lins = 0
         self._min_adres = 0
         self._field_cod = [None, None]
+        self._sypt_file = None
         self._head = ' '
         self._line = Line()
         self._old_line = Line()
@@ -184,8 +185,31 @@ class Pass2:
     def end_pass_2(self):
         pass
 
+    # Procedure in pass 2 for "END OF" cards.
     def end_of(self, popo):
-        pass
+        # Branch if not for new and main program
+        if popo.card[8] == 'N':
+            self._line.text = '    END OF ' + popo.card[8:68] + ' '*49
+            # Change "NEW" to "REVISION 0 OF".
+            popo.card = popo.card[:8] + 'REVISION 0 OF' + popo.card[11:59] + popo.card[69:]
+        else:
+            self._line.text = '  END OF ' + popo.card[8:68] + ' '*51
+
+        # Force space 3 after preceding line.
+        self._old_line.spacing = 3
+
+        # FIXME: Handle subroutines
+
+        # FIXME: Handle more elaborate printing cases
+        self.print_lin()
+
+        if self._sypt_file is not None:
+            self.send_sypt(popo.card)
+            self._sypt_file.close()
+            self._sypt_file = None
+
+        # Leave log-card mode
+        self._user_page = 0
 
     def modify(self, popo):
         pass
@@ -209,7 +233,7 @@ class Pass2:
         # Signal that last was remarks, print.
         self._yul.switch |= SwitchBit.LAST_REM
         self.print_lin()
-        self.send_sypt(popo)
+        self.send_sypt(popo.card)
 
     def disaster(self, popo):
         pass
@@ -778,7 +802,7 @@ class Pass2:
             self._old_line.text = self._old_line.text[:8] + ref_str + self._old_line.text[16:]
 
         # Release card for tape and go to cuss.
-        self.send_sypt(popo)
+        self.send_sypt(popo.card)
         return self.cusser()
 
     # Routine in pass 2 to finish processing a word (either an instruction or constant). Releases the line
@@ -1581,7 +1605,8 @@ class Pass2:
         cuss.msg = cuss.msg[0] + ('%-8s' % common) + cuss.msg[9:]
 
     def send_sypt(self, card):
-        pass
+        if self._sypt_file is not None:
+            self._sypt_file.write(card + '\n')
 
     def cusser(self):
         line_cussed = False
@@ -1999,7 +2024,12 @@ class Pass2:
     # delete list and refurbish the lists of threads to subsidiary subroutines.
     def real_assy(self):
         # FIXME: handle deletes?
-        # FIXME: create files, update metadata
+
+        self._sypt_file = self._yul.yulprogs.create_sypt(self._yul.comp_name,
+                                                         self._yul.prog_name,
+                                                         self._yul.revno,
+                                                         sylt=bool(self._yul.switch & SwitchBit.SUBROUTINE))
+
         return self.inish_p2()
 
     # Initializing procedure for pass 2.

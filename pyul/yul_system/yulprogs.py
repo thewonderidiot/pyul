@@ -146,3 +146,14 @@ class Yulprogs:
             auth_data['PROGRAMS'].append(prog_entry)
 
         self.update_auth(auth_name, auth_data)
+
+    def create_sypt(self, comp_name, prog_name, revno, sylt=False):
+        tape = 'SYLT' if sylt else 'SYPT'
+        comp_dir = os.path.join(self._tape, tape, comp_name)
+        sypt_fn = os.path.join(comp_dir, '%s.R%u' % (prog_name, revno))
+
+        if not os.path.isdir(comp_dir):
+            os.mkdir(comp_dir)
+
+        sypt_file = open(sypt_fn, 'w')
+        return sypt_file

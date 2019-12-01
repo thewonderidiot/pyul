@@ -25,11 +25,11 @@ class Yul:
         self._no_revise = False
         self._non_wise = 0
         self._invisible_director = False
-        self._yulprogs = None
+        self.yulprogs = None
         self.switch = 0
-        self._revno = 0
+        self.revno = 0
         self._auth_name = ''
-        self._prog_name = ''
+        self.prog_name = ''
         self._new_auth_name = ''
         self._new_prog_name = ''
         self._tape = 'YULPROGS'
@@ -135,7 +135,7 @@ class Yul:
             # Otherwise, use tape named.
             self._tape = sentence[1]
 
-        self._yulprogs = Yulprogs(self._tape)
+        self.yulprogs = Yulprogs(self._tape)
 
         # Append "A" or "B" to log number.
         self._yul_log_a = str(self._mon.get_log_no()) + self._mon.h1800_ab_sw
@@ -264,13 +264,13 @@ class Yul:
         self.yul_typer('  NEW COMPUTER: %s' % sentence[word])
 
         # Cuss and abort if conflict.
-        old_comp = self._yulprogs.find_comp(computer)
+        old_comp = self.yulprogs.find_comp(computer)
         if old_comp is not None:
             self._mon.mon_typer('CONFLICT WITH EXISTING COMPUTER NAME')
             self.typ_abort()
 
         # Form computer name entry.
-        self._yulprogs.add_comp(computer)
+        self.yulprogs.add_comp(computer)
         self.accept_m2()
 
     def rmov_comp(self, card, sentence):
@@ -295,14 +295,14 @@ class Yul:
         self._mon.mon_typer('REMOVING COMPUTER NAME: %s' % sentence[word])
 
         # Look up computer name.
-        old_comp = self._yulprogs.find_comp(comp_name)
+        old_comp = self.yulprogs.find_comp(comp_name)
         if old_comp is None:
             # Cuss and abort if no such computer.
             self._mon.mon_typer('COMPUTER NAME NOT RECOGNIZED.')
             self.typ_abort()
 
         # Branch if computer has no programs.
-        progs = self._yulprogs.list_progs(comp_name)
+        progs = self.yulprogs.list_progs(comp_name)
         if len(progs) > 0:
             # Cuss about removing computer in use. Tell him to check
             # the directory listing.
@@ -311,13 +311,13 @@ class Yul:
             self.typ_abort()
 
         # Checking on software sharing.
-        other_comp_names = self._yulprogs.list_comps()
+        other_comp_names = self.yulprogs.list_comps()
         shared_passes = 0
         for other_name in other_comp_names:
             if other_name == comp_name:
                 continue
 
-            other_comp = self._yulprogs.find_comp(other_name)
+            other_comp = self.yulprogs.find_comp(other_name)
             for p in ('PASS 1', 'PASS 2', 'PASS 3', 'MANUFACTURING'):
                 if other_comp[p]['SHARES'] == comp_name:
                     # Type out who needs which software.
@@ -329,7 +329,7 @@ class Yul:
             self.typ_abort()
 
         # Remove the computer.
-        self._yulprogs.remove_comp(comp_name)
+        self.yulprogs.remove_comp(comp_name)
         self.accept_m2()
 
     def message(self, card, sentence):
@@ -367,7 +367,7 @@ class Yul:
             head_msg = objc_msg
 
         # Omit computer name from "END OF" line.
-        self.old_line = head_msg + self._yul_date
+        self.old_line = '%-60s%12s' % (head_msg, self._yul_date)
 
         head_comp_msg = '%s: %s' % (self.comp_name, head_msg)
         head_comp_msg = '%-66s' % head_comp_msg
@@ -375,7 +375,7 @@ class Yul:
         self.page_head = self.page_head[:23] + head_comp_msg + self.page_head[89:]
 
         # Seek computer name in directory.
-        comp = self._yulprogs.find_comp(self.comp_name)
+        comp = self.yulprogs.find_comp(self.comp_name)
         if comp is None:
             # Cuss and exit if not there.
             self.yul_typer('COMPUTER NAME NOT RECOGNIZED.')
@@ -412,7 +412,7 @@ class Yul:
             self.known_psr()
 
             # Recover new progname, force revision.
-            self._prog_name = self._new_prog_name
+            self.prog_name = self._new_prog_name
             self.switch |= SwitchBit.REVISION
 
             # Recoer author name of version.
@@ -607,7 +607,7 @@ class Yul:
         # Subroutine in pass 0 to check a request for action on a known program or subroutine by
         # verifying the computer name, program or subroutine name, revision number, and author name
         # are mutually consistent.
-        comp = self._yulprogs.find_comp(self.comp_name)
+        comp = self.yulprogs.find_comp(self.comp_name)
         if comp is None:
             # Cuss and abort if no such computer.
             self.yul_typer('COMPUTER NAME NOT RECOGNIZED.')
@@ -615,12 +615,12 @@ class Yul:
 
         # Determine expected type and revno.
         expected_type = 'SUBROUTINE' if (self.switch & SwitchBit.SUBROUTINE) else 'PROGRAM'
-        expected_rev = self._revno
+        expected_rev = self.revno
         if (self.switch & SwitchBit.REVISION) and not (self.switch & (SwitchBit.VERSION | SwitchBit.REPRINT)):
             expected_rev -= 1
 
         # See if name exists as either a prog or sr.
-        prog = self._yulprogs.find_prog(self.comp_name, self._prog_name)
+        prog = self.yulprogs.find_prog(self.comp_name, self.prog_name)
         if prog is None or prog['TYPE'] != expected_type:
             if expected_type == 'SUBROUTINE':
                 # Cuss unrecognized subro name, abort.
@@ -647,7 +647,7 @@ class Yul:
 
     def new_prsub(self):
         # Seek program/subro name in directory.
-        prog = self._yulprogs.find_prog(self.comp_name, self._prog_name)
+        prog = self.yulprogs.find_prog(self.comp_name, self.prog_name)
         if prog is not None:
             # Cuss conflict and exit if found.
             self.yul_typer('CONFLICT WITH EXISTING PROG/SUB NAME.')
@@ -661,14 +661,14 @@ class Yul:
             prog_type = 'PROGRAM'
 
         # Enter the name of a new program or subroutine in the directory.
-        self._yulprogs.add_prog(self.comp_name, prog_type, self._prog_name, self._auth_name, self._yul_date)
+        self.yulprogs.add_prog(self.comp_name, prog_type, self.prog_name, self._auth_name, self._yul_date)
 
         # Seek author name in directory.
-        auth = self._yulprogs.find_auth(self._auth_name)
+        auth = self.yulprogs.find_auth(self._auth_name)
         if auth is None:
             # Include it now if not found.
-            self._yulprogs.add_auth(self._auth_name)
-            self._yulprogs.incr_auth(self._auth_name, self.comp_name, self._prog_name)
+            self.yulprogs.add_auth(self._auth_name)
+            self.yulprogs.incr_auth(self._auth_name, self.comp_name, self.prog_name)
 
     def task_objc(self, card, sentence, word):
         # Some initializations.
@@ -782,7 +782,7 @@ class Yul:
             self.rejec_dir(card)
 
         # Store name and exit.
-        self._prog_name = sentence[word]
+        self.prog_name = sentence[word]
 
         return word + 1
 
@@ -796,7 +796,7 @@ class Yul:
 
         if sentence[word] == 'NEW':
             # Revision number = 0 if new.
-            self._revno = 0
+            self.revno = 0
 
             # Step up word index and exit.
             return word + 1
@@ -826,7 +826,7 @@ class Yul:
             self.dcod_auth(card, sentence, word)
 
             # Save these quantities in parsed form.
-            self._new_prog_name = self._prog_name
+            self._new_prog_name = self.prog_name
             self._new_auth_name = self._auth_name
 
             # Cussabort if subdirector "FROM" missing.
@@ -878,7 +878,7 @@ class Yul:
             self.switch |= SwitchBit.REVISION
 
             # Fetch decimal revision number and exit.
-            self._revno = revision
+            self.revno = revision
             return word + 1
 
         else:
@@ -970,7 +970,7 @@ class Yul:
         self.yul_typer(stats_msg, end='')
 
         # Find computer name in directory.
-        comp = self._yulprogs.find_comp(comp_name)
+        comp = self.yulprogs.find_comp(comp_name)
         if comp is None:
             # Cuss and abort if nonexistent computer.
             self._mon.mon_typer('COMPUTER NAME NOT RECOGNIZED.')
@@ -994,7 +994,7 @@ class Yul:
 
                 # Signal availability, exit.
                 comp[pass_name]['AVAILABLE'] = True
-                self._yulprogs.update_comp(comp_name, comp)
+                self.yulprogs.update_comp(comp_name, comp)
                 self.accept_m2()
 
             elif sentence[word] == 'CHECKED':
@@ -1018,7 +1018,7 @@ class Yul:
 
                 # Signal checkout, exit.
                 comp[pass_name]['CHECKED OUT'] = True
-                self._yulprogs.update_comp(comp_name, comp)
+                self.yulprogs.update_comp(comp_name, comp)
                 self.accept_m2()
 
             elif sentence[word] == 'OBSOLETE':
@@ -1033,7 +1033,7 @@ class Yul:
                 # Erase avail and chko bits, exit.
                 comp[pass_name]['AVAILABLE'] = False
                 comp[pass_name]['CHECKED OUT'] = False
-                self._yulprogs.update_comp(comp_name, comp)
+                self.yulprogs.update_comp(comp_name, comp)
                 self.accept_m2()
 
             else:
@@ -1060,7 +1060,7 @@ class Yul:
             self.yul_typer(stats_msg, end='')
 
             # Find second computer.
-            other_comp = self._yulprogs.find_comp(other_comp_name)
+            other_comp = self.yulprogs.find_comp(other_comp_name)
             if other_comp is None:
                 # Cuss and abort if no such computer.
                 self.yul_typer('COMPUTER NAME NOT RECOGNIZED.')
@@ -1077,7 +1077,7 @@ class Yul:
                 comp[pass_name]['AVAILABLE'] = other_comp[pass_name]['AVAILABLE']
                 comp[pass_name]['CHECKED OUT'] = other_comp[pass_name]['CHECKED OUT']
 
-            self._yulprogs.update_comp(comp_name, comp)
+            self.yulprogs.update_comp(comp_name, comp)
 
             self._mon.mon_typer('STATUS: ')
             if not comp[pass_name]['AVAILABLE']:
