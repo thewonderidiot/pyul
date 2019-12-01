@@ -1346,6 +1346,8 @@ class Pass2:
         else:
             afield = ' '*(16-len(temp_adr)) + temp_adr + ' '*8
 
+        orig_afield = afield
+
         # Initially assume no modifier.
         self._field_cod[1] = 0
 
@@ -1408,7 +1410,7 @@ class Pass2:
 
         if also_main is None:
             # Set up putative symbolic subfield.
-            afield = popo.address_1() + popo.address_2() + ' '*8
+            afield = orig_afield
         else:
             # Recover non-modifier part of adr field.
             afield = also_main + ' '*8

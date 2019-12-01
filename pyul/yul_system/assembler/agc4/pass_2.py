@@ -258,6 +258,8 @@ class AGC4Pass2(Pass2):
         rite_norm = (popo.address_1() + popo.address_2()).rstrip()
         if len(rite_norm) >= 2 and rite_norm[-1] in '12' and rite_norm[-2] == ',':
             # Indicate indexing and remove comma.
+            if rite_norm[-1] == '2':
+                additive = 2
             additive |= Bit.BIT1
             rite_norm = rite_norm[:-2]
         else:
@@ -323,10 +325,11 @@ class AGC4Pass2(Pass2):
     def op_ck_stor(self, popo, rite_norm, additive):
         # Exit if not beginning of equation.
         if self._yul.switch & SwitchBit.BEGINNING_OF_EQU2:
-            if self._op_count <= 0:
+            if self._op_count > 0:
                 # Cuss bad operator word count.
                 self.cuss_list[70].demand = True
 
+        self._yul.switch &= ~SwitchBit.BEGINNING_OF_EQU2
         return self.pol_sign_t(popo, rite_norm, additive)
 
     def non_const(self, popo, set_min=True):
