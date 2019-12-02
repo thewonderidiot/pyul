@@ -144,6 +144,9 @@ class Pass1:
 
         self._mon.mon_typer('END YUL PASS 1')
 
+        # Clear out substrand (paragraph) table
+        self._yul.substrab = [False]*256
+
         # FIXME: do segment things
 
         try:

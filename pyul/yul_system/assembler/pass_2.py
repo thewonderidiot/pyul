@@ -12,6 +12,13 @@ class Line:
         self.spacing = spacing
         self.text = text
 
+class WordRecord:
+    def __init__(self, page_no):
+        self.page = page_no
+        self.fwa = 0
+        self.lwa = 0
+        self.words = []
+
 class Pass2:
     def __init__(self, mon, yul, adr_limit, m_typ_tab):
         self._mon = mon
@@ -25,6 +32,9 @@ class Pass2:
         self._user_page = 0
         self._n_err_lins = 0
         self._min_adres = 0
+        self._sent_loc = 0
+        self._wd_buff = None
+        self._wd_recs = []
         self._field_cod = [None, None]
         self._sypt_file = None
         self._head = ' '
@@ -183,7 +193,9 @@ class Pass2:
         own_proc(popo)
 
     def end_pass_2(self):
-        pass
+        # Finish and write last word record.
+        self._wd_buff.lwa = self._sent_loc - 1
+        self._wd_recs.append(self._wd_buff)
 
     # Procedure in pass 2 for "END OF" cards.
     def end_of(self, popo):
@@ -813,7 +825,7 @@ class Pass2:
         # Release line for printing.
         self.print_lin()
 
-        self.send_word(self._word)
+        self.send_word(popo, self._word)
 
         # Branch if there is no location symbol or loc sym not in symbol table.
         if not popo.health & Bit.BIT8 or loc_symbol is None:
@@ -869,12 +881,14 @@ class Pass2:
 
         return self.no_loc_sym(popo, symbol, print_line)
 
-    def send_word(self, word):
+    def send_word(self, popo, word):
         # Immediate exit for bad location.
         if self._location >= ONES:
             return
 
-        # FIXME: Set up substrand use bits and mark substrand bit
+        # Choose from 256 substrand use bits.
+        substrand = self._location // 256
+        self._yul.substrab[substrand] = True
 
         if word != BAD_WORD:
             # Parity computation for good word only.
@@ -887,8 +901,48 @@ class Pass2:
             # Set parity bit in print.
             self._old_line.text = self._old_line.text[:45] + ('%o' % parity) + self._old_line.text[46:]
 
-            # Branch if word is a constant.
-            # FIXME
+            if word < Bit.BIT1:
+                # Set up zero if no internal flag.
+                common = 0
+            else:
+                # Branch if word is a constant.
+                if word & Bit.BIT2:
+                    # Set up external constant flag.
+                    common = self.cons_flag
+                elif word & Bit.BIT3:
+                    # Set up external interpretive flag.
+                    common = self.pret_flag
+                else:
+                    common = self.misc_flag
+
+            # Put constant flag on negative instructn.
+            if common in (0, self.misc_flag) and popo.card[16] == '-':
+                common = self.cons_flag
+
+            # Apply chosen external flag to word.
+            word &= ~self.flag_mask
+            word |= common & self.flag_mask
+
+        self._sent_loc += 1
+
+        old_page = self._page_no
+        if self._yul.switch & SwitchBit.OWE_HEADS:
+            old_page += 1
+
+        if self._wd_buff is None:
+            self.change_fwa(old_page)
+
+        if (old_page != self._wd_buff.page) or (self._sent_loc != self._location):
+            self._wd_buff.lwa = self._sent_loc - 1
+            self._wd_recs.append(self._wd_buff)
+            self.change_fwa(old_page)
+
+        self._wd_buff.words.append(word)
+
+    def change_fwa(self, old_page):
+        self._wd_buff = WordRecord(old_page)
+        self._wd_buff.fwa = self._location
+        self._sent_loc = self._location
 
     def fits_fitz(self, popo):
         sym_addr = (popo.health >> 16) & 0xFFFF
@@ -1237,7 +1291,7 @@ class Pass2:
         self.print_lin()
         # Send word that has valid location.
         self._line.text = self._old_line.text[:8] + self._line.text[8:]
-        self.send_word(self._word)
+        self.send_word(popo, self._word)
         # Set up continuation line.
         self._line.text = 'C' + self._line.text[1:]
 

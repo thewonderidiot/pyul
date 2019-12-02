@@ -25,6 +25,7 @@ class Yul:
         self._no_revise = False
         self._non_wise = 0
         self._invisible_director = False
+        self.substrab = [False]*256
         self.yulprogs = None
         self.switch = 0
         self.revno = 0

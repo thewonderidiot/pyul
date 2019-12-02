@@ -10,6 +10,10 @@ class AGC4Pass2(Pass2):
         self.d2_params = [268435455.0, 268435456.0, 268435455]
         self.k2_maxnum = 0o7777777777
         self.con_mask = [39, 44]
+        self.flag_mask = 0o7400007700000000
+        self.pret_flag = 0o1000000000
+        self.cons_flag = 0o2000000000
+        self.misc_flag = 0o3000000000
 
         self._max_adres = 0
 
@@ -736,7 +740,8 @@ class AGC4Pass2(Pass2):
         self._line.text = self._line.text[:42] + ('%02o' % (self._word & 0o77)) + self._line.text[44:]
 
         # Plant flag of poland, join main proc.
-        self._word |= (0x5 << 7*6)
+        dec_5_flag = Bit.BIT2 | Bit.BIT4
+        self._word |= dec_5_flag
         return self.bc_check(popo)
 
     # Subroutine in pass 2 for AGC4 to set in print a right-hand location for such as setloc.
