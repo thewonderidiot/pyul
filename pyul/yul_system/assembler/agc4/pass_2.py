@@ -302,7 +302,7 @@ class AGC4Pass2(Pass2):
             self._yul.switch &= ~SwitchBit.BEGINNING_OF_EQU2
 
         # Test for inactive address if unindexed.
-        if additive <= Bit.BIT1:
+        if additive < Bit.BIT1:
             # Maximum value for polish unindexed.
             self._max_adres = 0o77776
             if rite_norm == '':
@@ -386,11 +386,13 @@ class AGC4Pass2(Pass2):
 
         # Use additive on polish or store address.
         self._word &= ~0o37777
-        self._word |= (abs(self._address) + abs(additive)) & 0o37777
+        add_sum = abs(self._address) + abs(additive)
 
         if additive >= Bit.BIT1:
             # Use 2 x address if indexed.
-            self._word += self._address
+            add_sum += abs(self._address)
+
+        self._word |= add_sum & 0o37777
 
         # Branch if no minus sign in column 17.
         if popo.card[16] == '-':
@@ -398,7 +400,7 @@ class AGC4Pass2(Pass2):
             self._word -= 2
 
         return self.gud_basic(popo)
-            
+
 
     def rng_error(self, popo):
         # Print bad-size address if possible.
@@ -611,7 +613,7 @@ class AGC4Pass2(Pass2):
 
         # Revoke permission for minus addresses.
         self._yul.switch |= SwitchBit.BEGINNING_OF_EQU2
-        
+
         # Branch on type of first operator.
         op_type = (popo.health >> 24) & 0x3
         if op_type == 0:
@@ -717,7 +719,7 @@ class AGC4Pass2(Pass2):
         if word <= 0o37777:
             # Cuss overflow of operator word.
             self.cuss_list[65].demand = True
-            
+
             # Set to plot out word like constant.
             self._word = Bit.BIT1
             return self.bad_basic(popo)
