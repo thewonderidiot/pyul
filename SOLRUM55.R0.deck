@@ -9988,4 +9988,172 @@ R0722  2INTEGRATION OF THE VEHICLES POSITION AND VELOCITY.
  075911          2DEC   0.968892208
  075912 DENALT   =      26D             TEMPORARY STORAGE FOR ALTITUDE
  075913 DENCEIL  2DEC   6655 B-14       EARTHRAD +300 KM SCALED AT 2(14)
+L       ORBITAL INTEGRATION FOR 501
+ 0001  2         SETLOC 60000
+ 0002   AVETOMD1 AXC,1  2
+ 0003            ITA    SXA,1
+ 0004            ITC
+ 0005                   1
+ 0006                   MIDEXIT
+ 0007                   MEASMODE
+ 0008  2                AVETOMID
+ 0009   AVETOMD2 AXC,1  1
+ 0010            ITA    SXA,1
+ 0011                   2
+ 0012                   MIDEXIT
+ 0013  2                MEASMODE
+ 0014   AVETOMID VMOVE  6
+ 0015            AXT,1  SXA,1
+ 0016            AXT,1  SXA,1
+ 0017            AXT,1  SXA,1
+ 0018            AXT,1  SXA,1
+ 0019            AXT,1  SXA,1
+ 0020            AXT,1  SXA,1
+ 0021                   ZEROVEC
+ 0022                   0
+ 0023                   WMATFLAG        TURN OFF WMATRIX INTEGRATION.
+ 0024                   RSCALE
+ 0025                   SCALER          SET SCALE OF POSITION.
+ 0026                   4
+ 0027                   SCALDELT        ALSO DEVIATION.
+ 0028                   18D
+ 0029                   SCALEDT         AND TIME STEP.
+ 0030                   EARTHTAB
+ 0031                   PBODY
+ 0032                   TESTTET
+ 0033                   STEPEXIT
+ 0034  2         STORE  TDELTAV         ZERO POSITION DEVIATION.
+ 0035            NOLOD  0
+ 0036  2         STORE  TNUV            ALSO VELOCITY.
+ 0037            NOLOD  0               AND TIME SINCE RECTIFICATION, TIME,
+ 0038  8         STORE  TC              AND KEPLER X.
+ 0039            AXT,1  1
+ 0040            AST,1
+ 0041                   12D
+ 0042  2                6
+ 0047   RVTOMID  VXSC*  1               TRANSFORM POSITION AND VELOCITY TO
+ 0048            VXM    VSLT
+ 0049                   RRECT +12D,1
+ 0050                   SCLRAVMD +12D,1
+ 0051                   REFSMMAT
+ 0052                   2
+ 0053  2         STORE  RRECT +12D,1
+ 0054            NOLOD  0
+ 0055  2         STORE  RCV +12D,1
+ 0056            TIX,1  0
+ 0057  2                RVTOMID
+ 0058            DMOVE  0
+ 0059                   TAVEGON
+ 0063  8         STORE  TDEC
+ 0064   TESTTET  EXIT   0               FOR DUMP ONLY
+ 00643           TC     INTPRET
+ 00647           LXC,1  1
+ 0065            AST,1  TIX,1
+ 0066                   MEASMODE
+ 0067                   1
+ 0068  2                +3
+ 0069            ITC    0
+ 0070  2                +4
+ 0071            TEST   0
+ 0072                   UPDATFLG
+ 0073  2                NOSTATE
+ 0074            STZ    0
+ 0075  2                OVFIND
+ 0076            DSU    2
+ 00765           RTB    TSLT
+ 0077            DDV
+ 0078                   TDEC
+ 0079                   TET
+ 00795                  SGNAGREE
+ 0080                   11D
+ 0081                   EARTHTAB
+ 0082  2         STORE  DT/2
+ 0083            BOV    3
+ 0084            ABS    DSU
+ 0085            BMN    DAD
+ 0086            DSU    BMN
+ 0087                   USEMAXDT
+ 0088                   DT/2
+ 0089                   DT/2MIN
+ 0090                   DODCSION
+ 0091                   DT/2MIN
+ 0092                   DT/2MAX
+ 0093  2                TIMESTEP
+ 0094   USEMAXDT DMOVE  1
+ 0095            SIGN
+ 0096                   DT/2MAX
+ 0097                   DT/2
+ 0098  2         STORE  DT/2
+ 0099            ITC    0
+ 0100  8                TIMESTEP
+ 0101   DODCSION ITC    0               RECTIFY TO OBTAIN FULL POSITION
+ 0102  2                RECTIFY         AND VELOCUTY VECTORS.
+ 0103            SMOVE  1
+ 0104            BMN    BZE
+ 0105                   MEASMODE        TEST MEASMODE.
+ 0106                   AVEGON          MEASMODE = -1.
+ 0107  2                IGN-4SEC        MEASMODE = 0.
+ 0108            AXT,1  1               MEASMODE = +1.
+ 0109            AST,1
+ 0110                   12D
+ 0111  2                6
+ 0112   RVTOAVE  VXSC*  1               TRANSFORM POSITION AND VELOCITY VECTORS
+ 0113            MXV    VSLT
+ 0114                   RRECT +12D,1
+ 0115                   SCLRMDAV +12D,1
+ 0116                   REFSMMAT
+ 0117                   1
+ 0118  2         STORE  RIGNTION +12D,1
+ 0119            VXSC*  1
+ 0120            MXV    VSLT
+ 0121                   RAVEGON +12D,1
+ 0122                   SCLRMDAV +12D,1
+ 0123                   REFSMMAT
+ 0124                   1
+ 0125  2         STORE  RAVEGON +12D,1
+ 0126            TIX,1  0
+ 0127  2                RVTOAVE
+ 0128            ITCI   0
+ 0129  8                MIDEXIT         RETURN.
+ 0130   AVEGON   VMOVE  0               SAVE POSITION AND VELOCITY AT
+ 0131                   RRECT           AVERAGE G ON TIME.
+ 0132  2         STORE  RAVEGON
+ 0133            VMOVE  0
+ 0134                   VRECT
+ 0135  2         STORE  VAVEGON
+ 0136            LXC,1  1
+ 0137            AST,1  TIX,1
+ 0138                   MEASMODE
+ 0139                   1
+ 0140  2                RVTOAVE -4
+ 0141            DAD    1
+ 0142            AXT,1  SXA,1
+ 0143                   TDEC
+ 0144                   12M56S          12 MINUTES, 56 SECS
+ 0145                   0
+ 0146                   MEASMODE        MAKE MEASMODE 0.
+ 0147  2         STORE  TDEC
+ 0148            ITC    0
+ 0149  4                TESTTET         CONTINUE INTEGRATION.
+ 0150   IGN-4SEC VXSC   1               TRANSFORM AND SAVE POSITION ONLY
+ 0151            MXV    VSLT
+ 0152                   RRECT
+ 0153                   SCLRMDAV
+ 0154                   REFSMMAT
+ 0155                   1
+ 0156  2         STORE  RIG-4SEC
+ 0157            DAD    1
+ 0158            AXT,1  SXA,1
+ 0159                   TDEC
+ 0160                   4SECONDS        ADD 4 SECONDS TO DECISION TIME.
+ 0161                   1
+ 0162                   MEASMODE        MAKE MEASMODE +1.
+ 0163  2         STORE  TDEC
+ 0164            ITC    0
+ 0165  8                TESTTET         DO LAST INTEGRATION STEP.
+ 0166   12M56S   2DEC   77600           12 MINUTES, 56 SECS
+ 0167   4SECONDS 2DEC   400
+ 01675  DT/2MIN  2DEC   .000024
+ 01676  DT/2MAX  2DEC   .65027077 B-1   .075 HOUR MAXIMUM TIME STEP
+ 0168   INITMSK  OCT    30000
 *       ENDOFJOB
