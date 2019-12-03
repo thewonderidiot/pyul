@@ -9122,4 +9122,870 @@ R0072  2         MISSION PROGRAM DETECTED FAILURES (ERROR RETURNS TO IMUSTALL, E
  0075            TC     POSTJUMP
  0076  2         CADR   THATSALL        FRESH START AND PROGRAM ALARM.
  0077   ENDFAILF EQUALS
+L      2ORBITAL INTEGRATION PROGRAM
+ 0001            BANK   23
+R000101      *** SCALING FACTORS AND ARGUMENTS ***
+R000102
+ 000103 DEL      =      2
+ 000104 DEL+E    =      2
+ 000105 2DEL     =      4
+ 000106 2DEL+E   =      4
+ 000107 E        =      0
+ 000108 RSCALE   =      16D
+ 000109 VSCALE   =      6
+ 00011  TSCALE   =      27D
+ 000111 2VSCALE  =      12D
+ 000112 4RSCALE  =      64D
+ 000113 R+VSCALE =      22D
+R0002  2         FBR3 SETS UP A TIMESTEP CALL TO KEPLER.
+ 0003   FBR3     TSRT   1
+ 0004            ROUND  DAD
+ 0005                   H
+ 0006                   TSCALE -18D
+ 0007                   TC
+ 0008  2         STORE  TAU
+ 0009            DMP    2
+ 0010            TSRT   ROUND
+ 0011            DAD
+ 0012                   EARTHTAB
+ 0013                   DT/2
+ 0014                   12D
+ 0015                   TET
+ 0016  2         STORE  TET
+ 0017            ITC    0
+ 0018  2                KEPLER
+ 0019            ITC    0
+ 0020  2                KEPLER2
+ 0021   GETKTIME ITC    0
+ 0022  2                KTIMEN+1
+ 0023            ITC    0
+ 0024                   KEPLER3
+P0025            THIS ORBITAL KEPLER SUBROUTINE FINDS THE POSITION AND VELOCITY
+ 0026  9OF THE VEHICLE AFTER TIME FOUND IN
+R0027   GIVENT  SINCE RECTIFICATION TO POSITION  RRECT  AND VELOCITY  VRECT  . T
+ 0028  9HE RESULTING POSITION AND VELOCITY ARE
+R0029  4LEFT IN  FOUNDR  AND  FOUNDV  , RESPECTIVELY.
+ 0030   KEPLER   LXA,1  1               UNIT OF RECTIFICATION POSITION TO 0
+ 0031            SXA,1  UNIT
+ 0032                   FIXLOC
+ 0033                   PUSHLOC
+ 0034  2                RRECT
+ 0035            TSLT   0               AND LENGTH OF ORIGINAL IN 6.
+ 0036                   30D
+ 0037  2                1
+ 0038            VSQ    3               A4 TO REGISTER 8.
+ 0039            ROUND  DMP
+ 0040            TSLT   DSU
+ 0041            TSLT   ROUND
+ 0042                   VRECT
+ 0043                   6               LENGTH OF POSITION AT RECTIFICATION.
+ 00435                  2DEL+E -1
+ 0044                   DP1/2
+ 0045  2                1
+ 0046            NOLOD  3               ALPHA TO REGISTER 10.
+ 0047            TSRT   COMP
+ 0048            DAD    TSRT
+ 00485           DDV
+ 0049                   1
+ 0050                   DP1/2
+ 00505                  2DEL+E -1
+ 0051  2                6
+ 0052            DOT    1               A1 TO REGISTER 12.
+ 0053            TSLT   ROUND
+ 0054                   RRECT
+ 0055                   VRECT
+ 00555 2                DEL+E
+ 0056  8         ITCQ   0
+ 0057   KEPLER2  UNIT   1
+ 0058            AXT,2  DOT
+ 0059                   RCV
+ 0060                   10D             SET MAXIMUM ITERATION COUNT TO 10.
+ 0061  2                VCV             IR/2 . VC IN 14
+ 0062            TSLT   0
+ 0063                   30D
+ 0064                   1
+ 0065  2         STORE  ALPHAM          RC IN ALPHAM.
+ 0066            TSRT   1
+ 0067            ROUND  DDV
+ 0068                   DT/2
+ 0069                   TSCALE -18D
+ 0070  2                ALPHAM          Q IN 16.
+ 0071            TSRT   4
+ 00715           DDV    DSU
+ 0072            DMPR   DMPR
+ 0073            DMPR   AST,2
+ 0074            TSLT
+ 0075                   DP1/2
+ 00755                  2DEL+E -1
+ 0076                   ALPHAM
+ 0077                   10D             1/4RC - ALPHA
+ 0078                   16D             Q (  )
+ 0079                   16D             Q Q (  )
+ 0080                   DP1/3
+ 0081                   1
+ 0082  2                2DEL +4
+ 0083            DMPR   1
+ 0084            TSLT
+ 0085                   14D
+ 0086                   16D
+ 0087  2                DEL +3
+ 0088            NOLOD  4
+ 0089            BDSU   DMPR
+ 0090            BDSU   DSU
+ 0091            DMP    TSLT
+ 0092            ROUND  DAD
+ 0093                   DP1/2
+ 0094                   -               20
+ 0095                   DP1/2
+ 0096                   -               18
+ 0097                   -               16
+ 0098                   1
+ 0099                   XKEP
+ 0100  2         STORE  XKEP
+ 0101            ITCQ   0
+P0102  4ITERATING EQUATIONS - GIVEN X IN MPAC AND 14D, FIND TIME OF FLIGHT.
+ 0103   KTIMEN+1 NOLOD  5               FORM ALPHA X-SQUARED AND CALL S AND C.
+ 0104            DSQ    ROUND
+ 0105            DMP    TSLT
+ 0106            ROUND  LXA,1           AND SET PD INDICATOR TO 16 AS WELL.
+ 0107            INCR,1 SXA,1
+ 0108            ITA    ITC
+ 0109                   10D             ALPHA
+ 0110                   2DEL
+ 0111                   FIXLOC
+ 0112                   16D
+ 0113                   PUSHLOC
+ 0114                   GMODE
+ 0115  2                S(X)C(X)
+ 0116            NOLOD  4               S RETURNS IN MPAC, C ON TOP OF PDL.
+ 0117            DMP    TSLT
+ 0118            DMP    TSLT
+ 0119            DMP    TSLT
+ 0120            ROUND
+ 0121                   XKEP
+ 0122                   4
+ 0123                   XKEP
+ 0124                   E +1
+ 0125                   XKEP
+ 0126                   1
+ 0127  2         STORE  23D             A3.
+ 0128            NOLOD  1
+ 0129            DMPR
+ 0130  2                8D
+ 0131            DMP    2
+ 0132            TSLT   DMP
+ 0133            TSLT   ROUND
+ 0134                   XKEP
+ 0135                   16D             VALUE OF C.
+ 0136                   5
+ 0137                   XKEP
+ 0138                   E +2
+ 0139  2         STORE  21D             A2.
+ 0140            NOLOD  2
+ 0141            DMP    TSRT
+ 0142            ROUND  DAD
+ 0143                   12D             A1.
+ 0144                   2
+ 0145            DMPR   1
+ 0146            DAD
+ 0147                   6
+ 0148  2                XKEP            COMPUTED TIME TO PD+18.
+ 0149            ITCI   0
+ 0150  2                GMODE
+ 0151   KEPLER3  NOLOD  1               COMPARE COMPUTED TIME WITH GIVEN TIME.
+ 0152            BDSU
+ 0153                   GIVENT
+ 0154  2         STORE  16D             DIFFERENCE TO REGISTER 16.
+ 0155            EXIT   0               FOR DUMP ONLY  **************
+ 0156  2DUMPDUMP TC     INTPRET
+ 0157            NOLOD  3
+ 0158            ABS    DSU
+ 0159            BMN    TIX,2
+ 0160            ITC
+ 0161                   KEPSILON        SEE IF WITHIN EPSILON OF GIVEN TIME.
+ 0162  2                GETRANDV        IF SO, GET R AND V AND EXIT.
+ 0163                   GETNEWX
+ 0164  2                GETRANDV
+ 0165   GETNEWX  DMP    4
+ 0166            TSLT   ROUND
+ 0167            BDSU   DMP
+ 0168            AXC,1  TSLT*
+ 01685           ROUND
+ 0169                   10D             ALPHA
+ 0170                   23D             A3
+ 0171                   2DEL+E
+ 0172                   XKEP
+ 0173                   12D             A1
+ 0174                   E -3
+ 01745                  0,1
+ 0175  2         STORE  18D
+ 0176            DMP    2
+ 0177            TSLT   ROUND
+ 0178            DAD    DAD
+ 0179                   21D             A2
+ 0180                   8D              A4
+ 0181                   1
+ 0182                   -
+ 0183  2                6               R0
+ 0184            DDV    1
+ 0185            DAD
+ 0186                   16D
+ 0187                   18D
+ 0188                   XKEP
+ 0189  2         STORE  XKEP
+ 0190            ITC    0
+ 0191  8                GETKTIME
+R0192  2CONSTANTS.
+ 0193   KEPSILON OCT    00000
+ 0194            OCT    00002
+ 0195   THREE/8  2DEC   .375
+ 0196   DP1/4    2DEC   .25
+ 0197   DP1/3    2DEC   .333333333
+ 0198   DQUARTER EQUALS DP1/4
+ 0199   POS1/16  2DEC   .0625
+ 0200   POS1/4   EQUALS DP1/4
+ 0201   3/8      EQUALS THREE/8
+P0202            SUBROUTINE FOR COMPUTING THE UNIVERSAL CONIC FUNCTIONS S(X) AND
+ 0203  9 C(X). THE ACTUAL OUTPUT OF THIS ROUTINE
+R0204  2CONSISTS OF SCALED VERSIONS DEFINED AS FOLLOWS:
+R0205                        S (X) = S(64X)                C (X) = C(64X)/4
+R0206  2                      S                             S
+R0207            IT IS ASSUMED THAT THE INPUT ARRIVES IN MPAC,MPAC+1,AND THAT IT
+ 0208  9 LIES BETWEEN -30/64 AND 40/64. UPON
+R0209  4EXIT, S(X) WILL BE LEFT IN MPAC,MPAC+1 AND C(X) ON TOP OF THE PUSHDOWN L
+ 0210  9IST.
+ 0211   S(X)C(X) NOLOD  0               SAVE ARGUMENT
+ 0212  2         STORE  XSTOREX
+ 0213            NOLOD  2                        2
+ 0214            RTB    DSQ             COMPUTE A (X)
+ 0215            ROUND
+ 0216                   A(X)
+ 0217  2         STORE  ASQ
+ 0218            NOLOD  3                      2          2
+ 0219            DMP    TSLT            C (X)=A (.25 - 2XA ) TO PUSHDOWN LIST
+ 0220            ROUND  BDSU             S
+ 0221            DMPR
+ 0222                   XSTOREX
+ 0223                   1
+ 0224                   POS1/4
+ 0225  2                ASQ
+ 0226            TSRT   1                2
+ 0227            ROUND                  A /4 TO PUSHDOWN LIST
+ 0228                   ASQ
+ 0229  2                2
+ 0230            DMOVE  2                2
+ 0231            RTB    DSQ             B  TO PUSHDOWN LIST
+ 0232            ROUND
+ 0233                   XSTOREX
+ 0234  2                B(X)
+ 0235            DMPR   2                            2        2    2
+ 0236            BDSU   DMPR            LEAVE S (X)=B (.0625-A X)+A /4 IN MPAC
+ 0237            DAD    ITCQ                   S
+ 0238                   XSTOREX
+ 0239                   ASQ
+ 0240  2                POS1/16
+ 0241   XSTOREX  =      26D
+ 0242   ASQ      =      24D
+ 0243  2         OCT    70707           THIS HAS TO BE NEGATIVE TO TERMINATE EQN
+ 0244  2A(X)     TC     POLY                A AND B POLYNOMIALS WHOSE COEFFICI-
+ 0245  2         DEC    10                    ENTS WERE OBTAINED WITH THE *AUTO-
+ 0246            2DEC    7.071067810 E-1      CURVEFIT* PROGRAM
+ 0247            2DEC   -4.714045180 E-1
+ 0248            2DEC    9.42808914  E-2
+ 0249            2DEC   -8.9791893   E-3
+ 0250            2DEC    4.989987    E-4
+ 0251            2DEC   -1.79357     E-5
+ 0252  4         TC     DANZIG          RE-ENTER INTERPRETER
+ 0253  2B(X)     TC     POLY
+ 0254  2         DEC    10
+ 0255            2DEC    8.164965793 E-1
+ 0256            2DEC   -3.265986572 E-1
+ 0257            2DEC    5.90988980  E-2
+ 0258            2DEC   -4.0085592   E-3
+ 0259            2DEC    2.781528    E-4
+ 0260            2DEC   -1.25610     E-5
+ 0261            TC     DANZIG          RETURN AS BEFORE
+P0262  4ROUTINE FOR OBTAINING R AND V, NOW THAT THE PROPER X HAS BEEN FOUND.
+ 0263   GETRANDV LXA,1  2
+ 0264            INCR,1 SXA,1
+ 0265            COMP   VXSC
+ 0266                   FIXLOC
+ 0267                   25D
+ 0268                   PUSHLOC
+ 0269                   21D             AZ FROM LAST ITERATION.
+ 0270  2                0               UNIT OF GIVEN POSITION VECTOR.
+ 0271            DSU    2
+ 0272            TSLT   VXSC
+ 0273            VAD    VSLT
+ 0274                   18D             LAST VALUE OF T.
+ 0275                   23D             LAST VALUE OF A3.
+ 0276                   DEL +1
+ 0277                   VRECT
+ 0278                   -
+ 0279  2                1
+ 0280            NOLOD  1               ADDITION MUST BE DONE IN THIS ORDER.
+ 0281            VAD    VAD
+ 0282                   RRECT
+ 0283  2         STORE  FOUNDR          RESULTING CONIC POSITION.
+ 0284            NOLOD  1               LENGTH OF ABOVE TO PD+16.
+ 0285            ABVAL  TSLT
+ 0286                   1
+ 0287  2         STORE  16D
+ 0288            DMP    4
+ 0289            TSLT   ROUND
+ 0290            DSU    TSRT
+ 0291            DDV    VXSC
+ 02915           VSLT
+ 0292                   10D             ALPHA.
+ 0293                   23D             A3
+ 0294                   2DEL+E
+ 0295                   XKEP
+ 02955                  DEL+E
+ 0296                   16D             LENGTH OF FOUND POSITION.
+ 0297                   0               UNIT OF RECTIFICATION POSITION.
+ 0298                   3
+ 0299            TSRT   3
+ 0300            DSU    DDV
+ 0301            VXSC   VAD
+ 0302            VSLT
+ 0303                   16D
+ 0304                   1
+ 0305                   21D
+ 0306                   16D
+ 0307                   VRECT
+ 0308                   -
+ 0309                   1
+ 0310  2         STORE  FOUNDV          THIS COMPLETES THE CALCULATION.
+ 0311            ITCI   0
+ 0312                   HBRANCH
+P0313  4         THE POSTRUE ROUTINES SET UP THE BETA VECTOR AND OTHER INITIAL C
+ 0314  9ONDITIONS FOR THE NEXT ACCOMP.
+ 0315   POSTRUE  LXA,1  3                                                    -
+ 0316            SXA,1  VSRT
+ 0317            VAD    LXA,2
+ 0318            LXA,1  SXA,1
+ 0319                   SCALDELT        SETS UP SCALE A.
+ 0320                   SCALEA
+ 0321                   ALPHAV
+ 0322                   RSCALE -4
+ 0323                   RCV             POSITION OUTPUT OF KEPLER.
+ 0324                   DIFEQCNT
+ 0325                   SCALER
+ 0326                   SCALEB          SET UP SCALE B AND G MODE.
+ 0327  2         STORE  BETAV
+ 0328            BHIZ   0
+ 0329                   WMATFLAG        TEST W MATRIX FLAG.
+ 0330  2                ACCOMP
+ 0331            VMOVE  0
+ 0332                   BETAV
+ 0333            STORE  VECTAB,2        SAVE R/PV IN VECTAB FOR W MATRIX UPDATE.
+P0334  4AGC ROUTINE TO COMPUTE ACCELERATION COMPONENTS.
+ 0335   ACCOMP   UNIT   0               UNITIZE ALPHA VECTOR
+ 0336                   ALPHAV
+ 0337  2         STORE  ALPHAV
+ 0338            DMOVE  0               SAVE LENGTH OF ALPHA VECTOR
+ 0339                   30D
+ 0340  2         STORE  ALPHAM
+ 0341            STZ    0
+ 0342  2                OVFIND
+ 0343   ACCOMP2  VSRT   3                       2
+ 0344            VSQ    LXA,1           NORMED B  TO PD.
+ 0345            SXA,1  TSLC
+ 0346            ROUND
+ 0347                   BETAV
+ 0348                   1
+ 0349                   FIXLOC
+ 0350                   PUSHLOC
+ 0351  2                S1
+ 0352            TSLC   1               NORMALIZE (LESS ONE) LENGTH OF ALPHA
+ 0353            TSRT                     SAVING NORM. SCALE FACTOR IN X1
+ 0354                   ALPHAM
+ 0355                   X1
+ 0356  2                1                C(PDL+2)= ALMOST NORMED ALPHAM
+ 0357            UNIT   0               SAME PROCEDURE FOR BETA VECTOR
+ 0358                   BETAV
+ 0359  2         STORE  BETAV
+ 0360            DMOVE  0
+ 0361                   30D
+ 0362  2         STORE  BETAM
+ 0363            NOLOD  2
+ 0364            TSLC   BDDV            FORM NORMALIZED QUOTIENT ALPHAM/BETAM
+ 0365            TSRT   ROUND
+ 0366                   X2
+ 0367                   -
+ 0368  8                1               C(PDL +2) = ALMOST NORMALIZED RHO.
+ 0369            LXC,2  3               C(X2) = -SCALE(RHO) + 1.
+ 0370            XAD,2  XAD,2                 = -S(B)-N(B)+S(A)+N(A)+1
+ 0371            XSU,2  INCR,2
+ 0372            NOLOD  TSRT*
+ 0373                   X2
+ 0374                   SCALEA
+ 0375                   X1
+ 0376                   SCALEB
+ 0377                   2
+ 0378  2                0,2
+ 0379            NOLOD  1               RHO/4 PD +6
+ 0380            TSRT   ROUND
+ 0381  2                2
+ 0382            DOT    2
+ 0383            TSLT   ROUND            (RHO/4)- 2 (ALPHAV/2.BETAV/2)
+ 0384            BDSU                                TO PDL +6
+ 0385                   ALPHAV
+ 0386                   BETAV
+ 0387  2                1
+ 0388            NOLOD  1               Q/4 = RHO(C(PDL +4)) TO PD +8D
+ 0389            DMPR
+ 0390  2                4
+ 0391            NOLOD  1               (Q + 1)/4 TO PD +10D.
+ 0392            DAD
+ 0393  2                DQUARTER
+ 0394            NOLOD  1                          3/2
+ 0395            SQRT   DMPR            ((Q + 1)/4)    TO PD +12D.
+ 0396  2                10D
+ 0397            NOLOD  1                                   3/2
+ 0398            TSLT   DAD             (1/4) + 2((Q + 1)/4)    TO PD +14D.
+ 0399                   1
+ 0400  8                DQUARTER
+ 0401            DAD    3                              -
+ 0402            DMPR   TSLT            (G/2)(C(PD +4))B/2 TO PD +16D.
+ 0403            DAD    DDV
+ 0404            DMPR   VXSC
+ 0405                   10D
+ 0406                   DP1/2
+ 0407                   8D
+ 0408                   1
+ 0409                   THREE/8
+ 0410                   14D
+ 0411                   6
+ 0412  2                BETAV
+ 0413            VSRT   1               A12 + C(PD +16D) TO PD +16D.
+ 0414            VAD
+ 0415                   ALPHAV
+ 0416  2                3
+ 0417            DMP    5               -
+ 0418            TSLC   ROUND           GAMMA TO PD +22D, -SCALE(GAMMA)-1 TO
+ 0419            BDDV   LXC,1           X1.
+ 0420            XAD,1  XAD,1
+ 0421            XAD,1  XAD,1
+ 0422            COMP   VXSC
+ 0423                   0
+ 0424                   12D
+ 0425                   S2
+ 0426                   2
+ 0427                   X2              C(X2) = SCALE (RHO).
+ 0428                   S2              C(S2) = N((B.B/4)(...)3/2)
+ 0429                   S1              C(S1) = N(B.B/4)
+ 0430                   SCALEB
+ 0431                   SCALEB
+ 0432  2                16D             RESULT OF PRECEDING EQUATION.
+ 0433            NOLOD  1               -SCALE(GAMMA)-1 IS LEFT IN X1.
+ 0434            VSLT*                  ADJUST GAMMA TO SCALE OF -32.
+ 0435                   31D,1
+ 0436  2         STORE  FV
+ 0437            VMOVE  0
+ 0438                   BETAV
+ 0439  2         STORE  ALPHAV          BETA VECTOR INTO ALPHA FOR NEXT ACCOMP.
+ 0440            DMOVE  0
+ 0441                   BETAM
+ 0442            STORE  ALPHAM
+P0443            THE  OBLATE  ROUTINE COMPUTES THE ACCELERATION DUE THE THE EART
+ 0444  9HS OBLATENESS. IT USES THE UNIT OF THE
+R0445   VEHICLE POSITION VECTOR FOUND IN ALPHAV AND THE DISTANCE TO THE CENTER O
+ 0446  9F THE EARTH IN ALPHAM. THIS IS ADDED TO
+R0447  4THE SUM OF THE DISTURBING ACCELERATIONS IN FV AND THE PROPER DIFEQ STAGE
+ 0448  9 IS CALLED VIA X1.
+ 0449   OBLATE   LXA,1  1
+ 0450            SXA,1  TSLT
+ 0451                   FIXLOC          SET PUSH-DOWN COUNTER TO ZERO.
+ 0452                   PUSHLOC
+ 0453                   ALPHAM
+ 0454                   1
+ 0455  2         STORE  ALPHAM
+ 0456            DMPR   0               P2'/8 TO REGISTER 0.
+ 0457                   ALPHAV +4       Z COMPONENT OF POSITION IS COS PHI.
+ 0458  2                3/4
+ 0459            DSQ    2               P3'/4 TO REGISTER 2.
+ 0460            TSLT   DMPR
+ 0461            DSU
+ 0462                   ALPHAV +4
+ 0463                   3
+ 0464                   15/16
+ 0465  2                3/8
+ 0466            NOLOD  2               P4'/16 TO REGISTER 4.
+ 0467            DMPR   DMPR
+ 0468            TSLT
+ 0469                   ALPHAV +4
+ 0470                   7/12
+ 0471  2                1               TO STACK.
+ 0472            DMPR   1               FINISH P4'/16.
+ 0473            BDSU
+ 0474                   P2'/8
+ 0475  2                2/3
+ 0476            NOLOD  1               BEGIN COMPUTING P5'/128.
+ 0477            DMPR   DMPR
+ 0478                   ALPHAV +4
+ 0479  8                9/16
+ 0480            DMPR   6               FINISH P5:/128 AND TERM USING UNIT
+ 0481            BDSU   DMP             POSITION VECTOR AT ALPHA.
+ 0482            TSLT   TSRT
+ 04822           DDV    DAD
+ 0483            DMPR   TSRT
+ 0484            DDV    DAD
+ 0485            VXSC
+ 0486                   P3'/4
+ 0487                   5/128
+ 0488                   -
+ 0489                   J4REQ/J3
+ 0490                   2
+ 04902                  RSCALE -14D
+ 0491                   ALPHAM
+ 0492                   P4'/16
+ 0493                   2J3RE/J2
+ 04932                  RSCALE -14D
+ 0494                   ALPHAM
+ 0495                   P3'/4
+ 0496                   ALPHAV
+ 0497  2         STORE  ALPHAV
+ 0498            DMP    2               COMPUTE TERM USING IZ.
+ 0499            TSLT   TSRT
+ 0500            DDV    DAD
+ 0501                   J4REQ/J3
+ 0502                   -
+ 0503                   1
+ 05032                  RSCALE -14D
+ 0504  8                ALPHAM
+ 0505            TSRT   2
+ 0506            DMPR   DDV
+ 0507            DAD    BDSU
+ 0508                   2J3RE/J2
+ 0509                   RSCALE -11D
+ 0510                   -
+ 0511                   ALPHAM
+ 0512                   -
+ 0513                   ALPHAV +4
+ 0514  2         STORE  ALPHAV +4
+ 0515            DSQ    4
+ 0516            DSQ    TSLC
+ 0517            BDDV   VXSC
+ 0518            INCR,1 VSLT*           SHIFTS LEFT ON+, RIGHT ON -.
+ 0519            VAD
+ 0520                   ALPHAM
+ 0521                   X1
+ 0522                   J2REQSQ
+ 0523                   ALPHAV
+ 0524                   4RSCALE -52D
+ 0525                   0,1
+ 0526                   FV
+ 0527            STORE  FV
+P052701          THE DRAG ROUTINE IS AN INSERTION TO THE OBLATE ROUTINE. IT USES
+R052702 THE VEHICLE POSITION VECTOR FOUND IN RCV, THE DISTANCE TO THE CENTER OF
+R0527032THE EARTH IN ALPHAM, AND THE VEHICLE VELOCITY VECTOR IN VCV.
+R052704          IT APPROXIMATES THE U.S. STD ATMOSPHERE 1962 (OVER THE RANGE OF
+R052705 100 TO 300 KM ABOVE SEA LEVEL) WITH AN EQUATION OF THE FORM
+R052706                                                   2      3      4  4
+R0527072                    RHO = BASERHO /((1 +C1 X +C2 X  +C3 X  +C4 X )  ).
+R052708          IT ASSUMES THE VEHICLE MASS TO BE THAT EXPECTED AFTER THE
+R0527093FIFTH SPS BURN.
+ 05271  DENSITY  TSRT   2               IF THE ALTITUDE IS GREATER THAN THE
+ 052711          DSU    BPL                CEILING ALTITUDE, DENCEIL (300 KM),
+ 052712          ITC                       SKIP THE DRAG CALCULATIONS AND GO
+ 052713                 DENCEIL            TO NBRANCH.
+ 052714                 RSCALE -14D
+ 052715                 ALPHAM
+ 052716                 DENSITY1
+ 0527172                NBRANCH
+ 052718 DENSITY1 TSRT   2               NORMALIZE ALTITUDE FOR AIR DENSITY
+ 052719          BDSU   TSLT               FUNCTION SO THAT IT RANGES FROM
+ 05272           DDV    TSLT               0 TO 1 OVER THE ALTITUDES OF 100 KM
+ 052721                 DENBASE            TO 300 KM RELATIVE TO THE REFERENCE
+ 052722                 RSCALE -14D        SPHERE AND STORE IN DENALT.
+ 052723                 ALPHAM
+ 052724                 6
+ 052725                 DENFACT
+ 052726                 RSCALE -14D
+ 0527272         STORE  DENALT
+ 052728 DRAG1    NOLOD  7               CALCULATE SCALAR PART OF DRAG, I.E.,
+ 052729          DMP    DAD                ((RHO)(AREA)(DRAG COEFF))/MASS.
+ 05273           DMP    DAD
+ 052732          DMP    DAD                LEAVE IN PDL AS D. P. NUMBER
+ 052734          DMP    DAD
+ 052736          TSLT   DSQ
+ 052738          DSQ    TSLT
+ 05274           BDDV
+ 052742                 DEN4
+ 052744                 DEN3
+ 052746                 DENALT
+ 052748                 DEN2
+ 05275                  DENALT
+ 052752                 DEN1
+ 052754                 DENALT
+ 052756                 DEN0
+ 052758                 1
+ 05276                  2
+ 052762                 PACD/M
+ 052764 DRAG2    VXV    2
+ 052766          AXT,1  VSLT*
+ 052768          VSU
+ 05277                  OMEGA
+ 052772                 RCV
+ 052774                 23D
+ 052776                 R+VSCALE,1
+ 052778                 VCV
+ 05278           NOLOD  3
+ 052782          ABVAL  VXSC
+ 052784          VXSC   AXT,1
+ 052786          VSLT*  VAD
+ 052788                 -                  (-1/2)(ABVAL(-V))(V)
+ 05279                  -                                            -   -
+ 052792                 1                  (-1/2)(RHO A CD/M)(ABVAL(-V))(V)
+ 052793                 2VSCALE -12D,1
+ 052794                 FV
+ 052796          STORE  FV                 SUM OF PERTURB ACCELERATIONS
+ 0528   NBRANCH  LXA,1  1
+ 0529            ITC*
+ 0530                   DIFEQCNT
+ 0531                   DIFEQ,1
+P0532  4         BEGIN INTEGRATION STEP WITH RECTIFICATION TEST.
+ 0533   TIMESTEP ABVAL  2               RECTIFICATION REQUIRED IF THE LENGTH OF
+ 0534            DSU    BMN             DELTA IS GREATER THAN .5 (8 KM).
+ 0535            ITC
+ 0536                   YV
+ 0537                   DP1/4
+ 0538                   INTGRATE
+ 0539  2                RECTIFY         CALL RECTIFICATION SUBROUTINE.
+ 0540   INTGRATE AXT,1  3               INITIALIZE INDEXES AND SWITCHES.
+ 0541            SXA,1  AXT,1
+ 0542            SXA,1  TEST
+ 0543            SWITCH
+ 0544                   FBR3
+ 0545                   FBRANCH         EXIT FROM DIFEQCOM
+ 0546                   POSTRUE
+ 0547                   HBRANCH         EXIT FROM KEPLER.
+ 0548                   JSWITCH         0 FOR STATE VECTOR, 1 FOR W MATRIX.
+ 0549                   +2              TURN IT OFF HERE.
+ 0550  8                JSWITCH
+ 0551   DIFEQ0   VMOVE  0               POSITION DEVIATION INTO ALPHA.
+ 0552                   YV
+ 0553  2         STORE  ALPHAV
+ 0554            DMOVE  0               START H AT 0.
+ 0555                   DPZERO
+ 0556  2         STORE  H               GOES 0(DELT/2)DELT.
+ 0557            NOLOD  0               ZERO DIFEQCNT AND REGISTER FOLLOWING.
+ 0558  2         STORE  DIFEQCNT        GOES 0(-12D)(-24D).
+ 0559            ITCI   0               BEGIN AT ADDRESS IN HBRANCH.
+ 0560                   HBRANCH
+P0561            THE  RECTIFY  SUBROUTINE IS CALLED BY THE INTEGRATION PROGRAM (
+ 0562  9AND OCCAISONALLY BY THE MEASUREMENT
+R0563  4INCORPORATION ROUTINES) TO ESTABLISH A NEW CONIC.
+ 0564   RECTIFY  VSRT   1               RECTIFY - FORM TOTAL POSITION AND VEL.
+ 0565            VAD                    ADJUST SCALE DIFFERENCE (ASSUMED
+ 0566                   TDELTAV
+ 0567                   RSCALE -4
+ 0568                   RCV
+ 0569  2         STORE  RRECT
+ 0570            NOLOD  0               SET UP CONIC 'ANSWER' FOR TIMESTEP.
+ 0571  2         STORE  RCV
+ 0572            AXT,1  2
+ 0573            VMOVE  VSLT*
+ 05735           VAD
+ 0574                   VSCALE -14D
+ 0575                   TNUV
+ 05755                  0,1
+ 0576                   VCV
+ 0577  2         STORE  VRECT
+ 0578            NOLOD  0
+ 0579  2         STORE  VCV
+ 0580            AXT,1  1               ZERO DELTA, NU, AND TIME SINCE RECTIFI-
+ 0581            AST,1  DMOVE
+ 0582                   12D
+ 0583                   2
+ 0584                   DPZERO
+ 0585  2         STORE  TC
+ 0586            NOLOD  0
+ 0587  2         STORE  XKEP            ZERO X.
+ 0588   ZEROLOOP NOLOD  0               INDEXES CAUSE LOOP TO ZERO 6 CONSECUTIVE
+ 0589  2         STORE  YV +12D,1       DP NUMBERS (DELTA AND NU ARE ADJACENT).
+ 0590            TIX,1  1               LOOP OR START INTEGRATION STEP IF DONE.
+ 0591            ITCQ
+ 0592                   ZEROLOOP
+P0593            THE THREE DIFEQ ROUTINES - DIFEQ+0, DIFEQ+12, AND DIFEQ+24 - AR
+ 0594  9E ENTERED TO PROCESS THE CONTRIBUTIONS
+R0595  4AT THE BEGINNING, MIDDLE, AND END OF THE TIME STEP, RESPECTIVELY. THE UP
+ 0596  9DATING IS DONE BY THE NYSTROM METHOD.
+ 0597   DIFEQ+0  VSRT   0
+ 0598                   FV
+ 0599                   3
+ 0600  2         STORE  PHIV
+ 0601            ITC    0
+ 0602  2                DIFEQCOM
+ 0603   7/12     2DEC   .5833333333     ENTRIES MUST BE 12 WORDS APART SO FILL
+ 0604   9/16     2DEC   9 B -4          HOLES WITH CONSTANTS
+ 0605   5/128    2DEC   5 B -7
+ 0606   DIFEQ+12 VSRT   1
+ 0607            VAD
+ 0608                   FV
+ 0609                   1
+ 0610                   PHIV
+ 0611  2         STORE  PSIV
+ 0612            ITC    0
+ 0613  2                DIFEQCOM -6
+ 0614   DPZERO   2DEC   0.0
+ 0615   DP2/3    2DEC   .6666666667
+ 0616   DIFEQ+24 VXSC   3               DO FINAL CALCULATION FOR Y AND Z.
+ 0617            VXSC   VSLT
+ 0618            VAD    VXSC
+ 0619            VAD
+ 0620                   PHIV
+ 0621                   H
+ 0622                   DP2/3
+ 0623                   1
+ 0624                   ZV
+ 0625                   H
+ 0626                   YV
+ 0627  8         STORE  YV
+ 0628            VSRT   4
+ 0629            VAD    VXSC
+ 0630            VXSC   VSLT
+ 0631            VAD    TEST            SEE IF THIS IS STATE VECTOR OR W COLUMN.
+ 0632            AXT,1
+ 0633                   FV
+ 0634                   3
+ 0635                   PSIV
+ 0636                   H
+ 0637                   DP2/3
+ 0638                   1
+ 0639                   ZV
+ 0640                   JSWITCH
+ 0641                   ENDSTATE
+ 0642                   0
+ 0643  2         STORE  W +72D,2        VELOCITY COLUMN VECTOR.
+ 0644            VMOVE  0
+ 0645                   YV
+ 0646  2         STORE  W +36D,2        POSITION COLUMN VECTOR.
+ 0647            TIX,2  0
+ 0648  2                NEXTCOL
+ 0649            VMOVE  0
+ 0650                   DELTAV
+ 0651  2         STORE  TDELTAV
+ 0652            VMOVE  0
+ 0653                   NUV
+ 0654  2         STORE  TNUV
+ 0655            ITCI   0
+ 0656  2                STEPEXIT
+ 0657   NEXTCOL  VMOVE* 0               SET UP NEXT COLUMNS OF W MATRIX.
+ 0658                   W +36D,2
+ 0659  2         STORE  YV
+ 0660            VMOVE* 0
+ 0661                   W +72D,2
+ 0662  2         STORE  ZV
+ 0663            ITC    0
+ 0664  2                DIFEQ0
+ 0665   ENDSTATE NOLOD  0
+ 0666  8         STORE  TNUV
+ 0667            TSRT   1               UPDATE TIME SINCE RECTIFICATION.
+ 0668            ROUND  DAD
+ 0669                   H
+ 0670                   TSCALE -18D
+ 0671                   TC
+ 0672  2         STORE  TC
+ 0673            BHIZ   0
+ 0674                   WMATFLAG
+ 0675  2                NEXTCOL -2
+ 0676            ITC    0
+ 0677                   SETWINT         FOR NOW
+ 0678   SETWINT  AXT,2  4               SET UP W MATRIX EXTRAPOLATION ROUTINES.
+ 0679            AST,2  AXT,1           PROGRAM DESCRIPTION IS AT  DOW..  .
+ 0680            SXA,1  SXA,1
+ 0681            SWITCH AXT,1
+ 0682            ITC
+ 0683                   36D
+ 0684                   6
+ 0685                   DOW..
+ 0686                   FBRANCH
+ 0687                   HBRANCH
+ 0688                   JSWITCH
+ 0689                   0
+ 0690                   NEXTCOL
+P0691  4         COMES HERE TO FINISH FIRST TWO DIFEQ COMPUTATIONS.
+ 0692   -6       VSRT   1               ENTERS HERE FROM DIFEQ+12 MIDPOINT
+ 0693            VAD                    COMPUTATION.
+ 0694                   FV
+ 0695                   2
+ 0696                   PHIV
+ 0697  2         STORE  PHIV
+ 0698   DIFEQCOM DAD    1               INCREMENT H AND DIFEQCNT.
+ 0699            INCR,1 SXA,1
+ 0700                   DT/2
+ 0701                   H
+ 0702           -       12D
+ 0703                   DIFEQCNT        DIFEQCNT SET FOR NEXT ENTRY.
+ 0704  2         STORE  H
+ 0705            VXSC   2
+ 0706            VSRT   VAD
+ 0707            VXSC   VAD
+ 0708                   FV
+ 0709                   H
+ 0710                   1
+ 0711                   ZV
+ 0712                   H
+ 0713                   YV
+ 0714  2         STORE  ALPHAV
+ 0715            ITCI   0               EXIT VIA FBRANCH.
+ 0716  2                FBRANCH
+ 0717   DIFEQ    EQUALS DIFEQ+0
+P0718            ORBITAL ROUTINE FOR EXTRAPOLATING THE W MATRIX. IT COMPUTES THE
+R0719   SECOND DERIVATIVE OF EACH COLUMN POSITION VECTOR OF THE MATRIX AND CALLS
+R0720   THE NYSTOM INTEGRATION ROUTINES TO SOLVE THE DIFFERENTIAL EQUATIONS. THE
+R0721   PROGRAM USES A TABLE OF VEHICLE POSITION VECTORS COMPUTED DURING THE
+R0722  2INTEGRATION OF THE VEHICLES POSITION AND VELOCITY.
+ 0723   DOW..    VSRT   0
+ 0724                   ALPHAV
+ 0725  2                4
+ 0726            UNIT*  2               X1 REFERENCES THE TABLE OF POSITION
+ 0727            VPROJ  VXSC            VECTORS AND CALLS THE CORRECT DIFEQ PROG
+ 0728            VSU
+ 0729                   VECTAB,1
+ 0730                   ALPHAV
+ 0731  2                3/4
+ 0732            DMP    4               CUBE OF LENGTH OF POSITION VECTOR
+ 0733            TSLC   ROUND           DIVIDES VECTOR IN PUSH-DOWN LIST TO
+ 0734            BDDV   VXSC            FORM FINAL RESULT.
+ 0735            XCHX,2 INCR,2          INCREMENT COMPENSATES FOR .5 R IN 30D.
+ 0736            VSLT*  LXA,2
+ 0737                   28D
+ 0738                   30D
+ 0739                   S1
+ 0740                   DP1/4
+ 0741                   -
+ 0742                   S1
+ 0743                   3
+ 0744                   0,2
+ 0745                   S1
+ 0746  2         STORE  FV
+ 0747            ITC*   0               CALL NYSTROM ROUTINES ACCORDING TO X1.
+ 0748  8                DIFEQ,1
+ 0749   EARTHTAB 2DEC   .6335627        400 / SQRT(MU).
+ 0750   15/16    2DEC   15. B -4
+ 0751   3/4      2DEC   3.0 B -2
+ 0752   J2REQSQ  2DEC   .335914874
+ 0753   2J3RE/J2 2DEC   -.003309146
+ 0754   J4REQ/J3 2DEC   .60932709
+ 0755   2/3      EQUALS DP2/3
+ 0756   P2'/8    EQUALS 0
+ 0757   P3'/4    EQUALS 2
+ 0758  2P4'/16   EQUALS 4
+ 0759   DP1/2    2DEC   .5
+ 075901 DENBASE  2DEC   6455 B-14       EARTHRAD +100 KM SCALED AT 2 TO THE (14)
+ 075902 DENFACT  2DEC   0.781250        200/256
+ 075903 DEN4     2DEC   -7.55161127 B-5 CONSTANTS FOR DENSITY FUNCTION SCALED AT
+ 075904 DEN3     2DEC   21.2523654 B-5     2 TO THE (5)
+ 075905 DEN2     2DEC   -19.9253572 B-5
+ 075906 DEN1     2DEC   16.0533069 B-5
+ 075907 DEN0     2DEC   1.0 B-5
+ 075908 PACD/M   2DEC   0.0000363648    (RHO AREA CD)/MASS AT 100KM
+ 075909 OMEGA    2DEC   0               EARTH ROT VECTOR/SQRT(MU) SCALED
+ 07591           2DEC   0                  AT 2 TO THE (-23) KM TO (-3/2)
+ 075911          2DEC   0.968892208
+ 075912 DENALT   =      26D             TEMPORARY STORAGE FOR ALTITUDE
+ 075913 DENCEIL  2DEC   6655 B-14       EARTHRAD +300 KM SCALED AT 2(14)
 *       ENDOFJOB
