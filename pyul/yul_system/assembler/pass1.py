@@ -1,4 +1,3 @@
-import importlib
 from yul_system.types import Bit, SwitchBit, FieldCodBit, HealthBit, LocStateBit, \
                              MemType, Symbol, ALPHABET, ONES
 
@@ -149,12 +148,8 @@ class Pass1:
 
         # FIXME: do segment things
 
-        try:
-            comp_mod = importlib.import_module('yul_system.assembler.' + self._yul.comp_name.lower() + '.pass_2')
-            comp_pass2_class = getattr(comp_mod, self._yul.comp_name + 'Pass2')
-            comp_pass2 = comp_pass2_class(self._mon, self._yul, self.adr_limit, self.m_typ_tab)
-        except Exception as e:
-            self._mon.mon_typer('UNABLE TO LOAD PASS 2 FOR COMPUTER %s: %s' % (self._yul.comp_name, e.text.upper()))
+        comp_pass2 = self._mon.phi_load(self._yul.comp_name + '.PASS2', self._yul, self.adr_limit, self.m_typ_tab)
+        if comp_pass2 is None:
             self._yul.typ_abort()
 
         return comp_pass2.pass_1p5()
@@ -1594,12 +1589,8 @@ class Pass1:
         return self.send_popo(popo)
 
 def inish_p1(mon, yul):
-    try:
-        comp_mod = importlib.import_module('yul_system.assembler.' + yul.comp_name.lower() + '.pass_1')
-        comp_pass1_class = getattr(comp_mod, yul.comp_name + 'Pass1')
-        comp_pass1 = comp_pass1_class(mon, yul)
-    except Exception as e:
-        mon.mon_typer('UNABLE TO LOAD PASS 1 FOR COMPUTER %s: %s' % (yul.comp_name, e.text.upper()))
+    comp_pass1 = mon.phi_load(yul.comp_name + '.PASS1', yul)
+    if comp_pass1 is None:
         yul.typ_abort()
 
     comp_pass1.m_special()

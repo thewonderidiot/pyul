@@ -3,6 +3,8 @@ Very simplistic simulation of the MIT Monitor operating system for the H-1800.
 '''
 import sys
 import random
+import inspect
+import importlib
 from datetime import datetime
 from yul_system import pass_0
 from yul_system.types import Bit
@@ -72,6 +74,38 @@ class Monitor:
     def mon_peek(self):
         # Alternate name for phi_peek()
         return self.phi_peek()
+
+    def phi_load(self, path, *args):
+        # Determine module path of caller for relative load
+        frm = inspect.stack()[1]
+        mod_path = inspect.getmodule(frm[0]).__name__
+
+        # Strip off the last bit (the name of the file containing the function that called us)
+        mod_path = mod_path[:mod_path.rfind('.')+1]
+
+        # Split up the supplied path into parts and prepend "MOD" onto any that start with numbers
+        parts = [('MOD' if p[0].isdigit() else '') + p for p in path.split('.')]
+
+        # Put together an absolute path of the module to be loaded using the supplied relative path
+        mod_path += '.'.join([p.lower() for p in parts])
+
+        # Also use the relative path to construct the name of a class to find in that file
+        class_name = ''.join([p.title() for p in parts])
+
+        try:
+            # Attempt to load the module
+            mod = importlib.import_module(mod_path)
+
+            # Load the class definition from that module
+            ctype = getattr(mod, class_name)
+
+            # Construct an object of that class type. The first argument is a pointer to this monitor
+            # instance, and the remaining arguments are as supplied by the caller.
+            return ctype(self, *args)
+
+        except Exception as e:
+            self.mon_typer('FAILED TO LOAD MODULE %s: %s' % (class_name.upper(), str(e).upper()))
+            return None
 
     def phi_sentr(self, card):
         # Process a director card into a sentence. Whitespace is removed between all

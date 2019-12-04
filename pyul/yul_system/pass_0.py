@@ -1,6 +1,6 @@
 from datetime import datetime
 from yul_system.yulprogs import Yulprogs
-from yul_system.assembler import pass_1
+from yul_system.assembler import pass1
 from yul_system.types import MONTHS, NBTCS, Bit, SwitchBit
 
 class TypAbort(Exception):
@@ -458,7 +458,7 @@ class Yul:
                 pass
             sub_card, sub_sent = self.rd_subdrc()
 
-        pass_1.inish_p1(self._mon, self)
+        pass1.inish_p1(self._mon, self)
 
     def assy_subd(self, sub_card, sub_sent, is_assembly):
         # Subroutine in pass 0 to process assembly and/or printing subdirectors.

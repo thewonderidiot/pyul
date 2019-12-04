@@ -1,7 +1,7 @@
-from yul_system.assembler.pass_1 import Pass1
+from yul_system.assembler.pass1 import Pass1
 from yul_system.types import MemType, SwitchBit, Bit, HealthBit, FieldCodBit
 
-class AGC4Pass1(Pass1):
+class Agc4Pass1(Pass1):
     def __init__(self, mon, yul):
         super().__init__(mon, yul)
 

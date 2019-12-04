@@ -1,7 +1,7 @@
 from yul_system.types import ONES, BAD_WORD, Bit, SwitchBit
-from yul_system.assembler.pass_2 import Pass2, Cuss
+from yul_system.assembler.pass2 import Pass2, Cuss
 
-class AGC4Pass2(Pass2):
+class Agc4Pass2(Pass2):
     def __init__(self, mon, yul, adr_limit, m_typ_tab):
         super().__init__(mon, yul, adr_limit, m_typ_tab)
 
