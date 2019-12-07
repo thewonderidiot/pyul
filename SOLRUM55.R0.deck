@@ -10156,4 +10156,919 @@ L       ORBITAL INTEGRATION FOR 501
  01675  DT/2MIN  2DEC   .000024
  01676  DT/2MAX  2DEC   .65027077 B-1   .075 HOUR MAXIMUM TIME STEP
  0168   INITMSK  OCT    30000
+L      2PRELAUNCH ALIGNMENT PROGRAM
+R0001   THE PRELAUNCH ALIGNMENT PROGRAM CONSISTS OF TWO PARTS- VERTICAL ERECTION
+ 0002  9 AND GYROCOMPASSING. IN THE FIRST CASE
+R0003   THE Z PIPA INPUTS ARE USED TO CONTROL THE Y GYRO IN SUCH A WAY THAT THES
+ 0004  9E INPUTS ARE NULLED. A SIMILAR SIT-
+R0005   UATION APPLIES TO THE Y PIPA INPUTS AND THE Z GYRO.IN THE GYROCOMPASSING
+ 0006  9 CASE, THE Y PIPA INPUTS ARE USED IN
+R0007   EXACTLY THE SAME FASHION AS IN VERTICAL ERECTION. THE Z PIPA INPUTS ARE
+ 0008  9SPLIT BETWEEN THE Y GYRO TO HOLD THE
+R0009  4VERTICAL AND THE X GYRO TO POINT THE Z AXIS ALONG SOME DESIRED AZIMUTH.
+R0010   WHILE PRELAUNCH IS ACTIVE IT STAYS IN THE EXECUTIVE AND USES THE SLEEP/W
+ 0011  9AKE FEATURES. BY THIS MEANS MOST
+R0012  2ERASABLE USAGE IS CONFINED TO A VAC AREA. THE ASSIGNMENT IS AS FOLLOWS-
+ 0013   SINLAM   =      34D             SIN OF LATITUDE
+ 0014   COSLAM   =      36D             COSINE OF LATITUDE
+ 0015   SINAZ    =      2               SIN OF AZIMUTH
+ 0016   COSAZ    =      4               COSINE OF AZIMUTH
+ 0017  2         SETLOC 42000
+ 0018  2TOP1     TC     INTPRET
+ 0019            DMOVE  1               THIS START DISPLAYS ALL INPUTS FOR CHEK
+ 0020            RTB    EXIT
+ 0021                   AZIMUTH
+ 0022  2                1STO2S
+ 0023            TC     GRABDSP
+ 0024  2         TC     PREGBSY
+ 0025            XCH    MPAC
+ 0026            TS     DSPTEM1
+ 0027            CAF    ZERO
+ 0028  2         TS     DSPTEM1 +1
+ 0029            TC     CHECKNV         DISPLAY AZIMUTH
+ 0030  2         OCT    00661           (N.B. CAN NOT BE MODIFIED    ...ALK)
+ 0031  2         TC     PRELEXIT -1
+ 0032  2         TC     INTPRET
+ 0033            TSLT   0
+ 0034                   LATITUDE
+ 0035                   2
+ 0036  2         STORE  DSPTEM1 +1
+ 0037            DMOVE  1
+ 0038            RTB    EXIT
+ 0039                   VAZ
+ 0040  2                1STO2S
+ 0041            XCH    MPAC
+ 0042  2         TS     DSPTEM1
+ 0043            TC     CHECKNV         DISPLAY VEHICLE AZIMUTH, LATITUDE
+ 0044  2         OCT    00661           (SEE N.B. ABOVE)
+ 0045  2         TC     PRELEXIT -1
+ 00455 2         TC     FREEDSP         DONE WITH DSKY.
+ 0046  2         TC     INTPRET
+ 0047   TOP3     DMOVE  1               COMPUTES GIMBAL ANGLES
+ 0048            RTB    AXT,1
+ 0049                   SCNBMAT +8D
+ 0050                   ZEROVAC
+ 0051                   18D
+ 0052  2         STORE  0
+ 0053            COS    0
+ 0054                   VAZ
+ 0055  2         STORE  8D
+ 0056            NOLOD  0
+ 0057  2         STORE  16D
+ 0058            SIN    0
+ 0059                   VAZ
+ 0060  2         STORE  14D
+ 0061            NOLOD  1
+ 0062            COMP   AST,1
+ 0063                   6
+ 0064  2         STORE  10D
+ 0065   TOP33    VMOVE* 1
+ 0066            VXM    VSLT
+ 0067                   SCNBMAT +18D,1
+ 0068                   0
+ 0069                   1
+ 0070  2         STORE  XNB +18D,1
+ 0071            TIX,1  0
+ 0072  2                TOP33
+ 0073            ITC    0
+ 0074  2                MAKEXSM
+ 0075            ITC    0
+ 0076  2                CALCGA
+ 0077            NOLOD  1
+ 0078            TP
+ 0079  2         STORE  PRELXGA
+ 0080  2         EXIT   0
+R0081  4ENTER AT TOP2 IF GIMBAL ANGLES, AZIMUTH, LATITUDE ALREADY KEYED IN
+ 0082   TOP2     TC     BANKCALL        GO AND START CDU ZEROING
+ 0083  2         CADR   IMUZERO
+ 0084            TC     NEWMODE
+ 0085  2         OCT    01              INITIALIZATION.
+ 0086            CAF    NINETEEN        INITIALIZE ERASABLE MEMORY TO ZEROS
+ 0087   ZEROS1   XCH    THETAY
+ 0088            CAF    ZERO
+ 0089            INDEX  THETAY
+ 0090            TS     FILTER
+ 0091            CCS    THETAY
+ 0092  2         TC     ZEROS1
+ 0093            CAF    ELEVEN
+ 0094   ZEROS2   XCH    THETAY
+ 0095            CAF    ZERO
+ 0096            INDEX  THETAY
+ 0097            TS     THETAY
+ 0098            CCS    THETAY
+ 0099  2         TC     ZEROS2
+ 0100            CAF    SIXHNDRD        INITIALIZE FOR 5 MIN VERTICAL
+ 0101  2         TS     GYROCSW
+ 0102            TC     BANKCALL        INITIALIZATION COMPLETE SO STALL
+ 0103            CADR   IMUSTALL
+ 0104  4         TC     PRELEXIT
+ 0105            CS     PRELXGA         LOAD DESIRED CDU ANGLES.
+ 0106            COM
+ 0107            TS     THETAD
+ 0108            CS     PRELYGA
+ 0109            COM
+ 0110            TS     THETAD +1
+ 0111            CS     PRELZGA
+ 0112            COM
+ 0113            TS     THETAD +2
+ 0114            TC     PHASCHNG        GO INTO COARSE ALIGN PHASE.
+ 0115  2         OCT    02103           3.17 RESTART.
+ 0116   REPL11   TC     BANKCALL
+ 0117  2         CADR   IMUCOARS
+ 0118            TC     BANKCALL        NOTHING TO DO BUT SPEEP
+ 0119            CADR   IMUSTALL
+ 0120  4         TC     PRELEXIT
+ 0121   STARTPL2 TC     PHASCHNG        START FINE ALIGN - INITIALIZATION PHASE.
+ 0122  2         OCT    02203           3.18 RESTART.
+ 0123   REPL12   TC     BANKCALL
+ 0124  2         CADR   IMUFINE
+ 0125            TC     READTIME
+ 0126            CS     RUPTSTOR
+ 0127            TS     PREVTIME
+ 0128            CS     RUPTSTOR +1
+ 0129            TS     PREVTIME +1
+ 0130  2         RELINT
+ 0131            TC     BANKCALL        SLEEP
+ 0132            CADR   IMUSTALL
+ 0133  4         TC     PRELEXIT
+ 0134            TC     NEWMODE         SET MAJOR MODE TO VERTICAL ERECTION
+ 0135  2         OCT    5               (COUNTING)
+ 0136            CAF    ZERO
+ 0137            TS     INFLANG
+ 0138            TS     INFLANG +1
+ 0139            TS     INFLANG +2
+ 0140            TS     INFLANG +3
+ 0141            TS     INFLANG +4
+ 0142            TS     INFLANG +5
+ 0143            TS     PIPAY           SET ALL PIPAS TO ZERO
+ 0144            TS     PIPAZ
+ 0145  2         TS     PIPAX
+ 0146            CAF    NINE
+ 0147  2         TS     PRELTEMP
+ 0148            CAF    PLPIPADT        SET UP DELTA TIME FOR IMU COMPENSATION.
+ 0149            TS     1/PIPADT
+ 0150            INHINT
+ 0151            CAF    PRELDT          SET WAITLIST TO WAKE JOB
+ 0152            TC     WAITLIST
+ 0153  2         CADR   PRELALTS
+ 0154            TC     ENDOFJOB
+P0155  2         PRELAUNCH WAITLIST TASK - EXECUTED EVERY .5 SEC. IN LOOP.
+ 0156   PRELALTS CAF    PIPCAD21
+ 0157  2         TC     ISWCALL
+ 0158            CAF    TWENTY0
+ 0159            TC     NEWPHASE
+ 0160  2         OCT    3
+ 0161   REDO3.20 CS     TIME1
+ 0162  2         TS     TBASE3
+ 0163            CAF    TWO
+ 0164  2         TS     PIPAGE
+ 0165            XCH    IN2             TEST IN2 FOR GRR OR LIFT-OFF
+ 0166            XCH    IN2
+ 0167            MASK   BITS56
+ 0168            CCS    A
+ 0169  2         TC     PRELTERM
+ 0170            CAF    BIT2            CHECK IF LIFT-OFF HAS OCCURRED
+ 0171            MASK   FLAGWRD1
+ 0172            CCS    A
+ 0173  2         TC     PRELTERM        IT HAS. TERMINATE PRELAUNCH
+ 0174            CAF    PRELDT          SELF-SUSTAINING WAITLIST CALL
+ 0175            TC     WAITLIST
+ 0176  2         CADR   PRELALTS
+ 0177   NOPLWAIT CAF    PRIO20
+ 0178            TC     FINDVAC
+ 0179  2         CADR   PRAWAKE
+ 0180  2         TC     TASKOVER        RESUME
+ 0181   PRELTERM CS     RUPTSTOR +1     N.B. READTIME IS DONE IN PIPASR ABOVE
+ 0182            TS     TIME1GR
+ 0183            CS     RUPTSTOR
+ 0184  2         TS     TIME2GR
+ 0189            CS     TIME1GR
+ 0190  2         TS     TBASE5
+ 0191            CAF    ONE
+ 0192            TC     NEWPHASE
+ 0193  2         OCT    00005
+ 0194            CCS    A
+ 0195            TC     NOPLWAIT
+ 0196  2         TC     +1
+ 0197            CAF    2SEC21          CALL READACCS IN 2 SECS
+ 0198            TC     WAITLIST
+ 0199  2         CADR   READACCS
+ 0200  2         TC     NOPLWAIT
+ 0201   REPRELAL CAF    REPIP21
+ 0202  2         TC     PRELALTS +1
+ 0203   PIPCAD21 CADR   PIPASR
+ 0204  8REPIP21  CADR   REPIPASR
+ 0205   REDO3.21 TC     PRLRSTOR
+ 0206  2         TC     RE3.21
+ 0207  2PRAWAKE  TC     PRLSAVE
+ 0208            CCS    PHASE5          CHECK IF GRR HAS OCCURED.
+ 02082           CAF    NINETEEN        3.19 RESTART.
+ 02085           TC     +2
+ 0209            CAF    TWENTY1         3.21 RESTART.
+ 02092           TC     NEWPHASE
+ 02095 2         OCT    3
+ 0210            TC     BANKCALL
+ 0211  2         CADR   1/PIPA
+ 0212  2RE3.21   TC     INTPRET
+ 0213            SMOVE  0               ZERO TO THEAT-SOUTH
+ 0214                   ZEROPR
+ 0215  2         STORE  THETASTH
+ 0216            NOLOD  0
+ 0217  2         STORE  THETAE          ZERO TO THETA EAST
+ 0218            RTB    1
+ 0219            SIN
+ 0220                   ZEROVAC
+ 0221                   LATITUDE
+ 0222  2         STORE  SINLAM
+ 0223            COS    0
+ 0224                   LATITUDE
+ 0225  2         STORE  COSLAM
+ 0226            SMOVE  1
+ 0227            DSU
+ 0228                   90DEGAZ
+ 0229  2                AZIMUTH
+ 0230            SIN    0
+ 0231                   0
+ 0232  2         STORE  SINAZ
+ 0233            COS    0
+ 0234  2         STORE  COSAZ
+ 0235  2         EXIT   0
+ 0236            CCS    PHASE5          CHECK IF GRR HAS OCCURRED
+ 0237            TC     PRELTER1
+ 0238  2         TC     +1
+ 0239            TC     CHECKMM         CHECK IF VERTICAL ERECTION (UNCONDIT.)
+ 0240            OCT    5
+ 0241            TC     +2
+ 0242  2         TC     NOGYROCM
+ 0243            TC     CHECKMM         CHECK IF VERTICAL ERECTION (UNCONDIT.)
+ 0244            OCT    6
+ 0245            TC     +2
+ 0246  2         TC     TJL
+ 0247   DOGYROC  TC     CHECKMM         CHECK IF OPTICAL VERIFICATION
+ 0248            OCT    3
+ 0249  2         TC     DOGYROC1
+ 0254  2JSTERTHR TC     INTPRET
+ 0255            ITC    0
+ 0256  2                EARTHRR
+ 0257   DOGYROC1 TC     NEWMODE
+ 0258  2         OCT    2
+ 0259  2DOGYROC2 TC     INTPRET
+ 0260            ITC    0
+ 0261  2                GYROCOM
+ 0262   EARTHRR  ITC    0
+ 0263  2                EARTHRAT
+ 0264   ENDOFPR  DMOVE  0
+ 0265                   PIPTIME
+ 0266  2         STORE  PREVTIME
+ 0267  2         EXIT   0
+ 0268            CCS    PRELTEMP
+ 0269  2         TC     JUMPY
+ 0270            CCS    LGYRO           IF BUSY GO AROUND LOOP AGAIN
+ 0271  2         TC     JUMPY + 1       WAIT TIL NEXT TIME.  PRELTEM = 0 STILL.
+ 0278   PTORQUE  CAF    ZERO            INITIALIZE TORQUING REGISTERS AND RESET
+ 0279            XCH    THETAX
+ 0280            AD     INFLANG +1
+ 0281            TS     GYROANG +1
+ 0282            CAF    ZERO
+ 0283            AD     INFLANG
+ 0284  4         TS     GYROANG
+ 0285            CAF    ZERO
+ 0286            XCH    THETAY
+ 0287            AD     INFLANG +3
+ 0288            TS     GYROANG +3
+ 0289            CAF    ZERO
+ 0290            AD     INFLANG +2
+ 0291  2         TS     GYROANG +2
+ 0292            CAF    ZERO
+ 0293            XCH    THETAZ
+ 0294            AD     INFLANG +5
+ 0295            TS     GYROANG +5
+ 0296            CAF    ZERO
+ 0297            AD     INFLANG +4
+ 0298  2         TS     GYROANG +4
+ 0299            CAF    ZERO
+ 0300            TS     INFLANG
+ 0301            TS     INFLANG +1
+ 0302            TS     INFLANG +2
+ 0303            TS     INFLANG +3
+ 0304            TS     INFLANG +4
+ 0305  2         TS     INFLANG +5
+ 0312            CAF    NINE
+ 0313  2         TS     PRELTEMP
+ 0314            TC     PHASCHNG
+ 0315  2         OCT    02603
+ 0316            INHINT                 SET UP TORQUING JOB
+ 0317            CAF    PRIO27
+ 0318            TC     NOVAC
+ 0319            CADR   SPITGYRO
+ 0320  2         TC     ENDOFJOB
+ 0321  2JUMPY    TS     PRELTEMP
+ 0322            TC     PHASCHNG
+ 0323  2         OCT    02603
+ 0324  4         TC     ENDOFJOB
+ 0327   SPITGYRO CAF    LGYROANG
+ 0328            TC     BANKCALL
+ 0329  2         CADR   GYRODPNT
+ 0330            TC     BANKCALL
+ 0331            CADR   IMUSTALL
+ 0332            TC     ENDOFJOB
+ 0333            TC     ENDOFJOB
+P0334  2         VERTICAL ERECTION PROCEDURES.
+ 0335   NOGYROCM CCS    GYROCSW         COUNT DOWN FOR 5 MIN OF VERTICAL ERECT.
+ 0336            TC     MORE             IF MORE TO COME.
+ 0337            TC     NEWMODE         IF NOT, GO INTO GYROCOMP. (MM 02)
+ 0338  2         OCT    2
+ 0339  2         TC     +2
+ 0340  2MORE     TS     GYROCSW
+ 0341  2TJL      TC     INTPRET
+ 0342            ITC    0
+ 0343  2                EARTHRAT
+ 0344            DSU    1
+ 0345            DMP    DAD
+ 0346                   DELVY
+ 0347                   FILDELY
+ 0348                   VERECTC3
+ 0349                   FILDELY
+ 0350  2         STORE  FILDELY
+ 0351            AXC,1  1
+ 0352            AXC,2  ITC
+ 0353                   2
+ 0354                   0
+ 0355  2                VERECT
+ 0356            DSU    1
+ 0357            DMP    DAD
+ 0358                   DELVZ
+ 0359                   FILDELZ
+ 0360                   VERECTC3
+ 0361                   FILDELZ
+ 0362  2         STORE  FILDELZ
+ 0363            AXC,1  2
+ 0364            NOLOD  COMP
+ 0365            ITC
+ 0366                   0
+ 0367  2                VERECT
+ 0368            ITC    0
+ 0369                   ENDOFPR
+P0370  2         CALCULATION OF EARTH RATE
+ 0371   EARTHRAT DSU    1
+ 0372            TSLT   DMPR
+ 0373                   PIPTIME
+ 0374                   PREVTIME
+ 0375                   11D
+ 0376  2                GOMEGA
+ 0377            DMP    1                SIN(LAMBDE).DT.LENGTH OMEGA + THETA X
+ 0378            TSLT   DAD
+ 0379                   0
+ 0380                   SINLAM
+ 0381                   1
+ 0382                   THETAX
+ 0383  2         STORE  THETAX
+ 0384            DMP    1               -COS(LAMBDA).DT.LENGTH OMEGA + THETA STH
+ 0385            TSLT   BDSU
+ 0386                   -
+ 0387                   COSLAM
+ 0388                   1
+ 0389                   THETASTH
+ 0390  2         STORE  THETASTH
+ 0391            DMP    1                COS(AZIMUTH). SOUTH COMPONENT
+ 0392            TSLT
+ 0393                   THETASTH                             TO P.D. LIST
+ 0394                   COSAZ
+ 0395  2                1
+ 0396            DMP    2                Y COMPONENT = SIN(AZIMUTH).EAST COMP
+ 0397            TSLT   DAD                              + COS(AZIMUTH). SOUTH
+ 0398            DAD
+ 0399                   THETAE                                            COMP
+ 0400                   SINAZ
+ 0401                   1
+ 0402                   THETAY
+ 0403  2         STORE  THETAY
+ 0404            DMP    1                SIN(AZIMUTH). SOUTH COMPONENT
+ 0405            TSLT
+ 0406                   SINAZ                                TO P.D. LIST
+ 0407  2                THETASTH
+ 0408                   1
+ 0409            DMP    2                Z COMPONENT = COS(AZIMUTH.EAST COMP
+ 0410            TSLT   DSU
+ 0411            DAD
+ 0412                   COSAZ                         -SIN(AZIMUTH).SOUTH COMP
+ 0413                   THETAE
+ 0414                   1
+ 0415                   -
+ 0416                   THETAZ
+ 0417  2         STORE  THETAZ
+ 0418            ITCQ   0
+P0419  2         COMPUTATION OF GYROCOMPASS COMMAND
+ 0420   GYROCOM  ITA    1
+ 0421            DMP    TSLT
+ 0422                   S2
+ 0423                   DELVZ
+ 0424                   COSAZ
+ 0425  2                1
+ 0426            DMP    1                DELTA-V(EAST)= COS(AZ).DELTA-V(Z)
+ 0427            TSLT   DAD
+ 0428                   DELVY
+ 0429                   SINAZ
+ 0430                   1
+ 0431  2         STORE  DELE
+ 0432            AXC,1  2
+ 0433            AXC,2  NOLOD
+ 0434            COMP   ITC
+ 0435                   6
+ 0436                   2
+ 0437  2                VERECT
+ 0438            DMP    1                SIN(AZ).DELTA-V(Z)
+ 0439            TSLT
+ 0440                   DELVZ
+ 0441                   SINAZ
+ 0442  2                1
+ 0443            DMP    1                DELTA-V(SOUTH= COS(AZ.DELTA-V(Y)
+ 0444            TSLT   DSU
+ 0445                   DELVY
+ 0446                   COSAZ
+ 0447                   1
+ 0448  2         STORE  DELS
+ 0449            DMP    0
+ 0450                   DELS              C1. DELTA-V(SOUTH) TO P.D. LIST
+ 0451  2                GYRCMC1
+ 0452            DMP    1                FILTER = C1. DELTA-V(SOUTH)
+ 0453            DAD                             +C2. FILTER
+ 0454                   FILTER
+ 0455                   GYRCMC2
+ 0456  2         STORE  FILTER
+ 0457            NOLOD  2
+ 0458            DMP    TSLT
+ 0459            DAD
+ 0460                   GYRCMC3
+ 0461                   7
+ 0462                   THETAX
+ 0463  2         STORE  THETAX
+ 0464            DMP    1                EAST-TORQUING ANGLE = C4.FILTER
+ 0465            TSLT
+ 0466                   DELS
+ 0467                   GYRCMC4
+ 0468                   3
+ 0469  2         STORE  THETAE
+ 0470            ITCI   0
+ 0471                   S2
+P0472  2VERTICAL ERECTION SUBROUTINE
+R0473   VERECT - VERTICAL ERECTION      ENTERED IN INT. MODE WITH
+R0474                     SUBROUTINE            C(X1)= 2 FOR C(MPAC)= DEL-V Y
+R0475                                                = 0     C(MPAC)=-DEL-V Z
+R0476                                                = 6 FOR C(MPAC)=-DEL-V E
+R0477                                    FOR THESE THREE CASES OUTPUT WILL BE
+R0478                                                 THETA-Z
+R0479                                                 THETA-Y
+R0480                                                 THETA-S RESPECTIVELY.
+R0481                                    LOOP CONSTANTS ARE DETERMINED BY
+R0482                                           C(X2)= 0 NO GYROCOMPASSING
+R0483  4                                               2    GYROCOMPASSING
+ 0484  2VERECT   NOLOD  0
+ 0485  2         STORE  0
+ 0486            NOLOD  1
+ 0487            DAD*
+ 0488                   INT,1           COMPUTE INTEGRAL OF DEL-V = INT
+ 0489  2         STORE  INT,1
+ 0490            DMOVE  1
+ 0491            DMP*   TSLT
+ 0492                   0
+ 0493                   VERECTC1,2
+ 0494  2                5
+ 0495            DMP*   1
+ 0496            DAD*   DAD
+ 0497                   INT,1            THETA = THETA + C1 DEL-V  + C2 INT
+ 0498                   VERECTC2,2
+ 0499                   THETAY,1
+ 0500  2         STORE  THETAY,1
+ 0501            ITCQ   0
+P0502  2         PRELAUNCH MANUAL REQUEST PROCESSOR.
+ 0503   STARTPL  CAF    PRIO20          ENTER EXECUTIVE REQUEST ON START-UP.
+ 0504            TC     FINDVAC
+ 0505            CADR   STARTPL2
+ 0506  2         TC     SWRETURN
+ 0507   PLSTCHK  CS     EIGHT           PRELAUNCH COMES HERE WHENEVER A PHASE
+ 0508            AD     MPAC            REFERENCE IS MADE TO SEE IF A MANUAL
+ 0509            CCS    A               REQUEST HAS BEEN ENTERED THROUGH MASTER
+ 0510            TC     Q               CONTROL. ALL SUCH PHASES ARE LESS THAN 8
+ 0511   PLPRIO   OCT    24000
+ 0512  2         TC     +1
+ 0513            INDEX  MPAC            SEE WHICH MANUAL MODE REQUESTED.
+ 0514            TC     +0
+ 0515            TC     TOP1            1 - INITIALIZATION 1.
+ 0516            TC     TOP2            2 - INITIALIZATION 2.
+ 0517  2         TC     OPTCHK          3 - DO OPTICAL CHECK
+ 0518   PLFINCHK CCS    WASKSET         SEE IF IN FINE ALIGN.
+ 0519            TC     3CHECK
+ 0520            TC     PRELEXIT        SYSTEM IN BAD SHAPE.
+ 0521            TC     DOPLCHNG        DO THE CHANGE ANYWAY.
+ 0522  2         TC     PRELEXIT        SYSTEM IN BAD SHAPE.
+ 0523   3CHECK   AD     -CCSFINE
+ 0524            CCS    A
+ 0525            TC     TOP1
+ 0526   -CCSFINE OCT    -47             WASKSET IS 50 FOR FINE ALIGN.
+ 0527  2         TC     TOP1
+ 0528   DOPLCHNG INDEX  MPAC
+ 0529            TC     -2
+ 0530  2         TC     DOPL14
+ 0531   DOPL15   TC     NEWMODE         SET MAJOR MODE TO GYROCOMPASSING
+ 0532  2         OCT    2
+ 0533  2         TC     DOGYROC
+ 0534   DOPL14   TC     NEWMODE         SET MAJOR MODE TO UNCONDITIONAL VERT-
+ 0535  2         OCT    6               ICAL ERECTION
+ 0536            TC     TJL
+P0537  2         PRELAUNCH GO-SEQUENCE PROCESSOR.
+R0538  2           HAS BEEN DELETED.  SEE GENERAL RESTARTS.   ...DJL
+ 0539  2FINECODE OCT    50              FINE ALIGN AND COMPUTER CONTROL.
+R0540  2         PRELAUNCH TERMINATION.
+ 0541            TC     FREEDSP
+ 0542   PRELEXIT TC     BANKCALL        RETURN IMU TO MANUAL CONTROL.
+ 0543  2         CADR   IMUFINIS
+ 0544   ENDJ3OUT CS     ONE
+ 0545            TC     NEWPHASE
+ 0546  2         OCT    3
+ 0547            TC     ENDOFJOB
+P0548  2PRELAUNCH BANK STORED CONSTANTS
+ 0549   VERECTC1 2DEC   20. B-5         VERTICAL LOOP CONSTANTS
+ 0550            2DEC   2 B-5
+ 0551   VERECTC2 2DEC    .4
+ 0552            2DEC   .004
+ 0553   VERECTC3 2DEC   .1
+ 0554   GYRCMC1  2DEC   0.1
+ 0555   GYRCMC2  2DEC   0.9
+ 0556   GYRCMC3  2DEC   -68 B-7
+ 0557   GYRCMC4  2DEC   4 B-3
+ 0558   LABLAT   2DEC   .117678252      LATITUDE OF IL-7
+ 0559   90DEGAZ  2DEC   .25             90 DEG. FROM NORTH = EAST
+ 0560  2PRELDT   DEC    .5 E 2          HALF SECOND PRELAUNCH CYCLE
+ 0561  2WAKEPRAD CADR   PRAWAKE         WAKING ADDRESS FOR PRELAUNCH
+ 0562  2ZEROPR   OCT    0               OUR OWN PERSONAL COPY OF ZERO
+ 0564   LOMEGA   2DEC   .12169524       EARTH RATE IN IRIG PULSES PER .01 SEC.
+ 0565   GOMEGA   2DEC   0.97356192      EARTH RATE IN IRIG PULSES/CS
+ 0566   PLPIPADT DEC    50 B+6
+ 0567   -.25SC21 DEC    -25
+ 0568  2NEG.5SEC DEC    -50
+ 0569   2SEC21   DEC    200
+ 0570   DP2.5SEC 2DEC   250
+ 0571   BITS56   DEC    48
+ 0572   SIDEDAYS 2DEC*  .011605763 E-5B 23* FRACTION OF T2-T1 IN SIDEREAL DAY
+ 0573   LOCALUP  2DEC   .738876298 B-1
+ 0574            2DEC   .0              VECTOR AT TIME C(T2,T1) = 0
+ 0575            2DEC   .673841098 B-1
+ 0576   LGYROANG ADRES  GYROANG
+ 0577   IX       DEC    9
+P0578  4PRELAUNCH TERMINATION PHASE(AFTER G.R. SIGNAL)
+ 0579  2PRELTER1 TC     INTPRET
+ 0580            DAD    0
+ 0581                   PREVTIME
+ 0582                   DP2.5SEC
+ 0583  2         STORE  PREVTIME
+ 0584            ITC    0
+ 0585  2                EARTHRAT         CHANGED BY MR. FIXIT.
+ 0586  2         EXIT   0
+ 0587            CAF    ZERO
+ 0588            TS     GYROANG
+ 0589            TS     GYROANG +2
+ 0590  2         TS     GYROANG +4
+ 05902           XCH    THETAX
+ 05903           TS     GYROANG +1
+ 05904           XCH    THETAY
+ 05905           TS     GYROANG +3
+ 05906           XCH    THETAZ
+ 05907 2         TS     GYROANG +5
+ 0591            INHINT
+ 0592            CAF    PRIO31           CHANGED BY MR. FIXIT.
+ 0593            TC     NOVAC
+ 0594            CADR   SPITGYRO
+ 0595  2         RELINT
+ 0596            TC     NEWMODE
+ 0597  2         OCT    04              INERTIAL REFERENCE.
+ 0598  2         TC     INTPRET
+ 0599            DAD    0               FORM TIME SINCE LAUNCH VECTOR IN
+ 0600                   DTEPOCH         INERTIAL Z-X PLANE
+ 0601                   TIME2GR
+ 0602  2         STORE  DTEAROT
+ 0603            ITC    0               BRANCH TO FORCE WT TO LESS THAN 1 REV
+ 0604  2                EARROT2
+ 0605            SIN    0               FORM INERTIAL Z-X PLANE LOCAL VERTICAL
+ 0606  2                LATITUDE
+ 0607            DMOVE  0
+ 0608  2                ZERODP
+ 0609            COS    1
+ 0610            VDEF
+ 0611                   LATITUDE
+ 0612  2         STORE  VAC
+ 0613            TEST   0               TEST IF BIT IS ON. IF NOT SET IT ON
+ 0614                   NBSMBIT
+ 0615  2                NBITON
+ 0616   ROTXY    AXT,1  1               ROTATE PROJECTION OF LOCAL VERTICAL ON
+ 0617            AXT,2  ITC             INERTIAL X-Y PLANE ABOUT Z-AXIS
+ 0618                   2
+ 0619                   4
+ 0620  2                ACCUROT
+ 0621            NOLOD  0
+ 0622  2         STORE  REFSMMAT        PRESENT LOCAL VERTICAL VECTOR IS X-AXIS
+ 0623            DMOVE  0
+ 0624  2                ZERODP
+ 0625            DMOVE  0
+ 0626  2                VAC
+ 0627            COMP   1               FORM UNIT EAST VECTOR AT GRR
+ 0628            VDEF   UNIT
+ 0629  2                VAC +2
+ 0630            NOLOD  1               FORM UNIT SOUTH VECTOR
+ 0631            VXV    UNIT
+ 0632  2                REFSMMAT
+ 0633            DSU    0               FORM AZIMUTH SOUTH OF EAST AT GRR
+ 0634                   AZIMUTH
+ 0635                   90DEGAZ
+ 0636  2         STORE  30D
+ 0637            NOLOD  1
+ 0638            SIN    VXSC
+ 0639  2         STORE  REFSMMAT +12D   (TEMPORARY STORAGE)
+ 0640            COS    2               FORM SM Z-AXIS
+ 0641            VXSC   VAD
+ 0642            UNIT
+ 0643                   30D
+ 0644                   -
+ 0645                   REFSMMAT +12D
+ 0646  2         STORE  REFSMMAT +12D
+ 0647            NOLOD  1               FORM SM Y-AXIS BY CROSS PRODUCT
+ 0648            VXV    UNIT
+ 0649                   REFSMMAT
+ 0650  2         STORE  REFSMMAT +6
+ 0651            VXV    1               INITIALISE VN, GRAVITY GIVEN RN, UNITW
+ 0652            VXSC
+ 0653                   UNITW
+ 0654                   RN              SCALED AT 2(+25) METERS
+ 0655                   WIE
+ 0656  2         STORE  VN              SCALED AT 2(+7)M/CS
+ 0657            VMOVE  1
+ 0658            ITC
+ 0659                   RN
+ 0660  2                CALCGRAV
+ 0661  2         EXIT   0
+ 06612           CAF    PRIO31          GUESS WHAT WE:RE DOING
+ 06614 2         TS     1/PIPADT        GIVE UP   WOULD YOU BELEIVE 2 SECONDS
+ 0662  4         TC     ENDJ3OUT        TERMINATE PRELAUNCH. (PHASE = INACTIVE.)
+ 0663   NBITON   SWITCH 1
+ 0664            ITC
+ 0665                   NBSMBIT
+ 0666  2                ROTXY
+ 0667  8WIE      2DEC*  7.29211505 E-7 B+19*  RAD/CS SCALED AT 2(-19)
+ 0668   PRLSAVE  XCH    Q               SAVE CURRENT VARIABLES FOR RESTARTS
+ 0669  2         TS     MPAC +1
+ 0670            CAF    THIRTEEN
+ 0671   AGAIN1   TS     MPAC
+ 0672            INDEX  MPAC
+ 0673            CS     FILTER
+ 0674            INDEX  MPAC
+ 0675            TS     PTEMP
+ 0676            CCS    MPAC
+ 0677  2         TC     AGAIN1
+ 0678            CAF    ELEVEN
+ 0679   AGAIN2   TS     MPAC
+ 0680            INDEX  MPAC
+ 0681            CS     THETAY
+ 0682            INDEX  MPAC
+ 0683            TS     PTEMP +14D
+ 0684            CCS    MPAC
+ 0685  2         TC     AGAIN2
+ 0686            CS     PRELTEMP
+ 0687            TS     PTEMP +26D
+ 0688            CS     GYROCSW
+ 0689  2         TS     PTEMP +27D
+ 0690  2         TC     MPAC +1
+ 0691   PRLRSTOR XCH    Q               RESTORE OLD VALUES OF VARIABLES
+ 0692  2         TS     MPAC +1
+ 0693            CAF    THIRTEEN
+ 0694   AGAIN3   TS     MPAC
+ 0695            INDEX  MPAC
+ 0696            CS     PTEMP
+ 0697            INDEX  MPAC
+ 0698            TS     FILTER
+ 0699            CCS    MPAC
+ 0700  2         TC     AGAIN3
+ 0701            CAF    ELEVEN
+ 0702   AGAIN4   TS     MPAC
+ 0703            INDEX  MPAC
+ 0704            CS     PTEMP +14D
+ 0705            INDEX  MPAC
+ 0706            TS     THETAY
+ 0707            CCS    MPAC
+ 0708  2         TC     AGAIN4
+ 0709            CS     PTEMP +26D
+ 0710            TS     PRELTEMP
+ 0711            CS     PTEMP +27D
+ 0712  2         TS     GYROCSW
+ 0713            TC     MPAC +1
+P0714  4PRELAUNCH CHECK PROCEDURE (USES THE Z-NORTH SYSTEM OF AXES)
+ 0715   OPTCHK   INHINT
+ 0716            CAF    PRIO14
+ 0717            TC     FINDVAC         CALL WITH PRIORITY OF TWENTY
+ 0718  2         CADR   CHKOPT
+ 0719            CAF    BIT3
+ 0720            TS     MPAC
+ 0722            TC     PLFINCHK
+ 0723  2         TC     DOGYROC2
+ 0724   CHKOPT   TC     GRABDSP
+ 0725  2         TC     PREGBSY
+ 0726            TC     NEWMODE
+ 0727  2         OCT    03
+ 0728            CAF    ZERO
+ 0729            TS     STARS
+ 0730            AD     ONE
+ 0731            TS     DSPTEM1 +2
+ 0732            CAF    V06N30P
+ 0733            TC     NVSUB
+ 0734            TC     PRENVBSY
+ 0735            INDEX  STARS
+ 0736            XCH    TAZ
+ 0737            TS     DSPTEM1
+ 0738            INDEX  STARS
+ 0739            XCH    TEL
+ 0740  2         TS     DSPTEM1 +1
+ 0741            TC     CHECKNV
+ 0742            OCT    00661
+ 0743            TC     CHEXIT
+ 0744            XCH    DSPTEM1
+ 0745            INDEX  STARS
+ 0746            TS     TAZ
+ 0747            XCH    DSPTEM1 +1
+ 0748            INDEX  STARS
+ 0749  2         TS     TEL
+ 0750            CCS    STARS
+ 0751            TC     +3
+ 0752            CAF    ONE
+ 0753            TC     CHKOPT +5
+ 0754  2         TS     DSPTEM1 +2
+ 0755            CAF    TWO
+ 0756            TS     DSPTEM1 +1
+ 0757            CAF    ONE
+ 0758  2         TS     DSPTEM1         SETS UP STAR NUMBER DISPLAY
+ 0759            CAF    V06N30P
+ 0760            TC     NVSUB
+ 0761            TC     PRENVBSY
+ 0762            CAF    TWO
+ 0763            TC     BANKCALL
+ 0764            CADR   SXTMARK
+ 0765            TC     BANKCALL
+ 0766            CADR   OPTSTALL
+ 0767            TC     CHEXIT
+ 0768  2         TC     INTPRET
+ 0769            ITC    0
+ 0770  2                PROCTARG
+ 0771            ITC    0
+ 0772  2                MAKEXSM         COMPUTE DESIRED SM ORIENTAYION IN REC
+ 0773            MXV    1
+ 0774            VSLT
+ 0775                   TARGET1
+ 0776                   XSM
+ 0777                   1
+ 0778            STORE  STARAD
+ 0779            MXV    1
+ 0780            VSLT
+ 0781                   TARGET1 +6
+ 0782                   XSM
+ 0783                   1
+ 0784  2         STORE  STARAD +6
+ 0785            LXC,1  2
+ 0786            AXT,2  XSU,2
+ 0787            SXA,2  ITC
+ 0788                   MARKSTAT
+ 0789                   2
+ 0790                   X1
+ 0791                   S1
+ 0792  2                SXTNB
+ 0793            ITC    0
+ 0794  2                NBSM
+ 0795            VMOVE  0
+ 0796                   STARM
+ 0797            STORE  VECTEM
+ 0798            LXC,1  2
+ 0799            INCR,1 AXT,2
+ 0800            XSU,2  SXA,2
+ 0801                   MARKSTAT
+ 0802           -       7
+ 0803                   2
+ 0804                   X1
+ 0805  2                S1
+ 0806            ITC    0
+ 0807  2                SXTNB
+ 0808            ITC    0
+ 0809  2                NBSM
+ 0810            VMOVE  0
+ 0811                   STARM
+ 0812  2         STORE  12D
+ 0813            VMOVE  0
+ 0814                   VECTEM
+ 0815  2         STORE  6               TO AVOID ERASABLE BIND
+ 0816            ITC    0               FIND DESIRED SM IN PRESENT SM
+ 0817  2                AXISGEN
+ 0818            ITC    0               CALCULATE REQUIRED PULSE TORQUE IN GYROD
+ 0819  2                CALCGTA
+ 0820            VSRT   0
+ 0821                   OGC
+ 0822                   8D
+ 0823  2         STORE  OGC             CHANGE UNITS FROM 2PI TO GYRO PULSES
+ 0824  4         EXIT   0
+ 0825            TC     BANKCALL
+ 0826            CADR   MKRELEAS
+ 0827            TC     CHECKNV
+ 0828            OCT    00667
+ 0829            TC     CHEXIT
+ 0830  2         TC     INTPRET
+ 0831            VMOVE  0
+ 0832                   OGC             GETS SUMMED INTO PRELAUNCH
+ 0833  2         STORE  INFLANG
+ 0834  2         EXIT   0
+ 0837   CHEXIT   TC     FREEDSP
+ 0838            TC     NEWMODE
+ 0839            OCT    02
+ 0840            TC     ENDOFJOB
+P0841  4SUBROUTINE TO COMPUTE DESIRED SM AXES IN REC
+ 0842   MAKEXSM  EXIT   0
+ 0843            CAF    XVII
+ 0844            TS     BUF
+ 0845            CAF    ZERO            ZERO ALL OF XSM
+ 0846            INDEX  BUF
+ 0847            TS     XSM
+ 0848            CCS    BUF
+ 0849            TC     MAKEXSM +2
+ 0850            CAF    HALF
+ 0851  2         TS     XSM             HALF UNIT MATRIX IS COMPUTED
+ 0852  2         TC     INTPRET
+ 0853            COS    0
+ 0854                   AZIMUTH
+ 0855  2         STORE  XSM +8D
+ 0856            NOLOD  0
+ 0857  2         STORE  XSM +16D
+ 0858            SIN    0
+ 0859                   AZIMUTH
+ 0860  2         STORE  XSM +14D
+ 0861            COMP   0
+ 0862                   XSM +14D
+ 0863  2         STORE  XSM +10D
+ 0864            ITCQ   0
+P0865  4ROUTINE TO CONVERT TARGET AZIMUTH AND ELEVATIONS TO VECTORS
+ 0866   PROCTARG AXT,1  1
+ 0867            AXT,2  AST,2
+ 0868                   1
+ 0869                   12D
+ 0870  2                6
+ 0871   PROC1    SMOVE* 1
+ 0872            TSRT
+ 0873                   TEL +1,1
+ 0874                   2
+ 0875  2         STORE  0
+ 0876            SIN    0
+ 0877                   0
+ 0878            STORE  TARGET1 +12D,2
+ 0879            COS    0
+ 0880  2                0               PUSH DOWN THE COSINE OF ELEVATION
+ 0881            SMOVE* 1
+ 0882            RTB
+ 0883                   TAZ +1,1
+ 0884                   CDULOGIC
+ 0885  2         STORE  2               THEN Y=0.5SIN(AZ)COS(EL)
+ 0886            SIN    1
+ 0887            DMP    TSLT
+ 0888                   2
+ 0889                   0
+ 0890                   1
+ 0891  2         STORE  TARGET1 +14D,2
+ 0892            COS    1
+ 0893            DMP    TSLT
+ 0894                   2
+ 0895                   -
+ 0896                   1
+ 0897            STORE  TARGET1 +16D,2
+ 0898            AXT,1  1
+ 0899            TIX,2  ITCQ
+ 0900                   0
+ 0901                   PROC1
+P0902  4ROUTINE TO ROTATE COORDINATE SYSTEM BY EARTHRATE TIMES TIME
+ 0903  9ON
+ 0904   V06N30P  OCTAL  00630
+ 0905   XVII     DEC    17
+P0906   ROUTINE TO DISPLAY STORED DATA FOR CHECKING AND MODIFICATION,VERB NOUN
+R0907  4IS STORED AT L +1,RETURN IS TO L +2 FOR TERMINATE,L +3 FOR GOOD DATA OR
+ 0908  9PROCEDE
+ 0909   CHECKNV  XCH    Q
+ 0910            TS     CHKNVTEM
+ 0911            INDEX  CHKNVTEM
+ 0912  2         XCH    A
+ 0913            TC     NVSUB
+ 0914            TC     CHECKNV1
+ 0915            TC     BANKCALL
+ 0916  2         CADR   FLASHON
+ 0917            TC     ENDIDLE
+ 0918            TC     +3
+ 0919            TC     +4
+ 0920  2         TC     CHECKNV +2
+ 0921            INDEX  CHKNVTEM
+ 0922            TC     Q
+ 0923            INDEX  CHKNVTEM
+ 0924  2         TC     Z
+ 0925   CHECKNV1 CAF    CHECKNV2
+ 0926            TC     NVSUBUSY
+ 0927   CHECKNV2 CADR   CHECKNV +2
 *       ENDOFJOB
