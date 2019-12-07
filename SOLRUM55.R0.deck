@@ -11071,4 +11071,256 @@ R0907  4IS STORED AT L +1,RETURN IS TO L +2 FOR TERMINATE,L +3 FOR GOOD DATA OR
  0925   CHECKNV1 CAF    CHECKNV2
  0926            TC     NVSUBUSY
  0927   CHECKNV2 CADR   CHECKNV +2
+L      2INFLIGHT ALIGNMENT PROGRAM
+ 0001  2         SETLOC 44000
+ 0002   SWAYSTAT CAF    SIX             PROGRAM START AND INITIAL CONDITIONS
+ 0003            TS     DTCOUNT         SET DTCOUNT = 6
+ 0004            TS     DTCOUNT +1
+ 0005            CAF    ONE
+ 0006            TS     SWAYPULS        SET FIRST PIPA PULSE = +1
+ 0007            TS     SWAYPULS +1
+ 0008            CAF    ONE
+ 0009            TC     WAITLIST
+ 0010            CADR   SWAYROTY
+ 0011            CAF    ONE
+ 0012            AD     PHAZING
+ 0013            TC     WAITLIST
+ 0014            CADR   SWAYROTZ
+ 0015            RELINT
+ 0016  4         TC     ENDOFJOB
+ 0017   SWAYROTZ XCH    LP              STORE LP IN LPRUPT
+ 0018            XCH    LPRUPT
+ 0019            CAF    ONE             SET INDEX PIPSLECT FOR SELECTION OF
+ 0020            TS     PIPSLECT        PIPA TO BE INCREMENTED
+ 0021  2         TC     SWAYROTY +4
+ 0022   SWAYROTY XCH    LP
+ 0023            XCH    LPRUPT
+ 0024            CAF    ZERO
+ 0025  2         TS     PIPSLECT
+ 0026            CS     ZERO
+ 0027            INDEX  PIPSLECT
+ 0028            XCH    PIPAY
+ 0029            INDEX  PIPSLECT
+ 0030            AD     SWAYPULS
+ 0031            INDEX  PIPSLECT
+ 0032            XCH    PIPAY
+ 0033            CCS    A
+ 0034            AD     ONE             INCREMENT PIPA COUNTER IF PULSE
+ 0035            TC     ADDINC +1
+ 0036            TC     ADDINC
+ 0037  4         TC     ENDCHEC
+ 0038   ADDINC   CS     ONE
+ 0039            INDEX  PIPSLECT
+ 0040            AD     PIPAY
+ 0041            INDEX  PIPSLECT
+ 0042  4         XCH    PIPAY
+ 0043   ENDCHEC  CCS    ENDSROT         IF ENDSROT = +1 EXIT PROGRAM
+ 0044            TC     CDTTHREE        WHEN DTCOUNT = 6
+ 0045            TC     TIMCALC
+ 0046            TC     CDTTHREE
+ 0047   CDTTHREE CS     SIX
+ 0048            INDEX  PIPSLECT
+ 0049            AD     DTCOUNT
+ 0050            CCS    A
+ 0051            TC     TIMCALC         EXIT ON DTCOUNT = 6
+ 0052            TC     ENDSWAY
+ 0053            TC     TIMCALC
+ 0054  4         TC     ENDSWAY
+ 0055   TIMCALC  INDEX  PIPSLECT
+ 0056            CCS    DTCOUNT
+ 0057            TC     DIMCOUNT        ACC NOW CONTAINS DTCOUNT - 1
+ 0058            TC     ALTPULSS        IF DTCOUNT NORZ CHANGE
+ 0059            TC     ALTPULSS        SIGN OF SWAYPULSE
+ 0060            NOOP
+ 0061   ALTPULSS INDEX  PIPSLECT
+ 0062            CS     SWAYPULS
+ 0063            INDEX  PIPSLECT
+ 0064            TS     SWAYPULS
+ 0065            CAF    THIRTEEN        AND RESTART DTCOUNT AT 13
+ 0066   DIMCOUNT INDEX  PIPSLECT
+ 0067            TS     DTCOUNT         DTCOUNT NOW DIMINISHED BY ONE
+A0068                                   OR RESET TO 13
+ 0069            INDEX  PIPSLECT
+ 0070            INDEX  DTCOUNT         SELECT APPROPRIATE DELTA T FROM LIST
+ 0071            CAF    DELTA
+ 0072            EXTEND
+ 0073            MP     TPERIOD         AND MULTIPLY BY PERIOD
+ 0074            AD     FIVE            ROUND RESULT
+ 0075            EXTEND
+ 0076            MP     ONETENTH
+ 0077            TS     RUPTSTOR +3     TIME (DT) TILL NEXT INTERRUPT 10MS
+ 0078   NEXTRUPT CCS    PIPSLECT
+ 0079            TC     ZPIPRUPT        CALL WAITLIST FOR ZPIPA
+ 0080            XCH    RUPTSTOR +3
+ 0081            TC     WAITLIST        CALL WAITLIST FOR YPIPA
+ 0082            CADR   SWAYROTY
+ 0083  2         TC     ENDSWAY
+ 0084   ZPIPRUPT XCH    RUPTSTOR +3
+ 0085            TC     WAITLIST
+ 0086            CADR   SWAYROTZ
+ 0087   ENDSWAY  XCH    LPRUPT          REPLACE LP
+ 0088            EXTEND
+ 0089            MP     BIT1
+ 0090  8         TC     TASKOVER        END OF SWAY ROUTINE
+R0091  4MEMORY ASSIGNMENTS
+ 0092   DTCOUNT  EQUALS AMEMORY         YPIPA STATE COUNTER (0-7)
+ 0093   SWAYPULS EQUALS AMEMORY +2      NEXT YPIPA PULSE (+1,-1)
+ 0094   PHAZING  EQUALS AMEMORY +4      TIME DELAY FOR ZPIPA START
+A0095                                   INITIALIZED BY KEYBOARD
+A0096                                   +XXXXX. E-2 SEC
+A0097                                   MUST BE GREATER THAN 00001
+ 0098   ENDSROT  EQUALS AMEMORY +5      FLAG FOR PROGRAM EXIT
+A0099                                   SET BY KEYBOARD
+A0100                                   = 00001. TO END SWAYROUTINE
+A0101                                   = +00000. TO CONTINUE
+ 0102   TPERIOD  EQUALS AMEMORY +8D     PERIOD OF SWAY
+A0103                                   SET BY KEYBOARD
+A0104                                   = XX.XXX SEC
+ 0105   PIPSLECT EQUALS AMEMORY +9D     INDEX FOR PIPA SELECTION
+ 0106   DELTA    DEC    .05482          DELTA  T0
+ 0107            DEC    .03444          1
+ 0108            DEC    .02833          2
+ 0109            DEC    .02528          3
+ 0110            DEC    .02356          4
+ 0111            DEC    .02259          5
+ 0112            DEC    .02213          6
+ 0113            DEC    .02213          7
+ 0114            DEC    .02259          8
+ 0115            DEC    .02356          9
+ 0116            DEC    .02528          10
+ 0117            DEC    .02833          11
+ 0118            DEC    .03444          12
+ 0119            DEC    .1325           13
+ 0120   ONETENTH DEC    E-1
+P0122  4VERIFICATION ASSISTANVE FOR INFLIGHT
+ 0123   MYTEST   TC     INTPRET                                            456
+ 0124            DMOVE  0                                                  356
+ 0125                   ZERODP          SET ANGLES TO ZERO AND TEST        256
+ 0126  2         STORE  IGC                                                156
+ 0127            NOLOD  0                                                  056
+ 0128  2         STORE  MGC                                                -56
+ 0129            NOLOD  0                                                  +56
+ 0130  2         STORE  OGC
+ 0131            ITC    0
+ 0132  2                DOTEST
+ 0133            COMP   0               SET ANGLES TO -HALF AND TEST
+ 0134                   HALFDP
+ 0135  2         STORE  IGC
+ 0136            NOLOD  0
+ 0137  2         STORE  MGC
+ 0138            NOLOD  0
+ 0139  2         STORE  OGC
+ 0140            ITC    0
+ 0141  2                DOTEST
+ 0142   CHGIGC   DMOVE  1               CHANGE IGC,MGC, AND OGC AND TEST
+ 0143            DAD
+ 0144                   AZIMUTH
+ 0145                   INCRMT
+ 0146  2         STORE  IGC
+ 0147            NOLOD  0
+ 0148  2         STORE  AZIMUTH
+ 0149            DSU    1
+ 0150            BPL    ITC
+ 0151                   IGC
+ 0152                   HALFDP
+ 0153                   OUT
+ 0154  2                DOTEST
+ 0155   CHGMGC   DMOVE  1               CHANGE MGC AND OGC AND TEST
+ 0156            DAD
+ 0157                   GYROCSW
+ 0158                   INCRMT
+ 0159  2         STORE  MGC
+ 0160            NOLOD  0
+ 0161  2         STORE  GYROCSW
+ 0162            DSU    1
+ 0163            BPL    ITC
+ 0164                   MGC
+ 0165                   HALFDP
+ 0166                   RESETM
+ 0167  2                DOTEST
+ 0168   CHGOGC   DMOVE  1               RESET OGC AND TEST
+ 0169            DAD
+ 0170                   PRELXGA
+ 0171                   INCRMT
+ 0172  2         STORE  OGC
+ 0173            NOLOD  0
+ 0174  2         STORE  PRELXGA
+ 0175            DSU    1
+ 0176            BPL    ITC
+ 0177                   OGC
+ 0178                   HALFDP
+ 0179                   RESETO
+ 0180  2                DOTEST
+ 0181            ITC    0
+ 0182  2                CHGOGC
+ 0183   RESETO   COMP   0               RESET OGC TO-HALF
+ 0184                   HALFDP          LOOP TO CHGMGC
+ 0185  2         STORE  PRELXGA
+ 0186            ITC    0
+ 0187  2                CHGMGC
+ 0188   RESETM   COMP   0               RESET MGC TO -HALF
+ 0189                   HALFDP          LOOP TO CHGIGC
+ 0190            STORE  GYROCSW
+ 0191            ITC    0
+ 0192  2                CHGIGC
+ 0193   INCRMT   2DEC   .20
+ 0194   OUT      EXIT   0               END OF MAIN
+ 0195  2LASTWORD TC     ENDOFJOB
+ 0196   DOTEST   ITA    1
+ 0197            VMOVE  ITC
+ 0198                   LATITUDE
+ 0199                   UNITX
+ 0200  2                MYROT
+ 0201            NOLOD  0
+ 0202  2         STORE  STARAD
+ 0203            VMOVE  1
+ 0204            ITC
+ 0205                   UNITY
+ 0206  2                MYROT
+ 0207            NOLOD  0
+ 0208  2         STORE  STARAD +6D
+ 0209            VMOVE  0
+ 0210                   UNITX
+ 0211  2         STORE  6D
+ 0212            VMOVE  0
+ 0213                   UNITY
+ 0214  2         STORE  12D
+ 0215            ITC    0
+ 0216  2                AXISGEN
+ 0217            ITC    0               SEND NEW VECTORS TO CALCGTA
+ 0218  2                CALCGTA
+ 0219            ITCI   0
+ 0220                   LATITUDE
+ 0221   MYROT    ITA    1               INITIALIZE
+ 0222            TEST   SWITCH
+ 0223                   S2
+ 0224                   NBSMBIT
+ 0225                   MYROT1
+ 0226  2                NBSMBIT
+ 0227   MYROT1   AXT,1  1               ROTATE X,Z  ABOUT  Y
+ 0228            AXT,2  DMOVE
+ 0229                   4
+ 0230                   0
+ 0231                   IGC
+ 0232  2         STORE  30D
+ 0233            ITC    0
+ 0234  2                ACCUROT
+ 0235            AXT,1  1               ROTATE X,Y  ABOUT  Z
+ 0236            AXT,2  DMOVE
+ 0237                   2
+ 0238                   4
+ 0239                   MGC
+ 0240  2         STORE  30D
+ 0241            ITC    0
+ 0242  2                ACCUROT
+ 0243            AXT,1  1               ROTATE  Z,Y ABOUT  X
+ 0244            AXT,2  DMOVE
+ 0245                   0
+ 0246                   2
+ 0247                   OGC
+ 0248  2         STORE  30D
+ 0249            ITC    0
+ 0250  2                ACCUROT
+ 0251            ITCI   0
+ 0252                   S2
 *       ENDOFJOB
