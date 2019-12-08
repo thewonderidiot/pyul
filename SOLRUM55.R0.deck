@@ -11323,4 +11323,356 @@ P0122  4VERIFICATION ASSISTANVE FOR INFLIGHT
  0250  2                ACCUROT
  0251            ITCI   0
  0252                   S2
+L      2RTB OP CODES
+ 0001            BANK   30
+R0002  2ROUTINE TO LOAD TIME OF DAY INTO MPAC
+ 0003   LOADTIME TC     READTIME
+ 0004            CS     RUPTSTOR
+ 0005            TS     MPAC
+ 0006            CS     RUPTSTOR +1
+ 0007            TS     MPAC +1
+ 0008            RELINT
+ 0009            CAF    ZERO
+ 0010            TS     NEWEQIND
+ 0011            TS     MPAC +2
+ 0012            TC     DPEXIT
+P0013  2ROUTINE TO RESET THE PUSHDOWN POUNTER
+ 0014   FRESHPD  CS     FIXLOC
+ 0015            COM
+ 0016            TS     PUSHLOC
+ 0017            TC     RE-ENTER
+P0018  2ROUTINE TO ZERO OUT THE FIRST 38 LOCS OF A VAC AREA
+ 0019   ZEROVAC  CAF    37DEC
+ 0020   ZVLOOP   TS     TEM2
+ 0021            AD     FIXLOC
+ 0022            TS     Q
+ 0023            CAF    ZERO
+ 0024            INDEX  Q
+ 0025            TS     0
+ 0026            CCS    TEM2
+ 0027            TC     ZVLOOP
+ 0028  2         TC     RE-ENTER
+ 0029   37DEC    DEC    37
+P0030  2ROUTINE TO CONVERT IS COMP. NOS. TO 1S COMP.
+ 0031   CDULOGIC CCS    MPAC            THIS BASIC ROUTINE TESTS CDU ANGLES FOR
+ 0032            TC     CDULOG1         +OR-SIGN INCLUDING ZERO AND FORMS A DP
+ 0033            TC     CDULOG1         NUMBER CORRESPONDING TO ANGLE
+ 0034            TC     +1
+ 0035            CS     HALF            USE       SMOVE 1
+ 0036            TC     +2                        RTB
+ 0037   CDULOG1  CS     ZERO                            CDUXYZ
+ 0038            XCH    OVCTR                           CDULOGIC
+ 0039            XCH    MPAC
+ 0040            EXTEND
+ 0041            MP     HALF
+ 0042            XCH    OVCTR
+ 0043            AD     LP
+ 0044            XCH    MPAC +1
+ 0045            XCH    OVCTR
+ 0046            XCH    MPAC
+ 0047            TC     DPEXIT
+P0048  2ROUTINE TO CONVERT 1S COMP. NOS. TO 2S COMP.
+ 0049   1STO2S   CAF    ZERO
+ 0050            XCH    MPAC +1
+ 0051            DOUBLE
+ 0052            TS     OVCTR
+ 0053            CAF    ZERO
+ 0054            AD     MPAC
+ 0055            AD     MPAC
+ 0056            CCS    A
+ 0057            AD     ONE
+ 0058            TC     +2
+ 0059            COM
+ 0060   ZYXR     TS     MPAC            AND MAYBE OVERFLOW.
+ 0061  2         TC     DPEXIT
+ 0062            INDEX  A               HANDLE OVERFLOW IN STANDARD ANGULAR WAY.
+ 0063            CAF    LIMITS
+ 0064            AD     MPAC            GUARANTEED NO OVERFLOW.
+ 0065  8         TC     ZYXR
+ 0066   READPIPS INHINT
+ 0067            CS     PIPAX
+ 0068            CS     A
+ 0069            INDEX  FIXLOC
+ 0070            TS     VAC
+ 0071            CS     PIPAY
+ 0072            CS     A
+ 0073            INDEX  FIXLOC
+ 0074            TS     VAC +2
+ 0075            CS     PIPAZ
+ 0076            CS     A
+ 0077            INDEX  FIXLOC
+ 0078            TS     VAC +4
+ 0079            RELINT
+ 0080            CAF    ZERO
+ 0081            INDEX  FIXLOC
+ 0082            TS     VAC +1
+ 0083            INDEX  FIXLOC
+ 0084            TS     VAC +3
+ 0085            INDEX  FIXLOC
+ 0086            TS     VAC +5
+ 0087            TS     NEWEQIND        LOAD INDICATOR OFF.
+ 0088   VMODE    CS     ZERO
+ 0089  4         TC     DPEXIT +1
+ 0090   PULSEIMU INDEX  FIXLOC          ADDRESS OF GYRO COMMANDS SHOULD BE IN X1
+ 0091            CS     X1
+ 0092            COM
+ 0093            TC     BANKCALL
+ 0094  2         CADR   GYRODPNT
+ 0095  8         TC     RE-ENTER
+ 0096   SGNAGREE TC     BANKCALL
+ 0097            CADR   TPAGREE
+ 0098  4         TC     DPEXIT
+R0099   ROUTINE TO COMPLETE OPTICS TRUNNION ANGLE CONVERSION FROM COUNTER
+R0100   READING TO DP REVOLUTIONS. CALLS TO TRUNLOG SHOULD BE IMMEDIATELY
+R0101   PRECEDED BY A CALL TO CDULOGIC.  (NO NEED TO CHECK SXT POWER-ON BIT.)
+ 0106   TRUNLOG  CAF    10DEGS          CORRECT FOR 20 DEG OFFSET (CDULOGIC
+ 0107            AD     MPAC             ALREADY SHIFTED IT RIGHT ONE) AND SHIFT
+ 0108            TS     MPAC             RIGHT TWO ADDITIONAL PLACES.
+ 0109            CAF    QUARTER
+ 0110            TC     SHORTMP
+ 01105 2         TC     DANZIG          WITH PD IF AT END W/ NO ADDRESSES.
+ 0111  810DEGS   DEC    3600            HALF OF SXT TRUNION OFFSET
+ 0112   INCRCDUS CAF    LOCTHETA
+ 0113            TS     BUF
+ 0114            CAF    TWO
+ 0115   INCRCDU2 TS     BUF +1
+ 0116            DOUBLE
+ 0117            AD     VACLOC
+ 0118            INDEX  A
+ 0119            CS     0
+ 0120            COM
+ 0121            TC     BANKCALL
+ 0122  2         CADR   CDUINC
+ 0123            CCS    BUF
+ 0124            TS     BUF
+ 0125            CCS    BUF +1
+ 0126            TC     INCRCDU2
+ 0127  2         TC     VMODE
+ 0128   LOCTHETA ADRES  THETAD +2
+P0129  2   LOG FUNCTION SUBROUTINE
+R0130      INPUT... X  (IN IMPAC)
+R0131  2  OUTPUT... -LN(X)/32    ( IN MPAC.  SCALED BY 32TO FIT LOG OF 2EXP-28.
+ 0132    LOG     TC     SWAPLOC          CALLED BY     RTB   LOG
+ 0133  2         TC     INTPRET
+ 0134            NOLOD  2               GENERATES LOG BY SHIFTING ARG UNTIL
+ 0135            TSLC   BDSU            IT LIES BETWEEN .5 AND1.  THE LOG OF
+ 0136            EXIT                   THIS PART IS FOUND AND THE LOG OF THE
+A0137                                   SHIFTED PART IS COMPUTED AND ADDED IN.
+ 0138                   31D             SHIFT COUNT STORED IN LOC 31 OF VAC AREA
+ 0139  2                NEARONE
+ 0140            TC     POLY            GETS LOG OF PRINCIPLE PART.
+ 0141            DEC    6
+ 0142            2DEC   0
+ 0143            2DEC   .031335467
+ 0144            2DEC   .0130145859
+ 0145            2DEC   .0215738898
+ 0146            CAF    ZERO
+ 0147            TS     MPAC + 2
+ 0148            CAF    CLOG1/2 +1
+ 0149            XCH    MPAC +1
+ 0150            TS     LOGTEM +1
+ 0151            CAF    CLOG1/2
+ 0152            XCH    MPAC
+ 0153            XCH    LOGTEM
+ 0154            INDEX  FIXLOC
+ 0155            CS     31D             LOAD POSITIVE SHIFT COUNT IN A.
+ 0156  2         TC     SHORTMP2        MULTIPLY BY SHIFT COUNT.
+ 0157            XCH    MPAC +2
+ 0158            XCH    MPAC +1
+ 0159            XCH    MPAC            RESULT WAS IN MPAC +1 AND MPAC +2.
+ 0160            TC     DAD             ADD IN PREVIOUS RESULT. LEFT IN LOGTEM.
+ 0161            ADRES  LOGTEM
+ 0162            TC        SWAPLOC
+ 0163  2         TC     DPEXIT
+ 0164   CLOG1/2  2DEC   .0216608494
+P0165  2         SUBROUTINE TO COMPUTE THE ARCTAN OF THE RATIO OF TWO FUNCTIONS.
+R0166  2         CALLED AS THOUGH A BASIC SUBR...    RTB       ARCTAN
+ 0167   ARCTAN   TC     SWAPLOC          ARCTAN COMPUTES ARCTAN(VACZ/VACX)
+ 0168            TC     INTPRET                                ---------
+ 0169   INATAN   DSQ    0                RESULTHAS VALUE BETWEEN + AND - 1/2
+ 0170  2                VACZ             (180 DEG. SCALED) IS LEFT IN MPAC.
+ 0171            DSQ    4
+ 0172            DAD    BOV
+ 0173            BZE    SQRT
+ 0174            BDDV   BOV
+ 0175            TSRT   ASIN
+ 0176                   VACX
+ 0177                   -
+ 0178                   2BIG
+ 0179                   ATAN0/0
+ 0180                   VACZ
+ 0181                   ATAN=90
+ 0182  2                1                AND PUSH IT DOWN
+ 0183            BMN    2
+ 0184            LODON  DMOVE
+ 0185            EXIT
+ 0186                   VACX
+ 0187                   NEGVX
+ 0188  2                -               (INACTIVE NEEDED FOR PUSH-UP).
+ 0189   ATANDUN  TC     SWAPLOC
+ 0190  4         TC     DPEXIT
+ 0191   NEGVX    COMP   2               IF VACX NEGATIVE, CHNAGE RESULT.
+ 0192            BPL    DAD
+ 0193            RTB
+ 0194                   -
+ 0195                   NEGOUT
+ 0196                   HALVE
+ 0197                   ATANDUN
+ 0198   NEGOUT   NOLOD  1
+ 0199            DSU    RTB
+ 0200                   HALVE
+ 0201  2                ATANDUN
+ 0202    2BIG    NOLOD  1
+ 0203            VSRT   ITC
+ 0204                   1
+ 0205  2                INATAN
+ 0206   ATAN0/0  DMOVE  1
+ 0207            RTB
+ 0208                   3ZEROS          WHAT SHOULD ARCTAN(0/0) =
+ 0209  2                ATANDUN
+ 0210   ATAN=90  SIGN   1
+ 0211            RTB
+ 0212                   FOURTH
+ 0213                   VACZ
+ 0214                   ATANDUN
+P0215  2    BASIC SUBROUTINE TO SAVE INTERPRETER REGISTERS  (SAME BANK AS RTBS).
+ 0216   SWAPLOC  XCH    LOC              SUBROUTINE TO SWAP LOC, ADRLOC, AND
+ 0217            INDEX  FIXLOC           ORDER REGISTERS WITH LOCATIONS 28,
+ 0218            XCH    28D              29, AND 30 IN TEMP AREA.
+ 0219            TS     LOC
+ 0220            XCH    ADRLOC           USEFUL FOR USING INTERPRETER IN SUBROUT
+ 0221            INDEX  FIXLOC           AND THEN ABLE TO CONTINUE IN MIDDLE OF
+ 0222            XCH    29D             CURRENT EQUATIONS.
+ 0223            TS     ADRLOC           USE...     TC   SWAPLOC
+ 0224            CS     BANKSET         PACK INTERPRETIVE BANK AND ORDER IN 30D.
+ 0225            AD     ORDER
+ 0226            INDEX  FIXLOC                      .........
+ 0227            XCH    30D                         TC   SWAPLOC
+ 0228            TS     ORDER                       TC   DANZIG
+ 0229            MASK   LOW7
+ 0230            XCH    ORDER
+ 0231            MASK   BANKMASK
+ 0232            COM
+ 0233            TS     BANKSET
+ 0234            TC     Q
+P0235         SUBROUTINE TO SET MPACS TO POS OR NEG MAX DEPENDING ON SIGN MPAC
+ 0236   SIGNMPAC CCS    MPAC
+ 0237            TC     SETPOS
+ 0238            TC     SETPOS
+ 0239            TC     +1
+ 0240            CAF    NEGSIGN
+ 0241            TS     MPAC
+ 0242            TS     MPAC + 1
+ 0243            TS     MPAC + 2
+ 0244            CAF    ZERO
+ 0245            TS     NEWEQIND
+ 0246  2         TC     DPEXIT
+ 0247   SETPOS   CAF    POSMAX
+ 0248  8         TC     -7
+ 0249   V1STO2S  CAF    TWO             THIS ROUTINE TAKES GIMBAL ANGLES SCALED
+ 0250            TS     VBUF            2PI IN THE VAC AND LEAVES 2S COMPLIMENT
+ 0251            DOUBLE                 ANSWERS IN MPAC.....MPAC +2
+ 0252            AD     VACLOC          BASE ADDRESS OF VECTOR ACCUMULATOR
+ 0253            TS     VBUF +1
+ 0254            INDEX  VBUF +1
+ 0255            CS     Q
+ 0256            COM
+ 0257            DOUBLE
+ 0258            TS     OVCTR           SKIPS ON OVERFLOW
+ 0259            CAF    ZERO
+ 0260            INDEX  VBUF +1
+ 0261            AD     A
+ 0262            INDEX  VBUF +1
+ 0263            AD     A
+ 0264            CCS    A               TEZT FOR NEGATIVE MAJOR PART
+ 0265            AD     ONE
+ 0266            TC     +2
+ 0267            COM
+ 0268   ZYXW     INDEX  VBUF
+ 0269            TS     MPAC
+ 0270            TC     ZYXWV
+ 0271            INDEX  A
+ 0272            CAF    LIMITS          NORMAL PROCEDURE FOR ANGLE OVERFLOW
+ 0273            INDEX  VBUF
+ 0274            AD     MPAC
+ 0275  2         TC     ZYXW
+ 0276   ZYXWV    CCS    VBUF
+ 0277            TC     V1STO2S +1
+ 0278            TS     NEWEQIND
+ 0279            CS     TWO
+ 0280            TC     DPEXIT +1
+ 0281   V2STOD1S CAF    TWO             THIS ROUTINE TAKES CDU ANGLES IN MPAC...
+ 0282            TS     VBUF            MPAC +2 AND CONVERTS TO ANGLES SCALED
+ 0283            DOUBLE                 2PI IN THE VAC LOCATIONS
+ 0284            AD     VACLOC
+ 0285  4         TS     VBUF +1
+ 0286            INDEX  VBUF
+ 0287            CS     MPAC
+ 0288            EXTEND
+ 0289            MP     NEG1/2
+ 0290            TS     VBUF +2         UNCORRECTED UPPER PARTS
+ 0291            CCS    LP              TEST SIGN OF LOWER WORD
+ 0292            CAF    ZERO
+ 0293            TC     +3              POSITIVE CASE OK
+ 0294            TC     +1
+ 0295            CS     HALF            NEGATIVE CASE
+ 0296            AD     LP              CORRECT LOWER WORD
+ 0297            INDEX  VBUF +1
+ 0298            TS     Q               STORE  LOWER WORD
+ 0299            CAF    ZERO            DEAL WITH OVERFLOW STANDARD WAY
+ 0300            AD     VBUF +2
+ 0301            INDEX  VBUF +1
+ 0302  2         TS     A               STORE UPPER WORD
+ 0303            CCS    VBUF
+ 0304  2         TC     V2STOD1S +1
+ 0305            CS     ZERO
+ 0306            TS     MODE
+ 0307            TC     DANZIG
+P0308  4ROUTINE TO FREE DSKY
+ 0309   DSPFREE  TC     FREEDSP
+ 0310            TC     RE-ENTER
+P0311  2      FINAGLE TO GET OGC CORRECTED TO NEAREST POINT ON 16 SPEED.
+ 0312   CDUXFIX  CS     OGC             INTERPRETIVE SCALING.   (REVS)
+ 0313            EXTEND
+ 0314            MP     BIT12           MULTIPLY BY 1/8 TH.
+ 0315  2         TS     MPAC + 1        SAVE RESULT.
+ 0316            CAF    BIT11           1/16 TH.
+ 0317            AD     THETAD          TO FIND NEAREST ZERO POINT.
+ 0318            MASK   HI4             DROPS BACK TO LOWER (MORE NEG) 1/8TH.
+ 0319            TS     K1ROLL
+ 0320            TC     +3              SKIPS THIS IF ADDITION OVERFLEW.
+ 0321            CAF    POSMAX          IN THAT CASE, USE POSMAX.
+ 0322  2         TS     K1ROLL
+ 0323            CS     K1ROLL          THE CURRENT NEAREST ZERO POINT ON 16 SPD
+ 0324            AD     THETAD          DELTA FROM ZERO POINT.
+ 0325            AD     MPAC + 1        MINUS NEW COMMAND
+A0326                                     A = DELTHETAD -DELNEWCOMMAND
+ 0327            AD     BIT11           PLUS 1/16 TH.  (180 DEG SCALED.)
+ 0328            CCS    A               IF NEG, CHANGE IS MORE THAN + 180 DEG.
+ 0329            TC     CHECKNEG        OK, CHECK OTHER WAY.
+ 0330   NEG1/8+1 OCT    74000
+ 0331            CS     BIT12           CHANGE TOO BIG, MOVE TO NEXT LOWER 0-PT.
+ 0332   NEWBIAS  AD     K1ROLL          (NEG ZERO OF CCS COMES HERE ALSO, SO..)
+ 0333            TS     K1ROLL
+ 0334  2         TC     GETNUOGC        SKIPPING ON OVERFLOW.
+ 0335            INDEX  A
+ 0336            CS     LIMITS
+ 0337  2         TC     NEWBIAS  + 1    AND SET PROPER LIMIT VALUE.
+ 0338   CHECKNEG AD     NEG1/8+1
+ 0339            CCS    A               CHECK OTHER SIDE.
+ 0340            CAF    BIT12           ADD 108 TH TO K1ROLL.
+ 0341            TC     NEWBIAS         (+ 0 IMPOSSIBLE.)
+ 0342  2         TC     +1              NO NEED TO CHANGE BIAS.
+ 0343   GETNUOGC CS     MPAC + 1        NEW DELTA.
+ 0345            AD     K1ROLL          AS MODIFIES IF IT WAS NEC.
+ 0346            TS     MPAC
+ 0347  2         TC     +4              DETECT OVERFLOW.
+ 0348            INDEX  A
+ 0349            CAF    LIMITS          GO TO POSMAX FROM NEGMAX. (AND VICEVERSA
+ 0350  2         AD     MPAC            AND GET NEW ANGLE.
+ 0351            EXTEND
+ 0352            MP     BIT14           RESCALE TO REVS.
+ 0353            TS     OGC
+ 0354  4         TC     RE-ENTER        TO NEXT EQUATION WITHOUT PUSHING DOWN.
+ 0355   HI4      OCT    74000
 *       ENDOFJOB
