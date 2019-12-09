@@ -205,6 +205,9 @@ class SymbolTable:
     def symbols(self):
         return self._symbols
 
+    def count(self):
+        return len(self._sym_map) + sum([1 if len(defs) > 1 else 0 for defs in self._sym_map])
+
     def __contains__(self, sym):
         return sym in self._sym_map
 

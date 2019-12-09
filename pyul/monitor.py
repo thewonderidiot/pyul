@@ -6,7 +6,7 @@ import random
 import inspect
 import importlib
 from datetime import datetime
-from yul_system import pass_0
+from yul_system import pass0
 from yul_system.types import Bit
 
 class Monitor:
@@ -157,7 +157,7 @@ class Monitor:
 
             # Start up YUL
             self.mon_typer(job_id)
-            self._yul = pass_0.Yul(self)
+            self._yul = pass0.Yul(self)
 
             # Print out job start information
             now = datetime.now()

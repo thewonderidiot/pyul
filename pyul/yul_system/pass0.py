@@ -33,15 +33,17 @@ class Yul:
         self.prog_name = ''
         self._new_auth_name = ''
         self._new_prog_name = ''
-        self._tape = 'YULPROGS'
+        self.tape = 'YULPROGS'
         self._task_msg = ''
         self._yul_date = ''
         self._yul_log_a = 'A'
         self.n_lines = 54
         self.n_copies = 0
         self.page_head = 'LOGNO.  YUL SYSTEM FOR                  ' + \
-                          '                                        ' + \
-                          '                        (MAIN)  PAGE   0'
+                         '                                        ' + \
+                         '                        (MAIN)  PAGE   0'
+        self.page_no = 0
+        self.sym_place = 0
 
         self._directs = {
             'ADD':           self.add_comp,
@@ -98,14 +100,14 @@ class Yul:
                 self._non_wise = 0
 
             # Normalize contents of columns 2-8.
-            abbrev = card[1:7] + self._tape[0] + card[0]
+            abbrev = card[1:7] + self.tape[0] + card[0]
             while abbrev[0] == ' ':
                 abbrev = abbrev[1:8] + abbrev[0]
 
             card = abbrev + card[8:]
 
             # Initial letter must match that of tape.
-            if abbrev[0] != self._tape[0]:
+            if abbrev[0] != self.tape[0]:
                 self._mon.mon_typer('WRONG TAPE NAME ABBREVIATION IN COLS 2-7')
                 self.rejec_dir(card)
 
@@ -131,12 +133,12 @@ class Yul:
         sentence = self._mon.phi_sentr(self._mon.lcard)
         if sentence[1] == '':
             # If there's no word after "YUL", use tape YULPROGS.
-            self._tape = 'YULPROGS'
+            self.tape = 'YULPROGS'
         else:
             # Otherwise, use tape named.
-            self._tape = sentence[1]
+            self.tape = sentence[1]
 
-        self.yulprogs = Yulprogs(self._tape)
+        self.yulprogs = Yulprogs(self.tape)
 
         # Append "A" or "B" to log number.
         self._yul_log_a = str(self._mon.get_log_no()) + self._mon.h1800_ab_sw
@@ -151,7 +153,7 @@ class Yul:
 
     def set_pg_hed(self):
         # Forbid revisions on a frozen tape.
-        if self._tape == 'FROZEYUL' or self._tape == '2NDFROZE':
+        if self.tape == 'FROZEYUL' or self.tape == '2NDFROZE':
             self._no_revise = True
 
         # Put log and date in page heading.

@@ -28,7 +28,6 @@ class Pass2:
         self._def_xform = 0o31111615554
         self._marker = '*'
         self._lin_count = 0
-        self._page_no = 0
         self._user_page = 0
         self._n_err_lins = 0
         self._min_adres = 0
@@ -196,6 +195,9 @@ class Pass2:
         # Finish and write last word record.
         self._wd_buff.lwa = self._sent_loc - 1
         self._wd_recs.append(self._wd_buff)
+
+        comp_pass3 = self._mon.phi_load(self._yul.comp_name + '.PASS3', self._yul)
+        return comp_pass3.inish_p3()
 
     # Procedure in pass 2 for "END OF" cards.
     def end_of(self, popo):
@@ -783,7 +785,7 @@ class Pass2:
             return self.no_loc_sym(popo, loc_symbol)
 
     def pag_loxim(self, popo, loc_symbol=None):
-        page = self._page_no
+        page = self._yul.page_no
         if self._yul.switch & SwitchBit.OWE_HEADS:
             # Compensates if page heads are owed.
             page += 1
@@ -925,7 +927,7 @@ class Pass2:
 
         self._sent_loc += 1
 
-        old_page = self._page_no
+        old_page = self._yul.page_no
         if self._yul.switch & SwitchBit.OWE_HEADS:
             old_page += 1
 
@@ -1912,9 +1914,9 @@ class Pass2:
     # Printing of page head and subhead (loc), and detail lines.
 
     def page_unit(self, old_line):
-        self._page_no += 1
+        self._yul.page_no += 1
         # Put page number alpha in page head.
-        self._yul.page_head = self._yul.page_head[:116] + ('%4d' % self._page_no)
+        self._yul.page_head = self._yul.page_head[:116] + ('%4d' % self._yul.page_no)
 
         return self.print_hed(old_line)
 
@@ -2060,7 +2062,7 @@ class Pass2:
             for def_symbol in self._yul.sym_thr.all(definee):
                 # Reconstitute signed modifier.
                 def_symbol.value += definer.value
-                if def_symbol.value < 0 or def_symbol.value > self.adr_limit:
+                if def_symbol.value < 0 or def_symbol.value > self._adr_limit:
                     if def_symbol.health == 0x1:
                         # Nearly def becomes oversize defined.
                         def_symbol.health = 0x8
