@@ -144,6 +144,7 @@ class LocStateBit:
     OVERSIZE   = Bit.BIT14
     WRONG_TYPE = Bit.BIT15
     CONFLICT   = Bit.BIT16
+    FULL       = Bit.BIT17
 
 class MemType:
     ERASABLE = Bit.BIT25
@@ -162,3 +163,60 @@ class Symbol:
         self.analyzer = 0
         self.def_page = 0
         self.ref_pages = []
+        self.index = 0
+
+class SymbolTable:
+    def __init__(self):
+        self._symbols = []
+        self._sym_map = {}
+        self._get_latest = True
+
+    def get_latest(self):
+        self._get_latest = True
+
+    def get_first(self):
+        self._get_latest = False
+
+    def advance(self, name):
+        self._sym_map[name] = self._sym_map[name][1:] + self._sym_map[name][0:1]
+
+    def add(self, symbol):
+        sym_idx = len(self._sym_map)
+        if sym_idx >= 8192:
+            return False
+
+        symbol.index = sym_idx
+        self._symbols.append(symbol)
+
+        if symbol.name in self._sym_map:
+            self._sym_map[symbol.name].append(sym_idx)
+        else:
+            self._sym_map[symbol.name] = [sym_idx]
+
+        return True
+
+    def first(self, sym_name):
+        return self._symbols[self._sym_map[name][0]]
+
+    def all(self, sym_name):
+        indices = self._sym_map[sym_name]
+        return [self._symbols[i] for i in indices]
+
+    def symbols(self):
+        return self._symbols
+
+    def __contains__(self, sym):
+        return sym in self._sym_map
+
+    def __getitem__(self, name):
+        if isinstance(name, str):
+            if name not in self._sym_map:
+                if len(self._sym_map) >= 8192:
+                    return None
+                else:
+                    return Symbol(name)
+
+            latest_def = self._sym_map[name][-1 if self._get_latest else 0]
+            return self._symbols[latest_def]
+        else:
+            return self._symbols[name]

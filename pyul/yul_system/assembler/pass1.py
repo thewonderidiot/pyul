@@ -1,3 +1,4 @@
+import copy
 from yul_system.types import Bit, SwitchBit, FieldCodBit, HealthBit, LocStateBit, \
                              MemType, Symbol, ALPHABET, ONES
 
@@ -281,7 +282,7 @@ class Pass1:
                     popo.card = popo.card[0] + 'SEQBRK' + popo.card[7:]
                     self._renumber = 0
                     return self.move_popo(popo)
-                
+
                 self._renumber += 100
 
                 # Erase old sequence break flag.
@@ -485,9 +486,15 @@ class Pass1:
                 sym_name = common.strip()
                 symbol = self.anal_symb(sym_name)
 
-                # Using old symbol health as rel address, get address of transform word.
-                sym_xform = self._xforms[symbol.health]
-                new_health = (sym_xform >> 8*4) & 0xF
+                if symbol is None:
+                    # symbol is None if sym tab full.
+                    self._loc_state |= LocStateBit.FULL
+                    # In which case treat loc as blank.
+                else:
+                    # Using old symbol health as rel address, get address of transform word.
+                    sym_xform = self._xforms[symbol.health]
+                    new_health = (sym_xform >> 8*4) & 0xF
+
             elif self._field_cod[0] != None:
                 if self._field_cod[0] & FieldCodBit.UNSIGNED:
                     self._field_cod[1] = self._loc_ctr
@@ -518,8 +525,20 @@ class Pass1:
             self.sy_def_xit(loc_value, symbol, new_health)
 
     def sy_def_xit(self, loc_value, symbol, new_health):
+        if symbol is None:
+            return False
+
+        # Branch if this is the only definition.
+        if symbol.name in self._yul.sym_thr:
+            symbol = copy.deepcopy(symbol)
+
         symbol.value = loc_value
         symbol.health = new_health
+
+        sym_fit = self._yul.sym_thr.add(symbol)
+        if not sym_fit:
+            # Location-symbol-didn't-fit-in-table-flg.
+            self._loc_state |= Bit.BIT17
 
     def ok_l_size(self, loc_value, symbol, sym_xform, new_health):
         # Look up memory type.
@@ -574,12 +593,12 @@ class Pass1:
         self._loc_ctr += 1
         return True
 
-    def anal_symb(self, symbol):
-        if len(symbol) < 8:
-            symbol = ('%-7s%s' % (symbol, self._head)).strip()
-        if symbol not in self._yul.sym_thr:
-            self._yul.sym_thr[symbol] = Symbol(symbol)
-        return self._yul.sym_thr[symbol]
+    def anal_symb(self, sym_name):
+        if len(sym_name) < 8:
+            # Append head if there is room
+            sym_name = ('%-7s%s' % (sym_name, self._head)).strip()
+
+        return self._yul.sym_thr[sym_name]
 
     def segnum(self, popo):
         # FIXME: IMPLEMENT SEGMENT ASSEMBLIES
@@ -1110,6 +1129,11 @@ class Pass1:
         sym_name = common.strip()
         symbol = self.anal_symb(sym_name)
 
+        # Error exit if symbol table is full.
+        if symbol is None:
+            popo.health |= Bit.BIT16
+            return self.send_popo(popo)
+
         # Get address of location transforms.
         sym_xform = self._xforms[symbol.health]
 
@@ -1325,8 +1349,13 @@ class Pass1:
         sym_name = adr_wd[0].strip()
         symbol = self.anal_symb(sym_name)
 
-        # Store address of address symbol. (Assumes ordered dict).
-        popo.health |= (list(self._yul.sym_thr.keys()).index(symbol.name) + 1) << 16
+        # Exit if symbol table is full.
+        if symbol is None:
+            popo.health |= Bit.BIT16
+            return self.no_adress(popo, adr_wd, symbol)
+
+        # Store address of address symbol.
+        popo.health |= (symbol.index + 1) << 16
 
         if symbol.health > 0x0 and symbol.health < 0x3:
             # Signal address nearly defined.
@@ -1395,6 +1424,11 @@ class Pass1:
         sym_name = common.strip()
         symbol = self.anal_symb(sym_name)
 
+        # Abort if symbol table is full.
+        if symbol is None:
+            popo.health |= Bit.BIT15
+            return self.send_popo(popo)
+
         # Save symbol, get address of transform.
         sym_xform = self._xforms[symbol.health]
         if symbol.health <= 2 or symbol.heatlh != 5:
@@ -1451,6 +1485,20 @@ class Pass1:
     def end_is(self, popo, loc_loc, symbol, new_health):
         self._loc_state = LocStateBit.SYMBOLIC
         self.sy_def_xit(loc_loc, symbol, new_health)
+
+        # Exit unless loc symbol failed to fit.
+        b8b17 = Bit.BIT8 | Bit.BIT17
+        if (self._loc_state & b8b17) != b8b17:
+            return self.send_popo(popo)
+
+        # Branch if op code is equals.
+        if popo.health & HealthBit.CARD_TYPE_EQUALS:
+            # Show unfitting of equals loc sym.
+            popo.health |= Bit.BIT15
+        else:
+            # Show unfitting of erase loc sym.
+            popo.health |= Bit.BIT15
+
         return self.send_popo(popo)
 
     def not_ok_def(self, popo, loc_loc, symbol, sym_xform, adr_wd, adr_symbol=None):

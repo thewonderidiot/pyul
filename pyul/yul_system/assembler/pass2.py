@@ -644,7 +644,7 @@ class Pass2:
             loc_symbol = None
         else:
             # Maybe cuss loc sym no fit in table.
-            if popo.health & Bit.BIT15:
+            if popo.health & Bit.BIT17:
                 self.cuss_list[14].demand = True
 
             # Analyze and pre-process location symbol.
@@ -949,8 +949,7 @@ class Pass2:
         if sym_addr == 0:
             return None
 
-        sym_keys = list(self._yul.sym_thr.keys())
-        return self._yul.sym_thr[sym_keys[sym_addr-1]]
+        return self._yul.sym_thr[sym_addr-1]
 
     def proc_adr(self, popo, temp_adr=None):
         # Form subfields from address field.
@@ -1016,7 +1015,8 @@ class Pass2:
         if self._adr_symbol is None:
             # Cuss and exit when symbol dont fit.
             self.cuss_list[15].demand = True
-            self.sym_cuss(cuss_list[15], sym_name)
+            self.sym_cuss(self.cuss_list[15], sym_name)
+            self._address = ONES
             return None
 
         return self.symb_fits(self._adr_symbol)
@@ -1643,17 +1643,25 @@ class Pass2:
         # Get history of normalized symbol.
         symbol = self.anal_symb(common)
 
+        # Branch if no page-of-definition for sym.
+        if symbol.def_page != 0:
+            # Advance pointer to next member of set.
+            self._yul.sym_thr.advance(symbol.name)
+
         # Show whether there is a valid definition.
         symbol.defined = (((self._def_xform << 1) >> symbol.health) & 0x1) == 1
 
         return symbol
 
-    def anal_symb(self, symbol):
-        if len(symbol) < 8:
-            symbol = ('%-7s%s' % (symbol, self._head)).strip()
-        if symbol not in self._yul.sym_thr:
-            self._yul.sym_thr[symbol] = Symbol(symbol)
-        return self._yul.sym_thr[symbol]
+    def anal_symb(self, sym_name):
+        if len(sym_name) < 8:
+            sym_name = ('%-7s%s' % (sym_name, self._head)).strip()
+
+        symbol = self._yul.sym_thr[sym_name]
+        if sym_name not in self._yul.sym_thr:
+            self._yul.sym_thr.add(symbol)
+
+        return symbol
 
     def sym_cuss(self, cuss, common):
         cuss.msg = cuss.msg[0] + ('%-8s' % common) + cuss.msg[9:]
@@ -2009,17 +2017,20 @@ class Pass2:
         self.assy_typ_q()
 
     def resolvem(self):
-        for sym_name, symbol in self._yul.sym_thr.items():
+        for symbol in self._yul.sym_thr.symbols():
             # If not nearly defined, seek another.
             if symbol.health > 0x0 and symbol.health < 0x3:
                 self.def_test(symbol)
+
+        self._yul.sym_thr.get_first()
 
     def def_test(self, symbol):
         # Mark definer thread.
         symbol.analyzer = 1
 
         # Fetch symbol health code.
-        definer = self._yul.sym_thr[symbol.definer]
+        definer = self._yul.sym_thr.first(symbol.definer)
+
         # "Branch" if symbol has no valid defin.
         undefined = (self._def_xform >> (16 + definer.health)) & 0x1
 
@@ -2040,33 +2051,31 @@ class Pass2:
         # Void a definer thread.
         definer.analyzer = 2
         for definee in definer.definees:
-            def_symbol = self._yul.sym_thr[definee]
-
-            if def_symbol.analyzer != 2:
-                self.voidem(def_symbol)
+            for def_symbol in self._yul.sym_thr.all(definee):
+                if def_symbol.analyzer != 2:
+                    self.voidem(def_symbol)
 
     def definem(self, definer):
         for definee in definer.definees:
-            def_symbol = self._yul.sym_thr[definee]
-
-            # Reconstitute signed modifier.
-            def_symbol.value += definer.value
-            if def_symbol.value < 0 or def_symbol.value > self.adr_limit:
-                if def_symbol.health == 0x1:
-                    # Nearly def becomes oversize defined.
-                    def_symbol.health = 0x8
+            for def_symbol in self._yul.sym_thr.all(definee):
+                # Reconstitute signed modifier.
+                def_symbol.value += definer.value
+                if def_symbol.value < 0 or def_symbol.value > self.adr_limit:
+                    if def_symbol.health == 0x1:
+                        # Nearly def becomes oversize defined.
+                        def_symbol.health = 0x8
+                    else:
+                        # Mult near def becomes mult oversize def.
+                        def_symbol.health = 0xB
                 else:
-                    # Mult near def becomes mult oversize def.
-                    def_symbol.health = 0xB
-            else:
-                if def_symbol.health == 0x1:
-                    # Nearly defined becomes defined by =.
-                    def_symbol.health = 0x3
-                else:
-                    # Mult nearly def becomes mult def by =.
-                    def_symbol.health = 0x4
+                    if def_symbol.health == 0x1:
+                        # Nearly defined becomes defined by =.
+                        def_symbol.health = 0x3
+                    else:
+                        # Mult nearly def becomes mult def by =.
+                        def_symbol.health = 0x4
 
-            self.definem(def_symbol)
+                self.definem(def_symbol)
 
     def assy_typ_q(self):
         if not self._yul.switch & SwitchBit.REPRINT:

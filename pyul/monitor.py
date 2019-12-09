@@ -28,8 +28,8 @@ class Monitor:
         self.h1800_ab_sw = 'A'
 
         # Print out a log header
-        self.phi_print(' '*80 + '%6u          %2d.%2d.%2d               1\n' %
-                       (self._log_no, self.phi_date.month, self.phi_date.day, self.phi_date.year % 100))
+        self.phi_print(' '*80 + '%6u          %2d.%2d.%2d               1' %
+                       (self._log_no, self.phi_date.month, self.phi_date.day, self.phi_date.year % 100), 2)
 
     def get_log_no(self):
         return self._log_no
@@ -44,7 +44,7 @@ class Monitor:
             page_sep = True
         elif spacing <= 1:
             spacing = 1
-        print(s, file=self._lineprinter, end='\n'*spacing)
+        print(s.rstrip(), file=self._lineprinter, end='\n'*spacing)
         if page_sep:
             print('\n'+'-'*120+'\n', file=self._lineprinter)
 
@@ -161,11 +161,11 @@ class Monitor:
 
             # Print out job start information
             now = datetime.now()
-            self.phi_print('%-95s TIME:    %02u:%02u.%u\n\n' % (card, now.hour % 12, now.minute, int((now.second / 60) * 10)))
-            self.phi_print('  H-1800 %02u %02u %02u %70s\n\n' % (now.month, now.day, now.year % 100, '¢¢¢¢¢¢¢¢'))
+            self.phi_print('%-95s TIME:    %02u:%02u.%u' % (card, now.hour % 12, now.minute, int((now.second / 60) * 10)), 3)
+            self.phi_print('  H-1800 %02u %02u %02u %70s' % (now.month, now.day, now.year % 100, '¢¢¢¢¢¢¢¢'), 3)
 
         elif sentence[0] == 'YUL':
-            self.phi_print('%s\n\n' % card)
+            self.phi_print('%s' % card, 3)
             if self._yul is None:
                 self.mon_typer('YUL SYSTEM NOT LOADED')
                 return

@@ -1,7 +1,7 @@
 from datetime import datetime
 from yul_system.yulprogs import Yulprogs
 from yul_system.assembler import pass1
-from yul_system.types import MONTHS, NBTCS, Bit, SwitchBit
+from yul_system.types import MONTHS, NBTCS, Bit, SwitchBit, SymbolTable
 
 class TypAbort(Exception):
     # Generic task-aborting error.
@@ -442,7 +442,7 @@ class Yul:
     def init_assy(self):
         # Procedure to initialize a permissible assembly or reprint.
         # Initialize symbol table
-        self.sym_thr = {}
+        self.sym_thr = SymbolTable()
 
         # Initialize availability table.
         self.av_table = [0]*2048
