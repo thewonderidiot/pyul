@@ -11675,4 +11675,1015 @@ A0326                                     A = DELTHETAD -DELNEWCOMMAND
  0353            TS     OGC
  0354  4         TC     RE-ENTER        TO NEXT EQUATION WITHOUT PUSHING DOWN.
  0355   HI4      OCT    74000
+L       IMU PERFORMANCE TESTS 1
+ 0001  2         SETLOC 24000
+ 0002   ALGNTST  CS     ZERO            SXT-NB-IMU FINE ALIGNMENT TEST
+ 0003            TS     CDUIND
+ 0004            TC     BANKCALL
+ 0005  2         CADR   IMUZERO
+ 0006   OPTDATA  CAF    ZERO            CHECK TARGET AZIMUTH AND ELEVATION
+ 0007            TS     STARS
+ 0008            AD     ONE
+ 0009            TS     DSPTEM1 +2
+ 0010            CAF    V05N30E
+ 0011            TC     NVSUB
+ 0012            TC     PRENVBSY
+ 0013            INDEX  STARS
+ 0014            XCH    TAZ
+ 0015            TS     DSPTEM1
+ 0016            INDEX  STARS
+ 0017            XCH    TEL
+ 0018            TS     DSPTEM1 +1
+ 0019            TC     CHECKLD         R1 = AZIMUTH = +XXX.XX
+ 0020            OCT    00661           R2 = ELEVATION = +XX.XXX
+ 0021            TC     ENDTEST
+ 0022            XCH    DSPTEM1
+ 0023            INDEX  STARS
+ 0024            TS     TAZ
+ 0025            XCH    DSPTEM1 +1
+ 0026            INDEX  STARS
+ 0027            TS     TEL
+ 0028            CCS    STARS
+ 0029            TC     +3
+ 0030            CAF    ONE
+ 0031  2         TC     OPTDATA +1
+ 0032            TS     COARSAGN
+ 0033            TS     EROPTN
+ 0034            TS     TIME2
+ 0035            TS     NDXCTR
+ 0036            AD     72DEC
+ 0037  2         TS     MAXPTS2
+ 0038            TC     BANKCALL
+ 0039  2         CADR   LATAZCHK
+ 0040            TC     BANKCALL
+ 0041  2         CADR   TARGSM
+ 0042   POSLOAD  CAF    V21N30E         R1 POSITION 1,2,3
+ 0043            TC     NVSUB
+ 0044            TC     PRENVBSY
+ 0045            TC     ENDIDLE
+ 0046            TC     ENDTEST
+ 0047            TC     -5
+ 0048            XCH    DSPTEM1
+ 0049            TS     POSITON
+ 0050            COM
+ 0051            MASK   BIT3
+ 0052            CCS    A
+ 0053            TC     +2
+ 0054            TC     DSPYLOAD
+ 0055            CAF    ONE
+ 0056            TS     COAROFIN
+ 0057            TC     BANKCALL
+ 0058            CADR   FINDNAVB        COARSE ALIGN MARKS
+ 0059            TC     BANKCALL
+ 0060            CADR   IMUSTALL        WAIT FOR IMUZERO COMPLETION
+ 0061  4         TC     ENDTEST
+ 0062            TC     BANKCALL
+ 0063  2         CADR   POSNJUMP
+ 0064   POSNRETN TC     BANKCALL
+ 0065  2         CADR   PUTPOSX
+ 0066            CCS    COARSAGN
+ 0067            TC     +2
+ 0068            TC     +4
+ 0069            CCS    NEWJOB
+ 0070            TC     CHANG1
+ 0071            TC     -5
+ 0072  2         TC     OGCZERO
+ 0073            TC     BANKCALL
+ 0074            CADR   IMUFINE         INITIATE FINE ALIGN MODE
+ 0075            TC     BANKCALL
+ 0076            CADR   IMUSTALL        WAIT FOR IMUFINE COMPLETION
+ 0077  2         TC     ENDTEST
+ 0078            CAF    ZERO
+ 0079            TS     COAROFIN
+ 0080            TC     BANKCALL
+ 0081            CADR   FINDNAVB        FINE ALIGN MARKS
+ 0082            TC     FREEDSP
+ 0083            TC     BANKCALL
+ 0084            CADR   SMDCALC         FINE ALIGN TORQUING
+ 0085            TC     BANKCALL
+ 0086            CADR   IMUSTALL        WAIT FOR PULSING COMPLETION
+ 0087  8         TC     ENDTEST
+ 0088   ERFINAL  TC     BANKCALL
+ 0089            CADR   STOPHOR
+ 0090   ERRETN   CCS    EROPTN
+ 0091            TC     ERFINAL
+ 0092            TC     +2
+ 0093            TC     ENDTEST
+ 0094            INHINT
+ 0095            TC     TPTIME
+ 0096            RELINT
+ 0097            CAF    ZERO
+ 0098            TS     PIPAX
+ 0099            TS     PIPAY
+ 0100            TS     PIPAZ
+ 0101            TS     STOREPL
+ 0102            TS     NDXCTR          UPDATE STORAGE LOCATION
+ 0103            TC     BANKCALL
+ 0104            CADR   STORRSLT
+ 0105            INHINT
+ 0106            CAF    60SEC
+ 0107            TC     WAITLIST
+ 0108            CADR   PIP1
+ 0109            CAF    PIP2ADR
+ 0110  2         TC     JOBSLEEP
+ 0111   PIP1     CAF    PIP2ADR
+ 0112            TC     JOBWAKE
+ 0113  2         TC     TASKOVER
+ 0114   PIP2     CS     PIPNDX
+ 0115            TS     PIPINDEX
+ 0116            TC     CHECKG
+ 0117            RELINT
+ 0118            TC     BANKCALL
+ 0119            CADR   STORRSLT
+ 0120            CS     PIPNDX +1
+ 0121            TS     PIPINDEX
+ 0122            TC     CHECKG
+ 0123            RELINT
+ 0124            TC     BANKCALL
+ 0125            CADR   STORRSLT
+ 0126            INHINT
+ 0127            CAF    30SEC
+ 0128            TC     WAITLIST
+ 0129            CADR   PIP1
+ 0130            CAF    PIP2ADR
+ 0131            TC     JOBSLEEP
+ 0132  8PIP2ADR  CADR   PIP2
+ 0133   GYROTORK CAF    V21N30E
+ 0134            TC     NVSUB
+ 0135            TC     PRENVBSY
+ 0136            TC     ENDIDLE
+ 0137            TC     ENDTEST
+ 0138            TC     +1
+ 0139            XCH    DSPTEM1
+ 0140            TS     TESTNO
+ 0141            TS     CALCDIR
+ 0142            TC     FREEDSP
+ 0143            CAF    QUARTER
+ 0144            TS     AZIMUTH
+ 0145            TS     GENPL +76D
+ 0146            CAF    SIX
+ 0147            TS     NBPOS
+ 0148            CCS    TESTNO
+ 0149            TS     TESTNO
+ 0150            TC     +5
+ 0151            TS     TESTNO
+ 0152            CS     BURSTPOS
+ 0153            TS     SAVE
+ 0154            TC     +3
+ 0155            CAF    BURSTPOS
+ 0156            TS     SAVE
+ 0157            CS     TESTNO
+ 0158            AD     TWO
+ 0159            TS     NEGCDU2
+ 0160            CCS    A
+ 0161            CAF    ONE
+ 0162            TC     +3
+ 0163            TC     +1
+ 0164            CAF    THREE
+ 0165            TS     POSITON
+ 0166  4         TC     STEVEIN
+ 0167   TORK     CS     NEGCDU2
+ 0168            COM
+ 0169            CCS    A
+ 0170            INDEX  TESTNO
+ 0171            CS     CDUX
+ 0172            TC     +2
+ 0173            CS     CDUX
+ 0174            TS     NEGCDU1
+ 0175            CS     TESTNO
+ 0176            COM
+ 0177            AD     TESTNO
+ 0178            TS     LOCNO
+ 0179  2         CAF    ITERNO
+ 0180   BLOGS    TS     BUBBLE
+ 0181            INHINT
+ 0182            CAF    TIMEINCR
+ 0183            TC     WAITLIST
+ 0184            CADR   WAKEUP
+ 0185            RELINT
+ 0186            CAF    FIVE
+ 0187            TS     PLOW
+ 0188            CAF    ZERO
+ 0189            INDEX  PLOW
+ 0190            TS     GYROD
+ 0191            CCS    PLOW
+ 0192            TC     -5
+ 0193            CS     SAVE
+ 0194            COM
+ 0195            INDEX  LOCNO
+ 0196            TS     GYROD +1
+ 0197            CAF    LLGYROD
+ 0198            TC     BANKCALL
+ 0199            CADR   GYROSPNT
+ 0200            TC     BANKCALL
+ 0201            CADR   IMUSTALL
+ 0202            TC     ENDTEST
+ 0203            CAF    WAKECADR
+ 0204            TC     JOBSLEEP
+ 0205   WAKEUP   CAF    WAKECADR
+ 0206            TC     JOBWAKE
+ 0207            TC     TASKOVER
+ 0208   WAKE     CCS    BUBBLE
+ 0209            TC     BLOGS
+ 0210            CS     NEGCDU2
+ 0211            COM
+ 0212            CCS    A
+ 0213            INDEX  TESTNO
+ 0214            CS     CDUX
+ 0215            TC     +2
+ 0216            CS     CDUX
+ 0217            TS     NEGCDU2
+ 0218            CCS    CALCDIR           DONE TO INSURE PROPER SIGN
+ 0219            CS     NEGCDU1
+ 0220            TC     +4
+ 0221            CS     NEGCDU2
+ 0222            TS     NEGCDU2
+ 0223            TC     +2
+ 0224            TS     NEGCDU1
+ 0225            INHINT
+ 0226            CS     NEGCDU2
+ 0227            CS     A
+ 0228            TS     ITEMP2
+ 0229            CS     NEGCDU1
+ 0230            TC     BANKCALL
+ 0231            CADR   2SCOMDIF
+ 0232            RELINT
+ 0233            TS     CUSSANG
+ 0234            EXTEND
+ 0235            MP     FIVE
+ 0236            CS     LP
+ 0237            TS     DSPTEM1
+ 0238            TC     GRABDSP
+ 0239            TC     PREGBSY
+ 0240            TC     BANKCALL
+ 0241            CADR   FLASHON
+ 0242            CAF    V07N30E
+ 0243            TC     NVSUB
+ 0244            TC     PRENVBSY
+ 0245            TC     ENDIDLE
+ 0246  4         TC     ENDTEST
+ 0247   BURSTPOS DEC    256
+ 0248   ITERNO   DEC    4095
+ 0249   TIMEINCR DEC    24
+ 0250   LLGYROD  ADRES  GYROD +1
+ 0251  8WAKECADR CADR   WAKE
+R0252  2THIS IS A ROUGH CHECK PROGRAM FOR THE IMU GYROS AND ACCELEROMETERS
+ 0253   IMUCHK   CAF    QUARTER
+ 0254            TS     AZIMUTH
+ 0255            TC     FREEDSP
+ 0256            CAF    ZERO
+ 0257            TS     AZIMUTH +1
+ 0258            CAF    SIX
+ 0259            TS     NBPOS
+ 0260            CAF    BIT4
+ 0261            TS     POSITON
+ 0262            CS     A
+ 0263            TS     GENPL +76D
+ 0264  2         TC     STEVEIN
+ 0265   IMUCHKR  TC     BANKCALL        CHECKS COARSE ALIGN AND GYRO TORQUING
+ 0266            CADR   IMULOCK         CHECKS ALL MODE SWITCHING
+ 0267            TC     BANKCALL
+ 0268            CADR   IMUSTALL
+ 0269  2         TC     ENDTEST
+ 0270            TC     BANKCALL
+ 0271            CADR   IMUREENT
+ 0272            TC     BANKCALL
+ 0273            CADR   IMUSTALL
+ 0274  2         TC     ENDTEST
+ 0275            TC     BANKCALL
+ 0276            CADR   IMUFINE
+ 0277            CAF    ZERO
+ 0278            TS     PIPAX
+ 0279            TS     PIPAY
+ 0280            TS     PIPAZ
+ 0281            TC     BANKCALL
+ 0282            CADR   IMUSTALL
+ 0283  2         TC     ENDTEST
+ 0284            CAF    ONE
+ 0285            TS     RESULTCT
+ 0286  2         TS     POSITON
+ 0287   IMUCHK1  CAF    TWO             MEASURE TIME OF OCCURRENCE OF EACH
+ 0288   IMUCHK2  TS     PIPINDEX        PIP PULSE. ALSO STORE VELOCITY
+ 0289            INHINT
+ 0290            TC     CHECKG
+ 0291            CS     PIPAY
+ 0292            CS     A
+ 0293            INDEX  POSITON
+ 0294            TS     DATAPL +30D
+ 0295            CS     PIPAZ
+ 0296            CS     A
+ 0297            INDEX  POSITON
+ 0298            TS     DATAPL +32D
+ 0299            RELINT
+ 0300            TC     DATALD1
+ 0301            XCH    RESULTCT
+ 0302            AD     FIVE
+ 0303            TS     RESULTCT
+ 0304            CCS    PIPINDEX
+ 0305            TC     IMUCHK2
+ 0306            CCS    POSITON
+ 0307            TC     +2
+ 0308            TC     COMPUT
+ 0309            TS     POSITON
+ 0310            CAF    BIT6
+ 0311            TC     WARTMAL
+ 0312            CCS    COUNTPL
+ 0313            TC     WARTMAL2
+ 0314  4         TC     IMUCHK1
+ 0315   COMPUT   CAF    ZERO            CALC V1XV2 ANDROOT(GX)2+(GY)2+(GZ)2
+ 0316            TS     DATAPL
+ 0317            TS     DATAPL +5
+ 0318            TS     DATAPL +10D
+ 0319            XCH    DATAPL +30D
+ 0320            TS     DATAPL +35D
+ 0321            CAF    ZERO
+ 0322            XCH    DATAPL +32D
+ 0323            TS     DATAPL +37D
+ 0324            CAF    TWO
+ 0325            TS     DATAPL +15D
+ 0326            TS     DATAPL +20D
+ 0327            TS     DATAPL +25D
+ 0328            TS     DATAPL +34D
+ 0329  2         TS     DATAPL +36D
+ 0330            TC     BANKCALL
+ 0331  8         CADR   CHKCALC
+ 0332   GYDRFT   CAF    ZERO
+ 0333  2         TS     TESTNDX
+ 0334   SFTSTIN  CAF    BIT6            PIP SCALE FACTOR TEST ENTRY
+ 0335            TS     NBPOS
+ 0336            CAF    ZERO
+ 0337            TS     GENPL +76D
+ 0338            CAF    ONE
+ 0339  2         TS     POSITON
+ 0340   GYRDRFT1 TC     BANKCALL
+ 0341  2         CADR   LATAZCHK
+ 0342   GYRDRFT2 TC     SHOWLD          LOAD NAVBASE TILT ANGLE IN DEGREES
+ 0343            TC     BANKCALL
+ 0344            CADR   SHOW
+ 0345            TC     FREEDSP
+ 0346            CCS    NBPOS           NUMBER IN POSITON.FOR VERTICAL DRIFT
+ 0347            TC     LTNDX+          TEST IN LAB LOAD + NUMBER IN TESTNDX
+ 0348            TC     LTNDX0
+ 0349            CAF    TEN
+ 0350            TC     +4
+ 0351   LTNDX0   CAF    SIX
+ 0352            TC     +2
+ 0353   LTNDX+   CAF    ZERO
+ 0354  2         TS     NBPOS
+ 0355   STEVEIN  CS     ZERO
+ 0356            TS     CDUIND
+ 0357            CS     A
+ 0358            TS     LTSTNDX
+ 0359            TC     BANKCALL
+ 0360            CADR   IMUZERO
+ 0361            TC     BANKCALL
+ 0362            CADR   IMUSTALL
+ 0363  2         TC     ENDTEST
+ 0364            TC     BANKCALL
+ 0365  2         CADR   NBPOSPL
+ 0366   POSGMBL  TC     BANKCALL
+ 0367  2         CADR   PUTPOSX
+ 0368            TC     BANKCALL
+ 0369            CADR   IMUFINE
+ 0370            TC     BANKCALL
+ 0371            CADR   IMUSTALL
+ 0372            TC     ENDTEST
+ 0373            CS     CDUX
+ 0374            CS     A
+ 0375            INDEX  FLNDX12         FIXED BY *UNEEDA* DEBUGGING SERVICE
+ 0376            TS     6
+ 0377            CS     CDUY
+ 0378            CS     A
+ 0379            INDEX  FLNDX12         FIXED BY *UNEEDA* DEBUGGING SERVICE
+ 0380            TS     2
+ 0381            CS     CDUZ
+ 0382            CS     A
+ 0383            INDEX  FLNDX12         FIXED BY *UNEEDA* DEBUGGING SERVICE
+ 0384            TS     4
+ 0385            TC     BANKCALL        READ CDU ANGLES AND COMPLETE
+ 0386  4         CADR   FALNE1
+ 0387   FALNED   CCS    GENPL +76D
+ 0388            TC     TORK
+ 0389            TC     +2
+ 0390            TC     IMUCHKR
+ 0391            TC     BANKCALL
+ 0392  8         CADR   FALNED1
+ 0393   ACCELTST CAF    NINTHOU
+ 0394            TS     TESTTIME        ACCELEROMETER OUTPUT TO GRAVITY
+ 0395            CS     ZERO
+ 0396            TS     TESTNDX
+ 0397  8         TC     SFTSTIN
+ 0398   CHECKG   XCH    Q               PIP PULSE CATCH ROUTINE
+ 0399  2         XCH    QPLACE
+ 0400   CHECKG1  RELINT
+ 0401            CCS    NEWJOB
+ 0402            TC     CHANG1
+ 0403            INHINT
+ 0404            CAF    ZERO
+ 0405            INDEX  PIPINDEX
+ 0406            XCH    PIPAX
+ 0407            TS     STOREPL
+ 0408            CCS    STOREPL
+ 0409            TC     CHECKP
+ 0410            TC     RESTORE1
+ 0411            TC     CHECKM
+ 0412  2         TC     RESTORE1
+ 0413   CHECKP   CAF    BIT6            LOOKS FOR ONE MORE   PULSE
+ 0414   CHECKP1  TS     PIPANO
+ 0415            INDEX  PIPINDEX
+ 0416            CCS    PIPAX
+ 0417            TC     CHECKG3
+ 0418            TC     +3
+ 0419            TC     RESTORE1
+ 0420            TC     +1
+ 0421            CCS    PIPANO
+ 0422            TC     CHECKP1
+ 0423            TC     RESTORE1
+ 0424   CHECKM   CAF    BIT6            LOOKS FOR ONE MORE  INUS
+ 0425   CHECKM1  TS     PIPANO
+ 0426            INDEX  PIPINDEX
+ 0427            CCS    PIPAX
+ 0428            TC     RESTORE1
+ 0429            TC     +3
+ 0430            TC     CHECKG3
+ 0431            TC     +1
+ 0432            CCS    PIPANO
+ 0433            TC     CHECKM1
+ 0434  2         TC     RESTORE1
+ 0435  2CHECKG3  TC     TPTIME
+ 0436            CAF    BIT4
+ 0437   CHECKG5  TS     PIPANO
+ 0438            INDEX  PIPINDEX
+ 0439            CCS    PIPAX
+ 0440            TC     +4
+ 0441            TC     RESTORE1
+ 0442            TC     +2
+ 0443            TC     RESTORE1
+ 0444            CCS    PIPANO
+ 0445            TC     CHECKG5
+ 0446   NREAD    TC     RESTORE
+ 0447            TS     STOREPL
+ 0448  2         TC     QPLACE
+ 0449   RESTORE1 TC     RESTORE
+ 0450  2         TC     CHECKG1
+ 0451   RESTORE  XCH    STOREPL
+ 0452            INDEX  PIPINDEX
+ 0453            AD     PIPAX
+ 0454            INDEX  PIPINDEX
+ 0455            TS     PIPAX
+ 0456  8         TC     Q
+ 0457   WEIKPL   INHINT
+ 0458            TC     CHECKG
+ 0459            RELINT
+ 0460            CAF    FOUR
+ 0461            AD     RESULTCT
+ 0462            TS     RESULTCT
+ 0463            TC     DATALD1
+ 0464            CCS    COUNTPL
+ 0465            TC     DOSCTEST
+ 0466            TC     BANKCALL
+ 0467  8         CADR   RESULTS
+ 0468   TSTJUMP  CCS    TESTNDX
+ 0469            TC     LABTEST
+ 0470            TC     SCRTEST
+ 0471            TC     LABTEST
+ 0472   PIPTST   CAF    ONE             MEASURE PIP PULSE RATE FOR 90 SEC.
+ 0473            TS     COUNTPL
+ 0474            CAF    ZERO
+ 0475            INDEX  PIPINDEX
+ 0476            TS     PIPAX
+ 0477            TS     RESULTCT
+ 0478  2         TC     WEIKPL
+ 0479   DOSCTEST TS     COUNTPL         HORIZ DRIFT TEST SET UP TO
+ 0480            INHINT                 READ EAST PIP FOUR TIMES
+ 0481            CS     TESTTIME
+ 0482            CS     A
+ 0483            TC     WAITLIST
+ 0484            CADR   CARRYON
+ 0485            RELINT
+ 0486            CAF    CONCADR
+ 0487  2         TC     JOBSLEEP
+ 0488   CARRYON  CAF    CONCADR
+ 0489            TC     JOBWAKE
+ 0490  2         TC     TASKOVER
+ 0491  8CONCADR  CADR   WEIKPL
+ 0492   LABTEST  CCS    LTSTNDX         SET UP TO MEASURE VERTICAL DRIFT
+ 0493            TC     CDUD
+ 0494            CAF    ZERO
+ 0495            TS     XSM
+ 0496            TS     XSM +6
+ 0497            TS     XSM +12D
+ 0498   CDUCK    CAF    BIT6
+ 0499   CDUCK1   TS     STOREPL
+ 0500  2         TC     STOPHOR1
+ 0501            CCS    STOREPL
+ 0502            TC     CDUCK1
+ 0503            CAF    ZERO
+ 0504            INDEX  CDUNDX
+ 0505            TS     CDUX
+ 0506   CDUCK2   CAF    BIT6
+ 0507   CDUCK3   TS     STOREPL
+ 0508            INDEX  CDUNDX
+ 0509            CCS    CDUX
+ 0510            TC     CDUCK4
+ 0511            TC     +3
+ 0512            TC     CDUCK1
+ 0513            TC     CDUCK4
+ 0514            CCS    STOREPL
+ 0515            TC     CDUCK3
+ 0516            TC     STOPHOR1
+ 0517            TC     CDUCK2
+ 0518   CDUCK4   TC     READTIME
+ 0519            RELINT
+ 0520            CS     RUPTSTOR
+ 0521            TS     DATAPL
+ 0522            CS     RUPTSTOR +1
+ 0523            TS     DATAPL +1
+ 0524            CAF    THREE
+ 0525   CDUCK5   TS     STOREPL
+ 0526  2         TC     STOPHOR1
+ 0527            CCS    STOREPL
+ 0528            TC     CDUCK5
+ 0529            INDEX  CDUNDX
+ 0530            CCS    CDUX
+ 0531            TC     POSPLS
+ 0532            TC     CDUCK1
+ 0533            TC     CDUCK1
+ 0534  2         TC     NEGPLS
+ 0535   POSPLS   CS     TESTNDX         INITIALIZES VERTICAL DRIFT TEST
+ 0536            CCS    A
+ 0537            TC     LONGTST
+ 0538            NOOP
+ 0539            CS     SXTTR
+ 0540            TC     +6
+ 0541   NEGPLS   CS     TESTNDX
+ 0542            CCS    A
+ 0543            TC     LONGTST
+ 0544            NOOP
+ 0545            CAF    SXTTR
+ 0546            NDX    CDUNDX
+ 0547  2         TS     CDUX
+ 0548   CDUCK6   TC     STOPHOR1
+ 0549            CAF    BIT6
+ 0550   CDUCK7   TS     STOREPL
+ 0551            INDEX  CDUNDX
+ 0552            CCS    CDUX
+ 0553            TC     +4
+ 0554            TC     CDUD1
+ 0555            TC     +2
+ 0556            TC     CDUD1
+ 0557            CCS    STOREPL
+ 0558            TC     CDUCK7
+ 0559  2         TC     CDUCK6
+ 0560   CDUD1    CAF    BIT7
+ 0561            INDEX  CDUNDX
+ 0562            TS     CDUX
+ 0563  4         TC     CDUD
+ 0564   STOPHOR1 XCH    Q
+ 0565            TS     QPLACE
+ 0566            TC     BANKCALL
+ 0567            CADR   STOPHOR
+ 0568  8         TC     QPLACE
+ 0569   CDUD     INDEX  CDUNDX
+ 0570            XCH    CDUX
+ 0571            TS     GENPL +77D
+ 0572            TC     READTIME
+ 0573            RELINT
+ 0574            CS     RUPTSTOR
+ 0575            TS     DATAPL +2
+ 0576            CS     RUPTSTOR +1
+ 0577            TS     DATAPL +3
+ 0578            TC     BANKCALL
+ 0579  4         CADR   CDUCALC
+ 0580   LONGTST  CAF    DECX             CHANGED BY MR. FIXIT.
+ 0581            TS     STOREPL         VERTICAL ERECTION FOR 14480 SECONDS
+ 0582            CAF    ONE
+ 0583            TS     LTSTNDX
+ 0584            TC     BANKCALL
+ 0585            CADR   FRECT +2
+ 0586   DSPYLOAD XCH    Q
+ 0587            TS     QPLACE
+ 0588            TC     +2
+ 0589            TS     NDXCTR
+ 0590            INDEX  NDXCTR
+ 0591            CS     YSM
+ 0592            COM
+ 0593            TS     DSPTEM1
+ 0594            INDEX  NDXCTR
+ 0595            CS     YSM +1
+ 0596            COM
+ 0597            TS     DSPTEM1 +1
+ 0598            CS     NDXCTR
+ 0599            COM
+ 0600            AD     YSMCADR
+ 0601            TS     DSPTEM1 +2
+ 0602            TC     BANKCALL
+ 0603            CADR   FLASHON
+ 0604            CAF    V05N30E
+ 0605            TC     NVSUB
+ 0606            TC     PRENVBSY
+ 0607            CAF    V07N30E
+ 0608            TC     NVSUB
+ 0609            TC     PRENVBSY
+ 0610            TC     ENDIDLE         WAIT FOR DATA OR PROCEED
+ 0611            TC     ENDTEST
+ 0612            TC     +2
+ 0613            TC     DSPYLOAD +4     RE-DISPLAY IF DATA LOADED
+ 0614            CS     NDXCTR
+ 0615            AD     TEN
+ 0616            CCS    A
+ 0617            CAF    TWO
+ 0618            AD     NDXCTR
+ 0619            TC     DSPYLOAD +3
+ 0620            TC     QPLACE
+ 0621  8YSMCADR  CADR   YSM
+ 0622   LATAZCK1 TC     MAKECADR
+ 0623            TS     RETBB
+ 0624            TC     CHECKLD
+ 0625            OCT    00661
+ 0626            TC     ENDTEST
+ 0627            XCH    RETBB
+ 0628  4         TC     BANKJUMP
+ 0629   CHECKLD  XCH    Q
+ 0630            TS     QPLAC
+ 0631            INDEX  QPLAC
+ 0632            XCH    A
+ 0633            TC     NVSUB
+ 0634            TC     CHECKLD1
+ 0635            TC     BANKCALL
+ 0636            CADR   FLASHON
+ 0637            TC     ENDIDLE
+ 0638            TC     +3
+ 0639            TC     +4
+ 0640            TC     CHECKLD +2
+ 0641            INDEX  QPLAC
+ 0642            TC     Q
+ 0643            INDEX  QPLAC
+ 0644            TC     2
+ 0645   CHECKLD1 CAF    CHECKLD2
+ 0646            TC     NVSUBUSY
+ 0647  8CHECKLD2 CADR   CHECKLD +2
+ 0648   SHOW     TC     MAKECADR
+ 0649            TS     RETAA
+ 0650   SHOW1    CS     POSITON
+ 0651            CS     A
+ 0652            TS     DSPTEM2 +2
+ 0653            TC     BANKCALL
+ 0654            CADR   FLASHON
+ 0655            CAF    VB06N66
+ 0656            TC     NVSUB
+ 0657            TC     PRENVBSY
+ 0658            TC     ENDIDLE
+ 0659            TC     ENDTEST
+ 0660            TC     +3
+ 0661            TC     SHOWLD
+ 0662            TC     SHOW1
+ 0663            XCH    RETAA
+ 0664  6         TC     BANKJUMP
+ 0665   SHOWLD   CS     NBPOS
+ 0666            CS     A
+ 0667            TS     DSPTEM2
+ 0668            CS     TESTNDX
+ 0669            CS     A
+ 0670            TS     DSPTEM2 +1
+ 0671  6         TC     Q
+ 0672   DATALD1  CS     STOREPL
+ 0673            CS     A
+ 0674            INDEX  RESULTCT
+ 0675            TS     DATAPL
+ 0676            CS     MPAC
+ 0677            CS     A
+ 0678            INDEX  RESULTCT
+ 0679            TS     DATAPL +1
+ 0680            CS     MPAC +1
+ 0681            CS     A
+ 0682            INDEX  RESULTCT
+ 0683            TS     DATAPL +2
+ 0684            CS     MPAC +2
+ 0685            CS     A
+ 0686            INDEX  RESULTCT
+ 0687            TS     DATAPL +3
+ 0688  8         TC     Q
+ 0689   FINISH   TC     BANKCALL
+ 0690            CADR   SHOW
+ 0691            CAF    BIT6
+ 0692            TS     NBPOS
+ 0693            CAF    ONE
+ 0694            AD     POSITON
+ 0695            TS     POSITON
+ 0696            CS     POSITON
+ 0697            AD     DEC11
+ 0698            CCS    A
+ 0699            TC     +2
+ 0700            TC     ENDTEST
+ 0701            INHINT
+ 0702            CAF    PRIO20
+ 0703            TC     FINDVAC
+ 0704            CADR   GYRDRFT2
+ 0705  8         TC     ENDOFJOB
+ 0706   TPTIME   XCH    Q
+ 0707            TS     QPLAC
+ 0708            CS     TIME2
+ 0709            CS     A
+ 0710            TS     MPAC
+ 0711            CS     TIME1
+ 0712            CS     A
+ 0713            TS     MPAC +1
+ 0714            INHINT
+ 0715            TC     FINETIME
+ 0716            RELINT
+ 0717            TS     MPAC +2
+ 0718            CCS    A
+ 0719            TC     +7
+ 0720            CS     TIME2
+ 0721            CS     A
+ 0722            TS     MPAC
+ 0723            CS     TIME1
+ 0724            CS     A
+ 0725            TS     MPAC +1
+ 0726            XCH    MPAC +2
+ 0727            EXTEND
+ 0728            MP     BIT11
+ 0729            XCH    LP
+ 0730            TS     MPAC +2
+ 0731  8         TC     QPLAC
+ 0732   OGCZERO  XCH    Q               ZERO RESIDUAL TORQUING
+ 0733            TS     QPLACE
+ 0734            CAF    FIVE
+ 0735            TS     OVCTR
+ 0736            CAF    ZERO
+ 0737            INDEX  OVCTR
+ 0738            TS     OGC
+ 0739            CCS    OVCTR
+ 0740            TC     OGCZERO +3
+ 0741  4         TC     QPLACE
+ 0742   FLTRZERO XCH    Q
+ 0743            TS     QPLACE
+ 0744            CAF    FIVE
+ 0745            TS     OVCTR
+ 0746            CAF    ZERO
+ 0747            INDEX  OVCTR
+ 0748            TS     FILDELX
+ 0749            CCS    OVCTR
+ 0750            TC     FLTRZERO +3
+ 0751  8         TC     QPLACE
+ 0752   WARTMAL  XCH    Q
+ 0753            TS     QPLACE
+ 0754            CS     Q
+ 0755            TS     COUNTPL
+ 0756   WARTMAL4 CCS    COUNTPL
+ 0757            TC     +4
+ 0758            TC     QPLACE
+ 0759            TC     +2
+ 0760            TC     WARTMAL4 -1
+ 0761            INHINT
+ 0762            CAF    BIT11
+ 0763            TC     WAITLIST
+ 0764            CADR   WARTMAL3
+ 0765            RELINT
+ 0766            CCS    COUNTPL
+ 0767            TC     QPLACE
+ 0768            TC     QPLACE
+ 0769            NOOP
+ 0770   WARTMAL2 TS     COUNTPL
+ 0771            CAF    WTMLCADR
+ 0772            TC     JOBSLEEP
+ 0773   WTMLCADR CADR   WARTMAL4
+ 0774   WARTMAL3 CAF    WTMLCADR
+ 0775            TC     JOBWAKE
+ 0776  8         TC     TASKOVER
+ 0777   ENDTEST  TC     FREEDSP
+ 0778            TC     NEWMODE
+ 0779            OCT    00000
+ 0780            CS     ZERO
+ 0781            TS     CDUIND
+ 0782            TC     BANKCALL
+ 0783            CADR   MKRELEAS
+ 0784  8         TC     ENDOFJOB
+ 0785   SCRTEST  CAF    ZERO
+ 0786            TS     DATAPL
+ 0787            TS     GENPL +1
+ 0788            TS     GENPL +2
+ 0789            TS     GENPL +3
+ 0790            TS     GENPL +4
+ 0791            CAF    TWO
+ 0792            TS     CDUNDX
+ 0793            INHINT
+ 0794            CAF    NINTHOU
+ 0795            TC     WAITLIST
+ 0796            CADR   CARYON
+ 0797            RELINT
+ 0798            CAF    CONTCADR
+ 0799  2         TC     JOBSLEEP
+ 0800   CARYON   CAF    CONTCADR
+ 0801            TC     JOBWAKE
+ 0802  2         TC     TASKOVER
+ 0803  4CONTCADR CADR   ULES
+ 0804   ULES     INHINT
+ 0805            TC     CHECKG
+ 0806            RELINT
+ 0807            TC     DATALD1
+ 0808            CAF    FOUR
+ 0809            TS     RESULTCT
+ 0810            TC     DATALD1
+ 0811            TC     +5
+ 0812   REPEET   TS     CDUNDX          CDUNDX USED FOR CONV
+ 0813            CAF    FIVE
+ 0814            AD     RESULTCT
+ 0815            TS     RESULTCT
+ 0816            CAF    DEC1500          LENGTH OF TEST SELECTED IN LAB
+ 0817   SUMSUM   TS     COUNTPL
+ 0818            INHINT
+ 0819            CAF    TEN              LENGTH OF SAMPLE SELECTED BY LAB TEST
+ 0820            TC     WAITLIST
+ 0821            CADR   REPMAL
+ 0822            RELINT
+ 0823            CAF    REPCADR
+ 0824  2         TC     JOBSLEEP
+ 0825  2REPCADR  CADR   RETPLS
+ 0826   REPMAL   CAF    REPCADR
+ 0827            TC     JOBWAKE
+ 0828  2         TC     TASKOVER
+ 0829  2RETADR   ADRES  RETHERE
+ 0830   RETPLS   CAF    RETADR
+ 0831            TS     QPLACE
+ 0832            INHINT
+ 0833            CAF    ZERO
+ 0834            TS     STOREPL
+ 0835            TC     CHECKG3
+ 0836   RETHERE  RELINT
+ 0837            CS     DATAPL
+ 0838            AD     STOREPL
+ 0839            TS     GENPL
+ 0840            TC     BANKCALL
+ 0841  2         CADR   SCRINTP
+ 0842            CCS    CDUNDX
+ 0843            TC     REPEET
+ 0844            TC     BANKCALL
+ 0845  8         CADR   RESULTS
+ 0846   POSSET   CAF    ZERO
+ 0847            TS     RESULTCT
+ 0848            CAF    MTRXLD1
+ 0849            TS     OVCTR
+ 0850            CAF    ZERO
+ 0851            INDEX  OVCTR
+ 0852            TS     XSM
+ 0853            CCS    OVCTR
+ 0854            TC     -5
+ 0855            INDEX  POSITON
+ 0856            TC     +1
+ 0857            TC     ENDTEST
+ 0858            TC     POSN1
+ 0859            TC     POSN2
+ 0860            TC     POSN3
+ 0861            TC     POSN4
+ 0862            TC     POSN5
+ 0863            TC     POSN6
+ 0864            TC     POSN7
+ 0865            TC     POSN8
+ 0866            TC     POSN9
+ 0867            TC     POSN10
+ 0868            TC     POSN11
+ 0869   POSN1    CAF    HALF            X UP Y SOUTH Z EAST
+ 0870            TS     XSM
+ 0871            TS     YSM +2
+ 0872            TS     ZSM +4
+ 0873            CCS    TESTNDX
+ 0874            TC     +2
+ 0875            TC     LPNDX1
+ 0876            NOOP
+ 0877            CAF    ZERO
+ 0878            TS     PIPINDEX
+ 0879            TS     CDUNDX
+ 0880            TC     POSGMBL
+ 0881   LPNDX1   CAF    TWO
+ 0882            TS     PIPINDEX
+ 0883            TC     POSGMBL
+ 0884   POSN2    CAF    HALF            X DOWN Y WEST ZNORTH
+ 0885            COM
+ 0886            TS     XSM
+ 0887            TS     YSM +4
+ 0888            TS     ZSM +2
+ 0889            CCS    TESTNDX
+ 0890            TC     +2
+ 0891            TC     LPNDX2
+ 0892            NOOP
+ 0893            CAF    ZERO
+ 0894            TS     CDUNDX
+ 0895            TS     PIPINDEX
+ 0896            TC     POSGMBL
+ 0897   LPNDX2   CAF    ONE
+ 0898            TS     PIPINDEX
+ 0899            TC     POSGMBL
+ 0900   POSN3    CAF    HALF            Z UP Y WEST X NORTH
+ 0901            TS     ZSM
+ 0902            COM
+ 0903            TS     XSM +2
+ 0904            TS     YSM +4
+ 0905            CCS    TESTNDX
+ 0906            TC     LCNDX3
+ 0907            TC     LPNDX2
+ 0908            NOOP
+ 0909  2         TC     LPNDX1
+ 0910   LCNDX3   CAF    ZERO
+ 0911            TS     CDUNDX
+ 0912            TC     POSGMBL
+ 0913   POSN4    CAF    HALF            Z DOWN Y SOUTH X EAST
+ 0914            TS     XSM +4
+ 0915            TS     YSM +2
+ 0916            COM
+ 0917            TS     ZSM
+ 0918            CCS    TESTNDX
+ 0919            TC     LCNDX3
+ 0920            TC     LPNDX4
+ 0921            NOOP
+ 0922  2         TC     LPNDX1
+ 0923   LPNDX4   TS     PIPINDEX
+ 0924            TC     POSGMBL
+ 0925   POSN5    CAF    HALF            Y UP Z NORTH X WEST
+ 0926            TS     YSM
+ 0927            COM
+ 0928            TS     XSM +4
+ 0929            TS     ZSM +2
+ 0930            CCS    TESTNDX
+ 0931            TC     LCNDX5
+ 0932            TC     LPNDX4
+ 0933            TC     LCNDX5
+ 0934  2         TC     LPNDX2
+ 0935   LCNDX5   CAF    ONE
+ 0936            TS     CDUNDX
+ 0937            TC     POSGMBL
+ 0938   POSN6    CAF    HALF            Y DOWN Z EAST X SOUTH
+ 0939            TS     XSM +2
+ 0940            TS     ZSM +4
+ 0941            COM
+ 0942            TS     YSM
+ 0943            CCS    TESTNDX
+ 0944            TC     LCNDX5
+ 0945            TC     LPNDX1
+ 0946            TC     LCNDX5
+ 0947  2         TC     LPNDX2
+ 0948   POSN7    CAF    ROOT 2/4
+ 0949            TS     ZSM
+ 0950            TS     ZSM +2
+ 0951            TS     YSM
+ 0952            COM
+ 0953            TS     YSM +2
+ 0954            CAF    HALF
+ 0955            TS     XSM +4
+ 0956            CAF    ZERO
+ 0957            TS     PIPINDEX
+ 0958            CCS    NBPOS
+ 0959            TC     GYRDRFT2
+ 0960            TS     TESTNDX
+ 0961            TC     POSGMBL
+ 0962   POSN8    CAF    ROOT 2/4
+ 0963            TS     YSM
+ 0964            TS     YSM +2
+ 0965            TS     XSM
+ 0966            COM
+ 0967            TS     XSM +2
+ 0968            CAF    HALF
+ 0969            TS     ZSM +4
+ 0970            CAF    TWO
+ 0971            TS     PIPINDEX
+ 0972            CAF    ZERO
+ 0973            TS     TESTNDX
+ 0974            TC     POSGMBL
+ 0975   POSN9    CAF    ROOT 2/4
+ 0976            TS     XSM
+ 0977            TS     XSM +2
+ 0978            TS     ZSM
+ 0979            COM
+ 0980            TS     ZSM +2
+ 0981            CAF    HALF
+ 0982            TS     YSM +4
+ 0983            CAF    ONE
+ 0984            TS     PIPINDEX
+ 0985            CCS    NBPOS
+ 0986            TC     GYRDRFT2
+ 0987            TS     TESTNDX
+ 0988            TC     POSGMBL
+ 0989   POSN10   CS     ONE             POSITION FOR LONG TEST FOR ADIAY
+ 0990            TS     TESTNDX
+ 0991            TC     POSN5
+ 0992   POSN11   CS     ONE
+ 0993            TS     TESTNDX
+ 0994  8         TC     POSN6
+ 0995   V05N30E  OCT    00530
+ 0996   72DEC    DEC    72
+ 0997   V21N30E  OCT    02130
+ 0998   60SEC    DEC    6000
+ 0999   30SEC    DEC    3000
+ 1000   V07N30E  OCT    00730
+ 1001   NINTHOU  DEC    9000
+ 1002   SXTTR    DEC    64                 THIS FIXES  INACCURACY DUE TO ENCODER
+ 1003   DEC180   DEC    180
+ 1004   VB06N66  OCT    00666
+ 1005   DEC11    DEC    11
+ 1006   MTRXLD1  DEC    17
+ 1007   ROOT 2/4 DEC    .35355339
+ 1008   FLNDX12  ADRES  GENPL           FIXED BY *UNEEDA* DEBUGGING SERVICE
+ 1009   DEC1500  DEC    1500
+ 1010   DECX     DEC    1448
 *       ENDOFJOB
