@@ -152,6 +152,11 @@ class MemType:
     SPEC_NON = Bit.BIT27
     MEM_MASK = ERASABLE | FIXED | SPEC_NON
 
+class Line:
+    def __init__(self, text=' '*120, spacing=0):
+        self.spacing = spacing
+        self.text = text
+
 class Symbol:
     def __init__(self, name, value=0, health=0, definer=None):
         self.name = name

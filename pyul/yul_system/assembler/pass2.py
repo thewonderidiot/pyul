@@ -1,4 +1,4 @@
-from yul_system.types import ALPHABET, ONES, BAD_WORD, Symbol, SwitchBit, HealthBit, FieldCodBit, Bit
+from yul_system.types import ALPHABET, ONES, BAD_WORD, Symbol, SwitchBit, HealthBit, FieldCodBit, Bit, Line
 from math import modf
 
 class Cuss:
@@ -6,11 +6,6 @@ class Cuss:
         self.msg = msg
         self.poison = poison
         self.demand = False
-
-class Line:
-    def __init__(self, text=' '*120, spacing=0):
-        self.spacing = spacing
-        self.text = text
 
 class WordRecord:
     def __init__(self, page_no):
@@ -89,7 +84,6 @@ class Pass2:
             else:
                 self.right_pq(popo, card_type)
 
-        self.print_lin()
         return self.end_pass_2()
 
     def un_las_rem(self, popo, card_type):
@@ -196,7 +190,7 @@ class Pass2:
         self._wd_buff.lwa = self._sent_loc - 1
         self._wd_recs.append(self._wd_buff)
 
-        comp_pass3 = self._mon.phi_load(self._yul.comp_name + '.PASS3', self._yul)
+        comp_pass3 = self._mon.phi_load(self._yul.comp_name + '.PASS3', self._yul, self._old_line)
         return comp_pass3.inish_p3()
 
     # Procedure in pass 2 for "END OF" cards.
@@ -215,6 +209,7 @@ class Pass2:
         # FIXME: Handle subroutines
 
         # FIXME: Handle more elaborate printing cases
+        self._line.spacing = Bit.BIT1
         self.print_lin()
 
         if self._sypt_file is not None:
