@@ -12686,4 +12686,998 @@ R0252  2THIS IS A ROUGH CHECK PROGRAM FOR THE IMU GYROS AND ACCELEROMETERS
  1008   FLNDX12  ADRES  GENPL           FIXED BY *UNEEDA* DEBUGGING SERVICE
  1009   DEC1500  DEC    1500
  1010   DECX     DEC    1448
+L       IMU PERFORMANCE TESTS 2
+ 0001  2         SETLOC 70000
+ 0002   MISALIGN TC     BANKCALL
+ 0003            CADR   OGCZERO
+ 0004            TC     GRABDSP
+ 0005            TC     PREGBSY
+ 0006            CAF    11DEC
+ 0007            TS     PTS
+ 0008            CAF    ZERO
+ 0009            TS     PTS +1
+ 0010   BBB      TS     NDXCTR
+ 0011            INDEX  NDXCTR
+ 0012            CS     GENPL +68D
+ 0013            INDEX  NDXCTR
+ 0014            AD     GENPL +74D
+ 0015            INDEX  NDXCTR
+ 0016            TS     GENPL +74D
+ 0017            CAF    63DEC
+ 0018            AD     NDXCTR
+ 0019            CCS    A
+ 0020            CS     THREE
+ 0021            AD     NDXCTR
+ 0022            TC     BBB
+ 0023   CCCC     TS     NDXCTR
+ 0024            TC     INTPRET
+ 0025            LXA,1  0
+ 0026                   NDXCTR
+ 0027            DMOVE* 1
+ 0028            DSU
+ 0029                   GENPL +72D,1
+ 0030                   GENPL
+ 0031            STORE  GENPL +72D,1
+ 0032            EXIT   0
+ 0033            CS     NDXCTR
+ 0034            AD     69DEC
+ 0035            CCS    A
+ 0036            CAF    THREE
+ 0037            AD     NDXCTR
+ 0038            TC     CCCC
+ 0039            TS     GENPL
+ 0040            TS     GENPL +1
+ 0041            TS     RUN
+ 0042            CAF    THREE
+ 0043   DDDD     TS     NDXCTR
+ 0044            TC     INTPRET
+ 0045            LXA,1  0
+ 0046                   NDXCTR
+ 0047            DSU*   0
+ 0048                   GENPL +72D,1
+ 0049                   GENPL +66D,1
+ 0050            NOLOD  1
+ 0051            TSRT   DAD*
+ 0052                   1
+ 0053                   GENPL +66D,1
+ 0054            STORE  GENPL +72D,1
+ 0055            NOLOD  1
+ 0056            TSLT   DAD
+ 0057                   2
+ 0058                   OGC
+ 0059            STORE  OGC
+ 0060            DMOVE* 2
+ 0061            TSLT   DSQ
+ 0062            DAD
+ 0063                   GENPL +72D,1
+ 0064                   4
+ 0065                   MGC
+ 0066            STORE  MGC
+ 0067            EXIT   0
+ 0068            CS     RUN
+ 0069            COM
+ 0070            AD     NDXCTR
+ 0071            COM
+ 0072            AD     63DEC
+ 0073            CCS    A
+ 0074            CAF    SIX
+ 0075            AD     NDXCTR
+ 0076            TC     DDDD
+ 0077            AD     RUN
+ 0078   EEEE     TS     NDXCTR
+ 0079            INDEX  NDXCTR
+ 0080            CS     GENPL +11D
+ 0081            COM
+ 0082            TS     TEMDELV
+ 0083            CAF    ZERO
+ 0084            TS     TEMDELV +1
+ 0085            TC     INTPRET
+ 0086            LXC,1  0
+ 0087                   NDXCTR
+ 0088            DMOVE  0
+ 0089                   -
+ 0090            NOLOD  2
+ 0091            TSLT   BDDV
+ 0092            DAD
+ 0093                   5
+ 0094                   TEMDELV
+ 0095                   IGC
+ 0096            STORE  IGC
+ 0097            TSLT   1
+ 0098            BDDV
+ 0099                   -
+ 0100                   3
+ 0101                   TEMDELV
+ 0102            DMOVE* 2
+ 0103            TSLT   DMP
+ 0104            DAD
+ 0105                   GENPL +9D,1
+ 0106                   4
+ 0107                   -
+ 0108                   GENPL
+ 0109            STORE  GENPL
+ 0110            EXIT   0
+ 0111            CS     NDXCTR
+ 0112            AD     63DEC
+ 0113            AD     RUN
+ 0114            AD     NEG3
+ 0115            CCS    A
+ 0116            CAF    SIX
+ 0117            AD     NDXCTR
+ 0118            TC     EEEE
+ 0119            TC     INTPRET
+ 0120            DMP    0
+ 0121                   OGC
+ 0122                   GENPL
+ 0123            DMP    1
+ 0124            DSU
+ 0125                   MGC
+ 0126                   IGC
+ 0127            DSQ    1
+ 0128            TSRT
+ 0129                   OGC
+ 0130                   1
+ 0131            TSLT   2
+ 0132            DMP    DSU
+ 0133            BDDV   DMP
+ 0134                   PTS
+ 0135                   11
+ 0136                   MGC
+ 0137                   -
+ 0138                   -
+ 0139                   K
+ 0140            STORE  DSPTEM2
+ 0141            EXIT   0
+ 0142            TC     BANKCALL
+ 0143            CADR   FLASHON
+ 0144            CAF    V06N66E
+ 0145            TC     NVSUB
+ 0146            TC     PRENVBSY
+ 0147            TC     ENDIDLE
+ 0148            TC     ENDTEST1
+ 0149            CAF    THREE
+ 0150            TS     RUN
+ 0151            TC     BANKCALL
+ 0152            CADR   OGCZERO
+ 0153            CAF    ZERO
+ 0154            TS     GENPL
+ 0155            TS     GENPL +1
+ 0156  4         TC     DDDD
+ 0157   K        2DEC   1.233 E3 B-14
+ 0159   63DEC    DEC    63
+ 0160  469DEC    DEC    69
+ 0161   ENDTEST1 TC     BANKCALL
+ 0162  8         CADR   ENDTEST
+ 0163   FINDNAVB TC     MAKECADR
+ 0164            TS     RETAA
+ 0165            TC     BANKCALL
+ 0166            CADR   MKRELEAS
+ 0167            CAF    ONE
+ 0168            TS     DSPTEM1
+ 0169            CAF    V01N30E         MARK ON TARGET 1
+ 0170            TC     NVSUB
+ 0171            TC     PRENVBSY
+ 0172            CAF    ONE
+ 0173            TC     BANKCALL
+ 0174            CADR   SXTMARK
+ 0175            TC     BANKCALL
+ 0176            CADR   OPTSTALL
+ 0177            TC     ENDTEST1
+ 0178            INDEX  MARKSTAT
+ 0179            CS     0
+ 0180            CS     A
+ 0181            TS     VACADR          TIME OF MARK
+ 0182            INDEX  MARKSTAT
+ 0183            CS     1
+ 0184            CS     A
+ 0185            TS     VACADR +1
+ 0186            CS     MARKSTAT
+ 0187            TS     MKSTAT1
+ 0188            TC     BANKCALL
+ 0189            CADR   MKRELEAS
+ 0190            CAF    TWO
+ 0191            TS     DSPTEM1
+ 0192            CAF    V01N30E         MARK ON TARGET 4
+ 0193            TC     NVSUB
+ 0194            TC     PRENVBSY
+ 0195            CAF    ONE
+ 0196            TC     BANKCALL
+ 0197            CADR   SXTMARK
+ 0198            CCS    COAROFIN        COARSE ALIGN OR FINE ALIGN MARKS
+ 0199            TC     CLGNMARK
+ 0200            CS     MKSTAT1
+ 0201            AD     TWO
+ 0202            INDEX  FIXLOC
+ 0203            TS     S1              BASE ADDRESS GIMBAL ANGLES
+ 0204            TC     INTPRET         OPT-NB-SM    TARGET 1
+ 0205            LXA,1  0
+ 0206                   MKSTAT1
+ 0207            ITC    0
+ 0208                   SXTNB
+ 0209            VSLT   1
+ 0210            ITC
+ 0211                   STARM
+ 0212                   0
+ 0213                   NBSM
+ 0214            NOLOD  0
+ 0215            STORE  STARAD
+ 0216            DMOVE  0
+ 0217                   VACADR
+ 0218            STORE  TMARK
+ 0219  2         EXIT   0
+ 0220   EARRTCOM TC     INTPRET         COMPENSATE BETWEEN FINE ALIGN MARKS
+ 0221            ITC    0
+ 0222                   EARTHR
+ 0223            ITC    0
+ 0224                   OUTGYR
+ 0225            EXIT   0
+ 0226            TC     BANKCALL
+ 0227            CADR   IMUSTALL
+ 0228            TC     ENDTEST1
+ 0229            CCS    OPTCADR
+ 0230            TC     +3
+ 0231            TC     EARRTCOM
+ 0232            TC     +1
+ 0233            TC     BANKCALL
+ 0234            CADR   OPTSTALL
+ 0235            TC     ENDTEST1
+ 0236            CAF    TWO
+ 0237            AD     MARKSTAT
+ 0238            INDEX  FIXLOC
+ 0239            TS     S1              BASE ADDRESS GIMBAL ANGLES
+ 0240            TC     INTPRET         OPT-NB-SM    TARGET 4
+ 0241            LXC,1  0
+ 0242                   MARKSTAT
+ 0243            ITC    0
+ 0244                   SXTNB
+ 0245            VSLT   1
+ 0246            ITC
+ 0247                   STARM
+ 0248                   0
+ 0249                   NBSM
+ 0250            NOLOD  0
+ 0251            STORE  STARAD +6
+ 0252            ITC    0
+ 0253  2                MATXDET
+ 0254   CLGNMARK TC     INTPRET         OPT-NB       TARGET 1
+ 0255            LXA,1  0
+ 0256                   MKSTAT1
+ 0257            ITC    0
+ 0258                   SXTNB
+ 0259            VMOVE  0
+ 0260                   STARM
+ 0261            STORE  STARAD
+ 0262            EXIT   0
+ 0263            TC     BANKCALL
+ 0264            CADR   OPTSTALL
+ 0265            TC     ENDTEST1
+ 0266            TC     INTPRET         OPT-NB       TARGET 4
+ 0267            LXC,1  0
+ 0268                   MARKSTAT
+ 0269            ITC    0
+ 0270                   SXTNB
+ 0271            VMOVE  0
+ 0272                   STARM
+ 0273  2         STORE  STARAD +6
+ 0274   MATXDET  VMOVE  0               CALCULATE TRANSFORMATION MATRIX
+ 0275                   TAR1POS
+ 0276            STORE  6
+ 0277            VMOVE  0
+ 0278                   TAR1POS +6
+ 0279            STORE  12D
+ 0280            ITC    0
+ 0281                   AXISGEN
+ 0282            VMOVE  0
+ 0283                   XDC
+ 0284            STORE  STARAD
+ 0285            VMOVE  0
+ 0286                   YDC
+ 0287            STORE  STARAD +6
+ 0288            VMOVE  0
+ 0289                   ZDC
+ 0290            STORE  STARAD +12D
+ 0291            EXIT   0
+ 0292            XCH    RETAA
+ 0293  8         TC     BANKJUMP
+ 0294   PUTPOSX  TC     MAKECADR
+ 0295            TS     RETAA
+ 0296            TC     INTPRET
+ 0297            ITC    0
+ 0298                   CALCGA
+ 0299            EXIT   0
+ 0300            TC     BANKCALL
+ 0301            CADR   IMUCOARS        INITIATE COARSE ALIGN MODE
+ 0302            TC     BANKCALL
+ 0303            CADR   IMUSTALL        WAIT FOR IMUCOARS COMPLETION
+ 0304            TC     ENDTEST1
+ 0305            XCH    RETAA
+ 0306  4         TC     BANKJUMP
+ 0307   SMDCALC  TC     MAKECADR
+ 0308            TS     RETAA
+ 0309            TC     INTPRET
+ 0310            MXV    1
+ 0311            VSLT
+ 0312                   XSM
+ 0313                   STARAD
+ 0314                   1
+ 0315            STORE  XDC
+ 0316            MXV    1
+ 0317            VSLT
+ 0318                   YSM
+ 0319                   STARAD
+ 0320                   1
+ 0321            STORE  YDC
+ 0322            VXV    1
+ 0323            VSLT
+ 0324                   XDC
+ 0325                   YDC
+ 0326                   1
+ 0327            STORE  ZDC
+ 0328            ITC    0
+ 0329                   CALCGTA
+ 0330            ITC    0
+ 0331                   OUTGYR
+ 0332            EXIT   0
+ 0333            XCH    RETAA
+ 0334  8         TC     BANKJUMP
+ 0335   LATAZCHK TC     MAKECADR
+ 0336            TS     RETAA
+ 0337            TC     INTPRET         CHECK LATITUDE AND NAVBASE AZIMUTH
+ 0338            TSLT   0
+ 0339                   LATITUDE
+ 0340                   2
+ 0341            STORE  DSPTEM1 +1
+ 0342            DMOVE  1
+ 0343            RTB    EXIT
+ 0344                   AZIMUTH
+ 0345                   1STO2S
+ 0346            XCH    MPAC
+ 0347            TS     DSPTEM1
+ 0348            TC     BANKCALL
+ 0349  2         CADR   LATAZCK1
+ 0350            TC     INTPRET
+ 0351            SMOVE  1
+ 0352            RTB
+ 0353                   DSPTEM1
+ 0354                   CDULOGIC
+ 0355            STORE  AZIMUTH
+ 0356            SMOVE  1
+ 0357            TSRT
+ 0358                   DSPTEM1 +1
+ 0359                   2
+ 0360            STORE  LATITUDE
+ 0361            EXIT   0
+ 0362            XCH    RETAA
+ 0363  8         TC     BANKJUMP
+ 0364   TARGSM   TC     INTPRET
+ 0365            ITC    0
+ 0366                   ERTHRVEN
+ 0367            ITC    0
+ 0368                   PROCTARG
+ 0369            VMOVE  0
+ 0370                   TARGET1
+ 0371            STORE  TAR1POS
+ 0372            VMOVE  0
+ 0373                   TARGET1 +6
+ 0374            STORE  TAR1POS +6
+ 0375            ITC    0
+ 0376                   MAKEXSM
+ 0377            EXIT   0
+ 0378            TC     BANKCALL
+ 0379  8         CADR   POSLOAD
+ 0380   ALGNINIT RTB    0
+ 0381                   ZEROVAC
+ 0382            DMOVE  0
+ 0383                   ZERODP
+ 0384            COS    1
+ 0385            COMP
+ 0386                   LATITUDE
+ 0387            SIN    1
+ 0388            VDEF   VXSC            (SIN,-COS,0)
+ 0389                   LATITUDE
+ 0390                   OMEG/MS
+ 0391            STORE  VMARK
+ 0392            RTB    0
+ 0393                   LOADTIME
+ 0394            STORE  TMARK
+ 0395  8         ITCQ   0
+ 0396   EARTHR   RTB    0
+ 0397                   LOADTIME
+ 0398            STORE  S1
+ 0399            NOLOD  3
+ 0400            DSU    TSLT
+ 0401            VXSC   MXV
+ 0402            VAD
+ 0403                   TMARK
+ 0404                   10D
+ 0405                   VMARK
+ 0406                   XSM
+ 0407                   OGC
+ 0408            STORE  OGC
+ 0409            DMOVE  0
+ 0410                   S1
+ 0411            STORE  TMARK
+ 0412  8         ITCQ   0
+ 0413   OUTGYR   AXT,1  1
+ 0414            AST,1  AXT,2
+ 0415                   6
+ 0416                   2
+ 0417                   0
+ 0418   OUTGYR1  TSRT*  0
+ 0419                   OGC +6,1
+ 0420                   8D,2
+ 0421            STORE  GYROD +6,1
+ 0422            TSLT*  1
+ 0423            BDSU*
+ 0424                   GYROD +6,1
+ 0425                   8D,2
+ 0426                   OGC +6,1
+ 0427            STORE  OGC +6,1
+ 0428            TIX,1  0
+ 0429                   OUTGYR1
+ 0430            AXT,1  1
+ 0431            RTB    ITCQ
+ 0432                   GYROD
+ 0433  7                PULSEIMU
+ 0434   STORRSLT TC     MAKECADR
+ 0435            TS     RETAA
+ 0436            TC     INTPRET
+ 0437            LXC,1  0
+ 0438                   NDXCTR
+ 0439            NOLOD  2
+ 0440            TSLT   DMP
+ 0441            RTB
+ 0442                   8D
+ 0443                   SCALFTR
+ 0444                   SGNAGREE
+ 0445            STORE  GENPL,1
+ 0446            EXIT   0
+ 0447            XCH    STOREPL
+ 0448            INDEX  NDXCTR
+ 0449            TS     GENPL +2
+ 0450            CS     NDXCTR
+ 0451            AD     MAXPTS2
+ 0452            CCS    A
+ 0453            CAF    THREE
+ 0454            AD     NDXCTR
+ 0455            TC     +4
+ 0456            CCS    EROPTN
+ 0457            TC     ENDTEST1
+ 0458  8         TC     MISALIGN
+ 0459            TS     NDXCTR
+ 0460            XCH    RETAA
+ 0461  8         TC     BANKJUMP
+ 0462   TJLAL    AXT,1  1
+ 0463            AST,1
+ 0464                   6
+ 0465                   2
+ 0466   TJLAL1   DSU*   1
+ 0467            DMP    DAD*
+ 0468                   DELVX +6,1
+ 0469                   FILDELX +6,1
+ 0470                   VRECTC3
+ 0471                   FILDELX +6,1
+ 0472            STORE  FILDELX +6,1
+ 0473            TIX,1  0
+ 0474                   TJLAL1
+ 0475  8         ITCQ   0
+ 0476   FALNE1   CAF    TWO
+ 0477            AD     FLNDX
+ 0478            INDEX  FIXLOC
+ 0479            TS     S1
+ 0480            TC     INTPRET
+ 0481            MXV    1
+ 0482            VSLT   ITC
+ 0483                   XSM
+ 0484                   STARAD
+ 0485                   1
+ 0486                   NBSM
+ 0487            NOLOD  0
+ 0488            STORE  XDC
+ 0489            MXV    1
+ 0490            VSLT   ITC
+ 0491                   YSM
+ 0492                   STARAD
+ 0493                   1
+ 0494                   NBSM
+ 0495            NOLOD  0
+ 0496            STORE  YDC
+ 0497            VXV    1
+ 0498            VSLT
+ 0499                   XDC
+ 0500                   YDC
+ 0501                   1
+ 0502            STORE  ZDC
+ 0503            ITC    0
+ 0504                   CALCGTA
+ 0505            ITC    0
+ 0506                   OUTGYR
+ 0507            EXIT   0
+ 0508            TC     BANKCALL
+ 0509            CADR   IMUSTALL
+ 0510            TC     ENDTEST1
+ 0511            TC     BANKCALL
+ 0512  8         CADR   FALNED
+ 0513   VERTRECT NOLOD  1
+ 0514            VXM    VSLT
+ 0515                   XSM
+ 0516                   1
+ 0517            STORE  0
+ 0518            DMOVE  0
+ 0519                   VAC +2
+ 0520            COMP   0
+ 0521                   VAC +4
+ 0522            SMOVE  1
+ 0523            VDEF
+ 0524                   ZERODP
+ 0525            NOLOD  1
+ 0526            VXSC   VSLT
+ 0527                   INTCON1
+ 0528                   1
+ 0529            VSU    3
+ 0530            BOV    VXSC
+ 0531            VSLT   VAD
+ 0532            MXV    VAD
+ 0533                   0
+ 0534                   18D
+ 0535                   ERECTND
+ 0536                   INTCON1
+ 0537                   1
+ 0538                   -
+ 0539                   XSM
+ 0540                   OGC
+ 0541            STORE  OGC
+ 0542            VMOVE  0
+ 0543            STORE  18D
+ 0544  8ERECTND  ITCQ   0
+ 0545   POSNJUMP INDEX  POSITON
+ 0546            TC     +1
+ 0547            TC     ENDTEST1
+ 0548            TC     POS1
+ 0549            TC     POS2
+ 0550            TC     POS3
+ 0551            TC     POS4
+ 0552            TC     BANKCALL
+ 0553  2         CADR   POSNRETN
+ 0554   POS1     CS     ONE
+ 0555            TS     PIPNDX
+ 0556            CS     TWO
+ 0557            TS     PIPNDX +1
+ 0558  4         TC     POS1 -2
+ 0559   POS2     TC     INTPRET
+ 0560            VMOVE  1
+ 0561            COMP
+ 0562                   XSM
+ 0563            VMOVE  0
+ 0564                   ZSM
+ 0565            STORE  XSM
+ 0566            VMOVE  0
+ 0567                   -
+ 0568            STORE  ZSM
+ 0569            EXIT   0
+ 0570            CS     ZERO
+ 0571            TS     PIPNDX
+ 0572            CS     ONE
+ 0573            TS     PIPNDX +1
+ 0574  4         TC     POS1 -2
+ 0575   POS3     TC     INTPRET
+ 0576            VMOVE  0
+ 0577                   XSM
+ 0578            VMOVE  0
+ 0579                   ZSM
+ 0580            VMOVE  0
+ 0581                   YSM
+ 0582            STORE  ZSM
+ 0583            VMOVE  0
+ 0584                   -
+ 0585            STORE  XSM
+ 0586            VMOVE  0
+ 0587                   -
+ 0588            STORE  YSM
+ 0589            EXIT   0
+ 0590            CS     ZERO
+ 0591            TS     PIPNDX
+ 0592            CS     TWO
+ 0593            TS     PIPNDX +1
+ 0594  8         TC     POS1 -2
+ 0595   POS4     TC     INTPRET
+ 0596            VXV    1
+ 0597            UNIT
+ 0598                   YSM
+ 0599                   ZSM
+ 0600            STORE  XSM
+ 0601            EXIT   0
+ 0602  4         TC     POS1 -2
+ 0603   NBPOSPL  CAF    MTRXLD
+ 0604            TS     OVCTR           ZERO STARAD
+ 0605            CAF    ZERO
+ 0606            INDEX  OVCTR
+ 0607            TS     STARAD
+ 0608            CCS    OVCTR
+ 0609  2         TC     NBPOSPL +1
+ 0610            TC     INTPRET         SETS UP AZIMUTH AND VERTICAL VECTORS
+ 0611            RTB    0               FOR AXISGEN,RESULTS TO BE USED IN CALCGA
+ 0612                   ZEROVAC         TO COMPUTE COARSE ALIGN ANGLES
+ 0613            AXC,1  1
+ 0614            XSU,1  VMOVE*
+ 0615                   SCNBAZ
+ 0616                   NBPOS
+ 0617                   0,1
+ 0618            STORE  STARAD          AZIMUTH IN NB COORDS
+ 0619            AXC,1  1
+ 0620            XSU,1  VMOVE*
+ 0621                   SCNBVER
+ 0622                   NBPOS
+ 0623                   0,1
+ 0624            STORE  STARAD +6       VERTICAL IN NB COORDS
+ 0625            COS    1
+ 0626            COMP
+ 0627                   AZIMUTH
+ 0628  2         STORE  8D
+ 0629            SIN    0
+ 0630                   AZIMUTH
+ 0631            STORE  10D             AZIMUTH IN CER
+ 0632            VMOVE  0
+ 0633                   LABNBVER
+ 0634            STORE  12D              VERTICAL IN CER
+ 0635            ITC    0
+ 0636  2                AXISGEN
+ 0637            VMOVE  0
+ 0638                   XDC
+ 0639  2         STORE  STARAD
+ 0640            VMOVE  0
+ 0641                   YDC
+ 0642  2         STORE  STARAD +6
+ 0643            VMOVE  0
+ 0644                   ZDC
+ 0645            STORE  STARAD +12D
+ 0646            EXIT   0
+ 0647            TC     BANKCALL
+ 0648  8         CADR   POSSET
+ 0649   RESULTS  CCS    TESTNDX
+ 0650            TC     CDUCALC
+ 0651            TC     PIPCALC
+ 0652            TC     CDUCALC
+ 0653   SFCALC   CS     DATAPL +4
+ 0654            AD     DATAPL +8D
+ 0655  2         TS     DATAPL
+ 0656            TC     INTPRET
+ 0657            TSU    1
+ 0658            TSLT   ROUND
+ 0659                   DATAPL +9D
+ 0660                   DATAPL +5
+ 0661                   14D
+ 0662            SMOVE  2
+ 0663            DMP    DDV
+ 0664            RTB
+ 0665                   DATAPL
+ 0666                   DC585
+ 0667                   0
+ 0668                   SGNAGREE
+ 0669            STORE  DSPTEM2
+ 0670            EXIT   0
+ 0671            TC     GRABDSP
+ 0672            TC     PREGBSY
+ 0673            TC     BANKCALL
+ 0674  8         CADR   FINISH
+ 0675   CDUCALC  TC     INTPRET
+ 0676            DSU    2
+ 0677            BDDV   DMP
+ 0678            RTB
+ 0679                   DATAPL +2
+ 0680                   DATAPL
+ 0681                   GENPL +76D
+ 0682                   ERUNITS         2DEC.66666
+ 0683                   SGNAGREE
+ 0684            STORE  DSPTEM2
+ 0685  2         EXIT   0
+ 0686            TC     GRABDSP
+ 0687            TC     PREGBSY
+ 0688            TC     BANKCALL
+ 0689  8         CADR   FINISH
+ 0690   PIPCALC  TC     INTPRET
+ 0691            RTB    0
+ 0692                   FRESHPD
+ 0693            TSU    1
+ 0694            TSLT   ROUND
+ 0695                   GENPL +4
+ 0696                   DATAPL +1
+ 0697                   11D
+ 0698            DSQ    0
+ 0699                   0               T1(2) IN 2,3
+ 0700            DMP    1
+ 0701            VDEF
+ 0702                   0
+ 0703                   2
+ 0704            STORE  GENPL +25D
+ 0705            TSU    1
+ 0706            TSLT   ROUND
+ 0707                   GENPL +9D
+ 0708                   DATAPL +1
+ 0709                   11D
+ 0710            DSQ    0
+ 0711                   0
+ 0712            DMP    1               T2(2) IN 6
+ 0713            VDEF
+ 0714                   0
+ 0715                   2
+ 0716            STORE  GENPL +31D
+ 0717            TSU    1
+ 0718            TSLT   ROUND
+ 0719                   GENPL +14D
+ 0720                   DATAPL +1D
+ 0721                   11D
+ 0722            DSQ    0
+ 0723                   0
+ 0724            DMP    1
+ 0725            VDEF
+ 0726                   0
+ 0727                   2
+ 0728            STORE  GENPL +37D
+ 0729            VXV    1
+ 0730            DOT
+ 0731                   GENPL +31D
+ 0732                   GENPL +37D
+ 0733                   GENPL +25D
+ 0734            STORE  GENPL +45D      D2
+ 0735            DMOVE  0
+ 0736                   GENPL +7
+ 0737            STORE  GENPL +25D
+ 0738            DMOVE  0
+ 0739                   GENPL +12D
+ 0740            STORE  GENPL +31D
+ 0741            DMOVE  0
+ 0742                   GENPL +17D
+ 0743            STORE  GENPL +37D
+ 0744            VXV    2
+ 0745            DOT    DDV
+ 0746            DMP    RTB
+ 0747                   GENPL +31D
+ 0748                   GENPL +37D
+ 0749                   GENPL +25D
+ 0750                   GENPL +45D
+ 0751                   ERUNITS2
+ 0752                   SGNAGREE
+ 0753            STORE  DSPTEM2
+ 0754            EXIT   0
+ 0755            TC     GRABDSP
+ 0756            TC     PREGBSY
+ 0757            TC     BANKCALL
+ 0758  8         CADR   FINISH
+ 0759   CHKCALC  TC     INTPRET
+ 0760            RTB    1
+ 0761            RTB
+ 0762                   ZEROVAC
+ 0763                   FRESHPD
+ 0764            TSU    1
+ 0765            TSLT   ROUND
+ 0766                   DATAPL +17D
+ 0767                   DATAPL +2
+ 0768                   12D
+ 0769            DSU    2
+ 0770            TSLT   DMP
+ 0771            DDV
+ 0772                   DATAPL +15D
+ 0773                   DATAPL
+ 0774                   12D
+ 0775                   DC585           GZ IN 0,1
+ 0776            TSU    1
+ 0777            TSLT   ROUND
+ 0778                   DATAPL +22D
+ 0779                   DATAPL +7
+ 0780                   12D
+ 0781            DSU    2
+ 0782            TSLT   DMP
+ 0783            DDV
+ 0784                   DATAPL +20D
+ 0785                   DATAPL +5
+ 0786                   12D
+ 0787                   DC585           GY IN 2,3
+ 0788            TSU    1
+ 0789            TSLT   ROUND
+ 0790                   DATAPL +27D
+ 0791                   DATAPL +12D
+ 0792                   12D
+ 0793            STORE  TESTTIME
+ 0794            DSU    2
+ 0795            TSLT   DMP
+ 0796            DDV    VDEF
+ 0797                   DATAPL +25D
+ 0798                   DATAPL +10D
+ 0799                   12D
+ 0800                   DC585
+ 0801                   TESTTIME        G IN 0,1,2,3,4,5
+ 0802            ABVAL  1
+ 0803            TSLT   RTB
+ 0804                   0
+ 0805                   1
+ 0806                   SGNAGREE
+ 0807            STORE  DSPTEM2
+ 0808            EXIT   0
+ 0809            TC     GRABDSP
+ 0810            TC     PREGBSY
+ 0811            TC     BANKCALL
+ 0812  2         CADR   SHOW
+ 0813            TC     INTPRET
+ 0814            DMOVE  0
+ 0815                   DATAPL +32D
+ 0816            DMOVE  0
+ 0817                   DATAPL +30D
+ 0818            DMOVE  2
+ 0819            VDEF   UNIT
+ 0820            VSLT
+ 0821                   DATAPL +10D
+ 0822                   1               V1 IN 6,7,8,9,10,11
+ 0823            DMOVE  0
+ 0824                   DATAPL +36D
+ 0825            DMOVE  0
+ 0826                   DATAPL +34D
+ 0827            DMOVE  2
+ 0828            VDEF   UNIT
+ 0829            VSLT
+ 0830                   DATAPL +25D
+ 0831  2                1               V2 IN 12,13,14,15,1 ,17
+ 0832            VXV    3
+ 0833            ABVAL  TSLT
+ 0834            DDV    DMP
+ 0835            RTB
+ 0836                   6
+ 0837                   12D
+ 0838                   1
+ 0839                   TESTTIME
+ 0840                   ERUNITS1
+ 0841                   SGNAGREE
+ 0842            STORE  DSPTEM2
+ 0843  2         EXIT   0
+ 0844            TC     BANKCALL
+ 0845            CADR   SHOW
+ 0846  8         TC     ENDTEST1
+ 0847   STOPHOR  TC     MAKECADR
+ 0848            TS     RETAA
+ 0849            TC     INTPRET
+ 0850            ITC    0
+ 0851                   EARTHR
+ 0852            ITC    0
+ 0853                   OUTGYR
+ 0854            EXIT   0
+ 0855            TC     BANKCALL
+ 0856            CADR   IMUSTALL
+ 0857            TC     ENDTEST1
+ 0858            XCH    RETAA
+ 0859  8         TC     BANKJUMP
+ 0860   SCRINTP  TC     MAKECADR
+ 0861            TS     RETAA
+ 0862            TC     INTPRET
+ 0863            NOLOD  1
+ 0864            TSU
+ 0865                   DATAPL +5
+ 0866  2         STORE  0               T1:T0
+ 0867            NOLOD  1
+ 0868            TAD
+ 0869                   DATAPL +5
+ 0870  2         STORE  DATAPL +5       TN
+ 0871            TMOVE  2
+ 0872            TSLT   ROUND
+ 0873            DMP    DAD
+ 0874                   0
+ 0875                   12D
+ 0876                   GENPL
+ 0877                   GENPL +2
+ 0878            STORE  GENPL +2
+ 0879  2         EXIT   0
+ 0880            CCS    COUNTPL
+ 0881  2         TC     SUMSUM1
+ 0882            TC     INTPRET
+ 0883            LXC,1  0
+ 0884                   RESULTCT        FIRST=4
+ 0885            TMOVE  0               SECOND=9
+ 0886                   DATAPL +5
+ 0887            STORE  GENPL,1
+ 0888            DMOVE  0
+ 0889                   GENPL +2
+ 0890            STORE  GENPL +3,1
+ 0891            EXIT   0
+ 0892            XCH    RETAA
+ 0893  4         TC     BANKJUMP
+ 0894   SUMSUM1  TC     BANKCALL
+ 0895  8         CADR   SUMSUM
+ 0896   FALNED1  TC     INTPRET
+ 0897            ITC    0
+ 0898                   ALGNINIT
+ 0899            EXIT   0
+ 0900            CCS    TESTNDX
+ 0901            TC     LABTEST1
+ 0902            TC     +2
+ 0903            TC     +1
+ 0904            TC     BANKCALL
+ 0905            CADR   OGCZERO
+ 0906            TC     BANKCALL
+ 0907            CADR   FLTRZERO
+ 0908   FRECT    CAF    BIT7
+ 0909            TS     STOREPL
+ 0910            CAF    ZERO            VERTICAL ERECTION BY NULLING PIPAS
+ 0911            TS     PIPAX
+ 0912            TS     PIPAY
+ 0913            TS     PIPAZ
+ 0914   WARTNEW  CAF    TEN             CALL A SPADE A SPADE...HOMER
+ 0915            TS     COUNTPL
+ 0916            INHINT
+ 0917            CAF    50DEC
+ 0918            TC     WAITLIST
+ 0919            CADR   WARTNEW1
+ 0920            CAF    WART2ADR
+ 0921            TC     JOBSLEEP
+ 0922   WART2ADR CADR   WART2NEW
+ 0923   WARTNEW1 CAF    WART2ADR
+ 0924            TC     JOBWAKE
+ 0925            TC     TASKOVER
+ 0926   WART2NEW TC     INTPRET
+ 0927            RTB    0
+ 0928                   READPIPS
+ 0929            STORE  DELVX
+ 0930            ITC    0
+ 0931                   TJLAL
+ 0932            EXIT   0
+ 0933            CCS    COUNTPL
+ 0934            TC     WARTNEW +1
+ 0935            TC     INTPRET
+ 0936            VMOVE  1
+ 0937            ITC
+ 0938                   FILDELX
+ 0939                   VERTRECT
+ 0940            ITC    0
+ 0941                   EARTHR
+ 0942            ITC    0
+ 0943                   OUTGYR
+ 0944            EXIT   0
+ 0945            TC     BANKCALL
+ 0946            CADR   IMUSTALL
+ 0947  2         TC     ENDTEST1
+ 0948            CCS    STOREPL
+ 0949            TC     FRECT +1
+ 0950            TC     BANKCALL
+ 0951  4         CADR   TSTJUMP
+ 0952   LABTEST1 TC     BANKCALL
+ 0953  8         CADR   LABTEST
+ 0954   SCNBAZ   2DEC   -.27232         AZIMUTH OF NB IS ERAD IN AS Z AXIS EAST
+ 0955            2DEC   0
+ 0956            2DEC   .4194335
+ 0957   LABNBAZ  2DEC   0
+ 0958            2DEC   0
+ 0959            2DEC   .5
+ 0960   LABNBAZ1 2DEC   0
+ 0961            2DEC   0
+ 0962   SCNBVER  2DEC   .4194335
+ 0963            2DEC   0
+ 0964            2DEC   .27232
+ 0965   LABNBVER 2DEC   .5
+ 0966            2DEC   0
+ 0967            2DEC   0
+ 0968   LBNBVER1 2DEC   0
+ 0969            2DEC   -.5
+ 0970   V06N66E  OCT    00666
+ 0971   V01N30E  OCT    00130
+ 0972   OMEG/MS  2DEC   .12169524
+ 0973   SCALFTR  2DEC   .64
+ 0974   INTCON1  DEC    40 B+8
+ 0975            DEC    0
+ 0976   FLNDX    ADRES  GENPL
+ 0977   MTRXLD   DEC    17
+ 0978   DC585    2DEC   585 B+14
+ 0979   ERUNITS  2DEC   4308205 B-28     CONSTANT CORRECTED FOR SIDEREAL RATE
+ 0980   ERUNITS2 2DEC   38357 B-28
+ 0983   VRECTC3  2DEC   .1
+ 0984  8ERUNITS1 2DEC   685683 B-28
+ 0985   ERTHRVEN RTB    0
+ 0986                   ZEROVAC
+ 0987            COS    0
+ 0988                   LATITUDE
+ 0989            DMOVE  0
+ 0990                   ZERODP
+ 0991            SIN    1
+ 0992            VDEF   VXSC
+ 0993                   LATITUDE
+ 0994                   OMEG/MS
+ 0995            STORE  VMARK
+ 0996            ITCQ   0
 *       ENDOFJOB
