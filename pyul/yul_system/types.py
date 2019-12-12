@@ -5,7 +5,7 @@ MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 
 NBTCS = '-:+*/,'
 
 # H-1800 alphabet sorting
-ALPHABET = '0123456789=\' +ABCDEFGHI.)-JKLMNOPQR$*/STUVWXYZ.('
+ALPHABET = '0123456789\'=: ¢&+ABCDEFGHI;.)%■Δ-JKLMNOPQR#$*"↓?◇/STUVWXYZ@,(␍⌑⊗'
 
 # H-1800 max word
 ONES = 0xFFFFFFFFFFFF
@@ -206,6 +206,9 @@ class SymbolTable:
     def all(self, sym_name):
         indices = self._sym_map[sym_name]
         return [self._symbols[i] for i in indices]
+
+    def names(self):
+        return list(self._sym_map.keys())
 
     def symbols(self):
         return self._symbols
