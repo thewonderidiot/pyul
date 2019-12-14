@@ -187,7 +187,7 @@ class SymbolTable:
         self._sym_map[name] = self._sym_map[name][1:] + self._sym_map[name][0:1]
 
     def add(self, symbol):
-        sym_idx = len(self._sym_map)
+        sym_idx = len(self._symbols)
         if sym_idx >= 8192:
             self.sym_tab_xs += 1
             return False
