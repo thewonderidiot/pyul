@@ -4,9 +4,10 @@ ONE_THIRD = 0o253
 FULL_PAGE = 0o53576
 
 class SymbolHealth:
-    def __init__(self, flag, no_valid_loc, count=0):
+    def __init__(self, flag, no_valid_loc, description, count=0):
         self.flag = flag
         self.no_valid_loc = no_valid_loc
+        self.description = description
         self.count = count
 
 class Pass3:
@@ -30,6 +31,7 @@ class Pass3:
         self._sub_lastl = '              THIS SUBROUTINE IS MAINTAINED IN SYMBOLIC FORM ON '
         self._joyful = ['   GOOD ', '   FAIR ', '    BAD ', '  LOUSY ', ' ROTTEN ', 'BILIOUS ']
         self._alt_words = [' SUPERB ', '  SO-SO ', ' DISMAL ', '  AWFUL ', '   VILE ', ' PUTRID ']
+        self._usym_cuss = 'UNDEFINED:'
 
         self._sym_liner = ONE_THIRD * 2
 
@@ -37,23 +39,24 @@ class Pass3:
         self._sym_letter = 'x'
 
         self._symh_vect = [
-            SymbolHealth('U ■', True),
-            SymbolHealth('N ■', True),
-            SymbolHealth('NM■', True),
-            SymbolHealth('= ■', False),
-            SymbolHealth('=M■', False),
-            SymbolHealth('E ■', True),
-            SymbolHealth('J ■', True),
-            SymbolHealth('  ■', False),
-            SymbolHealth('M ■', False),
-            SymbolHealth('O ■', True),
-            SymbolHealth('T ■', False),
-            SymbolHealth('C ■', False),
-            SymbolHealth('OM■', True),
-            SymbolHealth('TM■', False),
-            SymbolHealth('CM■', False),
-            SymbolHealth('MM■', True),
-            SymbolHealth('X ■', True),
+            SymbolHealth('U ■', True,  'UNDEFINED'),
+            SymbolHealth('N ■', True,  'NEARLY DEFINED BY EQUALS'),
+            SymbolHealth('NM■', True,  'MULTIPLY DEFINED INCLUDING NEARLY BY EQUALS'),
+            SymbolHealth('= ■', False, 'DEFINED BY EQUALS'),
+            SymbolHealth('=M■', False, 'MULTIPLY DEFINED INCLUDING BY EQUALS'),
+            SymbolHealth('E ■', True,  'LEFTOVER WHICH FAILED TO FIT IN ERASABLE MEMORY'),
+            SymbolHealth('J ■', True,  'LEFTOVER WHICH FAILED TO FIT IN FIXED MEMORY'),
+            SymbolHealth('  ■', False, 'NORMALLY DEFINED'),
+            SymbolHealth('M ■', False, 'GIVEN MULTIPLE DEFINITIONS'),
+            SymbolHealth('O ■', True,  'OVERSIZE- OR ILL-DEFINED'),
+            SymbolHealth('T ■', False, 'ASSOCIATED WITH WRONG MEMORY TYPE'),
+            SymbolHealth('C ■', False, 'ASSOCIATED WITH CONFLICT IN FIXED OR ERASABLE MEMORY'),
+            SymbolHealth('OM■', True,  'MULTIPLY DEFINED; OVERSIZE- OR ILL-DEFINED'),
+            SymbolHealth('TM■', False, 'MULTIPLY DEFINED; ASSOCIATED WITH WRONG MEMORY TYPE'),
+            SymbolHealth('CM■', False, 'MUTLIPLY DEIFNED; ASSOCIATED WITH CONFLICT IN FIXED OR ERASABLE MEMORY'),
+            SymbolHealth('MM■', True,  'MULTIPLE ERRORS'),
+            SymbolHealth('X ■', True,  'IN MISCELLANEOUS TROUBLE'),
+            SymbolHealth('■■■', True,  'FAILED TO FIT IN SYMBOL TABLE'),
         ]
 
     def p3_masker(self):
@@ -279,8 +282,51 @@ class Pass3:
             # Print last page of symbol table listing.
             self.sym_page()
 
+        # Page heading for symbol table summary.
+        self._page_hed2.text = '%-120s' % 'SUMMARY OF SYMBOLE TABLE LISTING'
+
+        # Clean out print line in case of suppress.
+        self._line.text = ' '*120
+
+        # Symbol table overflow into health vectr.
+        self._symh_vect[-1].count = self._yul.sym_thr.sym_tab_xs
+
+        # Branch if there are symbols to cuss.
+        if len(self._usym_cuss) > 12:
+            self._mon.mon_typer(self._usym_cuss)
+
+        n_symbols = 0
+        for health in self._symh_vect:
+            n_symbols += health.count
+            if health.count > 0:
+                # Convert count for this state to z/s alf.
+                self._line.spacing = 2
+                self._line.text = self._line.text[:10] + ('%4d  %-110s' % (health.count, health.description))
+                self.print_lin()
+
+        # Place a line between addends and total.
+        self._line.spacing = 2
+        self._line.text = self._line.text[:10] + '----' + self._line.text[14:]
+        self._old_line.spacing = 1
+        self.print_lin()
+
+        # Print grand total to finish summary.
+        self._line.text = (' TOTAL:   %4d' %  n_symbols) + self._line.text[14:]
+        self._line.spacing = 7
+        self.print_lin()
+
+        # Upspace 7 and print character set.
+        self._line.spacing = 1
+        self._line.text = 'H-1800 CHARACTER SEQUENCE (360 LACKS ■≠½' + \
+                          '␍⌑¢);  0123456789\'=: >&   +ABCDEFGHI:.)%' + \
+                          '■?   -JKLMNOPQR#$*"≠½   </STUVWXYZ@,(␍⌑¢'
+        self.print_lin()
+
     def usy_place(self, sym):
-        pass
+        if len(self._usym_cuss) < 50:
+            self._usym_cuss += '  %-8s  ' % sym.name
+        elif len(self._usym_cuss) < 64:
+            self._usym_cuss += '& MORE'
 
     def eecr_test(self, sym):
         pass

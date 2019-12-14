@@ -172,6 +172,7 @@ class Symbol:
 
 class SymbolTable:
     def __init__(self):
+        self.sym_tab_xs = 0
         self._symbols = []
         self._sym_map = {}
         self._get_latest = True
@@ -188,6 +189,7 @@ class SymbolTable:
     def add(self, symbol):
         sym_idx = len(self._sym_map)
         if sym_idx >= 8192:
+            self.sym_tab_xs += 1
             return False
 
         symbol.index = sym_idx
