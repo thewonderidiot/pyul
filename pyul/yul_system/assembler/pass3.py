@@ -283,7 +283,7 @@ class Pass3:
             self.sym_page()
 
         # Page heading for symbol table summary.
-        self._page_hed2.text = '%-120s' % 'SUMMARY OF SYMBOLE TABLE LISTING'
+        self._page_hed2.text = '%-120s' % 'SUMMARY OF SYMBOL TABLE LISTING'
 
         # Clean out print line in case of suppress.
         self._line.text = ' '*120
@@ -316,7 +316,7 @@ class Pass3:
         self.print_lin()
 
         # Upspace 7 and print character set.
-        self._line.spacing = 1
+        self._line.spacing = 8
         self._line.text = 'H-1800 CHARACTER SEQUENCE (360 LACKS ■≠½' + \
                           '␍⌑¢);  0123456789\'=: >&   +ABCDEFGHI:.)%' + \
                           '■?   -JKLMNOPQR#$*"≠½   </STUVWXYZ@,(␍⌑¢'
