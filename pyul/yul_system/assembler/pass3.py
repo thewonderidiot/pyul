@@ -1,4 +1,4 @@
-from yul_system.types import ALPHABET, Bit, SwitchBit, Line
+from yul_system.types import ALPHABET, Bit, SwitchBit, Line, ONES
 
 ONE_THIRD = 0o253
 FULL_PAGE = 0o53576
@@ -37,23 +37,23 @@ class Pass3:
         self._sym_letter = 'x'
 
         self._symh_vect = [
-            SymbolHealth('U ', True),
-            SymbolHealth('N ', True),
-            SymbolHealth('NM', True),
-            SymbolHealth('= ', False),
-            SymbolHealth('=M', False),
-            SymbolHealth('E ', True),
-            SymbolHealth('J ', True),
-            SymbolHealth('  ', False),
-            SymbolHealth('M ', False),
-            SymbolHealth('O ', True),
-            SymbolHealth('T ', False),
-            SymbolHealth('C ', False),
-            SymbolHealth('OM', True),
-            SymbolHealth('TM', False),
-            SymbolHealth('CM', False),
-            SymbolHealth('MM', True),
-            SymbolHealth('X ', True),
+            SymbolHealth('U ■', True),
+            SymbolHealth('N ■', True),
+            SymbolHealth('NM■', True),
+            SymbolHealth('= ■', False),
+            SymbolHealth('=M■', False),
+            SymbolHealth('E ■', True),
+            SymbolHealth('J ■', True),
+            SymbolHealth('  ■', False),
+            SymbolHealth('M ■', False),
+            SymbolHealth('O ■', True),
+            SymbolHealth('T ■', False),
+            SymbolHealth('C ■', False),
+            SymbolHealth('OM■', True),
+            SymbolHealth('TM■', False),
+            SymbolHealth('CM■', False),
+            SymbolHealth('MM■', True),
+            SymbolHealth('X ■', True),
         ]
 
     def p3_masker(self):
@@ -67,9 +67,10 @@ class Pass3:
     # Routine to pick symbols out of the symbol table in alphabetical order.
     def read_syms(self, found_sym, all_done):
         sym_names = self._yul.sym_thr.names()
+        sym_names = ['%-8s' % name for name in sym_names]
         sym_names = sorted(sym_names, key=lambda sym: [ALPHABET.index(c) for c in sym])
         for name in sym_names:
-            for sym in self._yul.sym_thr.all(name):
+            for sym in self._yul.sym_thr.all(name.strip()):
                 found_sym(sym)
 
         all_done()
@@ -152,21 +153,136 @@ class Pass3:
         self._line.spacing = 1
         self.print_lin()
 
-        # Point to beginning of second column.
-        col2 = sym_lines
-        # Point to beginning of third column.
-        col3 = col2 + sym_lines
+        # Point to beginning of second and third columns.
+        col_starts = [0, sym_lines, 2*sym_lines]
         # Branch if last line has over one column.
         if sym_liner == 0:
-            col3 -= 1
+            col_starts[2] -= 1
 
         # Initialize comparison regs to blanks.
         compares = ['', '', '']
 
-        # FIXME: REMOVE
+        for line in range(0, sym_lines):
+            # Each third of a line ocntains all the information about one symbol.
+            for col in range(3 if line < (sym_lines - 1) else sym_liner):
+                # Point to a symbol in the table
+                sym_idx = col_starts[col] + line
+                sym = self._l_bank_5[sym_idx]
+                cc = col*40
+                nc = (col+1)*40
+
+                # Branch if symbol, not horizontal divider.
+                if sym is None:
+                    # Place horizontal divider of blots.
+                    self._line.text = self._line.text[:cc] + ('■'*36 + '   ' + '■') + self._line.text[nc:]
+                else:
+                    # Branch if any of healths 0-4.
+                    health = sym.health
+                    if (sym.health >= 6) or ((sym.health == 5) and True): # FIXME: check for failed leftover erase
+                        # Increment healths 5.5 (failed j-card) up.
+                        health += 1
+
+                    # Increment count of syms in this state.
+                    self._symh_vect[health].count += 1
+
+                    # Plant health flag and vertical divider.
+                    self._line.text = self._line.text[:cc+37] + self._symh_vect[health].flag + self._line.text[nc:]
+
+                    # Branch if symbol has a valid definition.
+                    if self._symh_vect[health].no_valid_loc:
+                        # Otherwise put it in typing list.
+                        self.usy_place(sym)
+                        eqivlent = ONES
+                    else:
+                        eqivlent = sym.value
+
+                    # Set definition or blots in print.
+                    self.m_edit_def(eqivlent, col_start=cc)
+
+                    # Branch if different from last symbol in this column; otherwise print a ditto.
+                    if sym.name == compares[col]:
+                        self._line.text = self._line.text[:cc] + '     "  ' + self._line.text[cc+8:]
+                    else:
+                        # Plant new symbol for next comparison.
+                        compares[col] = sym.name
+
+                        # Set headed symbol in print.
+                        self._line.text = self._line.text[:cc+2] + ('%-8s' % sym.name) + self._line.text[cc+10:]
+
+                    # Branch unless symbol was simply undef.
+                    if sym.health < 3:
+                        # Show that there's no page of definition.
+                        self._line.text = self._line.text[:cc+21] + ' - ' + self._line.text[cc+24:]
+                    else:
+                        # Convert page of def to zero-supp alpha.
+                        self._line.text = self._line.text[:cc+21] + ('%3d' % sym.def_page) + self._line.text[cc+24:]
+
+                    # Branch if symbol was referred to.
+                    refs = len(sym.ref_pages)
+                    if refs == 0:
+                        # Show lack of references.
+                        self._line.text = self._line.text[:cc+24] + '  -   -   - ' + self._line.text[cc+36:]
+                    else:
+                        # Convert number of references to z/s alf.
+                        refs_alf = '%3d' % refs
+
+                        # Branch if 999 refs or fewer.
+                        if refs > 999:
+                            refs_alf = '>1K'
+
+                        self._line.text = self._line.text[:cc+25] + refs_alf + self._line.text[cc+28:]
+
+                        # Convert page of first ref to z/s alpha.
+                        self._line.text = self._line.text[:cc+28] + ('%4d' % sym.ref_pages[0]) + self._line.text[cc+32:]
+
+                        # When both page numbers are the same, print only the first one.
+                        if sym.ref_pages[0] != sym.ref_pages[-1]:
+                            # Convert page of last ref to z/s alpha.
+                            self._line.text = self._line.text[:cc+32] + ('%4d' % sym.ref_pages[-1]) + self._line.text[cc+36:]
+
+                # Branch if any definition exists.
+                if eqivlent != ONES:
+                    self.eecr_test(sym)
+
+            # Remove vertical divider from last col.
+            self._line.text = self._line.text[:119] + ' '
+
+            self._line.spacing = 1
+            self.print_lin()
+
+        self._old_line.spacing = 2
+        self._line.text = 'KEY: SYMBOLS DEFINED BY EQUALS ARE FLAGG' + \
+                          'ED =.  OTHERS ARE NORMALLY DEFINED EXCEP' + \
+                          'T THOSE FLAGGED:                        '
+        self._line.spacing = 2
+        self.print_lin()
+
+        # Print key to health flags at end page.
+        self._line.text = 'U UNDEFINED             E FAILED LEFTOVE' + \
+                          'R ERASE   M MULTIPLY DEFINED           T' + \
+                          ' WRONG MEMORY TYPE    MM MULTIPLE ERRORS'
+        self._line.spacing = 1
+        self.print_lin()
+
+        self._line.text = 'N NEARLY DEFINED BY =   J FAILED LEFTOVE' + \
+                          'R WORD    D OVERSIZE- OR ILL-DEFINED   C' + \
+                          ' CONFLICT IN MEMORY   K  MISC. TROUBLE  '
+        self._line.spacing = Bit.BIT1
+        self.print_lin()
+
+        # Show that no page is under construction.
         self._sym_liner = ONE_THIRD*2
 
     def end_pr_sym(self):
+        # Branch if sym tab listing filled last p.
+        if self._sym_liner > 0o700:
+            # Print last page of symbol table listing.
+            self.sym_page()
+
+    def usy_place(self, sym):
+        pass
+
+    def eecr_test(self, sym):
         pass
 
     # Subroutine in pass 3 to print a line with pagination control.
@@ -209,6 +325,8 @@ class Pass3:
                 self.copy_prt5()
 
             self._mon.phi_print(self._page_hed2.text, spacing=self._page_hed2.spacing)
+
+            self._lin_count = 5
 
         else:
             if self._yul.n_copies != 0:
