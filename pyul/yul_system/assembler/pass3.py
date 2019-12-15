@@ -38,6 +38,8 @@ class Pass3:
         self._owed_sym = None
         self._sym_letter = 'x'
 
+        self._eecr_list = []
+
         self._symh_vect = [
             SymbolHealth('U ■', True,  'UNDEFINED'),
             SymbolHealth('N ■', True,  'NEARLY DEFINED BY EQUALS'),
@@ -167,7 +169,7 @@ class Pass3:
 
         for line in range(0, sym_lines):
             # Each third of a line ocntains all the information about one symbol.
-            for col in range(3 if line < (sym_lines - 1) else sym_liner):
+            for col in range(3 if line < (sym_lines - 1) else min(sym_liner + 1, 3)):
                 # Point to a symbol in the table
                 sym_idx = col_starts[col] + line
                 sym = self._l_bank_5[sym_idx]
@@ -243,9 +245,9 @@ class Pass3:
                             # Convert page of last ref to z/s alpha.
                             self._line.text = self._line.text[:cc+32] + ('%4d' % sym.ref_pages[-1]) + self._line.text[cc+36:]
 
-                # Branch if any definition exists.
-                if eqivlent != ONES:
-                    self.eecr_test(sym)
+                    # Branch if any definition exists.
+                    if eqivlent != ONES:
+                        self.eecr_test(sym)
 
             # Remove vertical divider from last col.
             self._line.text = self._line.text[:119] + ' '
@@ -425,5 +427,7 @@ class Pass3:
                 self._joyful = self._alt_words
 
         # FIXME: Create BYPT, etc.
+
+        self._yul.sym_thr.sort_multdefs()
 
         return self.p3_masker()

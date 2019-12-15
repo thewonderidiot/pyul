@@ -1643,7 +1643,7 @@ class Pass2:
         # Branch if no page-of-definition for sym.
         if symbol.def_page != 0:
             # Advance pointer to next member of set.
-            self._yul.sym_thr.advance(symbol.name)
+            symbol = self._yul.sym_thr.advance(symbol.name)
 
         # Show whether there is a valid definition.
         symbol.defined = (((self._def_xform << 1) >> symbol.health) & 0x1) == 1
@@ -1997,17 +1997,6 @@ class Pass2:
         pass
 
     def pass_1p5(self):
-        # print('\nSYMBOL TABLE:')
-        # print('-------------')
-        # syms = sorted(self._yul.sym_thr.keys(), key=lambda sym: [ALPHABET.index(c) for c in sym])
-        # for sym in syms:
-        #     s = self._yul.sym_thr[sym]
-        #     print('%-8s: %04o (%x)' % (sym, s.value, s.health))
-        #     if s.definer is not None:
-        #         print('  - Defined by: %s' % s.definer)
-        #     if len(s.definees) > 0:
-        #         print('  - Defines:    %s' % ', '.join(s.definees))
-
         # FIXME: resolve leftovers
 
         self.resolvem()

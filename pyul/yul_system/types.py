@@ -185,6 +185,7 @@ class SymbolTable:
 
     def advance(self, name):
         self._sym_map[name] = self._sym_map[name][1:] + self._sym_map[name][0:1]
+        return self.__getitem__(name)
 
     def add(self, symbol):
         sym_idx = len(self._symbols)
@@ -201,6 +202,10 @@ class SymbolTable:
             self._sym_map[symbol.name] = [sym_idx]
 
         return True
+
+    def sort_multdefs(self):
+        for name in self._sym_map:
+            self._sym_map[name] = sorted(self._sym_map[name])
 
     def first(self, sym_name):
         return self._symbols[self._sym_map[name][0]]
