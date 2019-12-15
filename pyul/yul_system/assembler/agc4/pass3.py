@@ -2,8 +2,8 @@ from yul_system.assembler.pass3 import Pass3
 from yul_system.types import ONES
 
 class Agc4Pass3(Pass3):
-    def __init__(self, mon, yul, old_line):
-        super().__init__(mon, yul, old_line)
+    def __init__(self, mon, yul, old_line, m_typ_tab):
+        super().__init__(mon, yul, old_line, m_typ_tab)
 
     # Subroutine in psas 3 for AGC4 to set in print the definition of a symbol or the upper limit of an
     # item in the availability display. Supply an integer in eqivlent or ones if there is no definition.

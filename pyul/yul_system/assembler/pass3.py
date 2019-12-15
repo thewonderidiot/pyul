@@ -1,4 +1,4 @@
-from yul_system.types import ALPHABET, Bit, SwitchBit, Line, ONES
+from yul_system.types import ALPHABET, Bit, SwitchBit, Line, ONES, MemType
 
 ONE_THIRD = 0o253
 FULL_PAGE = 0o53576
@@ -11,13 +11,15 @@ class SymbolHealth:
         self.count = count
 
 class Pass3:
-    def __init__(self, mon, yul, old_line):
+    def __init__(self, mon, yul, old_line, m_typ_tab):
         self._mon = mon
         self._yul = yul
 
         self._line = Line()
         self._old_line = old_line
         self._lin_count = 0
+
+        self._m_typ_tab = m_typ_tab
 
         self._page_hed2 = Line('SYMBOL TABLE LISTING, INCLUDING PAGE NUM' +
                                'BER OF DEFINITION, AND NUMBER OF REFEREN' +
@@ -63,11 +65,13 @@ class Pass3:
 
     def p3_masker(self):
         if self._yul.sym_thr.count() > 0:
-            return self.read_syms(self.print_sym, self.end_pr_sym)
+            self.read_syms(self.print_sym, self.end_pr_sym)
         else:
             # Announce lack of symbols.
             self._line.text = 'THERE ARE NO SYMBOLS IN THIS ASSEMBLY.' + self._line.text[38:]
             self.print_lin()
+
+        return self.av_disply()
 
     # Routine to pick symbols out of the symbol table in alphabetical order.
     def read_syms(self, found_sym, all_done):
@@ -129,7 +133,7 @@ class Pass3:
         # Set it up for first-letter comparison.
         self._sym_letter = self._owed_sym.name[0]
         owed_sym = self._owed_sym
-        
+
         # Clear flag, go to process owed symbol.
         self._owed_sym = None
         return self.pl_thread(owed_sym)
@@ -318,11 +322,13 @@ class Pass3:
         self.print_lin()
 
         # Upspace 7 and print character set.
-        self._line.spacing = 8
+        self._line.spacing = Bit.BIT1
         self._line.text = 'H-1800 CHARACTER SEQUENCE (360 LACKS ■≠½' + \
                           '␍⌑¢);  0123456789\'=: >&   +ABCDEFGHI:.)%' + \
                           '■?   -JKLMNOPQR#$*"≠½   </STUVWXYZ@,(␍⌑¢'
         self.print_lin()
+
+        return self.eecr_tabl()
 
     def usy_place(self, sym):
         if len(self._usym_cuss) < 50:
@@ -331,6 +337,91 @@ class Pass3:
             self._usym_cuss += '& MORE'
 
     def eecr_test(self, sym):
+        # Branch when memory type is known.
+        midx = 0
+        while sym.value > self._m_typ_tab[midx][1]:
+            midx += 1
+        mem_type = self._m_typ_tab[midx][0]
+
+        if mem_type != MemType.ERASABLE:
+            # Exit if definition was not by equals.
+            if sym.health >= 6:
+                return
+        lo = 0
+        hi = len(self._eecr_list)
+        idx = 0
+
+        while lo < hi:
+            idx = (lo + hi) // 2
+            if sym.value >= self._eecr_list[idx].value:
+                lo = idx + 1
+            else:
+                hi = idx
+
+        self._eecr_list.insert(lo, sym)
+
+    def eecr_tabl(self):
+        if len(self._eecr_list) == 0:
+            return self.wc_sumary()
+
+        self._page_hed2.text = 'ERASABLE & EQUIVALENCE CROSS-REFERENCE T' + \
+                               'ABLE, SHOWING DEFINITION, PAGE OF DEFINI' + \
+                               'TION, AND SYMBOL                        '
+
+        eecr_page = 0
+        for p in range(0, len(self._eecr_list), 200):
+            eecrs = self._eecr_list[p:p+200]
+            eecr_page = len(eecrs)
+            # Number of eecrs in last line.
+            excess = eecr_page % 5
+            rows = eecr_page // 5
+
+            for row in range(rows + (1 if excess > 0 else 0)):
+                cols = excess if (row == rows) else 5
+                sym_idx = row
+                col_start = 0
+                for col in range(cols):
+                    sym = eecrs[sym_idx]
+
+                    # Set definition of symbol in print.
+                    self.m_edit_def(sym.value, col_start=col_start)
+
+                    # Shift definition to left edge of column.
+                    self._line.text = self._line.text[:col_start] + \
+                                      self._line.text[col_start+11:col_start+19] + \
+                                      self._line.text[col_start+8:]
+
+                    # Set page of definition in print.
+                    self._line.text = self._line.text[:col_start+9] + ('%4d  ' % sym.def_page) + self._line.text[col_start+15:]
+
+                    # Set symbol in print.
+                    self._line.text = self._line.text[:col_start+15] + ('%-8s' % sym.name) + self._line.text[col_start+23:]
+
+                    # Advance to head of next column.
+                    sym_idx += rows
+                    col_start += 24
+
+                    # Branch if now on shorter columns.
+                    if col < excess:
+                        # Advance one more step on longer ones.
+                        sym_idx += 1
+
+                # Branch if now end of a 4-line group.
+                if (row % 4) == 3:
+                    self._line.spacing = 2
+                else:
+                    self._line.spacing = 1
+
+                self.print_lin()
+
+        self._old_line.spacing = Bit.BIT1
+        return self.wc_sumary()
+
+    def wc_sumary(self):
+        # FIXME: Implement word count summary
+        pass
+
+    def av_disply(self):
         pass
 
     # Subroutine in pass 3 to print a line with pagination control.

@@ -190,7 +190,7 @@ class Pass2:
         self._wd_buff.lwa = self._sent_loc - 1
         self._wd_recs.append(self._wd_buff)
 
-        comp_pass3 = self._mon.phi_load(self._yul.comp_name + '.PASS3', self._yul, self._old_line)
+        comp_pass3 = self._mon.phi_load(self._yul.comp_name + '.PASS3', self._yul, self._old_line, self._m_typ_tab)
         return comp_pass3.inish_p3()
 
     # Procedure in pass 2 for "END OF" cards.

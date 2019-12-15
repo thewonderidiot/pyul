@@ -1126,6 +1126,7 @@ class Pass1:
             return self.send_popo(popo)
 
         # Analyze location symbol.
+        popo.health |= Bit.BIT8
         sym_name = common.strip()
         symbol = self.anal_symb(sym_name)
 
