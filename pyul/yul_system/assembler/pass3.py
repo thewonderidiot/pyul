@@ -1,3 +1,4 @@
+from math import ceil
 from yul_system.types import ALPHABET, Bit, SwitchBit, Line, ONES, MemType
 
 ONE_THIRD = 0o253
@@ -11,7 +12,7 @@ class SymbolHealth:
         self.count = count
 
 class Pass3:
-    def __init__(self, mon, yul, old_line, m_typ_tab):
+    def __init__(self, mon, yul, old_line, m_typ_tab, wd_recs):
         self._mon = mon
         self._yul = yul
 
@@ -20,6 +21,7 @@ class Pass3:
         self._lin_count = 0
 
         self._m_typ_tab = m_typ_tab
+        self._wd_recs = wd_recs
 
         self._page_hed2 = Line('SYMBOL TABLE LISTING, INCLUDING PAGE NUM' +
                                'BER OF DEFINITION, AND NUMBER OF REFEREN' +
@@ -34,6 +36,14 @@ class Pass3:
         self._joyful = ['   GOOD ', '   FAIR ', '    BAD ', '  LOUSY ', ' ROTTEN ', 'BILIOUS ']
         self._alt_words = [' SUPERB ', '  SO-SO ', ' DISMAL ', '  AWFUL ', '   VILE ', ' PUTRID ']
         self._usym_cuss = 'UNDEFINED:'
+
+        self._m_type_cax = [
+            'SPECIAL OR NONEXISTENT MEMORY',
+            'RESERVED FIXED MEMORY',
+            'AVAILABLE FIXED MEMORY',
+            'RESERVED ERASABLE MEMORY',
+            'AVAILABLE ERASABLE MEMORY'
+        ]
 
         self._sym_liner = ONE_THIRD * 2
 
@@ -71,7 +81,8 @@ class Pass3:
             self._line.text = 'THERE ARE NO SYMBOLS IN THIS ASSEMBLY.' + self._line.text[38:]
             self.print_lin()
 
-        return self.av_disply()
+        self.av_disply()
+        self.ws3()
 
     # Routine to pick symbols out of the symbol table in alphabetical order.
     def read_syms(self, found_sym, all_done):
@@ -414,7 +425,6 @@ class Pass3:
 
                 self.print_lin()
 
-        self._old_line.spacing = Bit.BIT1
         return self.wc_sumary()
 
     def wc_sumary(self):
@@ -422,7 +432,145 @@ class Pass3:
         pass
 
     def av_disply(self):
-        pass
+        self._page_hed2.text = '%-120s' % 'MEMORY TYPE & AVAILABILITY DISPLAY'
+
+        # Initialize address to 0.
+        address = 0
+
+        # Two columns are built up in bank 5.
+        self._l_bank_5 = []
+
+        while address <= self._m_typ_tab[-1][1]:
+            # Skip to H-O-F before each page
+            self._old_line.spacing = Bit.BIT1
+
+            # Branch when memory type found.
+            midx = 0
+            while address > self._m_typ_tab[midx][1]:
+                midx += 1
+            mem_type = self._m_typ_tab[midx][0]
+            upper_lim = self._m_typ_tab[midx][1]
+            end = address
+
+            # Branch if not special or nonexistent.
+            if mem_type == MemType.SPEC_NON:
+                # Save address of description.
+                desc = 0
+                # Save end category = upper lim of entry.
+                end = upper_lim
+
+            else:
+                avail = self.avail_q(address)
+                if mem_type == MemType.FIXED:
+                    if avail:
+                        desc = 2
+                    else:
+                        desc = 1
+                else:
+                    if avail:
+                        desc = 4
+                    else:
+                        desc = 3
+
+                # Go to find end of reserved/available E or F.
+                end += 1
+                while end < upper_lim:
+                    next_avail = self.avail_q(end)
+                    if avail != next_avail:
+                        end -= 1
+                        break
+                    end += 1
+
+            self._l_bank_5.append((address, end, desc))
+            address = end + 1
+            # Branch if a pageful is ready.
+            if (len(self._l_bank_5) >= 80) or (address > self._m_typ_tab[-1][1]):
+                # Having stored up to 80 entries in condensed CAC-format, we now print them on one page in two columns.
+                right_start = ceil(len(self._l_bank_5) / 2)
+                for row in range(right_start):
+                    cat_idx = row
+                    cs = 0
+                    for i in range(2):
+                        start, end, desc_idx = self._l_bank_5[cat_idx]
+                        # Store description of memory type.
+                        desc = self._m_type_cax[desc_idx]
+                        self._line.text = self._line.text[:cs+24] + desc + self._line.text[cs+24+len(desc):]
+
+                        # Print upper limit of category.
+                        self.m_edit_def(end, col_start=cs)
+
+                        # Stop there if length is 1.
+                        if start != end:
+                            self.m_edit_def(start, col_start=cs-12)
+
+                            # Insert "TO" between low and high limits.
+                            self._line.text = self._line.text[:cs+9] + 'TO' + self._line.text[cs+11:]
+
+                        cat_idx += right_start
+                        cs += 64
+                        if cat_idx >= len(self._l_bank_5):
+                            break
+
+                    self._line.spacing = 2 if (row % 4 == 3) else 1
+                    self.print_lin()
+
+                self._l_bank_5 = []
+
+    def avail_q(self, eqivlent):
+        available = True
+
+        avail_msk = 1 << (eqivlent & 0x1F)
+        avail_idx = eqivlent >> 5
+
+        if self._yul.av_table[avail_idx] & avail_msk:
+            available = False
+
+        return available
+
+    def ws3(self):
+        # FIXME: create BYPT
+        # FIXME: put symbol table into BYPT
+
+        self._wd_recs = sorted(self._wd_recs, key=lambda w: w.fwa)
+
+        for page_group in range(0, len(self._wd_recs), 160):
+            page_locs = self._wd_recs[page_group:page_group+160]
+            n_locs = len(page_locs)
+
+            # Form as much subhead as needed.
+            self._page_hed2.text = ' '*120
+            for i in range(min(4, n_locs)):
+                self._page_hed2.text = self._page_hed2.text[:i*32] + 'OCCUPIED LOCATIONS  PAGE' + \
+                                       self._page_hed2.text[i*32+24:]
+            self._old_line.spacing = Bit.BIT1
+
+            rows = n_locs // 4
+            excess = n_locs % 4
+
+            for row in range(rows + (1 if excess > 0 else 0)):
+                cols = excess if (row == rows) else 4
+                loc_idx = row
+                for col in range(cols):
+                    loc = page_locs[loc_idx]
+                    # Set LWA in print.
+                    self.m_edit_def(loc.lwa, col_start=col*32)
+
+                    # Print LWA only if FWA = LWA.
+                    if loc.fwa != loc.lwa:
+                        self.m_edit_def(loc.fwa, col_start=col*32 - 12)
+                        self._line.text = self._line.text[:col*32+9] + 'TO' + self._line.text[col*32+11:]
+
+                    # Set page number in print.
+                    self._line.text = self._line.text[:col*32+20] + ('%4d' % loc.page) + self._line.text[col*32+24:]
+
+                    loc_idx += rows
+                    if col < excess:
+                        loc_idx += 1
+
+                self._line.spacing = 2 if (row % 4 == 3) else 1
+                self.print_lin()
+
+        self.print_lin()
 
     # Subroutine in pass 3 to print a line with pagination control.
     # Strictly speaking, this subroutine prints the last line delivered to it.
