@@ -11,6 +11,17 @@ class SymbolHealth:
         self.description = description
         self.count = count
 
+class Paragraph:
+    def __init__(self, number):
+        self.number = number
+        self.words = [0]*256
+
+    def __getitem__(self, i):
+        return self.words[i]
+
+    def __setitem__(self, i, v):
+        self.words[i] = v
+
 class Pass3:
     def __init__(self, mon, yul, old_line, m_typ_tab, wd_recs):
         self._mon = mon
@@ -22,6 +33,8 @@ class Pass3:
 
         self._m_typ_tab = m_typ_tab
         self._wd_recs = wd_recs
+
+        self._paragraphs = {}
 
         self._page_hed2 = Line('SYMBOL TABLE LISTING, INCLUDING PAGE NUM' +
                                'BER OF DEFINITION, AND NUMBER OF REFEREN' +
@@ -83,6 +96,7 @@ class Pass3:
 
         self.av_disply()
         self.ws3()
+        self.prin_pars()
 
     # Routine to pick symbols out of the symbol table in alphabetical order.
     def read_syms(self, found_sym, all_done):
@@ -569,6 +583,66 @@ class Pass3:
 
                 self._line.spacing = 2 if (row % 4 == 3) else 1
                 self.print_lin()
+
+        # Procedure to initialize each substrand, and sorting loop for each word record.
+        for rec in self._wd_recs:
+            par_id = rec.fwa // 256
+            par_addr = rec.fwa % 256
+
+            for word in rec.words:
+                if par_id not in self._paragraphs:
+                    self._paragraphs[par_id] = Paragraph(par_id)
+
+                self._paragraphs[par_id][par_addr] = word
+
+                par_addr += 1
+                if par_addr >= 256:
+                    par_addr = 0
+                    par_id += 1
+
+    def prin_pars(self):
+        # Skip to head of form after availability.
+        self._old_line.spacing = Bit.BIT1
+
+        # Page subhead for substrand summary.
+        self._page_hed2.text = 'PARAGRAPHS GENERATED FOR THIS ASSEMBLY; ' + \
+                               'ADDRESS LIMITS AND THE MANUFACTURING LOC' + \
+                               'ATION CODE ARE SHOWN FOR EACH.          '
+
+        # In case of barren assembly (no words).
+        if len(self._paragraphs) == 0:
+            # Announce lack of words, go to finalize.
+            self._line.text = '%-120s' % 'NO WORDS WERE GENERATED FOR THIS ASSEMBLY.'
+            self.print_lin()
+            self._yul.switch |= SwitchBit.BAD_ASSEMBLY
+            return
+
+        last_ss_no = -1
+        for i,p in self._paragraphs.items():
+            self._line.spacing = 2
+            # Branch if this ph not successor of last.
+            if p.number == last_ss_no:
+                # Branch if this ph begins 4-ph group.
+                if (p.number & 3) != 0:
+                    # Selectively close up ph summary format.
+                    self._old_line.spacing = 1
+
+            # Form 1st & last addresses of paragraph.
+            address = p.number * 256
+            eqivlent = address + 255
+
+            # Print most paragraph information
+            self.m_print_pn(p.number, eqivlent)
+
+            # Call for lower limit print.
+            self.m_edit_def(address, col_start=-12)
+
+            # Insert "TO" between limit addresses.
+            self._line.text = self._line.text[:9] + 'TO' + self._line.text[11:]
+
+            self.print_lin()
+
+            last_ss_no = p.number + 1
 
         self.print_lin()
 
