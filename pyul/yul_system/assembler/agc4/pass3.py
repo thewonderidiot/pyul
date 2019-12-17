@@ -1,9 +1,19 @@
 from yul_system.assembler.pass3 import Pass3
-from yul_system.types import ONES
+from yul_system.types import ONES, BAD_WORD, CONFLICT, SwitchBit
 
 class Agc4Pass3(Pass3):
     def __init__(self, mon, yul, old_line, m_typ_tab, wd_recs):
         super().__init__(mon, yul, old_line, m_typ_tab, wd_recs)
+
+        self._pret_flag = 0o1000000000
+        self._cons_flag = 0o2000000000
+        self._misc_flag = 0o3000000000
+        self._flag_mask = 0o7000000000
+
+        self._octal_ctr = -1
+        self._n_oct_errs = 0
+        self._checksum = 0
+
         self._stick_nos = [
             ('B28', 'R1B'),
             ('B29', 'R2A'),
@@ -47,10 +57,48 @@ class Agc4Pass3(Pass3):
 
             # Put subaddress in the range 6000-7777.
             eqivlent &= ~0o76000
-            eqivlent |= 0o6000            
+            eqivlent |= 0o6000
 
         # Set subaddress in print and exit.
         self._line.text = self._line.text[:col_start+15] + ('%04o' % eqivlent) + self._line.text[col_start+19:]
+
+    def m_edit_wd(self, word):
+        self._octal_ctr += 1
+        image = ' '*14
+
+        # Branch if not "BAD WORD" or "CONFLICT":
+        if word in (BAD_WORD, CONFLICT):
+            # Mark as such, go to set flag and exit.
+            image = '%14s' % ('BAD WORD' if word == BAD_WORD else 'CONFLICT')
+            return (image, 0o4000000000)
+
+        flag = word & self._flag_mask
+        avail = False
+        if flag == self._pret_flag:
+            image = image[:4] + 'I:' + image[6:]
+        elif flag == self._cons_flag:
+            image = image[:4] + 'C:' + image[6:]
+        elif flag == self._misc_flag:
+            # Branch if not referring to fixed memory.
+            dest = (word >> 1) & 0o7777
+            if dest >= 0o2000:
+                if dest >= 0o6000:
+                    bank_no = (word >> 31) & 0o77
+                    dest = (bank_no << 10) + (dest & 0o1777)
+                avail = self.avail_q(dest)
+
+            if not avail:
+                # Remove flag if refers to used fixed.
+                word &= ~self._flag_mask
+            else:
+                image = image[:2] + '■REF' + image[6:]
+                self._n_oct_errs += 1
+                # Print remainder of octal storage map.
+                self._yul.switch &= ~SwitchBit.SUPPRESS_OCTAL
+
+        image = image[:7] + '%05o %o' % ((word >> 1) & 0o77777, word & 1)
+
+        return image, word
 
     # Subroutine in pass 3 for AGC4 to set in print the upper address limit, paragraph limit, stick number
     # and sense wire numbers for the paragraph summary.
@@ -83,3 +131,16 @@ class Agc4Pass3(Pass3):
                           self._line.text[112:]
 
         return self.m_edit_def(eqivlent)
+
+    # Subroutine in pass 3 for AGC4 to print two explanatory lines at the head of each page of
+    # an octal paragraph listing.
+    def m_explain(self, par_num):
+        self._page_hed2.text = ('OCTAL LISTING OF PARAGRAPH # %03o, WITH P' + \
+                                'ARITY BIT IN BINARY AT THE RIGHT OF EACH' + \
+                                ' WORD; "@" DENOTES UNUSED FIXED MEMORY. ') % par_num
+
+        self._line.spacing = 2
+        self._line.text = 'ALL VALID WORDS ARE BASIC INSTRUCTIONS E' + \
+                          'XCEPT THOSE MARKED "I" (INTERPRETIVE OPE' + \
+                          'RATOR WORDS) OR "C" (CONSTANTS).        '
+        self.print_lin()

@@ -12,6 +12,7 @@ ONES = 0xFFFFFFFFFFFF
 
 # Bad word - original "BAD WORD" in H-1800 character set
 BAD_WORD = 0xBADBADBADBAD
+CONFLICT = 0xBAD1C02F11C7
 
 class Bit:
     BIT1  = (1 << 47)

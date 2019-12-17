@@ -1,5 +1,5 @@
 from math import ceil
-from yul_system.types import ALPHABET, Bit, SwitchBit, Line, ONES, MemType
+from yul_system.types import ALPHABET, Bit, SwitchBit, Line, ONES, MemType, CONFLICT
 
 ONE_THIRD = 0o253
 FULL_PAGE = 0o53576
@@ -97,6 +97,7 @@ class Pass3:
         self.av_disply()
         self.ws3()
         self.prin_pars()
+        self.print_oct()
 
     # Routine to pick symbols out of the symbol table in alphabetical order.
     def read_syms(self, found_sym, all_done):
@@ -593,7 +594,13 @@ class Pass3:
                 if par_id not in self._paragraphs:
                     self._paragraphs[par_id] = Paragraph(par_id)
 
-                self._paragraphs[par_id][par_addr] = word
+                # Branch if no storage conflict.
+                if self._paragraphs[par_id][par_addr] != 0:
+                    # Conflict is enough for bad assembly.
+                    self._yul.switch |= SwitchBit.BAD_ASSEMBLY
+                    self._paragraphs[par_id][par_addr] = CONFLICT
+                else:
+                    self._paragraphs[par_id][par_addr] = word
 
                 par_addr += 1
                 if par_addr >= 256:
@@ -645,6 +652,48 @@ class Pass3:
             last_ss_no = p.number + 1
 
         self.print_lin()
+
+    def print_oct(self):
+        # In case octal suppression is revoked.
+        self._page_hed2.text = '■■■■■■■■■■■ SUPPRESSION OF OCTAL STORAGE' + \
+                               ' MAP REVOKED BECAUSE OF CUSSES (■XXX; EA' + \
+                               'CH COUNTS AS A CUSSED LINE). ■■■■■■■■■■■'
+
+        # Prepare for cusses in the octal stormap.
+        n_oct_errs = 0
+
+        for i,p in self._paragraphs.items():
+            # Go to H-O-F for each par.
+            self._old_line.spacing = Bit.BIT1
+
+            # Skip if octal map is suppressed.
+            if not self._yul.switch & SwitchBit.SUPPRESS_OCTAL:
+                # Print page head and subhead for parags.
+                self.m_explain(p.number)
+
+            # From 1st address of paragraph.
+            address = p.number * 256
+
+            for l in range(32):
+                # Set 1st address of line in print
+                self.m_edit_def(address, col_start=-12)
+
+                for w in range(8):
+                    # Make up 14-charater print image of wd.
+                    wno = l*8 + w
+                    image, edited_word = self.m_edit_wd(p[wno])
+                    p[wno] = edited_word
+
+                    self._line.text = self._line.text[:8+w*14] + image + self._line.text[8+w*14+14:]
+
+                if (l % 4) == 3:
+                    self._line.spacing = 2
+                else:
+                    self._line.spacing = 1
+                self.print_lin()
+                address += 8
+
+
 
     # Subroutine in pass 3 to print a line with pagination control.
     # Strictly speaking, this subroutine prints the last line delivered to it.
