@@ -252,7 +252,7 @@ class Agc4Pass3(Pass3):
         self._checksum = ONES
 
         return image, word
-    
+
     def sum_error(self, image, word):
         # "■SUM" for fouled-up checksum request.
         image = '  ■SUM' + image[6:]

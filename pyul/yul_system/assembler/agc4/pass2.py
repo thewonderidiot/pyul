@@ -855,11 +855,13 @@ class Agc4Pass2(Pass2):
         # Make printable version of low-order part
         sec_alf = '%05o' % sec_half
 
+        dec6_flag = Bit.BIT2 | Bit.BIT3
+        sec_half |= dec6_flag
+
         # Set word in print.
         self._line.text = self._line.text[:39] + ('%05o' % self._word) + self._line.text[44:]
 
         # Apply internal constant flag and exit
-        dec6_flag = Bit.BIT2 | Bit.BIT3
         self._word |= dec6_flag
 
         return sec_half, sec_alf
