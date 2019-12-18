@@ -681,15 +681,18 @@ class Pass3:
                 for w in range(8):
                     # Make up 14-charater print image of wd.
                     wno = l*8 + w
-                    image, edited_word = self.m_edit_wd(p[wno])
+                    image, edited_word = self.m_edit_wd(p[wno], address + w)
                     p[wno] = edited_word
 
                     self._line.text = self._line.text[:8+w*14] + image + self._line.text[8+w*14+14:]
 
+                # Branch if not last of 4-line group.
                 if (l % 4) == 3:
                     self._line.spacing = 2
                 else:
                     self._line.spacing = 1
+
+                # FIXME: SKIP TO SUPPRESS OCTAL STORAGE MAP.
                 self.print_lin()
                 address += 8
 
