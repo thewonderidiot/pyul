@@ -30,6 +30,7 @@ class Pass3:
         self._line = Line()
         self._old_line = old_line
         self._lin_count = 0
+        self._n_oct_errs = 0
 
         self._m_typ_tab = m_typ_tab
         self._wd_recs = wd_recs
@@ -692,11 +693,54 @@ class Pass3:
                 else:
                     self._line.spacing = 1
 
-                # FIXME: SKIP TO SUPPRESS OCTAL STORAGE MAP.
-                self.print_lin()
+                # Skip to suppress octal storage map.
+                if not self._yul.switch & SwitchBit.SUPPRESS_OCTAL:
+                    # Print an address and eight words.
+                    self.print_lin()
+
                 address += 8
 
+            # At end of each paragraph (formerly called a substrand), if any octal-map errors were found, print a
+            # combination cuss-wham line giving the number(s) of the cuss(es) and the page of the preceding cussed line.
 
+            if self._n_oct_errs > 0:
+                # Serial no for first cuss of page.
+                first_cuss = self._yul.n_err_lins + 1
+                line_beg = 'E■■■■■■  # %d  ' % first_cuss
+
+                # Line begins "E■■■■■■  # NN  "
+                self._line.text = line_beg + self._line.text[len(line_beg):]
+
+                # Fill it out as a wham line.
+                self._line.text = self._line.text[:16] + '■'*104
+
+                # Branch if this is the first cuss page.
+                if self._yul.err_pages[0] is not None:
+                    # Set in print pointer to previous cuss.
+                    self._line.text = self._line.text[:80] + 'PRECEDING CUSSED LINE IS ON PAGE%4s ■■■' % self._yul.err_pages[1]
+                    # Show that first cuss is on this page.
+                    self._yul.err_pages[0] = self._yul.page_head[-4:]
+
+                # Show that latest cuss is on this page.
+                self._yul.err_pages[1] = self._yul.page_head[-4:]
+
+                self._yul.n_err_lins += self._n_oct_errs
+
+                # Cuss line is done if just one on page.
+                if self._n_oct_errs > 1:
+                    # Make it "E■■■■■■  # NN   THROUGH  # NN"
+                    line_end = 'THROUGH  # %d' % self._yul.n_err_lins
+                    self._line.text = self._line.text[:16] + line_end + self._line.text[16+len(line_end):]
+
+                # Skip if octal map is suppressed.
+                if not self._yul.switch & SwitchBit.SUPPRESS_OCTAL:
+                    self._line.spacing = 1
+                    self.print_lin()
+
+                # Reset count for next page.
+                self._n_oct_errs = 0
+
+            # FIXME: Put paragraph into BYPT
 
     # Subroutine in pass 3 to print a line with pagination control.
     # Strictly speaking, this subroutine prints the last line delivered to it.

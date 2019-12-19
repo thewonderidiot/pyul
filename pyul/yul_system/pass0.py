@@ -29,6 +29,8 @@ class Yul:
         self.yulprogs = None
         self.switch = 0
         self.revno = 0
+        self.n_err_lins = 0
+        self.err_pages = [None, None]
         self._auth_name = ''
         self.prog_name = ''
         self._new_auth_name = ''
@@ -594,7 +596,8 @@ class Yul:
         if self.switch & switch_bit:
             self.duplisub(sub_card)
 
-        if is_assembly:
+        # Branch if not an assembly-type task.
+        if not is_assembly:
             self.il_reqest(sub_card)
 
     def ign_sbdir(self, sub_card):

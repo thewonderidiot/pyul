@@ -24,7 +24,6 @@ class Pass2:
         self._marker = '*'
         self._lin_count = 0
         self._user_page = 0
-        self._n_err_lins = 0
         self._min_adres = 0
         self._sent_loc = 0
         self._wd_buff = None
@@ -1699,7 +1698,7 @@ class Pass2:
 
     def numb_cuss(self):
         # Form serial number for this cussed line.
-        cuss_no = self._n_err_lins + 1
+        cuss_no = self._yul.n_err_lins + 1
         self._line.text = 'E■■■■■■ ' + self._line.text[8:]
 
         # Print serial "# NN  " and text of cuss.
@@ -1708,21 +1707,21 @@ class Pass2:
         self.print_lin()
 
     def count_cus(self, left_end, right_end):
-        self._n_err_lins += 1
-        if self._err_pages[0] is None:
+        self._yul.n_err_lins += 1
+        if self._yul.err_pages[0] is None:
             # On first error, save page number.
-            self._err_pages[0] = self._yul.page_head[-4:]
+            self._yul.err_pages[0] = self._yul.page_head[-4:]
 
         # Branch if cussed line is first on page.
-        elif self._err_pages[1] != self._yul.page_head[-4:]:
-            prev_cuss = 'PRECEDING CUSSED LINE IS ON PAGE%s ■■■' % self._err_pages[1]
+        elif self._yul.err_pages[1] != self._yul.page_head[-4:]:
+            prev_cuss = 'PRECEDING CUSSED LINE IS ON PAGE%s ■■■' % self._yul.err_pages[1]
             # Fill empty part of 1st cuss with blots.
             blot_words = '■■■■■■■■' * (right_end - left_end)
             end_idx = left_end*8 + len(blot_words) + len(prev_cuss)
             self._old_line.text = self._old_line.text[:left_end*8] + blot_words + prev_cuss + self._old_line.text[end_idx:]
 
         # Show latest page number with error.
-        self._err_pages[1] = self._yul.page_head[-4:]
+        self._yul.err_pages[1] = self._yul.page_head[-4:]
 
     def print_lin(self):
         # New line ages suddenly.
@@ -2091,6 +2090,6 @@ class Pass2:
         self._n_word_recs = 0
         self._yul.switch &= ~SwitchBit.LAST_REM
 
-        self._err_pages = [None, None]
+        self._yul.err_pages = [None, None]
 
         return self.pass_2()

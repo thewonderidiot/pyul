@@ -11,7 +11,6 @@ class Agc4Pass3(Pass3):
         self._flag_mask = 0o7000000000
 
         self._next_eqiv = 0
-        self._n_oct_errs = 0
         self._l_tc_self = 0
         self._checksum = 0
 
