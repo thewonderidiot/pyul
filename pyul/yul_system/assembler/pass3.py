@@ -720,6 +720,7 @@ class Pass3:
                 if self._yul.err_pages[0] is not None:
                     # Set in print pointer to previous cuss.
                     self._line.text = self._line.text[:80] + 'PRECEDING CUSSED LINE IS ON PAGE%4s ■■■' % self._yul.err_pages[1]
+                else:
                     # Show that first cuss is on this page.
                     self._yul.err_pages[0] = self._yul.page_head[-4:]
 
@@ -792,7 +793,7 @@ class Pass3:
         if self._yul.n_err_lins > 0:
             # Set error count in print.
             self._line.text = self._line.text[:74] + \
-                              ('%6d' % self._yul.n_err_lins) + \
+                              ('%8d' % self._yul.n_err_lins) + \
                               ' LINES CUSSED BETWEEN PAGES' + \
                               self._yul.err_pages[0] + ' AND' +\
                               self._yul.err_pages[1] + '.'
