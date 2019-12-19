@@ -99,6 +99,8 @@ class Pass3:
         self.ws3()
         self.prin_pars()
         self.print_oct()
+        self.subr_list()
+        self.close_yul()
 
     # Routine to pick symbols out of the symbol table in alphabetical order.
     def read_syms(self, found_sym, all_done):
@@ -741,6 +743,76 @@ class Pass3:
                 self._n_oct_errs = 0
 
             # FIXME: Put paragraph into BYPT
+
+    def subr_list(self):
+        # FIXME: implement subroutines
+        pass
+
+    # Procedure for pass 3 to clean up the end of YULPROGS. If the assembly is a reprint or a rejected assy. or a
+    # subroutine, YULPROGS has already been closed and rewound, and bit 11 set. Otherwise the existence of a bypt
+    # record for the program is noted in the directory, unless the assembly is bad. The file tape is closed and rewound.
+    def close_yul(self):
+        # FIXME: Implement YULPROGS management
+        
+        # Degree of aspersion gives the bad news.
+        ecch = False
+        if self._yul.n_err_lins <= 2:
+            horrid = self._joyful[2]
+        elif self._yul.n_err_lins <= 9:
+            horrid = self._joyful[3]
+        elif self._yul.n_err_lins <= 99:
+            horrid = self._joyful[4]
+        elif self._yul.n_err_lins <= 999:
+            horrid = self._joyful[5]
+        else:
+            ecch = True
+
+        # Branch if subroutine, not program.
+        if not self._yul.switch & SwitchBit.SUBROUTINE:
+            # Admit to BYPT if good/fair prog assy.
+            if self._yul.switch & SwitchBit.BAD_ASSEMBLY:
+                self._last_line = self._last_line[:16] + ' BAD: UN' + self._last_line[24:]
+                if ecch:
+                    self._mon.mon_typer('YUCCCHHHH')
+                else:
+                    self._mon.mon_typer(horrid + 'ASSEMBLY; FILED ON DISC')
+            else:
+                if self._yul.n_err_lins == 0:
+                    self._last_line = self._last_line[:16] + ' GOOD:  ' + self._last_line[24:]
+                    self._mon.mon_typer(self._joyful[0] + 'ASSEMBLY; FILED ON DISC')
+                else:
+                    self._last_line = self._last_line[:16] + ' FAIR:  ' + self._last_line[24:]
+                    self._mon.mon_typer(self._joyful[1] + 'ASSEMBLY; FILED ON DISC')
+        else:
+            self._mon.mon_typer(' END OF ASSEMBLY; FILED ON DISC')
+
+        self._line.text = self._last_line
+        
+        # Branch if no errors in program.
+        if self._yul.n_err_lins > 0:
+            # Set error count in print.
+            self._line.text = self._line.text[:74] + \
+                              ('%6d' % self._yul.n_err_lins) + \
+                              ' LINES CUSSED BETWEEN PAGES' + \
+                              self._yul.err_pages[0] + ' AND' +\
+                              self._yul.err_pages[1] + '.'
+            self._mon.mon_typer(self._line.text[72:])
+
+        self._old_line.spacing = 4
+        self._mon.mon_typer('', end='\n\n\n')
+
+        # Don't let last line have a page to self.
+        self._lin_count = 0
+
+        # Print end of last ph or of subro list.
+        self._line.text = self._line.text[:72] + '.' + self._line.text[73:]
+        self.print_lin()
+
+        # Print last line of assembly output.
+        self.print_lin()
+
+        # FIXME: final closeout
+
 
     # Subroutine in pass 3 to print a line with pagination control.
     # Strictly speaking, this subroutine prints the last line delivered to it.
