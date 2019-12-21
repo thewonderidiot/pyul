@@ -13680,4 +13680,452 @@ L       IMU PERFORMANCE TESTS 2
  0994                   OMEG/MS
  0995            STORE  VMARK
  0996            ITCQ   0
+L      2INFLIGHT ALIGNMENT SUBROUTINES
+R0001   CALGTA          GIVEN THE DESIRED XD,YD AND ZD UNIT VECTORS REFERED TO
+R0002   --------        PRESENT STABLE MEMBER ORIENTATION, THIS SUBROUTINE FINDS
+R0003                   THETAY, THETAZ, AND THETAX, THE REQUIRED GYRO TORQUE
+R0004                   ANGLES IN THE ORDER TO BE APPLIED TO BRING THE STABLE
+R0005  4                MEMBER INTO THE DESIRED ORIENTATION.
+ 0006            BANK   22
+ 0007   CALCGTA  ITA    1               DEFINE THE VECTOR ZPRIME WHICH IS THE
+ 0008            DMOVE
+ 0009                   S2              IMAGE OF Z UNDER THE ROTATION ABOUT Y
+ 0010  2                XDSMPR
+ 0011            DMOVE  0               ZPRIME =(-XD  ,0 , XD )
+ 0012  2                ZERODP                      2        0
+ 0013            COMP   1
+ 0014            VDEF   UNIT
+ 0015                   XDSMPR +4
+ 0016  2         STORE  ZPRIME
+ 0017            TSRT   0               SET UP COSTH AND SINTH TO ENTER
+ 0018                   ZPRIME              ARCTRIG FOR COMPUTATION OF THETA-Y
+ 0019                   1
+ 0020  2         STORE  SINTH
+ 0021            TSRT   0
+ 0022                   ZPRIME +4D
+ 0023                   1
+ 0024  2         STORE  COSTH
+ 0025            ITC    0
+ 0026  2                ARCTRIG
+ 0027            NOLOD  0
+ 0028  2         STORE  IGC
+ 0029            TSRT   0
+ 0030                   XDSMPR +2
+ 0031                   1
+ 0032  2         STORE  SINTH
+ 0033            DMP    0
+ 0034                   ZPRIME
+ 0035  2                XDSMPR +4
+ 0036            DMP    1
+ 0037            DSU
+ 0038                   ZPRIME +4
+ 0039                   XDSMPR
+ 0040  2         STORE  COSTH
+ 0041            ITC    0
+ 0042  2                ARCTRIG
+ 0043            NOLOD  0
+ 0044  2         STORE  MGC
+ 0045            DOT    0
+ 0046                   ZPRIME
+ 0047                   ZDSMPR
+ 0048  2         STORE  COSTH
+ 0049            DOT    0
+ 0050                   ZPRIME
+ 0051                   YDSMPR
+ 0052  2         STORE  SINTH
+ 0053            ITC    0
+ 0054  2                ARCTRIG
+ 0055            NOLOD  0
+ 0056  2         STORE  OGC
+ 0057            ITCI   0
+ 0058  8                S2
+ 0059   ARCTRIG  ABS    1               GIVEN SINTH AND COSTH SCALED X1/4 FIND
+ 0060            DSU    BMN             THETA IN THE RANGE -PI TO +PI SCALED-
+ 0061                   SINTH           TEMPORARY FOR SINTH               XPI/2
+ 0062                   QTSN45          CONSTANT=0.1768
+ 0063  2                TRIG1
+ 0064            TSLT   1
+ 0065            ACOS   SIGN
+ 0066                   COSTH           TEMPORARY FOR COSTH
+ 0067                   1
+ 0068                   SINTH           TEMPORARY FOR SINTH
+ 0069  2         STORE  THETA
+ 0070  2         ITCQ   0               RETURN TO MAIN PROGRAM
+ 0071   TRIG1    TSLT   1               SINTH LESS THAN QTSN45
+ 0072            ASIN
+ 0073                   SINTH           TEMPORARY FOR SINTH
+ 0074                   1
+ 0075  2         STORE  THETA
+ 0076            BMN    0
+ 0077                   COSTH
+ 0078  2                TRIG2
+ 0079            DMOVE  1
+ 0080            ITCQ
+ 0081                   THETA
+ 0082   TRIG2    SIGN   1               COSTH NEGATIVE
+ 0083            DSU
+ 0084                   HALFDP
+ 0085                   SINTH           WITH ASIN
+ 0086                   THETA
+ 0087  2         STORE  THETA
+ 0088  8         ITCQ   0               RETURN
+R0089                                   THIS PROGRAM COMPUTES SXT ANGLES SAC AND
+R0090                                   PAC IN HALF AND EIGHT REVOLUTIONS RESPEC
+R0091  2                                GO IN WITH S1=BASE ADDRESS OF CDU:S
+ 0092   SMNB     ITA    1               CHECK THAT NBSMBIT IS OFF,IF IT ISGO TO
+ 0093            TEST   SWITCH          NBSM1,OTHERWISE SWITCH IT OFF
+ 0094                   S2
+ 0095                   NBSMBIT
+ 0096                   SMNB1
+ 0097  2                NBSMBIT
+ 0098   SMNB1    AXT,1  1               NBSMBIT IS OFF
+ 0099            AXT,2  ITC             SET INDECES TO ROTATE X,Z ABOUT Y
+ 0100                   4
+ 0101                   0
+ 0102  2                AXISROT         DO AXIS ROTATION
+ 0103            AXT,1  1               SET INDECES TO ROTATE Y,X ABOUT Z
+ 0104            AXT,2  ITC
+ 0105                   2
+ 0106                   4
+ 0107  2                AXISROT         DO AXIS ROTATION
+ 0108            AXT,1  1               SET INDECES TO ROTATE Z,Y ABOUT X
+ 0109            AXT,2  ITC
+ 0110                   0
+ 0111                   2
+ 0112  2                AXISROT         DO AXIS ROTATION
+ 0113            ITCI   0               RETURN
+ 0114  8                S2
+ 0115   NBSM     ITA    1               CHECK THAT NBSMBIT IS ON,IF IT IS NOT GO
+ 0116            TEST                   TO NBSM1 AND SWITCH IT ON
+ 0117                   S2
+ 0118                   NBSMBIT
+ 0119  2                NBSM1
+ 0120   NBSM2    AXT,1  1               ROTATE Z,Y ABOUT X
+ 0121            AXT,2  ITC
+ 0122                   0
+ 0123                   2
+ 0124  2                AXISROT
+ 0125            AXT,1  1               ROTATE Y,X ABOUT Z
+ 0126            AXT,2  ITC
+ 0127                   2
+ 0128                   4
+ 0129  2                AXISROT
+ 0130            AXT,1  1               ROTATE X,Z ABOUT Y
+ 0131            AXT,2  ITC
+ 0132                   4
+ 0133                   0
+ 0134  2                AXISROT
+ 0135            ITCI   0               RETURN
+ 0136  2                S2
+ 0137   NBSM1    SWITCH 1
+ 0138            ITC
+ 0139                   NBSMBIT
+ 0140  8                NBSM2
+ 0141   AXISROT  XSU,1  2               ROUTINE FOR SINGLE AXIS ROTATIONS
+ 0142            SMOVE* RTB
+ 0143            XAD,1                  REMARKS ARE FOR ROTATING Z,Y ABOUT X
+ 0144                   S1
+ 0145                   4,1             INDEX1=0,INDEX2=2
+ 0146                   CDULOGIC        ANGLES ARE STORED IN THE ORDER IGA,MGA,
+ 0147                   S1
+ 0148  2         STORE  30D             OGA,SO WE PICK UP OGA
+ 0149   ACCUROT  COS    0
+ 0150                   30D
+ 0151  2         STORE  8D,1            STORE COS(OGA) IN 8
+ 0152            SIN    0
+ 0153                   30D
+ 0154  2         STORE  10D,1           STORE SIN(OGA) IN 10D
+ 0155            DMP*   1
+ 0156            TSLT
+ 0157                   10D,1
+ 0158                   VAC +4,2        PUSH DOWN (VAC +2)SIN(OGA)
+ 0159  2                1
+ 0160            DMP*   1
+ 0161            TSLT
+ 0162                   8D,1
+ 0163                   VAC +4,2        PUSH DOWN (VAC +2)COS(OGA)
+ 0164  2                1
+ 0165            DMP*   2
+ 0166            TSLT   TEST
+ 0167            BDSU
+ 0168                   10D,1
+ 0169                   VAC +4,1
+ 0170                   1
+ 0171                   NBSMBIT
+ 0172                   AXISROT1
+ 0173  2         STORE  VAC +4,2        VAC+2=(VAC+2)COS(OGA)-(VAC+4)SIN(OGA)
+ 0174            DMP*   1
+ 0175            TSLT   DAD
+ 0176                   8D,1
+ 0177                   VAC +4,1
+ 0178                   1
+ 0179  2         STORE  VAC +4,1        VAC+4=(VAC+2)SIN(OGA)+(VAC+4)COS(OGA)
+ 0180            VMOVE  1
+ 0181            ITCQ
+ 0182  2                VAC
+ 0183   AXISROT1 NOLOD  1               TEST WAS 0 FOR SMNB
+ 0184            DAD
+ 0185  2         STORE  VAC +4,2        VAC+2=(VAC+2)COS(OGA)+(VAC+4)SIN(OGA)
+ 0186            DMP*   1
+ 0187            TSLT   DSU
+ 0188                   8D,1
+ 0189                   VAC +4,1
+ 0190                   1
+ 0191  2         STORE  VAC +4,1        VAC+4=-(VAC+2)SIN(OGA)+(VAC+4)COS(OGA)
+ 0192            VMOVE  1
+ 0193            ITCQ
+ 0194  8                VAC
+ 0195   CALCGA   VXV    1               CALCULATE GIMBAL ANGLES GIVEN THE X,Y,Z-
+ 0196            UNIT
+ 0197                   XNB
+ 0198  2                YSM
+ 0199            NOLOD  1
+ 0200            DOT    ITA
+ 0201                   ZNB
+ 0202                   S2
+ 0203  2         STORE  COSTH           TEMPORARY FOR COSTH
+ 0204            NOLOD  1
+ 0205            DOT
+ 0206                   YNB
+ 0207  2         STORE  SINTH
+ 0208            ITC    0
+ 0209  2                ARCTRIG
+ 0210            NOLOD  0
+ 0211  2         STORE  OGC
+ 0212            DOT    2
+ 0213            TSLT   BOV
+ 0214            TSRT   ASIN
+ 0215                   YSM
+ 0216                   XNB
+ 0217                   2
+ 0218                   GIMLOCK1        LOOK FOR EXCESSIVE MGC
+ 0219                   1
+ 0220  2         STORE  MGC
+ 0221            ABS    1
+ 0222            DSU    BPL
+ 0223                   MGC
+ 0224                   .333...
+ 0225  2                GIMLOCK1
+ 0226   CALCGA1  DOT    0
+ 0227                   ZSM
+ 0228                   0               CONTAINS AMG
+ 0229  2         STORE  COSTH
+ 0230            DOT    0
+ 0231                   XSM
+ 0232  2         STORE  SINTH
+ 0233            ITC    0
+ 0234  2                ARCTRIG
+ 0235            NOLOD  0
+ 0236  2         STORE  IGC
+ 0237            VMOVE  1               OP COUNT BY UNEEDA DEBUGGING SERVICE INC
+ 0238            RTB
+ 0239                   OGC
+ 0240                   V1STO2S
+ 0241  2         STORE  THETAD          *** BEWARE *** MODE IS NOW DP ***
+ 0242            ITCI   0
+ 0243  2                S2
+ 0244  2GIMLOCK1 EXIT   0
+ 0245            TC     ALARM
+ 0246            OCT    00401
+ 0247  2         TC     INTPRET         RESUME ROUTINE.
+ 0248            ITC    0
+ 0249  8                CALCGA1
+ 0250   SXTNB    SMOVE* 1               THIS PROGRAM COMPUTES COMPONENTS OF
+ 0251            RTB    RTB             THE STAR HALF UNIT VECTOR,STARM, GIVEN
+ 0252                   5,1             THE MEASURED SXT ANGLES PAM AND SAM.
+ 0253                   CDULOGIC
+ 0254  2                TRUNLOG
+ 0255            NOLOD  1
+ 0256            SIN    TSLT
+ 0257  2                1               STORE A=SIN(PAM.PI/4)
+ 0258            SMOVE* 1
+ 0259            RTB
+ 0260                   3,1
+ 0261  2                CDULOGIC        STORE  SAM/2 IN PD 4,RESOLVES +/- ZERO
+ 0262            NOLOD  1
+ 0263            COS    DMP
+ 0264                   2
+ 0265  2         STORE  STARM           STARM +0=(A.COS(PI.SAM))/2
+ 0266            SIN    1               SIN(2PI.PD4).PD2
+ 0267            DMP
+ 0268  2         STORE  STARM +2        STARM +2=(A.SIN(PI.SAM))/2
+ 0269            COS    0
+ 0270  2         STORE  STARM +4        STARM +4=0.5.COS(PAM.PI/4)
+ 0271  8         ITCQ   0
+R0272   AXISGEN         GIVEN TWO STAR VECTORS     -         -
+R0273   -------                                STARA AND STARB WRITTEN IN TWO
+R0274                     COORDINATE SYSTEMS, THE D AND C SYSTEMS SO THAT WE
+R0275                     HAVE       -       -           -       -
+R0276                            STARA   STARB   AND STARB , STARA
+R0277                                 D       D           C       C
+R0278                     THIS PROGRAM COMPUTES THE HALF UNIT AXES
+R0279                             -   -   -
+R0280                            XD  YD  ZD
+R0281                              C   C   C
+R0282                     THAT IS THE D COORDINATE SYSTEM AXES REFERRED TO THE C
+R0283                     COORDINATE SYSTEM
+R0284                   THE INPUTS ARE STORED AS FOLLOWS
+R0285                                                           -
+R0286                            C(STARAD) - C(STARAD +5) = STARA
+R0287                                                            D
+R0288                                                           -
+R0289                            C(STARAD+6)-C(STARAD+11D)= STARB
+R0290                                                            D
+R0291                                                           -
+R0292                            C(6D) - C(11D)           = STARA
+R0293                                                            C
+R0294                                                           -
+R0295                            C(12D) - C(17D)          = STARB
+R0296                                                            C
+R0297                   RESULTS ARE LEFT IN XDC TO XDC +17D
+R0298                     THE RETUTINE DESTROYS THE INPUTS AND USES LOCATIONS
+R0299                        STARAD+12D TO STARAD+17D AND 18D - 23D +30D
+ 0300   AXISGEN  AXT,1  1
+ 0301            AST,1
+ 0302                   STARAD +6
+ 0303                   STARAD -6
+ 0304   AXISGEN1 VXV*   1
+ 0305            UNIT
+ 0306                   STARAD +12D,1
+ 0307                   STARAD +18D,1
+ 0308  2         STORE  STARAD +18D,1
+ 0309            VXV*   1
+ 0310            VSLT
+ 0311                   STARAD +12D,1
+ 0312                   STARAD +18D,1
+ 0313                   1
+ 0314  2         STORE  STARAD +24D,1
+ 0315            TIX,1  0
+ 0316  2                AXISGEN1
+ 0317            AXC,1  3
+ 0318            SXA,1  AXT,1
+ 0319            AST,1  AXT,2
+ 0320            AST,2
+ 0321                   6
+ 0322                   30D
+ 0323                   18D
+ 0324                   6
+ 0325                   6
+ 0326  2                2
+ 0327   AXISGEN2 XCHX,1 0
+ 0328  2                30D
+ 0329            VXSC*  0
+ 0330                   0,1
+ 0331  2                STARAD +6,2
+ 0332            VXSC*  0
+ 0333                   6,1
+ 0334                   STARAD +12D,2
+ 0335  2         STORE  24D
+ 0336            VXSC*  2
+ 0337            VAD    VAD
+ 0338            VSLT   XCHX,1
+ 0339                   12D,1
+ 0340                   STARAD +18D,2
+ 0341                   -
+ 0342                   24D
+ 0343                   1
+ 0344                   30D
+ 0345            STORE  XDC +18D,1
+ 0346            TIX,1  0
+ 0347  2                AXISGEN3
+ 0348   AXISGEN3 TIX,2  0
+ 0349  2                AXISGEN2
+ 0350  8         ITCQ   0
+ 0351   CALCSXA  VMOVE  1               THIS PROGRAM COMPUTES THE SXT ANGLES SAC
+ 0352            ITA    ITC             AND PAC GIVEN THE STAR VECTOR IN SM AXES
+ 0353                   STAR
+ 0354                   S2              HALF UNIT VECTOR
+ 0355  2                SMNB
+ 0356            NOLOD  0
+ 0357  2         STORE  6               STORE (STARM0,STARM1,STARM2)
+ 0358            DMOVE  0
+ 0359                   ZERODP
+ 0360  2         STORE  VAC +4          SET VAC TO (STARM0,STARM1,0)
+ 0361            NOLOD  1               UNIT VAC TO (S0,S1,0)
+ 0362            UNIT   TSRT
+ 0363                   2
+ 0364  2         STORE  0               STORE  COS/4 =S0/4 , SIN/4 = S1/4 ,0
+ 0365            DMOVE  0
+ 0366                   0
+ 0367  2                COSTH
+ 0368            DMOVE  0
+ 0369                   2
+ 0370  2                SINTH
+ 0371            ITC    0
+ 0372  2                ARCTRIG         USES THE COS/SIN STORED ABOVE
+ 0373            RTB    0
+ 0374                   1STO2S
+ 0375  2         STORE  SAC
+ 0376            DOT    3
+ 0377            TSLT   ASIN
+ 0378            TSLT   BOV
+ 0379            BMN    RTB
+ 0380                   0               1/4 UNIT (STARM0,STARM1,0)
+ 0381                   6               STARM-1/2 UNIT VECTOR
+ 0382                   3
+ 0383                   3
+ 0384                   CALCSXA1
+ 0385                   CALCSXA1
+ 0386                   1STO2S
+ 0387  2         STORE  PAC
+ 0388            ITCI   0
+ 0389  2                S2
+ 0390  2CALCSXA1 EXIT   0               PROGRAM ERROR,STAR OUT OF FIELD OF VIEW
+ 0391            TC     ALARM
+ 0392            OCT    00402
+ 0393  8         TC     ENDOFJOB
+ 0394   SXTANG   VXV    1               TIVELY FROM INPUTS STAR AND XNB,YNB,ZNB
+ 0395            UNIT   VSRT            THE HALF UNIT STAR VECTOR AND THE NAV
+ 0396                   ZNB             BASE HALF AXES.
+ 0397                   STAR
+ 0398                   1
+ 0399  2         STORE  PDA             DEFINES PROJECTION OF STAR IN XY PLANE
+ 0400            DOT    1
+ 0401            COMP   ITA             COMPUTE  SIN(PI.SAC)/4
+ 0402                   PDA
+ 0403                   XNB
+ 0404                   S2
+ 0405  2         STORE  SINTH
+ 0406            DOT    0               COMPUTE  COS(PI.SAC)/4
+ 0407                   PDA
+ 0408                   YNB
+ 0409  2         STORE  COSTH
+ 0410            ITC    0               COMPUTE  SAC
+ 0411  2                ARCTRIG
+ 0412            RTB    0
+ 0413                   1STO2S
+ 0414  2         STORE  SAC
+ 0415            VXV    4
+ 0416            DOT    TSLT
+ 0417            ASIN   TSLT            COMPUTE PAC
+ 0418            BOV    BMN
+ 0419            RTB
+ 0420                   PDA
+ 0421                   ZNB
+ 0422                   STAR
+ 0423                   2
+ 0424                   3
+ 0425                   SXTALARM
+ 0426                   SXTALARM        WE NOW HAVE PRECISION ANGLE
+ 0427                   1STO2S
+ 0428  2         STORE  PAC
+ 0429            ITCI   0               JOB IS DONE
+ 0430  2                S2
+ 0431  2SXTALARM EXIT   0               BRANCH TO RESTART SEQUENCE
+ 0432            TC     ALARM
+ 0433            OCT    00403
+ 0434  2         TC     ENDOFJOB
+ 0435   QTSN45   2DEC   .1768
+ 0436   THIRD    2DEC   .167
+ 0437   ZPRIME   =      22D
+ 0438   PDA      =      22D
+ 0439   COSTH    =      16D
+ 0440   SINTH    =      18D
+ 0441   THETA    =      20D
+ 0442   STARM    =      VAC
+ 0443   ZERODP   2DEC   0
+ 0444   POSMAXDP OCT    37777
+ 0445            OCT    37777
+ 0446   HALFDP   2DEC   .5
+ 0447   .333...  2DEC   .3333333333
 *       ENDOFJOB
