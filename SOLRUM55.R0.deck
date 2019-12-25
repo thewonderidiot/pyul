@@ -14128,4 +14128,2855 @@ R0299                        STARAD+12D TO STARAD+17D AND 18D - 23D +30D
  0445            OCT    37777
  0446   HALFDP   2DEC   .5
  0447   .333...  2DEC   .3333333333
+L      2KEYRUPT, UPRUPT, FRESH START
+ 0001            BANK   4
+ 0002   KEYRUPT1 MASK   LOW5            C(IN0) IN A
+ 0003            TS     RUPTREG4
+ 0004            TC     LODSAMPT        TIME IS SNATCHED IN RUPT FOR NOUN 65
+ 0005            CAF    PRIO33
+ 0006            TC     NOVAC
+ 0007            CADR   CHARIN
+ 0014   NOKEYBUF XCH    RUPTREG4
+ 0015            INDEX  LOCCTR
+ 0016            TS     MPAC            LEAVE 5 BIT KEY CDE IN MPAC FOR CHARIN
+ 0017  8         TC     RESUME
+ 0018   UPRUPTB  TS     BANKRUPT
+ 0019            TC     READTIME +1     TIME IS SNATCHED IN RUPT FOR NOUN 65
+ 0020            CAF    ZERO
+ 0021            XCH    UPLINK          ZERO UPLINK
+ 0022            TS     KEYTEMP1
+ 0023            CCS    DSPTAB  +7      TURN ON UPACT LIGHT
+ 0024            TC     +2              UPACT = BIT 11 OF DSPTAB +7
+ 0025            CAF    B12-1           SAFETY PLAY
+ 0026            AD     ONE
+ 0027            TS     KEYTEMP2        MAG OF DSPTAB +7 INTO KEYTEMP2
+ 0028            MASK   BIT11
+ 0029            CCS    A
+ 0030            TC     UPRPT1          BIT 11 ALREADY ONE
+ 0031            XCH    KEYTEMP2        BIT 11 = 0
+ 0032            AD     BIT11
+ 0033            CS     A               STORE NEGATIVELY
+ 0034            XCH    DSPTAB  +7
+ 0035            CCS    A
+ 0036            TC     INCNOUTU        PREVIOUS CONTENTS WAS +
+ 0037            NOOP                   SAFETY PLAY
+ 0038   UPRPT1   CAF    LOW5            TEST FOR TRIPLE CHAR REDUNDANCY
+ 0039            MASK   KEYTEMP1        LOW5 OF WORD
+ 0040            XCH    KEYTEMP1        LOW5 INTO KEYTEMP1
+ 0041            XCH    SR              WHOLE WORD INTO SR
+ 0042            TS     KEYTEMP2        ORIGINAL SR INTO KEYTEMP2
+ 0043            TC     SRGHT5
+ 0044            MASK   LOW5            MID 5
+ 0045            AD     HI10
+ 0046            TC     UPTEST
+ 0047            TC     SRGHT5
+ 0048            MASK   LOW5            HIGH 5
+ 0049            COM
+ 0050            TC     UPTEST
+ 0051   UPOK     TC     RESTORSR        CODE IS GOOD
+ 0052            CS     ELRCODE         IF CODE = ERROR LIGHT RESET, PUT +0
+ 0053            AD     KEYTEMP1        INTO UPLOCK(BIT2 OF STATE)
+ 0054            CCS    A               IF CODE NOT= ELR, PASS CODE ONLY IF
+ 0055            TC     TSTUPLOK        UPLOCK=0 (BIT2 OF STATE)
+ 0056   ELRCODE  OCT    22
+ 0057            TC     TSTUPLOK
+ 0058            CS     BIT2            0 INTO UPLOCK( BIT2 OF STATE)
+ 0059            MASK   UPLOCK
+ 0060            TS     UPLOCK
+ 0061            TC     ACCEPTUP
+ 0062   TSTUPLOK CAF    BIT2
+ 0063            MASK   UPLOCK
+ 0064            CCS    A
+ 0065            TC     RESUME          UPLOCK = 1 (BIT2 OF STATE)
+ 0066   ACCEPTUP XCH    KEYTEMP1        UPLOCK = 0 (BIT2 OF STATE)
+ 0067            TC     KEYRUPT1 +1
+ 0068   TMFAIL2  TC     RESTORSR        CODE IS BAD
+ 0069            CS     BIT2            LOCK OUT FURTHER UPLINK ACTIVITY (BY
+ 0070            MASK   UPLOCK          PUTTING 1 INTO UPLOCK,BIT2 OF STATE)
+ 0071            AD     BIT2            UNTIL ERROR LIGHT RESET IS SENT UP
+ 0072            TS     UPLOCK          UPLINK.
+ 0073   TMFAIL1  TC     TMALM
+ 0074  2         TC     RESUME
+ 0075   RESTORSR XCH    KEYTEMP2
+ 0076            DOUBLE
+ 0077            TS     SR
+ 0078  2         TC     Q
+ 0079  2TMALM    EQUALS TMFAIL          TM FAIL LIGHT ON (IN DOWNRUPT).
+ 0080   SRGHT5   CS     SR
+ 0081            CS     SR
+ 0082            CS     SR
+ 0083            CS     SR
+ 0084            CS     SR
+ 0085            CS     A
+ 0086  2         TC     Q               DELIVERS WORD UNCOMPLEMENTED
+ 0087   UPTEST   AD     KEYTEMP1
+ 0088            CCS    A
+ 0089            TC     TMFAIL2
+ 0090            TC     CCSHOLE
+ 0091            TC     TMFAIL2
+ 0092  2         TC     Q
+ 0093   HI10     OCT    77740
+ 0094  2UPBANK   EQUALS EXECBANK        IN SAME BANK AS EXEC.
+ 0095  2B12-1    OCT    3777
+ 0096   INCNOUTU XCH    NOUT
+ 0097            AD     ONE
+ 0098            TS     NOUT
+ 0099            INDEX  Q
+ 0100   UPLAST   TC     1
+R0101  8UPACT IS TURNED OFF BY VBRELDSP, ALSO BY ERROR LIGHT RESET.
+R0102   THE RECEPTION OF A BAD CODE BY UPLINK LOCKS OUT FURTHER UPLINK ACTIVITY
+R0103   BY PLACING A 1 INTO UPLOCK(BIT2 OF STATE). BIT9 (AND BIT11. OF TMKEYBUF
+R0104   IS SET TO 1 TO SEND AN INDICATION OF THIS SITUATION DOWN THE DOWNLINK.
+R0105   THE UPLINK INTERLOCK IS ALLOWED WHEN AN ERROR LIGHT RESET CODE IS SENT
+R0106   UP THE UPLINK, OR WHEN A FRESH START IS PERFORMED.
+L      2PINBALL GAME  BUTTONS AND LIGHTS
+R0001  4KEYBOARD AND DISPLAY PROGRAM
+R0002  2THE FOLLOWING QUOTATION IS PROVIDED THROUGH THE COUTESY OF THE AUTHORS.
+R0003         ::IT WILL BE PROVED TO THY FACE THAT THOU HAST MEN ABOUT THEE THAT
+R0004   USUALLY TALK OF A NOUN AND A VERB, AND SUCH ABOMINABLE WORDS AS NO
+R0005  2CHRISTIAN EAR CAN ENDURE TO HEAR.::
+R0006  4                     HENRY 6, ACT 2, SCENE 4
+R0007   SUMMARY OF ERASABLE ASSIGNMENTS FOR KEYBOARD AND DISPLAY PROGRAM
+R0008  4WHICH ARE ALL DEFINED ELSEWHERE.
+R0009  2         SETLOC 627
+R0010   BUFFER STORAGE AREAS FOR ROUTINES USING DISPLAY OR LOAD ROUTINES.
+R0011   DSPTEM1  ERASE  +2              BUFFER STORAGE AREA 1 (MOSTLY FOR TIME)
+R0012   DSPTEM2  ERASE  +2              BUFFER STORAGE AREA 2 (MOSTLY FOR DEG)
+R0013  4ERASABLE ASSIGNMENTS SPECIFIC TO PINBALL
+R0014  2ERASABLES RESERVED FOR EXECUTIVE ACTION
+R0015   DSPCOUNT ERASE                  DISPLAY POSITION INDICATOR
+R0016   DECBRNCH ERASE                  +DEC, - DEC, OCT INDICATOR
+R0017   VERBREG  ERASE                  VERB CODE
+R0018   NOUNREG  ERASE                  NOUN CODE
+R0019   XREG     ERASE                  R1 INPUT BUFFER
+R0020   YREG     ERASE                  R2 INPUT BUFFER
+R0021   ZREG     ERASE                  R3 INPUT BUFFER
+R0022   XREGLP   ERASE                  LO PART OF XREG (FOR DEC CONV ONLY)
+R0023   YREGLP   ERASE                  LO PART OF YREG (FOR DEC CONV ONLY)
+R0024   ZREGLP   ERASE                  LO PART OF ZREG (FOR DEC CONV ONLY)
+R0025   MODREG   ERASE                  MODE CODE
+R0026   DSPLOCK  =      STATE (BIT4)    KEYBOARD/SUBROUTINE CALL INTERLOCK
+R0027   REQRET   ERASE                  RETURN REGISTER FOR LOAD
+R0028   LOADSTAT ERASE                  STATUS INDICATOR FOR LOADTST
+R0029   CLPASS   ERASE                  PASS INDICATOR CLEAR
+R0030   NOUT     ERASE                  ACTIVITY COUNTER FOR DSPTAB
+R0031   NOUNADD  ERASE                  MACHINE ADDRESS FOR NOUN
+R0032   MONSAVE  ERASE                  N/V CODE FOR MONITOR. ALSO ACTIVITY
+R0033   MONSAVE1 ERASE                  NOUNADD STORAGE FOR MONITOR WITH MATBS
+R0034   DSPTAB   ERASE  +13D            0-10,DISPLAY PANEL BUFFER.11-13,C RELAYS
+R0035   CADRSTOR ERASE                  ENDIDLE STORAGE
+R0036   GRABLOCK ERASE                  INTERNAL INTERLOCK FOR DISPLAY SYSTEM
+R0037   NVSBCADR ERASE                  NVSUB STORAGE FOR CALLING CADR
+R0038   DSPLIST  ERASE  +2              WAITING LIST FOR DSP SYST INTERNAL USE
+R0039  4END OF ERASABLES RESERVED FOR EXECUTIVE ACTION
+R0040  2ERASABLES RESERVED FOR INTERRUPT ACTION
+R0041   IN0WORD  ERASE                  INPUT CODE STORAGE(KEYRUPT OR UPRUPT)
+R0042  4DSPCNT   ERASE                  COUNTER FOR DSPOUT
+R0043  2TEMPORARY ERASABLES FOR EXECUTIVE ACTION
+R0044   DSEXIT   =      COMPON          RETURN FOR DSPIN
+R0045   EXITEM   =      COMPON          RETURN FOR SCALE FACTOR ROUTINE SELECT
+R0046  2BLANKRET =      COMPON          RETURN FOR 2BLANK
+R0047   WRDRET   =      TEM9            RETURN FOR 5BLANK
+R0048   WDRET    =      TEM9            RETURN FOR DSPWD
+R0049   DECRET   =      TEM9            RETURN FOR PUTCOM(DEC LOAD)
+R0050  221/22REG =      TEM9            TEMP FOR CHARIN
+R0051   UPDATRET =      ORDER           RETURN FOR UPDATNN, UPDATVB
+R0052   CHAR     =      ORDER           TEMP FOR CHARIN
+R0053   ERCNT    =      ORDER           COUNTER FOR ERROR LIGHT RESET
+R0054  2DECOUNT  =      ORDER           COUNTER FOR SCALING AND DISPLAY (DEC)
+R0055   SGNON    =      TEM11           TEMP FOR +,- ON
+R0056   NOUNTEM  =      TEM11           COUNTER FOR MIXNOUN FETCH
+R0057   DISTEM   =      TEM11           COUNTER FOR OCTAL DISPLAY VERBS
+R0058   DECTEM   =      TEM11           COUNTER FOR FETCH (DEC DISPLAY VERBS)
+R0059  2DECTEM1  =      TEM11           TEMP FOR NUM
+R0060   SGNOFF   =      DVSW            TEMP FOR +,- ON
+R0061   NVTEMP   =      DVSW            TEMP FOR NVSUB
+R0062   SFTEMP1  =      DVSW            STORAGE FOR SF CONST HI PART(=SFTEMP2-1)
+R0063  2DECTEM2  =      DVSW            TEMP FOR NUM
+R0064   CODE     =      BRANCHQ         FOR DSPIN
+R0065  2SFTEMP2  =      BRANCHQ         STORAGE FOR SF CONST LO PART(=SFTEMP1+1)
+R0066  2ENTRET   =      MODE            EXIT FROM ENTER
+R0067   PROGREG  =      VBUF    +2      FOR GO EXEC PROGRAM
+R0068   MIXTEMP  =      VBUF    +2      FOR MIXNOUN DATA
+R0069   SIGNRET  =      VBUF    +2      RETURN FOR +,- ON
+R0070  2ALSO PROGREG+1 ,PROGREG+2.  MIXTEMP+1, MIXTEMP+2.
+R0071   WDCNT    =      VBUF    +5      CHAR COUNTER FOR DSPWD
+R0072  2INREL    =      VBUF    +5      INPUT BUFFER SELECTOR ( X,Y,Z, REG )
+R0073   MIXBR    =      TEM10           INDICATOR FOR MIXED OR NORMAL NOUN
+R0074  2DSPMMTEM =      TEM10           DSPCOUNT SAVE FOR DSPMM
+R0075   MONTEM   =      NEWEQIND        TEMP RETURN FOR MONITOR
+R0076  2DSREL    =      TEM2            REL ADDRESS FOR DSPIN(TEM2 USED BY DAD1)
+R0077   DSMAG    =      TEM4            MAGNITUDE STORE FOR DSPIN
+R0078  2IDADDTEM =      TEM4            MIXNOUN INDIRECT ADDRESS STORAGE
+R0079   COUNT    =      TEM5            FOR DSPIN  (TEM5 IS USED BY DAD)
+R0080   LSTPTR   =      ARETURN         LIST POINTER FOR GRABUSY
+R0081   RELRET   =      ARETURN         RETURN FOR RELDSP
+R0082  2FREERET  =      ARETURN         RETURN FOR FREEDSP
+R0083  2CADRTEM  =      ESCAPE          TEMP STORAGE FOR GRAB ROUTINES
+R0084   NNADTEM  ERASE                  TEMP FOR NOUN ADDRESS TABLE ENTRY
+R0085   NNTYPTEM ERASE                  TEMP FOR NOUN TYPE TABLE ENTRY
+R0086   IDAD1TEM ERASE                  TEMP FOR INDIR ADRES TABLE ENTRY(MIXNN)
+R0087                                   MUST = IDAD2TEM-1, = IDAD3TEM-2.
+R0088   IDAD2TEM ERASE                  TEMP FOR INDIR ADRES TABLE ENTRY(MIXNN)
+R0089                                   MUST = IDAD1TEM+1, = IDAD3TEM-1.
+R0090   IDAD3TEM ERASE                  TEMP FOR INDIR ADRES TABLE ENTRY(MIXNN)
+R0091  4                                MUST = IDAD1TEM+2, = IDAD2TEM+1.
+R0092  2TEMPORARY ERASABLES FOR INTERRUPT ACTION
+R0093   KEYTEMP1 =      WTEXIT          TEMP FOR KEYRUPT, UPRUPT
+R0094   DSRUPTEM =      WTEXIT          TEMP FOR DSPOUT
+R0095  8KEYTEMP2 =      RUPTAGN         TEMP FOR KEYRUPT, UPRUPT
+R0096   THE INPUT CODES ASSUMED FOR THE KEYBOARD ARE,
+R0097   0        10000
+R0098   1        00001
+R0099   9        01001
+R0100   VERB     10001
+R0101   ERROR RES10010
+R0102   KEY RLSE 11001
+R0103   +        11010
+R0104   -        11011
+R0105   ENTER    11100
+R0106   CLEAR    11110
+R0107  4NOUN     11111
+R0108   OUTPUT FORMAT FOR DISPLAY PANEL. SET OUT0 TO  AAAABCCCCCDDDDD.
+R0109   A-S SELECT A RELAYWORD. THIS DETERMINES WHICH PAIR OF CHARACTERS ARE
+R0110   ENERGIZED.
+R0111   B FOR SPECIAL RELAYS SUCH AS SIGNS ETC.
+R0112   C-S  5 BIT RELAY CODE FOR LEFT CHAR OF PAIR SELECTED BY RELAYWORD
+R0113  2D-S  5 BIT RELAY CODE FOR RIGHTCHAR OF PAIR SELECTED BY RELAYWORD.
+R0114   THE PANEL APPEARS AS FOLLOWS,
+R0115   MD1    MD2                         (MAJOR MODE)
+R0116   VD1    VD2 (VERB)    ND1    ND2    (NOUN)
+R0117   R1D1   R1D2   R1D3   R1D4   R1D5   (R1)
+R0118   R2D1   R2D2   R2D3   R2D4   R2D5   (R2)
+R0119  2R3D1   R3D2   R3D3   R3D4   R3D5   (R3)
+R0120   EACH OF THESE IS GIVEN A DSPCOUNT NUMBER FOR USE WITHIN COMPUTATION ONLY
+R0121   MD1   25     R2D1  11         ALL ARE OCTAL
+R0122   MD2   24     R2D2  10
+R0123   VD1   23     R2D3   7
+R0124   VD2   22     R2D4   6
+R0125   ND1   21     R2D5   5
+R0126   ND2   20     R3D1   4
+R0127   R1D1  16     R3D2   3
+R0128   R1D2  15     R3D3   2
+R0129   R1D3  14     R3D4   1
+R0130   R1D4  13     R3D5   0
+R0131  4R1D5  12
+R0132  2THERE IS AN 11 REGISTER TABLE (DSPTAB) FOR THE DISPLAY PANEL.
+R0133   DSPTAB RELAYWD       BIT11     BITS 10-6     BITS 5-1
+R0134   RELADD
+R0135   10     1011                    MD1  (25)     MD2  (24)
+R0136   9      1010          FLASH     VD1  (23)     VD2  (22)
+R0137   8      1001                    ND1  (21)     ND2  (20)
+R0138   7      1000          UPACT                   R1D1 (16)
+R0139   6      0111          +R1       R1D2 (15)     R1D3 (14)
+R0140   5      0110          -R1       R1D4 (13)     R1D5 (12)
+R0141   4      0101          +R2       R2D1 (11)     R2D2 (10)
+R0142   3      0100          -R2       R2D3 (7)      R2D4 (6)
+R0143   2      0011                    R2D5 (5)      R3D1 (4)
+R0144   1      0010          +R3       R3D2 (3)      R3D3 (2)
+R0145   0      0001          -R3       R3D4 (1)      R3D5 (0)
+R0146  4       0000   NO RELAYWORD
+R0147   THE 5 BIT RELAY CODES ARE,
+R0148   BLANK      00000
+R0149   0          10101
+R0150   1          00011
+R0151   2          11001
+R0152   3          11011
+R0153   4          01111
+R0154   5          11110
+R0155   6          11100
+R0156   7          10011
+R0157   8          11101
+R0158  89          11111
+ 0159  2         SETLOC 14000
+ 0160   FLASHON  XCH    Q
+ 0161            TS     DSEXIT
+ 0162  2         TC     FLASHON1
+ 0163   FLASHOFF XCH    Q
+ 0164            TS     DSEXIT
+ 0165            TC     FLASHOF1
+A0166  4                                END OF STANDARD LEAD INS.
+ 0167   CHARIN   TC     DSPLOCK1        BLOCK DISPLAY SYST BUT SAVE OLD
+ 0168            MASK   BIT4            C(DSPLOCK) FOR ERROR LIGHT RESET.
+ 0169            TS     21/22REG
+ 0170            XCH    MPAC
+ 0171            TS     CHAR
+ 0172            INDEX  A
+ 0173            TC     +1              INPUT CODE     FUNCTION
+ 0174            TC     CHARALRM        0
+ 0175            TC     NUM             1
+ 0176            TC     NUM             2
+ 0177            TC     NUM             3
+ 0178            TC     NUM             4
+ 0179            TC     NUM             5
+ 0180            TC     NUM             6
+ 0181            TC     NUM             7
+ 0182            TC     89TEST          10                 8
+ 0183            TC     89TEST          11                 9
+ 0184            TC     CHARALRM        12
+ 0185            TC     CHARALRM        13
+ 0186            TC     CHARALRM        14
+ 0187            TC     CHARALRM        15
+ 0188            TC     CHARALRM        16
+ 0189            TC     CHARALRM        17
+ 0190            TC     NUM     -2      20                 0
+ 0191            TC     VERB            21                 VERB
+ 0192            TC     ERROR           22                 ERROR LIGHT RESET
+ 0193            TC     ABORTCAL        23                 ABORT
+ 0194            TC     CHARALRM        24
+ 0195            TC     CHARALRM        25
+ 0196            TC     CHARALRM        26
+ 0197            TC     CHARALRM        27
+ 0198            TC     CHARALRM        30
+ 0199            TC     VBRELDSP        31                 KEY RELEASE
+ 0200            TC     POSGN           32                 +
+ 0201            TC     NEGSGN          33                 -
+ 0202            TC     ENTERJMP        34                 ENTER
+ 0203            TC     CHARALRM        35
+ 0204            TC     CLEAR           36                 CLEAR
+ 0205  4         TC     NOUN            37                 NOUN
+ 0206   ENTERJMP TC     POSTJUMP
+ 0207  2         CADR   ENTER
+ 0208   ABORTCAL CAF    OCT32
+ 0209            TC     POSTJUMP        FORCE DECODING OF VERB 72 AND DO RELDSP.
+ 0210  2         CADR   JAMEXTVB
+ 02101 4OCT32    OCT    32
+ 0211   89TEST   CAF    THREE
+ 0212            MASK   DECBRNCH
+ 0213            CCS    A
+ 0214            TC     NUM             IF DECBRNCH IS +, 8 OR 9 OK
+ 0215  4         TC     CHARALRM        IF DECBRNCH IS +0, REJECT 8 OR 9
+R0216   NUM ASSEMBLES OCTAL 3 BITS AT A TIME. FOR DECIMAL IT CONVERTS INCOMING
+R0217   WORD AS A FRACTION, KEEPING RESULTS TO DP.
+R0218   OCTAL RESULTS ARE LEFT IN XREG, YREG, OR ZREG. HI PART OF DEC IN XREG,
+R0219   YREG, ZREG. THE LOW PARTS IN XREGLP, YREGLP, OR ZREGLP)
+R0220   DECBRNCH IS LEFT AT +0 FOR OCT, +1 FOR + DEC, +2 FOR - DEC.
+R0221  2IF DSPCOUNT WAS LEFT -, NO MORE DATA IS ACCEPTED.
+ 0222            CAF    ZERO
+ 0223            TS     CHAR
+ 0224   NUM      CCS    DSPCOUNT
+ 0225            TC     +4              +
+ 0226            TC     +3              +0
+ 0227            TC     +1              -BLOCK DATA IN IF DSPCOUNT IS -
+ 0228            TC     ENDOFJOB        -0
+ 0229            TC     GETINREL
+ 0230            CCS    CLPASS          IF CLPASS IS + OR +0, MAKE IT +0.
+ 0231            CAF    ZERO
+ 0232            TS     CLPASS
+ 0233            TC     +1
+ 0234            INDEX  CHAR
+ 0235            CAF    RELTAB
+ 0236            MASK   LOW5
+ 0237            TS     CODE
+ 0238            XCH    DSPCOUNT
+ 0239            TS     COUNT
+ 0240            TS     DSPCOUNT
+ 0241            TC     DSPIN
+ 0242            CAF    THREE
+ 0243            MASK   DECBRNCH
+ 0244            CCS    A               +0, OCTAL.  +1, + DEC.  +2, - DEC.
+ 0245            TC     DECTOBIN        +
+ 0246            INDEX  INREL           +0 OCTAL
+ 0247            XCH    VERBREG
+ 0248            TS     CYL
+ 0249            CS     CYL
+ 0250            CS     CYL
+ 0251            XCH    CYL
+ 0252            AD     CHAR
+ 0253            TC     ENDNMTST
+ 0254   DECTOBIN INDEX  INREL
+ 0255            XCH    VERBREG
+ 0256            TS     MPAC            SUM X 2EXP-14 IN MPAC
+ 0257            CAF    ZERO
+ 0258            TS     MPAC    +1
+ 0259            CAF    TEN             10 X 2EXP-14
+ 0260            TC     SHORTMP         10SUM X 2EXP-28 IN MPAC, MPAC+1
+ 0261            XCH    MPAC    +1
+ 0262            AD     CHAR
+ 0263            TS     MPAC    +1
+ 0264            TC     ENDNMTST        NO OF
+ 0265            AD     MPAC            OF MUST BE 5TH CHAR
+ 0266            TS     MPAC
+ 0267            TC     DECEND
+ 0268   ENDNMTST INDEX  INREL
+ 0269            TS     VERBREG
+ 0270            CS     DSPCOUNT
+ 0271            INDEX  INREL
+ 0272            AD     CRITCON
+ 0273            CCS    A
+ 0274            TC     CHARALRM        +     PATHOLOGICAL CASE
+ 0275            TC     CHARALRM        +0   IMPOSSIBLE
+ 0276            TC     MORNUM          -
+ 0277   ENDNUM   CAF    THREE
+ 0278            MASK   DECBRNCH
+ 0279            CCS    A
+ 0280            TC     DECEND
+ 0281   ENDALL   CS     DSPCOUNT        BLOCK NUMIN BY PLACING DSPCOUNT
+ 0282            TC     MORNUM  +1      NEGATIVELY
+ 0283   DECEND   CAF    THREE
+ 0284            MASK   DECBRNCH
+ 0285            INDEX  A
+ 0286            TC     +0
+ 0287            TC     +DECSGN         + DEC
+ 0288            TC     DMP             - DEC
+ 0289            XCADR  NEGDECON
+ 0290            TC     ENDECOM         MULT SUM X 2EXP-28 IN MPAC, MPAC+1 BY
+ 0291   +DECSGN  TC     DMP             2EXP14/10EXP5. GIVES(SUM/10EXP5)X2EXP-14
+ 0292            XCADR  DECON           IN MPAC, +1, +2.
+ 0293   ENDECOM  XCH    MPAC    +2
+ 0294            INDEX  INREL
+ 0295            TS     XREGLP  -2
+ 0296            XCH    MPAC    +1
+ 0297            INDEX  INREL
+ 0298            TS     VERBREG
+ 0299            TC     ENDALL
+ 0300   MORNUM   CCS    DSPCOUNT        DECREMENT DSPCOUNT
+ 0301            TS     DSPCOUNT
+ 0302  2         TC     ENDOFJOB
+ 0303   CRITCON  OCT    22              (DEC 18)
+ 0304            OCT    20              (DEC 16)
+ 0305            OCT    12              (DEC 10)
+ 0306            OCT    5
+ 0307  2         OCT    0
+ 0308   DECON    2DEC   E-5 B14         2EXP14/10EXP5 = .16384 DEC
+ 0309   NEGDECON OCT    72603
+ 0310  4         OCT    64516
+R0311   GETINREL GETS PROPER DATA REG REL ADDRESS FOR CURRENT C(DSPCOUNT) AND
+R0312  2PUTS IN INTO INREL. +0 VERBREG, 1 NOUNREG, 2 XREG, 3 YREG, 4 ZREG.
+ 0313   GETINREL INDEX  DSPCOUNT
+ 0314            CAF    INRELTAB
+ 0315            TS     INREL           (A TEMP, REG)
+ 0316  2         TC     Q
+ 0317   INRELTAB OCT    4               R3D5 (DSPCOUNT = 0)
+ 0318            OCT    4               R3D4           =(1)
+ 0319            OCT    4               R3D3           =(2)
+ 0320            OCT    4               R3D2           =(3)
+ 0321            OCT    4               R3D1           =(4)
+ 0322            OCT    3               R2D5           =(5)
+ 0323            OCT    3               R2D4           =(6)
+ 0324            OCT    3               R2D3           =(7)
+ 0325            OCT    3               R2D2           =(8D)
+ 0326            OCT    3               R2D1           =(9D)
+ 0327            OCT    2               R1D5           =(10D)
+ 0328            OCT    2               R1D4           =(11D)
+ 0329            OCT    2               R1D3           =(12D)
+ 0330            OCT    2               R1D2           =(13D)
+ 0331            OCT    2               R1D1           =(14D)
+ 0332            TC     CCSHOLE         NO DSPCOUNT NUMBER = 15D
+ 0333            OCT    1               ND2            =(16D)
+ 0334            OCT    1               ND1            =(17D)
+ 0335            OCT    0               VD2            =(18D)
+ 0336  4         OCT    0               VD1            =(19D)
+ 0337   VERB     CAF    ZERO
+ 0338            TS     VERBREG
+ 0339            TS     CODE            VERB CANT USE 2BLANK SINCE THAT TURNS
+ 0340            CAF    VD1             THE FLASH OFF
+ 0341            TS     DSPCOUNT
+ 0342            TS     COUNT
+ 0343            TC     DSPIN
+ 0344            CAF    VD2
+ 0345            TS     COUNT
+ 0346            CAF    ZERO
+ 0347            TS     CODE
+ 0348            TC     DSPIN
+ 0349   N/VCOM   CAF    ZERO
+ 0350            TS     DECBRNCH
+ 0351            TS     REQRET          SET FOR ENTPAS0
+ 0352            CAF    ENDINST         IF DSPALARM OCCURS BEFORE FIRST ENTPAS0
+ 0353            TS     ENTRET          OR NVSUB, ENTRET MUST ALREADY BE SET
+A0354                                   TO TC ENDOFJOB
+ 0355            TC     ENDOFJOB
+ 0356   NOUN     CAF    ZERO
+ 0357            TS     NOUNREG
+ 0358            CAF    ND1             ND1, OCT 21 (DEC 17)
+ 0359            TS     DSPCOUNT
+ 0360            TC     2BLANK
+ 0361  4         TC     N/VCOM
+ 0362  4VD2      =      CRITCON         OCT 22
+ 0363   NEGSGN   TC     SIGNTEST
+ 0364            TC     -ON
+ 0365            CAF    TWO
+ 0366   BOTHSGN  AD     DECBRNCH        SET DEC COMP BIT TO 1 (IN DECBRNCH)
+ 0367            INDEX  INREL           BIT 5 FOR R1
+ 0368            AD     BIT7            BIT 4 FOR R2
+ 0369            TS     DECBRNCH        BIT 3 FOR R3
+ 0370   FIXCLPAS CCS    CLPASS          IF CLPASS IS + OR +0, MAKE IT +0.
+ 0371            CAF    ZERO
+ 0372            TS     CLPASS
+ 0373            TC     +1
+ 0374  2         TC     ENDOFJOB
+ 0375   POSGN    TC     SIGNTEST
+ 0376            TC     +ON
+ 0377            CAF    ONE
+ 0378  2         TC     BOTHSGN
+ 0379   +ON      XCH    Q
+ 0380            TS     SIGNRET
+ 0381            TC     GETINREL
+ 0382            INDEX  INREL
+ 0383            CAF    SGNTAB  -2
+ 0384            TS     SGNOFF
+ 0385            AD     ONE
+ 0386            TS     SGNON
+ 0387   SGNCOM   CAF    ZERO
+ 0388            TS     CODE
+ 0389            XCH    SGNOFF
+ 0390            TC     11DSPIN
+ 0391            CAF    BIT11
+ 0392            TS     CODE
+ 0393            XCH    SGNON
+ 0394            TC     11DSPIN
+ 0395            TC     SIGNRET
+ 0396   -ON      XCH    Q
+ 0397            TS     SIGNRET
+ 0398            TC     GETINREL
+ 0399            INDEX  INREL
+ 0400            CAF    SGNTAB  -2
+ 0401            TS     SGNON
+ 0402            AD     ONE
+ 0403            TS     SGNOFF
+ 0404  2         TC     SGNCOM
+ 0405   SGNTAB   OCT    5               -R1
+ 0406            OCT    3               -R2
+ 0407  4         OCT    0               -R3
+ 0408   SIGNTEST XCH    Q               ALLOWS +,- ONLY WHEN DSPCOUNT=R1D1,
+ 0409            TS     SIGNRET         R2D1, OR R3D1. ALLOWS ONLY FIRST OF
+ 04091           CAF    THREE           CONSECUTIVE +/- CHARACTERS
+ 04092           MASK   DECBRNCH
+ 04093           CCS    A               IF LOW 2 BITS OF DECBRNCH NOT = 0, SIGN
+ 04094           TC     ENDOFJOB        FOR THIS WORD ALREADY IN. REJECT.
+ 0410            CS     R1D1
+ 0411            TC     SGNTST1
+ 0412            CS     R2D1
+ 0413            TC     SGNTST1
+ 0414            CS     R3D1
+ 0415            TC     SGNTST1
+ 0416            TC     ENDOFJOB        NO MATCH FOUND. SIGN ILLEGAL
+ 0417   SGNTST1  AD     DSPCOUNT
+ 0418            CCS    A
+ 0419            TC     Q
+ 0420            TC     CCSHOLE
+ 0421            TC     Q
+ 0422  4         TC     SIGNRET         SIGN LEGAL
+R0423   ERROR LIGHT RESET RESETS TMALM, DSPALARM (CHECK FAIL), PROGALM, UNBLOCKS
+R0424   ENDPULSES, RESETS ERRUPT TRAP. IT ALSO FORCES BIT 12 OF ALL DSPTAB
+R0425  2ENTRIES TO ONE. RESETS UPACT LIGHT.
+ 0426   ERROR    CS     BIT4            RESTORE ORIGINAL C(DSPLOCK) BIT4 OF
+ 0427            INHINT                 STATE. THUS ERROR LIGHT RESET LEAVES
+ 0428            MASK   DSPLOCK         DSPLOCK UNCHANGED.
+ 0429            AD     21/22REG
+ 0430            TS     DSPLOCK
+ 0431            CS     BIT7            RESET ERRUPT TRAP
+ 0432            MASK   OUT1
+ 0433            AD     BIT7
+ 0434            TS     OUT1
+ 0435            CS     CFAILCON        RESET THE C RELAYS FOR IMU FAIL, CDUFAIL
+ 0436            MASK   DSPTAB  +11D    PIPA FAIL.
+ 0437            AD     BIT15
+ 0438            TS     DSPTAB  +11D
+ 0439            CS     ERCON
+ 0440            MASK   OUT1
+ 0441            TS     OUT1
+ 0442   TSTAB    CAF    BINCON          (DEC 10)
+ 0443            TS     ERCNT           ERCNT = COUNT
+ 0444            INHINT
+ 0445            INDEX  ERCNT
+ 0446            CCS    DSPTAB
+ 0447            AD     ONE
+ 0448            TC     ERPLUS
+ 0449            AD     ONE
+ 0450   ERMINUS  CS     A
+ 0451            MASK   NOTBIT12
+ 0452            TC     ERCOM
+ 0453   ERPLUS   CS     A
+ 0454            MASK   NOTBIT12
+ 0455            CS     A               MIGHT WANT TO RESET CLPASS, DECBRNCH,
+ 0456   ERCOM    INDEX  ERCNT           ETC.
+ 0457            TS     DSPTAB
+ 0458            RELINT
+ 0459            CCS    ERCNT
+ 0460            TC     TSTAB   +1
+ 0461            CCS    WASKSET
+ 0462            TC     ERROPT
+ 0463            TC     ERROPT
+ 0464            TC     ERROPT
+ 0465            XCH    IN3
+ 0466            XCH    IN3
+ 0467            MASK   LOW7
+ 0468  2         TS     WASKSET
+ 0469   ERROPT   CCS    WASOPSET
+ 0470            TC     ERROR1
+ 0471            TC     ERROR1
+ 0472            TC     ERROR1
+ 0473            XCH    IN3
+ 0474            XCH    IN3
+ 0475            MASK   OPTICSB
+ 0476  2         TS     WASOPSET
+ 0477   ERROR1   CAF    ZERO
+ 0478            TS     FAILREG
+ 0479            TS     OLDERR
+ 0480            TS     SFAIL
+ 0481            TS     CODE
+ 0482            CAF    SEVEN
+ 0483            TC     11DSPIN         TURN OFF UPACT LIGHT
+ 0484            TC     ENDOFJOB
+ 0485   OPTICSB  OCT    35000
+ 0486   ERCON    OCT    01131           BITS 1, 4, 5, 7, 10.
+A0487                                   PROGALM, TMFAIL, CHECK FAIL, ERRUPT TRAP
+A0488  2                                END PULSES.
+ 0489   NOTBIT12 OCT    73777
+ 0490  4CFAILCON OCT    40340
+R0491   CLEAR BLANKS WHICH R1, R2, R3 IS CURRENT OR LAST TO BE DISPLAYED(PERTINE
+R0492   NT XREG,YREG,ZREG IS CLEARED). SUCCESSIVE CLEARS TAKE CARE OF EACH RX
+R0493  2L/ RC UNTIL R1 IS DONE. THEN NO FURTHER ACTION
+R0494   THE SINGLE COMPONENT LOAD VERBS ALLOW ONLY THE SINGLE RC THAT IS
+R0495  2APPROPRIATE TO BE CLEARED.
+R0496   CLPASS   +0  PASS0, CAN BE BACKED UP
+R0497            +NZ  HIPASS, CAN BE BACKED UP
+R0498  2         -NZ  PASS0, CANNOT BE BACKED UP
+ 0499   CLEAR    CCS    DSPCOUNT
+ 0500            AD     ONE
+ 0501            TC     +2
+ 0502            AD     ONE
+ 0503            INDEX  A               DO NOT CHANGE DSPCOUNT BECAUSE MAY
+ 0504            CAF    INRELTAB        FAIL LEGALTST.
+ 05041           TS     INREL           MUST SET INREL, EVEN FOR HIPASS.
+ 0505            CCS    CLPASS
+ 0506            TC     CLPASHI         +
+ 0507            TC     +2              +0    IF CLPASS IS +0 OR -, IT IS PASS0
+ 0508            TC     +1              -
+ 0509            TC     LEGALTST
+ 0510            TC     CLEAR1
+ 0511   CLPASHI  CCS    INREL
+ 0512            TS     INREL
+ 0513            TC     LEGALTST
+ 0514            XCH    REQRET
+ 0515            AD     DOUBLK  +2      +3 TO - NUMBER. BACKS UP DATA REQUESTS
+ 0516            TS     REQRET
+ 0517            XCH    INREL
+ 0518            TS     MIXTEMP         TEMP STORAGE FOR INREL
+ 0519            XCH    VERBREG         DECREMENT VERB AND RE-DISPLAY
+ 0520            AD     NEG1
+ 0521            TS     VERBREG
+ 0522            TC     BANKCALL
+ 0523            CADR   UPDATVB
+ 0524            XCH    MIXTEMP
+ 0525            TS     INREL           RESTORE INREL
+ 0526   CLEAR1   TC     CLR5
+ 0527            CAF    ONE
+ 0528            AD     CLPASS          ONLY IF CLPASS IS + OR +0,
+ 0529            TS     CLPASS          SET FOR HIGHER PASS.
+ 0530            TC     ENDOFJOB
+ 0531   CLR5     XCH    Q
+ 0532            TS     WRDRET          USES 5BLANK  BUT AVOIDS ITS TC GETINREL
+ 0533            TC     5BLANK  +3
+ 0534   LEGALTST CS     TWO
+ 0535            AD     INREL
+ 0536            CCS    A
+ 0537            TC     Q               LEGAL  INREL G/ 2
+ 0538            TC     CCSHOLE
+ 0539            TC     ENDOFJOB        ILLEGAL   INREL= 0,1
+ 0540  4         TC     Q               LEGAL    INREL = 2
+R0541   5BLANK BLANKS 5 CHAR DISPLAY WORD IN R1, R2, OR R3. IT ALSO ZEROES XREG,
+R0542   YREG, OR ZREG.PLACE ANY + DSPCOUNT NUMBER FOR PERTINENT RC INTO DSPCOUNT
+R0543  2DSPCOUNT IS LEFT SET TO LEFT MOST DSP NUMB FOR RC JUST BLANKED.
+ 0544   5BLANK   XCH    Q
+ 0545            TS     WRDRET
+ 0546            TC     GETINREL
+ 0547            CAF    ZERO
+ 0548            INDEX  INREL
+ 0549            TS     VERBREG         ZERO X, Y, Z REG.
+ 0550            INDEX  INREL
+ 0551            TS     XREGLP  -2
+ 0552            TS     CODE
+ 0553            INDEX  INREL           ZERO PERTINENT DEC COMP BIT.
+ 0554            CS     BIT7            PROTECT OTHERS
+ 0555            MASK   DECBRNCH
+ 0556            MASK   BRNCHCON        ZERO LOW 2 BITS.
+ 0557            TS     DECBRNCH
+ 0558            INDEX  INREL
+ 0559            CAF    SINBLANK -2     BLANK ISOLATED CHAR SEPARATELY
+ 0560            TS     COUNT
+ 0561            TC     DSPIN
+ 0562   5BLANK1  INDEX  INREL
+ 0563            CAF    DOUBLK  -2
+ 0564            TS     DSPCOUNT
+ 0565            TC     2BLANK
+ 0566            CS     TWO
+ 0567            AD     DSPCOUNT
+ 0568            TS     DSPCOUNT
+ 0569            TC     2BLANK
+ 0570            INDEX  INREL
+ 0571            CAF    R1D1    -2
+ 0572            TS     DSPCOUNT        SET DSPCOUNT TO LEFT MOST DSP NUMBER
+ 0573  2         TC     WRDRET          OF REG. JUST BLANKED
+ 0574   SINBLANK OCT    16              DEC 14
+ 0575            OCT    5
+ 0576            OCT    4
+ 0577   DOUBLK   OCT    15              DEC 13
+ 0578            OCT    11              DEC 9
+ 0579  2         OCT    3
+ 0580  2BRNCHCON OCT    77774
+R0581   2BLANK BLANKS TWO CHAR. PLACE DSP NUMBER OF LEFT CHAR  OF THE PAIR INTO
+R0582  2DSPCOUNT. THIS NUMBER IS LEFT IN DSPCOUNT
+ 0583   2BLANK   XCH    Q
+ 0584            TS     BLANKRET
+ 0585            CS     DSPCOUNT
+ 0586            CS     A
+ 0587            TS     SR
+ 0588            CS     BLANKCON
+ 0589            INHINT
+ 0590            INDEX  SR
+ 0591            XCH    DSPTAB
+ 0592            CCS    A
+ 0593            TC     INCNOUT         IF OLD CONTENTS +,+1 TO NOUT
+ 0594            TC     CCSHOLE
+ 0595            RELINT                 IF -,NOUT OK
+ 0596            TC     BLANKRET
+ 0597  2BLANKCON OCT    4000
+ 0598   INCNOUT  XCH    NOUT
+ 0599            AD     ONE
+ 0600            TS     NOUT
+ 0601            INDEX  Q
+ 0602  8         TC     1               RETURN TO 2+ L(CALLING TC)
+R0603   ENTER PASS 0 IS THE EXECUTE FUNCTION. HIGHER ORDER ENTERS ARE TO LOAD
+R0604   DATA. THE SIGN OF REQRET DETERMINES THE PASS, + FOR PASS 0,- FOR HIGHER
+R0605  2PASSES.
+ 0606  2         SETLOC 16000
+ 0607   NVSUBB   TC     NVSUB1          STANDARD LEAD INS. DONT MOVE.
+ 0608   GRABUSYB TC     GRABUSY1
+ 0609   NVSUBSYB TC     NVSUBSY1
+ 0610   DSPMM    XCH    Q
+ 0611            TS     UPDATRET
+ 0612            TC     DSPMM1
+ 0613   LOADLV1  TC     LOADLV
+A0614  4                                END OF STANDARD LEAD INS.
+ 0615   ENTER    CAF    ZERO
+ 0616            TS     CLPASS
+ 0617            CAF    ENDINST
+ 0618            TS     ENTRET
+ 0619            CCS    REQRET
+ 0620            TC     ENTPAS0         IF +, PASS 0
+ 0621            TC     ENTPAS0         IF +, PASS 0
+ 0622            TC     +1              IF -, NOT PASS 0
+ 0623            CAF    THREE           IF DEC, ALARM IF LESS THAN 5 CHAR IN,
+ 0624            MASK   DECBRNCH        BUT LEAVE REQRET - AND FLASH ON, SO
+ 0625            CCS    A               OPERATOR CAN SUPPLY MISSING NUMERICAL
+ 0626            TC     +2              CHARACTERS AND CONTINUE.
+ 0627            TC     ACCEPTWD        OCTAL. ANY NUMBER OF CHAR OK.
+ 0628            CCS    DSPCOUNT
+ 0629            TC     GODSPALM        LESS THAN 5 CHAR DEC(DSPCOUNT IS +)
+ 0630            TC     GODSPALM        LESS THAN 5 CHAR DEC(DSPCOUNT IS +)
+ 0631            TC     +1              5 CHAR IN (DSPCOUNT IS -)
+ 0632   ACCEPTWD CS     REQRET          5 CHAR IN (DSPCOUNT IS -)
+ 0633            TS     REQRET          SET REQRET +.
+ 0634            TC     BANKCALL
+ 0635            CADR   FLASHOFF
+ 0636  2         TC     REQRET
+ 0637  2ENTEXIT  =      ENTRET
+ 0638   ENTPAS0  CAF    ZERO             NOUN VERB SUB ENTERS HERE
+ 0639            TS     DECBRNCH
+ 0640   TESTVB   CS     VERBREG         IF VERB IS 32-77, SKIP NOUN TEST
+ 0641            AD     LOWVERB         32-VB
+ 0642            CCS    A
+ 0643            TC     TESTNN          VERB L/ 32
+ 0644   LOWVERB  OCT    32              LOWER VERB THAT AVOIDS NOUN TEST
+ 0645            TC     +1              VERB G/ 32
+ 0646            TC     VERBFAN         VERB=32
+ 0647   TESTNN   CAF    LODNNLOC        SWITCH BANKS TO NOUN TABLE READING
+ 0648            TC     SWCALL          ROUTINE.
+ 0649            INDEX  MIXBR
+ 0650            TC     +0
+ 0651            TC     +2              NORMAL
+ 0652            TC     MIXNOUN         MIXED
+ 0653            CCS    NNADTEM         NORMAL
+ 0654            TC     VERBFAN -2           NORMAL IF +
+ 0655            TC     GODSPALM        NOT IN USE   IF +0
+ 0656            TC     REQADD          SPECIFY MACHINE ADDRESS IF -
+ 0657            CAF    R3D1            AUGMENT MACHINE ADDRESS IF -0
+ 0658            TS     DSPCOUNT
+ 0659            XCH    NOUNADD
+ 0660            AD     ONE
+ 0661            TS     NOUNADD
+ 0662            TC     DSPOCTWD
+ 0663            TC     VERBFAN
+ 0664   REQADD   CAF    BIT15           SET CLPASS FOR PASS0 ONLY
+ 0665            TS     CLPASS
+ 0666            CS     ENDINST
+ 0667            AD     ENTEXIT
+ 0668            CCS    A               TEST IF REACHED HERE FROM INTERNAL OR
+ 0669            TC     INTMATBS                    FROM EXTERNAL
+ 0670            TC     CCSHOLE
+ 0671            TC     INTMATBS
+ 0672            TC     REQDATZ         EXTERNAL MACH ADDR TO BE SPECIFIED
+ 0673            CCS    DECBRNCH
+ 0674            TC     GODSPALM        ALARM IF DECIMAL USED FOR MATBS
+ 0675            XCH    ZREG            OCTAL USED    OK
+ 0676            TS     NOUNADD
+ 0677            CAF    LODNNLOC        SWITCH BANKS TO NOUN TABLE READING
+ 0678            TC     SWCALL          ROUTINE.
+ 0679  2         TC     VERBFAN
+ 0680  2LODNNLOC CADR   LODNNTAB
+ 0681   INTMATBS CS     BIT4
+ 0682            MASK   VERBREG         MAKES VB 15 LOOK LIKE VB 05.
+ 0683            AD     NEG5
+ 0684            CCS    A
+ 0685            TC     DSPADD          VB NOT = 05 OR 15, DISPLAY ADDRESS.
+ 0686   NEG5     OCT    77772
+ 0687            TC     DSPADD          VB NOT = 05 OR 15, DISPLAY ADDRESS.
+ 0688            TC     VERBFAN         VB = 05 OR 15, DO NOT DISPLAY ADDRESS.
+ 0689   DSPADD   CAF    R3D1
+ 0690            TS     DSPCOUNT
+ 0691            CS     NOUNADD
+ 0692            CS     A
+ 0693            TC     DSPOCTWD
+ 0694  2         TC     VERBFAN
+ 0695            AD     ONE
+ 0696            TS     NOUNADD
+ 0697   VERBFAN  CS     LST2CON
+ 0698            AD     VERBREG         VERB-LST2CON
+ 0699            CCS    A
+ 0700            AD     ONE             VERB G/ LST2CON
+ 0701            TC     +2
+ 0702            TC     VBFANDIR        VERB L/ LST2CON
+ 0703   JAMEXTVB TS     MPAC            SPECIAL ENTRY FOR FORCING EXTENDED VERB.
+ 0704            TC     RELDSP          RELEASE DISPLAY SYST
+ 0705            XCH    MPAC            ALSO TURN OFF RELEASE DISPLAY SYST LIGHT
+ 0706            AD     LST2CADR
+ 0707            TC     BANKJUMP
+ 0708   LST2CON  OCT    40              FIRST LST2 VERB
+ 0709  2LST2CADR CADR   LST2FAN         THE LIST2 FAN IS LOCATED IN BANK 05
+ 0710   VBFANDIR INDEX  VERBREG
+ 0711            CAF    VERBTAB
+ 0712  2         TC     BANKJUMP
+ 0713   VERBTAB  CADR   GODSPALM        VB00 ILLEGAL
+ 0714            CADR   DSPA            VB01 DISPLAY OCT COMP 1 (R1)
+ 0715            CADR   DSPB            VB02 DISPLAY OCT COMP 2 (R1)
+ 0716            CADR   DSPC            VB03 DISPLAY OCT COMP 3 (R1)
+ 0717            CADR   DSPAB           VB04 DISPLAY OCT COMP 1,2 (R1,R2)
+ 0718            CADR   DSPABC          VB05 DISPLAY OCT COMP 1,2,3 (R1,R2,R3)
+ 0719            CADR   DECDSP          VB06 DECIMAL DISPLAY
+ 0720            CADR   DSPDPDEC        VB07 DP DECIMAL DISPLAY (R1,R2)
+ 0721            CADR   VBRQWAIT        VB10 REQUEST WAITLIST
+ 0722            CADR   MONITOR         VB11 MONITOR OCT COMP 1 (R1)
+ 0723            CADR   MONITOR         VB12 MONITOR OCT COMP 2 (R1)
+ 0724            CADR   MONITOR         VB13 MONITOR OCT COMP 3 (R1)
+ 0725            CADR   MONITOR         VB14 MONITOR OCT COMP 1,2 (R1,R2)
+ 0726            CADR   MONITOR         VB15 MONITOR OCT COMP 1,2,3 (R1,R2,R3)
+ 0727            CADR   MONITOR         VB16 MONITOR DECIMAL
+ 0728            CADR   MONITOR         VB17 MONITOR DP DEC  (R1,R2)
+ 0729   REQEXLOC CADR   VBRQEXEC        VB20 REQUEST EXECUTIVE
+ 0730            CADR   ALOAD           VB21 LOAD COMP 1 (R1)
+ 0731            CADR   BLOAD           VB22 LOAD COMP 2 (R2)
+ 0732            CADR   CLOAD           VB23 LOAD COMP 3 (R3)
+ 0733            CADR   ABLOAD          VB24 LOAD COMP 1,2 (R1,R2)
+ 0734            CADR   ABCLOAD         VB25 LOAD COMP 1,2,3 (R1,R2,R3)
+ 0735            CADR   GODSPALM        VB26 SPARE
+ 0736            CADR   GODSPALM        VB27 SPARE
+ 0737            CADR   GODSPALM        VB30 SPARE
+ 0738            CADR   DSPBANK         VB31 BANK DISPLAY
+ 0739            CADR   BUMP            VB32 C(R2) INTO R3, C(R1) INTO R2
+ 0740            CADR   VBPROC          VB33 PROCEED WITHOUT DATA
+ 0741            CADR   VBTERM          VB34 TERMINATE CURRENT TEST OR LOAD REQ
+ 0742            CADR   VBRELDSP        VB35 RELEASE DISPLAY SYST
+ 0743            CADR   SLAPB           VB36 FRESH START
+ 0744  4ENDVBFAN CADR   MMCHANG         VB37 CHANGE MAJOR MODE
+R0745  8THE LIST2 VERBFAN IS LOCATED IN BANK 05.
+R0746   NNADTAB CONTAINS A RELATIVE ADDRESS, IDADDREL(IN LOW 10 BITS), REFERRING
+R0747   TO WHERE 3 CONSECUTIVE ADDRESSES ARE STORED (IN IDADDTAB).
+R0748   MIXNOUN GETS DATA AND STORES IN MIXTEMP,+1,+2. IT SETS NOUNADD FOR
+R0749  2 MIXTEMP.
+ 0750   MIXNOUN  CCS    NNADTEM
+ 0751            TC     +4              +  IN USE
+ 0752            TC     GODSPALM        +0  NOT IN USE
+ 0753            TC     +2              -  IN USE
+ 0754            TC     +1              -0  IN USE
+ 0755            CS     SIX
+ 0756            AD     VERBREG
+ 0757            CCS    A               AVOID MIXNOUN SWAP FOR OTHER THAN
+ 0758            TC     VERBFAN              DISPLAY VERBS
+ 0759            TC     CCSHOLE
+ 0760            TC     +1
+ 0761            CAF    TWO
+ 0762   MIXNN1   TS     NOUNTEM
+ 0763            AD     MIXAD
+ 0764            TS     NOUNADD         SET NOUNADD TO MIXTEMP + K
+ 0765            INDEX  NOUNTEM
+ 0766            CS     IDAD1TEM        GET IDADDTAB ENTRY FOR COMPONENT K
+ 0767            CS     A               OF NOUN.
+ 0768            TS     DECOUNT
+A0769                                   TEST FOR DP(FOR OCT DISPLAY). IF SO, GET
+A0770                                     MINOR PART ONLY.
+ 0771            MASK   HI5
+ 0772            TC     LEFT5           SF ROUT NUMBER IN A
+ 0773            TC     DPTEST
+ 0774            TC     MIXNN2          NO DP
+ 0775            CAF    ONE             DP  GET MINOR PART
+ 0776            AD     DECOUNT
+ 0777            TS     DECOUNT
+ 0778   MIXNN2   XCH    DECOUNT
+ 0779            MASK   LOW10           ESUBK (NO DP)  OR (ESUBK)+1    FOR DP
+ 0780            INDEX  A               PICK UP C(ESUBK)  NOT DP
+ 0781            CS     0               OR C((ESUBK)+1)  FOR DP MINOR PART
+ 0782            CS     A
+ 0783            INDEX  NOUNADD
+ 0784            XCH    0               STORE IN MIXTEM + K
+ 0785            CCS    NOUNTEM
+ 0786            TC     MIXNN1
+ 0787  2         TC     VERBFAN
+ 0788  4MIXAD    TC     MIXTEMP
+ 0789   DPTEST   TS     SFTEMP1         ENTER WITH SF ROUT NUMBER IN A.
+ 0790            XCH    Q               RETURNS TO L+1 IF NO DP
+ 0791            XCH    SFTEMP1         RETURNS TO L+2 IF DP
+ 0792            INDEX  A
+ 0793            TC     +1
+ 0794            TC     SFTEMP1         OCTAL ONLY  NO DP
+ 0795            TC     SFTEMP1         FRACT NO DP
+ 0796            TC     SFTEMP1         DEG  NO DP
+ 0797            TC     SFTEMP1         ARITH  NO DP
+ 0798            TC     DPTEST1         DP1OUT
+ 0799            TC     DPTEST1         DP2OUT
+ 0800            TC     SFTEMP1         OPDEG  NO DP
+ 0801            TC     DPTEST1         DP3OUT
+ 0802   DPTEST1  INDEX  SFTEMP1
+ 0803  4         TC     1               RETURN TO L+2
+ 0804   REQDATX  CS     Q
+ 0805            TS     REQRET
+ 0806            CAF    R1D1
+ 0807            TC     REQCOM
+ 0808   REQDATY  CS     Q
+ 0809            TS     REQRET
+ 0810            CAF    R2D1
+ 0811            TC     REQCOM
+ 0812   REQDATZ  CS     Q
+ 0813            TS     REQRET
+ 0814            CAF    R3D1
+ 0815   REQCOM   TS     DSPCOUNT
+ 0816            TC     BANKCALL
+ 0817            CADR   5BLANK
+ 0818            TC     BANKCALL
+ 0819            CADR   FLASHON
+ 0820            CS     ENDINST
+ 0821            AD     ENTEXIT
+ 0822            CCS    A
+ 0823            TC     +4              ENTEXIT NOT ENDOFJOB. NVSUB INITIATED
+ 0824            TC     CCSHOLE
+ 0825            TC     +2              ENTEXIT NOT ENDOFJOB. NVSUB INITIATED
+ 0826            TC     ENTEXIT         ENTEXIT = ENDOFJOB. EXTERNALLY INITIATED
+ 0827            CS     ZERO            NVSUB INITIATED LOAD. SET CADRSTOR TO -0
+ 0828            TS     CADRSTOR
+ 0829  2         TC     ENTEXIT
+R0830   IF NVSUB INITIATED LOAD, SET CADRSTOR TO -0 TO TELL RECALTST TO RELEASE
+R0831  4DISPLAY IF ENDIDLE WAS NOT USED. (NECESSARY FOR DATAWAIT)
+ 0832            TS     NOUNREG
+ 0833   UPDATNN  XCH    Q
+ 0834            TS     UPDATRET
+ 0835            CAF    LODNNLOC        SWITCH BANKS TO NOUN TABLE READING
+ 0836            TC     SWCALL          ROUTINE.
+ 0837            CCS    NNADTEM
+ 0838            AD     ONE             NORMAL
+ 0839            TC     PUTADD
+ 0840            TC     PUTADD  +1      MATBS  DONT CHANGE NOUNADD
+ 0841            TC     PUTADD  +1      MATBI  DONT CHANGE NOUNADD
+ 0842   PUTADD   TS     NOUNADD
+ 0843            CAF    ND1
+ 0844            TS     DSPCOUNT
+ 0845            CS     NOUNREG
+ 0846  2         TC     UPDAT1
+ 0847            TS     VERBREG
+ 0848   UPDATVB  XCH    Q
+ 0849            TS     UPDATRET
+ 0850            CAF    VD1
+ 0851            TS     DSPCOUNT
+ 0852            CS     VERBREG
+ 0853   UPDAT1   CS     A
+ 0854            TC     DSP2BIT
+ 0855  4         TC     UPDATRET
+ 0856   GODSPALM TC     POSTJUMP
+ 0857            CADR   DSPALARM
+P0858            NOUN   TABLES
+R0859   NOUN CODE L/ 55, NORMAL CASE. NOUN CODE G/E 55, MIXED NOUN CASE.
+R0860   FOR NORMAL CASE, NNADTAB CONTAINS ONE MACHINE ADDRESS FOR EACH NOUN.
+R0861   +0 INDICATES NOUN NOT USED.   - ENTRY IDICATES MACHINE ADDRESS TO BE
+R0862  2SPECIFIED.      -0 ENTRY INDICATES AUGMENT OF LAST MACHINE ADDRESS.
+R0863   FOR MIXED CASE, NNADTAB CONTAINS ONE INDIRECT ADDRESS(IDADDREL) IN LOW
+R0864  210 BITS, AND THE COMPONENT CODE NUMBER IN THE HIGH 5 BITS.
+R0865  2NNTYPTAB IS A PACKED TABLE OF THE FORM MMMMMNNNNNPPPPP.
+R0866   FOR THE NORMAL CASE, M-S ARE THE COMPONENT CODE NUMBER.
+R0867                        N-S ARE THE SF ROUTINE CODE NUMBER.
+R0868  2                     P-S ARE THE SF CONSTANT CODE NUMBER.
+R0869   MIXED CASE,M-S ARE THE SF CONSTANT3 CODE NUMBER     3 COMPONENT CASE
+R0870              N-S ARE THE SF CONSTANT2 CODE NUMBER
+R0871              P-S ARE THE SF CONSTANT1 CODE NUMBER
+R0872              N-S ARE THE SF CONSTANT2 CODE NUMBER     2 COMPONENT CASE
+R0873              P-S ARE THE SF CONSTANT1 CODE NUMBER
+R0874  2           P-S ARE THE SF CONSTANT1 CODE NUMBER      1 COMPONENT CASE
+R0875   THERE IS ALSO AN INDIRECT ADDRESS TABLE(IDADDTAB) FOR MIXED CASE ONLY.
+R0876   ENTRY IS OF FORM RRRRREEEEEEEEEE. IDADDREL IS THE RELATIVE ADDRESS OF
+R0877   THE FIRST OF THESE ENTRIES.
+R0878   R-S ARE THE SF ROUTINE CODE NUMBERS FOR COMPONENT K
+R0879   E-S ARE THE MACHINE ADDRESS FOR COMPONENT K
+R0880   THERE IS ONE ENTRY IN THIS TABLE FOR EACH COMPONENT OF A MIXED NOUN
+R0881  2THEY ARE LISTED IN ORDER OF ASCENDING K.
+R0882   IN OCTAL DISPLAY AND LOAD (OCT OR DEC) VERBS, EXCLUDE USE OF VERBS WHOSE
+R0883   COMPONENT NUMBER IS GREATER THAN THE NUMBER OF COMPONENTS IN NOUN.
+R0884   ALL MACHINE ADDRESS TO BE SPECIFIED NOUNS ARE 1 COMPONENT.
+R0885   ONLY EXCEPTION IS NOUN 01 TO ALLOW OCTAL DISPLAYS AND LOADS OF
+R0886  4AN UNCONTOLLED NUMBER OF COMPONENTS.
+R0887   IN MULTI-COMPONENT LOAD VERBS, NO MIXING OF OCTAL AND DECIMAL DATA
+R0888  2COMPONENT WORDS IS ALLOWED. ALARM IF VIOLATION.
+R0889   IN DECIMAL LOADS OF DATA, 5 NUMERICAL CHARACTERS MUST BE KEYED IN
+R0890   BEFORE EACH ENTER. IF NOT, ALARM.
+P0891            DISPLAY  VERBS
+ 0892   DSPABC   CS     TWO
+ 0893            TC     COMPTEST
+ 0894            INDEX  NOUNADD
+ 0895            CS     2
+ 0896            XCH    BUF     +2
+ 0897   DSPAB    CS     ONE
+ 0898            TC     COMPTEST
+ 0899            INDEX  NOUNADD
+ 0900            CS     1
+ 0901            XCH    BUF     +1
+ 0902   DSPA     TC     TSTFORDP
+ 0903            INDEX  NOUNADD
+ 0904            CS     0
+ 0905   DSPCOM1  XCH    BUF
+ 0906            TC     DSPCOM2
+ 0907   DSPB     CS     ONE
+ 0908            TC     COMPTEST
+ 0909            INDEX  NOUNADD
+ 0910            CS     1
+ 0911            TC     DSPCOM1
+ 0912   DSPC     CS     TWO
+ 0913            TC     COMPTEST
+ 0914            INDEX  NOUNADD
+ 0915            CS     2
+ 0916            TC     DSPCOM1
+ 0917   DSPCOM2  CS     TWO             A  B  C  AB  ABC
+ 0918            AD     VERBREG         -1 -0 +1 +2  +3   IN A
+ 0919            CCS    A               +0 +0 +0 +1  +2    IN A AFTER CCS
+ 0920            TC     DSPCOM3
+ 0921            TC     ENTEXIT
+ 0922            TC     +1
+ 0923   DSPCOM3  TS     DISTEM          +0,+1,+2 INTO DISTEM
+ 0924            INDEX  A
+ 0925            CAF    R1D1
+ 0926            TS     DSPCOUNT
+ 0927            INDEX  DISTEM
+ 0928            CS     BUF
+ 0929            TC     DSPOCTWD
+ 0930            XCH    DISTEM
+ 0931  2         TC     DSPCOM2 +2
+R0932   COMPTEST ALARMS IF COMPONENT NUMBER OF VERB(LOAD OR OCT DISPLAY) IS
+R0933   GREATER THAN THE HIGHEST COMPONENT NUMBER OF NOUN.
+R0934   NOUN 01 IS EXCLUDED FROM TEST.
+ 0935   COMPTEST TS     SFTEMP1         - VERB COMP
+ 0936            XCH    Q
+ 0937            TS     SFTEMP2
+ 0938   COMPTST1 CS     ONE
+ 0939            AD     NOUNREG
+ 0940            CCS    A
+ 0941            TC     +4              NOUN NOT = 01
+ 0942            TC     CCSHOLE
+ 0943            TC     +2              NOUN NOT = 01
+ 0944            TC     SFTEMP2         NOUN = 01. ANY COMP OK
+ 0945            INDEX  MIXBR
+ 0946            CAF    COMPICK -1
+ 0947            INDEX  A
+ 0948            CS     0               MUST NOT DESTROY NNADTEM OR NNTYPTEM
+ 0949            CS     A
+ 0950            MASK   HI5
+ 0951            TC     LEFT5           NOUN COMP
+ 0952            AD     SFTEMP1         NOUN COMP - VERB COMP
+ 0953            CCS    A
+ 0954            TC     SFTEMP2         NOUN COMP G/ VERB COMP
+ 0955            TC     CCSHOLE
+ 0956            TC     GODSPALM        NOUN COMP L/ VERB COMP
+ 0957  4         TC     SFTEMP2         NOUN COMP = VERB COMP
+ 0958   TSTFORDP XCH    Q               TEST FOR DP. IF SO, GET MINOR PART ONLY.
+ 0959            TS     DECOUNT
+ 0960            INDEX  MIXBR
+ 0961            TC     +0
+ 0962            TC     +2              NORMAL
+ 0963            TC     DECOUNT         MIXED CASE ALREADY HANDLED IN MIXNOUN
+ 0964            TC     SFRUTNOR
+ 0965            TC     DPTEST
+ 0966            TC     DECOUNT         NO DP
+ 0967            XCH    NOUNADD         DP
+ 0968            AD     ONE
+ 0969            TS     NOUNADD         E+1 INTO NOUNADD FOR MINOR PART.
+ 0970  4         TC     DECOUNT
+ 0971   COMPICK  ADRES  NNTYPTEM
+ 0972  2         ADRES  NNADTEM
+ 0973   DECDSP   INDEX  MIXBR           NORMAL                MIXED
+ 0974            CAF    COMPICK    -1   ADRES NNTYPTEM        ADRES NNADTEM
+ 0975            INDEX  A
+ 0976            CS     0               MUST NOT DESTROY NNADTEM OR NNTYPTEM
+ 0977            CS     A               C(NNTYPTEM)           C(NNADTEM)
+ 0978            MASK   HI5             GET HI5 OF NNTYPTAB(NORM)OF NNADTAB(MIX)
+ 0979            TC     LEFT5
+ 0980            TS     DECOUNT         COMP NUMBER INTO DECOUNT
+ 0981   DSPDCGET TS     DECTEM          PICKS UP DATA
+ 0982            AD     NOUNADD         DECTEM  1COMP +0, 2COMP +1, 3COMP +2
+ 0983            INDEX  A
+ 0984            CS     0
+ 0985            INDEX  DECTEM
+ 0986            XCH    XREG            CANT USE BUF SINCE DMP USES IT.
+ 0987            CCS    DECTEM
+ 0988            TC     DSPDCGET        MORE TO GET
+ 0989   DSPDCPUT CAF    ZERO            DISPLAYS DATA
+ 0990            TS     MPAC    +1      DECOUNT 1COMP +0, 2COMP +1, 3COMP +2
+ 0991            TS     MPAC    +2
+ 0992            INDEX  DECOUNT
+ 0993            CAF    R1D1
+ 0994            TS     DSPCOUNT
+ 0995            INDEX  DECOUNT
+ 0996            CS     XREG
+ 0997            TS     MPAC
+ 0998            TC     SFCONUM         SF CON NUMB IN A
+ 0999            TS     SFTEMP2
+ 1000            TC     BANKCALL        SWITCH BANKS TO SF CONSTANT READING
+ 1001            CADR   GTSFOUT         ROUTINE. LOADS SFTEMP1, SFTEMP2.
+ 1002            INDEX  MIXBR
+ 1003            TC     +0
+ 1004            TC     DSPSFNOR
+ 1005            TC     SFRUTMIX
+ 1006  2         TC     DECDSP3
+ 1007   DSPSFNOR TC     SFRUTNOR
+ 1008  2         TC     DECDSP3
+ 1009   DSPDCEND TC     BANKCALL        ALL SFOUT ROUTINES END HERE
+ 1010            CADR   DSPDECWD
+ 1011            CCS    DECOUNT
+ 1012            TC     +2
+ 1013            TC     ENTEXIT
+ 1014            TS     DECOUNT
+ 1015  4         TC     DSPDCPUT        MORE TO DISPLAY
+ 1016   DECDSP3  INDEX  A
+ 1017            CAF    SFOUTABR
+ 1018  2         TC     BANKJUMP
+ 1019   SFOUTABR CADR   DSPALARM        ALARM IF DEC DISP WITH OCTAL ONLY NOUN
+ 1020            CADR   DSPDCEND
+ 1021            CADR   DEGOUTSF
+ 1022  2         CADR   ARTOUTSF
+ 1023            CADR   DP1OUTSF
+ 1024            CADR   DP2OUTSF
+ 1025            CADR   OPDEGOUT
+ 1026            CADR   DP3OUTSF
+ 1027  4ENDRTOUT EQUALS
+R1028           THE FOLLOWING IS ATYPICAL SF ROUTINE . IT USES MPAC. LEAVES RESU
+R1029  4LTS IN MPAC, MPAC+1. ENDS WITH TC DSPDCEND
+ 1030  2         SETLOC INCNOUT +5
+R1031      DEGOUTSF SCALES BY .18 THE LOW 14 BITS OF ANGLE , ADDING .18 FOR
+R1032  2NUMBERS IN THE NEGATIVE (AGC) RANGE.
+ 1033   DEGOUTSF CAF    ZERO
+ 1034            TS     MPAC    +2      SET INDEX FOR FULL SCALE
+ 1035            TC     FIXRANGE
+ 1036            TC     +2              NO AUGMENT NEEDED (SFTEMP1 AND 2 ARE 0)
+ 1037            TC     SETAUG          SET AUGMENTER ACCORDING TO C(MPAC +2)
+ 1038  2         TC     DEGCOM
+R1039     OPDEGOUT SCALES BY .09 FOR ONE RANGE AND BY .45 FOR THE OTHER.
+R1040  4FOR THE .45 RANGE A .2 BIAS IS ALSO ADDED.
+R1041   OPDEGOUT USED TO TEST BIT 13 OF WASOPSET (1 = 90 DEG RANGE, 0 = 180).
+R1042   SINCE THAT BIT IS ALWAYS 1 IN BLOCK 50 - 100, DON:T TEST IT NOW
+ 1047   OPDEGOUT CCS    MPAC            90 DEG RANGE ALWAYS
+ 1048            XCH    MPAC            IF POS OR POS 0 THEN ADD BIAS AND
+ 1049            TC     +3              CORRECT FOR POSSIBLE OVERFLOW
+ 1050            TC     NEGOPT          IF NEG NON ZERO
+ 1051            AD     NEG1            IF NEG ZERO SUBTRACT 1
+ 1052            AD     20BIAS
+ 1053   BIASCOM  TS     MPAC            TEST FOR OVERFLOW
+ 1054            TC     +4              NO OVFLOW
+ 1055            CAF    BIT15           IF OVFLOW
+ 1056            AD     MPAC
+ 1057            TS     MPAC
+ 1058            CAF    TWO             SET MULTIPLIER TO .45
+ 1059  2         TC     DEGOUTSF +1
+ 1060   NEGOPT   XCH    MPAC            NEGATIVE CASE
+ 1061            AD     20BIAS
+ 1062            CCS    A
+ 1063            TC     BIASCOM         IF POS THEN SUBTRACT 1 BECAUSE OF 2SCOM
+ 1064            TC     CCSHOLE
+ 1065            AD     ONE             IF NEG RESTORE SUM
+ 1066            COM                    IF NEG 0 LEAVE NEG 0
+ 1067  2         TC     BIASCOM
+ 1068   SETAUG   INDEX  MPAC    +2      LOADS SFTEMP1 AND SFTEMP2 WITH THE
+ 1069            CAF    DEGTAB2         DP AUGMENTER CONSTANT
+ 1070            TS     SFTEMP2
+ 1071            INDEX  MPAC    +2
+ 1072            CAF    DEGTAB1
+ 1073            TS     SFTEMP1
+ 1074  2         TC     Q
+ 1075   FIXRANGE XCH    Q               IF MPAC IS + RETURN TO L+1
+ 1076            TS     WDRET           IF MPAC IS - RETURN TO L+2 AFTER
+ 1077            CCS    MPAC            MASKING OUT THE SIGN BIT
+ 1078            TC     WDRET
+ 1079            TC     WDRET
+ 1080            TC     +1
+ 1081            CS     BIT15
+ 1082            MASK   MPAC
+ 1083            TS     MPAC
+ 1084            INDEX  WDRET
+ 1085  2         TC     1
+ 1086   DEGCOM   INDEX  MPAC    +2      LOADS MULTIPLIER , DOES SHORTMP, AND
+ 1087            CAF    DEGTAB2         ADDS AUGMENTER.
+ 1088            TS     MPAC    +1
+ 1089            INDEX  MPAC    +2
+ 1090            CAF    DEGTAB1
+ 1091            XCH    MPAC            ADJUSTED ANGLE IN A
+ 1092            TC     SHORTMP
+ 1093            TC     DAD
+ 1094            ADRES  SFTEMP1
+ 1095  4         TC     SCOUTEND
+ 1096   DEGTAB1  OCT    05605           HIGH PART OF   .18
+ 1097            OCT    02702                          .09
+ 1098  2         OCT    16314           .45
+ 1099   DEGTAB2  OCT    03656           LOW PART OF    .18
+ 1100            OCT    21727                          .09
+ 1101  2         OCT    31463           .45
+ 1102  220BIAS   OCT    16040           20 DEG BIAS FOR OPTICS
+ 1103   ARTOUTSF XCH    SFTEMP2         ASSUMES POINT AT LEFT OF DP SFCON.
+ 1104            TS     MPAC    +1
+ 1105            XCH    SFTEMP1         HI PART OF SFCONSTANT
+ 1106            XCH    MPAC
+ 1107            TC     SHORTMP
+ 1108   SCOUTEND TC     POSTJUMP
+ 1109  2         CADR   DSPDCEND
+ 1110   DP1OUTSF TC     DPOUT           SCALES MPAC, MPAC +1 BY DP SCALE FACTOR
+ 1111            XCH    MPAC    +2      IN SFTEMP1, SFTEMP2.  THEN SCALE RESULT
+ 1112            XCH    MPAC    +1      BY B14.
+ 1113            TS     MPAC
+ 1114  4         TC     SCOUTEND
+ 1115   DP2OUTSF TC     DPOUT           SCALES MPAC , MPAC +1 BY DP SCALE FACTOR
+ 1116  4         TC     SCOUTEND
+ 1117   DP3OUTSF TC     DPOUT           ASSUMES POINT BETWEEN BITS 7-8 OF HIGH
+ 1118            TC     TPLEFT7         PART OF SFCON. SHIFTS RESULTS LEFT 7.
+ 1119  4         TC     SCOUTEND
+R1120   DPOUT PICKS UP FRESH DATA FOR BOTH HI AND LO COMPONENTS.
+R1121  2THIS IS NEEDED FOR TIME DISPLAY.
+ 1122   DPOUT    XCH    Q
+ 1123            TS     OVFIND
+ 1124            INDEX  MIXBR
+ 1125            TC     +0
+ 1126            TC     DPOUTNOR
+ 1127            INDEX  DECOUNT
+ 1128            CS     IDAD1TEM        GET IDADDTAB ENTRY FOR COMPONENT K
+ 1129            CS     A               OF NOUN.
+ 1130            MASK   LOW10           E SUBK
+ 1131   DPOUTCOM TS     MPAC    +2
+ 1132            INHINT
+ 1133            INDEX  MPAC    +2
+ 1134            CS     0               MIXED         NORMAL
+ 1135            COM                    C(ESUBK)      C(E)
+ 1136            XCH    MPAC
+ 1137            INDEX  MPAC    +2
+ 1138            CS     1               C((E SUBK)+1)      C(E+1)
+ 1139            RELINT
+ 1140            COM
+ 1141            XCH    MPAC    +1
+ 1142            CCS    MPAC    +1      TEST IF LOW PART +0 IN CASE PICKING UP
+ 1143            TC     +3              TIME, IF SO COULD HAVE OVFLOD, SO GET
+ 1144            TC     +0CASE          UP TO DATE HIGH PART. IF NOT +0, NO
+ 1145            TC     +1              PROBLEM.
+ 1146   +0RET    TC     DMP
+ 1147            XCADR  SFTEMP1
+ 1148            TC     BANKCALL
+ 1149            CADR   TPAGREE
+ 1150  2         TC     OVFIND
+ 1151   +0CASE   INDEX  MPAC    +2
+ 1152            AD     0
+ 1153            XCH    MPAC
+ 1154  2         TC     +0RET
+ 1155   DPOUTNOR CS     NOUNADD
+ 1156            CS     A               E
+ 1157  4         TC     DPOUTCOM
+R1158   THIS IS A SPECIAL PURPOSE VERB FOR DISPLAYING A DOUBLE PRECISION AGC
+R1159   WORD AS 10 DECIMAL DIGITS ON THE AGC DISPLAY PANEL.  IT CAN BE USED WITH
+R1160   ANY NOUN, EXCEPT MIXED NOUNS. IT DISPLAYS THE CONTENTS
+R1161   OF THE REGISTER NOUNADD IS POINTING TO .  IF USED WITH NOUNS WHICH ARE
+R1162   INHERENTLY NOT DP SUCH AS THE CDU COUNTERS THE DISPLAY WILL BE GARBAGE.
+R1163  4DISPLAY IS IN R1 AND R2 ONLY WITH THE SIGN IN R1.
+ 1164   DSPDPDEC INDEX  MIXBR
+ 1165            TC     +0
+ 1166            TC     +2              NORMAL NOUN
+ 1167            TC     DSPALARM
+ 1168            INDEX  NOUNADD
+ 1169            CS     0
+ 1170            COM
+ 1171            XCH    MPAC            LOAD MPAC WITH HIGH ORDER PART
+ 1172            INDEX  NOUNADD
+ 1173            CS     1
+ 1174            COM
+ 1175            XCH    MPAC    +1      LOAD MPAC+1 WITH LOW ORDER PART
+ 1176            CAF    R1D1
+ 1177            TS     DSPCOUNT
+ 1178            CAF    ZERO
+ 1179            TS     MPAC  +2
+ 1180            TC     BANKCALL
+ 1181            CADR   TPAGREE
+ 1182            TC     DSP2DEC
+ 1183   ENDDPDEC TC     ENTEXIT
+P1184  4         LOAD   VERBS
+ 1185  2         SETLOC ENDRTOUT
+ 1186   ABCLOAD  CS     TWO
+ 1187            TC     COMPTEST
+ 1188            CAF    VBSP1LD
+ 1189            TC     UPDATVB  -1
+ 1190            TC     REQDATX
+ 1191            CAF    VBSP2LD
+ 1192            TC     UPDATVB  -1
+ 1193            TC     REQDATY
+ 1194            CAF    VBSP3LD
+ 1195            TC     UPDATVB -1
+ 1196  4         TC     REQDATZ
+ 1197   PUTXYZ   CS     SIX             TEST THAT THE 3 DATA WORDS LOADED ARE
+ 1198            TC     ALLDC/OC        ALL DEC OR ALL OCT.
+ 1199            CAF    LODNNLOC        SWITCH BANKS TO NOUN TABLE READING
+ 1200            TC     SWCALL          ROUTINE.
+ 1201            CAF    ZERO            X COMP
+ 1202            TC     PUTCOM
+ 1203            INDEX  NOUNADD
+ 1204            TS     0
+ 1205            CAF    ONE             Y COMP
+ 1206            TC     PUTCOM
+ 1207            INDEX   NOUNADD
+ 1208            TS     1
+ 1209            CAF    TWO             Z COMP
+ 1210            TC     PUTCOM
+ 1211            INDEX  NOUNADD
+ 1212            TS     2
+ 1213  2         TC     LOADLV
+ 1214   ABLOAD   CS     ONE
+ 1215            TC     COMPTEST
+ 1216            CAF    VBSP1LD
+ 1217            TC     UPDATVB -1
+ 1218            TC     REQDATX
+ 1219            CAF    VBSP2LD
+ 1220            TC     UPDATVB -1
+ 1221            TC     REQDATY
+ 1222   PUTXY    CS     FIVE            TEST THAT THE 2 DATA WORDS LOADED ARE
+ 1223            TC     ALLDC/OC        ALL DEC OR ALL OCT.
+ 1224            CAF    LODNNLOC        SWITCH BANKS TO NOUN TABLE READING
+ 1225            TC     SWCALL          ROUTINE.
+ 1226            CAF    ZERO            X COMP
+ 1227            TC     PUTCOM
+ 1228            INDEX  NOUNADD
+ 1229            TS     0
+ 1230            CAF    ONE             Y COMP
+ 1231            TC     PUTCOM
+ 1232            INDEX  NOUNADD
+ 1233            TS     1
+ 1234  2         TC     LOADLV
+ 1235   ALOAD    TC     REQDATX
+ 1236            CAF    LODNNLOC        SWITCH BANKS TO NOUN TABLE READING
+ 1237            TC     SWCALL          ROUTINE.
+ 1238            CAF    ZERO            X COMP
+ 1239            TC     PUTCOM
+ 1240            INDEX  NOUNADD
+ 1241            TS     0
+ 1242  2         TC     LOADLV
+ 1243   BLOAD    CS     ONE
+ 1244            TC     COMPTEST
+ 1245            CAF    BIT15           SET CLPASS FOR PASS0 ONLY
+ 1246            TS     CLPASS
+ 1247            TC     REQDATY
+ 1248            CAF    LODNNLOC        SWITCH BANKS TO NOUN TABLE READING
+ 1249            TC     SWCALL          ROUTINE.
+ 1250            CAF    ONE
+ 1251            TC     PUTCOM
+ 1252            INDEX  NOUNADD
+ 1253            TS     1
+ 1254  2         TC     LOADLV
+ 1255   CLOAD    CS     TWO
+ 1256            TC     COMPTEST
+ 1257            CAF    BIT15           SET CLPASS FOR PASS0 ONLY
+ 1258            TS     CLPASS
+ 1259            TC     REQDATZ
+ 1260            CAF    LODNNLOC        SWITCH BANKS TO NOUN TABLE READING
+ 1261            TC     SWCALL          ROUTINE.
+ 1262            CAF    TWO
+ 1263            TC     PUTCOM
+ 1264            INDEX  NOUNADD
+ 1265            TS     2
+ 1266  2         TC     LOADLV
+ 1267   LOADLV   CAF    ZERO
+ 1268            TS     DECBRNCH
+ 1269            CS     ZERO
+ 1270            TS     LOADSTAT
+ 1271            CS     VD1             TO BLOCK NUMERICAL CHARACTERS AND
+ 1272            TS     DSPCOUNT        CLEARS AFTER A COMPLETED LOAD
+ 1273            TC     POSTJUMP        AFTER COMPLETED LOAD, GO TO RECALTST
+ 1274  2         CADR   RECALTST        TO SEE IF THERE IS RECALL FROM ENDIDLE.
+ 1275   VBSP1LD  OCT    21              VB21 = ALOAD
+ 1276   VBSP2LD  OCT    22              VB22 = BLOAD
+ 1277  4VBSP3LD  OCT    23              VB23 = CLOAD
+ 1278   ALLDC/OC TS     DECOUNT         TESTS THAT DATA WORDS LOADED ARE EITHER
+ 1279            XCH    Q               ALL DEC OR ALL OCT. ALARMS IF NOT.
+ 1280            TS     DECRET
+ 1281            CS     DECBRNCH
+ 1282            TS     SR
+ 1283            CS     SR
+ 1284            CS     SR              SHIFTED RIGHT 2
+ 1285            CCS    A               DEC COMP BITS IN LOW 3
+ 1286            TC     +2              SOME ONES IN LOW 3
+ 1287            TC     DECRET          ALL ZEROS. ALL OCTAL.  OK
+ 1288            AD     DECOUNT         DEC COMP = 7 FOR 3COMP, =6 FOR 2COMP
+ 1289            CCS    A               (BUT IT HAS BEEN DECREMENTED BY CCS)
+ 1290            TC     GODSPALM        MUST MATCH 6 FOR 3COMP, 5 FOR 2COMP.
+ 1291            TC     CCSHOLE
+ 1292            TC     GODSPALM
+ 1293  4         TC     DECRET          ALL REQUIRED ARE DEC. OK
+ 1294   SFRUTNOR XCH    Q               GETS SF ROUTINE NUMBER FOR NORMAL CASE
+ 1295            TS     EXITEM
+ 1296            CAF    MID5
+ 1297            MASK   NNTYPTEM
+ 1298            TC     RIGHT5
+ 1299  2         TC     EXITEM          SF ROUTINE NUMBER IN A
+ 1300   SFRUTMIX XCH    Q               GETS SF ROUTINE NUMBER FOR MIXED CASE
+ 1301            TS     EXITEM
+ 1302            INDEX  DECOUNT
+ 1303            CS     IDAD1TEM        GET IDADDTAB ENTRY FOR COMPONENT K
+ 1304            CS     A               OF NOUN.
+ 1305            MASK   HI5
+ 1306            TC     LEFT5
+ 1307  2         TC     EXITEM          SF ROUTINE NUMBER IN A
+ 1308   SFCONUM  XCH    Q               GETS SF CONSTANT NUMBER
+ 1309            TS     EXITEM
+ 1310            INDEX  MIXBR
+ 1311            TC     +0
+ 1312            TC     CONUMNOR        NORMAL NOUN
+ 1313            INDEX  DECOUNT         MIXED NOUN
+ 1314            CAF    LOW5
+ 1315            MASK   NNTYPTEM
+ 1316            INDEX  DECOUNT
+ 1317            INDEX  DISPLACE
+ 1318            TC     0
+R1319   DO TC SFRET (DECOUNT=0),DO TC RIGHT5(DECOUNT=1), DO TC LEFT5 (DECOUNT=2)
+ 1320  2SFRET    TC     EXITEM          SF CON NUMBER IN A
+ 1321   DISPLACE TC     SFRET
+ 1322            TC     RIGHT5
+ 1323  2         TC     LEFT5
+ 1324   CONUMNOR CAF    LOW5            NORMAL NOUN ALWAYS GETS LOW 5 OF
+ 1325            MASK   NNTYPTEM
+ 1326  4         TC     EXITEM
+ 1327   PUTCOM   TS     DECOUNT
+ 1328            XCH    Q
+ 1329            TS     DECRET
+ 1330            CAF    ZERO
+ 1331            TS     OVFIND
+ 1332            INDEX  DECOUNT
+ 1333            XCH    XREGLP
+ 1334            TS     MPAC  +1
+ 1335            INDEX  DECOUNT
+ 1336            XCH    XREG
+ 1337            TS     MPAC
+ 1338            INDEX  MIXBR
+ 1339            TC     +0
+ 1340            TC     PUTNORM         NORMAL NOUN
+R1341   IF MIXNOUN, PLACE ADDRESS FOR COMPONENT K INTO NOUNADD
+ 1342            INDEX  DECOUNT
+ 1343            CS     IDAD1TEM        GET IDADDTAB ENTRY FOR COMPONENT K
+ 1344            CS     A               OF NOUN.
+ 1345            MASK   LOW10           EK    FOR CURRENT NOUN
+ 1346            EXTEND
+ 1347            SU     DECOUNT
+ 1348            TS     NOUNADD         PLACE (E SUB K) - K INTO NOUNADD
+ 1349            CCS    DECBRNCH
+ 1350            TC     PUTDECSF        +  DEC
+ 1351            TC     SFRUTMIX        +0  OCTAL
+ 1352            TC     DPTEST
+ 1353            TC     PUTCOM2         NO DP
+A1354                                   TEST FOR DP SCALE FOR OCT LOAD. IF SO,
+A1355                                   +0 INTO MAJOR PART. SET NOUNADD FOR
+A1356                                   LOADING OCTAL WORD INTO MINOR PART.
+ 1357   PUTDPCOM CAF    ONE             DP
+ 1358            AD     NOUNADD
+ 1359            TS     NOUNADD         (ESUBK)-K+1  OR  E+1
+ 1360            AD     DECOUNT         NOUNADD NOW SET FOR MINOR PART
+ 1361            TS     DECOUNT         (ESUBK)+1  OR  E+1  INTO DECOUNT
+ 1362            CAF    ZERO            NOUNADD SET FOR MINOR PART
+ 1363            INDEX  DECOUNT
+ 1364            TS     0       -1      ZERO MAJOR PART(ESUBK OR E)
+ 1365  2         TC     PUTCOM2
+ 1366   PUTNORM  CCS    DECBRNCH
+ 1367            TC     PUTDECSF        +  DEC
+ 1368            TC     SFRUTNOR        +0  OCTAL
+ 1369            TC     DPTEST
+ 1370            TC     PUTCOM2         NO DP
+ 1371            CAF    ZERO
+ 1372            TS     DECOUNT
+ 1373  2         TC     PUTDPCOM
+ 1374   PUTCOM2  XCH    MPAC
+ 1375  2         TC     DECRET
+R1376  2PUTDECSF FINDS MIXBR AND DECOUNT STILL SET FROM PUTCOM
+ 1377   PUTDECSF TC     SFCONUM         SF CON NUMB IN A
+ 1378            TS     SFTEMP2
+ 1379            TC     BANKCALL        SWITCH BANKS TO SF CONSTANT READING
+ 1380            CADR   GTSFIN          ROUTINE. LOADS SFTEMP1, SFTEMP2.
+ 1381            INDEX  MIXBR
+ 1382            TC     +0
+ 1383            TC     PUTSFNOR
+ 1384            TC     SFRUTMIX
+ 1385            TC     PUTDCSF2
+ 1386  2PUTSFNOR TC     SFRUTNOR
+ 1387   PUTDCSF2 INDEX  A
+ 1388            CAF    SFINTABR
+ 1389            TC     BANKJUMP        SWITCH BANKS FOR EXPANSHION ROOM
+ 1390   SFINTABR CADR   DSPALARM        ALARM IF DEC LOAD WITH OCTAL ONLY NOUN
+ 1391            CADR   BINROUND
+ 1392            CADR   DEGINSF
+ 1393            CADR   ARTHINSF
+ 1394            CADR   DPINSF
+ 1395            CADR   DPINSF2
+ 1396            CADR   OPTDEGIN
+ 1397            CADR   DPINSF          SAME AS ARITHDP1
+ 1398  4ENDRUTIN EQUALS
+R1399   SCALE FACTORS FOR THOSE ROUTINES NEEDING THEM ARE AVAILABLE IN SFTEMP1.
+R1400  4ALL SFIN ROUTINES USE MPAC MPAC+1. LEAVE RESULT IN A. END WITH TC DECRET
+ 1401  2         SETLOC ENDDPDEC +1
+R1402  2DEGINSF APPLIES 1000/180 =5.55555(10) = 5.43434(8)
+ 1403   DEGINSF  TC     DMP             SF ROUTINE FOR DEC DEGREES
+ 1404            XCADR  DEGCON1         MULT BY 5.5  5(10)X2/-3
+ 1405            CCS    MPAC    +1      THIS ROUNDS OFF MPAC+1 BEFORE SHIFT
+ 1406            CAF    BIT11           LEFT 3, AND CAUSES 360.00 TO OF/UF
+ 1407            TC     +2              WHEN SHIFTED LEFT AND ALARM.
+ 1408            CS     BIT11
+ 1409            AD     MPAC    +1
+ 1410            TC     2ROUND  +2
+ 1411            TC     BANKCALL        LEFT 1
+ 1412            CADR   SL1     +3
+ 1413   DEGINSF2 TC     BANKCALL        LEFT 2
+ 1414            CADR   SL1     +3
+ 1415            TC     TESTOFUF
+ 1416            TC     BANKCALL        RETURNS IF NO OF/UF
+ 1417            CADR   SL1     +3      LEFT 3
+ 1418            CCS    MPAC
+ 1419            TC     SIGNFIX         IF+, GO TO SIGNFIX
+ 1420            TC     SIGNFIX         IF +0, GO TO SIGNFIX
+ 1421            COM                    IF - , USE -MAGNITUDE +1
+ 1422            TS     MPAC            IF -0, USE +0
+ 1423   SIGNFIX  CCS    OVFIND
+ 1424            TC     SGNTO1          IF OVERFLOW
+ 1425            TC     ENDSCALE        NO OVERFLOW/UNDERFLOW
+ 1426            CCS    MPAC            IF UF FORCE SIGN TO 0 EXCEPT -180
+ 1427            TC     CCSHOLE
+ 1428            TC     NEG180
+ 1429            TC     +1
+ 1430            XCH    MPAC
+ 1431            MASK   POSMAX
+ 1432            TS     MPAC
+ 1433   ENDSCALE TC     POSTJUMP
+ 1434  2         CADR   PUTCOM2
+ 1435   NEG180   CS     POSMAX
+ 1436  2         TC     ENDSCALE  -1
+ 1437   SGNTO1   CS     MPAC            IF OF FORCE SIGN TO 1
+ 1438            MASK   POSMAX
+ 1439            CS     A
+ 1440  2         TC     ENDSCALE  -1
+ 1441   DEGCON1  2DEC   5.555555555 B-3
+ 1442   DEGCON2  2DEC   2.222222222 B-2
+ 1443  2NEG.2    OCT    -06250          = .197753906  I.E. THE BIAS SCALED
+ 1444   ARTHINSF TC     DMP             SCALES MPAC, +1 BY SFTEMP1, SFTEMP2.
+ 1445            XCADR  SFTEMP1         ASSUMES POINT BETWEEN HI AND LO PARTS
+ 1446            XCH    MPAC    +2      OF SFCON. SHIFTS RESULTS LEFT BY 14.
+ 1447            XCH    MPAC    +1      (BY TAKING RESULTS FROM MPAC+1, MPAC+2)
+ 1448            XCH    MPAC
+ 1449            CCS    A
+ 1450            TC     DSPALARM        TOO LARGE A LOAD
+ 1451            TC     BINROUND
+ 1452            TC     DSPALARM        TOO LARGE A LOAD
+ 1453   BINROUND TC     2ROUND
+ 1454            TC     TESTOFUF
+ 1455  4         TC     ENDSCALE        RETURNS IF NO OF/UF
+ 1456   OPTDEGIN CCS    MPAC            OPTICS SCALING ROUTINE
+ 1457            TC     OPDEGIN2        LOW RANGE   0 TO 90 DEG ALWAYS
+ 1458            TC     OPDEGIN2
+ 1459            TC     DSPALARM        REJECT - INPUT. ALARM
+ 1460  4         TC     DSPALARM        DITTO
+R1461   NO LONGER DO WE TEST BIT 13 OF WASOPSET TO DETERMINE RANGE. RANGE NOW
+R1462  4IS ALWAYS 90 DEG (BLOCK 50 - 100)
+ 1470   OPDEGIN2 XCH    MPAC            RANGE IS 90 DEG
+ 1471            AD     NEG.2           SUBTRACT BIAS
+ 1472            TS     MPAC
+ 1473            TC     DMP             MULT BY 100 / 45  B-2
+ 1474            XCADR  DEGCON2
+ 1475            CAF    BIT12           ROUND AS IN DEGINSF
+ 1476            AD     MPAC    +1
+ 1477            TC     2ROUND  +2
+ 1478  2         TC     DEGINSF2
+ 1479   DPINSF   TC     DMP             SCALES MPAC, MPAC +1 BY SFTEMP1,
+ 1480            XCADR  SFTEMP1         SFTEMP2.  STORES LOW PART OF RESULT
+ 1481            XCH    MPAC    +2      IN (E SUBK) +1 OR E+1
+ 1482            DOUBLE
+ 1483            TS     MPAC    +2
+ 1484            CAF    ZERO
+ 1485            AD     MPAC    +1
+ 1486            TC     2ROUND  +2
+ 1487            TC     TESTOFUF
+ 1488            INDEX  MIXBR           RETURNS IF NO OF/UF
+ 1489            TC     +0
+ 1490            TC     DPINORM
+ 1491            XCH    DECOUNT         MIXEDNOUN
+ 1492            TS     DECOUNT
+ 1493   DPINCOM  AD     NOUNADD             MIXED               NORMAL
+ 1494            TS     Q                 E SUBK            E
+ 1495            XCH    MPAC    +1
+ 1496            INDEX  Q
+ 1497            TS     1               PLACE LOW PART IN
+ 1498            TC     ENDSCALE        (E SUBK) +1    MIXED
+ 1499   DPINORM  CAF    ZERO            E +1         NORMAL
+ 1500  4         TC     DPINCOM
+ 1501   DPINSF2  TC     DMP             ASSUMES POINT BETWEEN BITS 7-8 OF HIGH
+ 1502            XCADR  SFTEMP1         PART OF SF CONST. DPINSF2 SHIFTS RESULTS
+ 1503            TC     TPLEFT7         LEFT BY 7, ROUNDS MPAC+2 INTO MPAC+1.
+ 1504  4         TC     DPINSF  +2
+ 1505   TPLEFT7  XCH    Q               OPERATES ON MPAC, MPAC+1, MPAC+2
+ 1506            TS     SFTEMP2
+ 1507            CAF    SIX             LEFT BY 7
+ 1508   LEFT7COM TS     SFTEMP1
+ 1509            TC     BANKCALL
+ 1510            CADR   SL1
+ 1511            CCS    SFTEMP1
+ 1512            TC     LEFT7COM
+ 1513  4         TC     SFTEMP2
+ 1514   2ROUND   XCH    MPAC    +1
+ 1515            DOUBLE
+ 1516            TS     MPAC    +1
+ 1517            TC     Q               IF MPAC+1 DOES NOT OF/UF
+ 1518            AD     MPAC
+ 1519            TS     MPAC
+ 1520            TC     Q               IF MPAC DOES NOT OF/UF
+ 1521            TS     OVFIND
+ 1522  42RNDEND  TC     Q
+ 1523   TESTOFUF CCS    OVFIND          RETURNS IF NO OF/UF
+ 1524            TC     DSPALARM        OF
+ 1525            TC     Q
+ 1526            TC     DSPALARM        UF
+P1527   MONITOR ALLOWS OTHER KEYBOARD ACTIVITY. IT IS ENDED BY VERB TERMINATE,
+R1528  2ANY NVSUB CALL THAT PASSES THE DSPLOCK, OR ANOTHER MONITOR.
+R1529   MONITOR ACTION IS SUSPENDED, BUT NOT ENDED, BY ANY KEYBOARD ACTION,
+R1530   EXCEPT ERROR LIGHT RESET. IT BEGINS AGAIN WHEN KEY RELEASE IS PERFORMED.
+R1531   MONITOR SAVES THE NOUN AND APPROPRIATE DISPLAY VERB IN MONSAVE. IT SAVES
+R1532   NOUNADD IN MONSAVE1, IF NOUN = MACHINE ADDRESS TO BE SPECIFIED.BIT 15 OF
+R1533  2MONSAVE1 IS THE KILL MONITOR SIGNAL (KILLER BIT).
+R1534   MONSAVE INDICATES IF MONITOR IS ON(+=ON, +0=OFF)
+R1535   IF MONSAVE IS +, MONITOR ENTERS NO REQUEST, BUT TURNS KILLER BIT OFF.
+R1536  2IF MONSAVE IS +0, MONITOR ENTERS REQUEST AND TURNS KILLER BIT OFF.
+R1537  2NVSUB AND VB=TERMINATE TURN KILL MONITOR BIT ON.
+R1538   IF KILLER BIT IS ON, MONREQ ENTERS NO FURTHER REQUESTS, ZEROS MONSAVE
+R1539  4AND MONSAVE1 (TURNING OFF KILLER BIT).
+R1540   MONITOR DOSENT TEST FOR MATBS SINCE NVSUB CAN HANDLE INTERNAL MATBS NOW
+ 1541  2         SETLOC ENDRUTIN
+ 1542   MONITOR  CS     BIT15
+ 1543            MASK   NOUNADD
+ 1544   MONIT1   TS     MPAC    +1      TEMP STORAGE
+ 1545            CAF    LOW6
+ 1546            MASK   VERBREG
+ 1547            TC     LEFT5
+ 1548            TS     CYL
+ 1549            XCH    CYL
+ 1550            AD     NOUNREG
+ 1551            TS     MPAC            TEMP STORAGE
+ 1552            CS     GRABLOCK        NEITHER CASE SEARCHES LIST.
+ 1553            AD     TWO
+ 1554            CCS    A
+ 1555            TC     RELDSP1         GRABLOCK=0,1. +0 INTO DSPLOCK AND
+ 1556            TC     +3              TURN OFF KEY RLSE LIGHT.
+ 1557            TC     CCSHOLE
+ 1558            TC     DSPLOCK0        GRABLOCK=2. +0 INTO DSPLOCK (BIT4 OF
+A1559                                   STATE) AND LEAVE KEY RELEASE LIGHT ALONE
+ 1560            INHINT
+ 1561            CCS    MONSAVE
+ 1562            TC     +4              IF MONSAVE WAS +, NO REQUEST
+ 1563            CAF    ONE             IF MONSAVE WAS 0, REQUEST MONREQ
+ 1564            TC     WAITLIST
+ 1565            CADR   MONREQ
+ 1566            XCH    MPAC
+ 1567            TS     MONSAVE         PLACE MONITOR VERB AND NOUN INTO MONSAVE
+ 1568            XCH    MPAC    +1
+ 1569            TS     MONSAVE1        ZERO THE KILL MONITOR BIT
+ 1570            RELINT
+ 1571  4         TC     ENTRET
+ 1572   MONREQ   TC     READTIME +1     CALLED BY WAITLIST
+ 1573            TC     LODSAMPT        TIME IS SNATCHED IN RUPT FOR NOUN 65
+ 1574            CCS    MONSAVE1
+ 1575            TC     +4              IF KILLER BIT = 0, ENTER REQUESTS
+ 1576            TC     +3              IF KILLER BIT = 0, ENTER REQUESTS
+ 1577            TC     KILLMON         IF KILLER BIT = 1, NO REQUESTS
+ 1578            TC     KILLMON         IF KILLER BIT = 1, NO REQUESTS
+ 1579            CAF    MONDEL
+ 1580            TC     WAITLIST        ENTER WAITLIST REQUEST FOR MONREQ
+ 1581            CADR   MONREQ
+ 1582            CAF    PRIO31
+ 1583            TC     NOVAC           ENTER EXEC REQUEST FOR MONDO
+ 1584            CADR   MONDO
+ 1585  2         TC     TASKOVER
+ 1586   KILLMON  CAF    ZERO            ZERO MONSAVE AND TURN KILLER BIT OFF
+ 1587            TS     MONSAVE
+ 1588            TS     MONSAVE1        TURN OFF KILL MONITOR BIT.
+ 1589  4         TC     TASKOVER
+ 1590  4MONDEL   OCT    144             FOR 1 SEC MONITOR INTERVALS
+ 1591   MONDO    CCS    MONSAVE1        CALLED BY EXEC
+ 1592            TC     +4              IF KILLER BIT = 0, CONTINUE
+ 1593            TC     +3              IF KILLER BIT = 0, CONTINUE
+ 1594            TC     ENDOFJOB        IN CASE TERMINATE CAME SINCE LAST MONREQ
+ 1595            TC     ENDOFJOB        IN CASE TERMINATE CAME SINCE LAST MONREQ
+ 1596            TC     TSTDSPLK        PERFORMS CCS DSPLOCK
+ 1597            TC     MONBUSY         NVSUB IS BUSY
+ 1598            CAF    LOW6            NVSUB IS AVAILABLE
+ 1599            MASK   MONSAVE
+ 1600            TS     NVTEMP
+ 1601            TC     NVSUBMON        PLACE NOUN INTO NOUNREG AND DISPLAY IT
+ 1602            TC     ENDOFJOB        IN CASE OF ALARM DURING DISPLAY
+ 1603            CAF    MONMASK
+ 1604            MASK   MONSAVE         CHANGE MONITOR VERB TO DISPLAY VERB
+ 1605            TC     RIGHT5
+ 1606            TS     CYR
+ 1607            XCH    CYR
+ 1608            TS     VERBREG
+ 1609            CAF    MONBACK         SET RETURN TO PASTEVB AFTER DATA DISPLAY
+ 1610            TS     ENTRET
+ 1611            CS     BIT15
+ 1612            MASK   MONSAVE1
+ 1613            TS     NOUNADD
+ 1614  2ENDMONDO TC     TESTNN
+ 1615            SETLOC ENDFAILF
+ 1616   PASTEVB  CAF    MIDSIX
+ 1617            MASK   MONSAVE
+ 1618            TS     NVTEMP          PLACE MONITOR VERB INTO VERBREG AND
+ 1619            TC     NVSUBMON             DISPLAY IT.
+ 1620            TC     +1              IN CASE OF ALARM DURING DISPLAY
+ 1621  2ENDPASTE TC     ENDOFJOB
+ 1622  4MIDSIX   OCTAL  07700
+ 1623            SETLOC ENDMONDO +1
+ 1624   MONMASK  OCT    700
+ 1625  2MONBACK  ADRES  PASTEVB
+ 1626   MONBUSY  TC     RELDSPON        TURN KEY RELEASE LIGHT
+ 1627  4         TC     ENDOFJOB
+R1628   DSPBANK IS USED TO DISPLAY (IN OCTAL) ANY FIXED REGISTER IN BANK.
+R1629   IT IS USED WITH NOUN = MACHINE ADDRESS TO BE SPECIFIED. THE CADR OF THE
+R1630  2DESIRED LOCATION IS THEN PUNCHED IN.
+ 1631   DSPBANK  CAF    R1D1
+ 1632            TS     DSPCOUNT
+ 1633            CS     NOUNADD
+ 1634            CS     A
+ 1635            TC     DATACALL
+ 1636            TC     DSPOCTWD
+ 1637  4         TC     ENDOFJOB
+ 1638  2         SETLOC TESTOFUF +4
+R1639    DSPDECWD CONVERTS C(MPAC) AND C(MPAC +1)TO A SIGN AND 5 CHAR DECIMAL
+R1640  2STARTING IN LOC SPECIFIED IN DSPCOUNT
+ 1641   DSPDECWD XCH    Q               USES SHORTMP THROUGHOUT
+ 1642            TS     WDRET
+ 1643            CCS    MPAC
+ 1644            TC     +7
+ 1645            TC     +6
+ 1646            AD     ONE
+ 1647            TS     MPAC
+ 1648            TC     -ON
+ 1649            CS     MPAC  +1
+ 1650            TC     +3
+ 1651            TC     +ON
+ 1652            XCH    MPAC    +1
+ 1653            AD     DECROUND
+ 1654            TS     MPAC    +1
+ 1655            CAF    ZERO
+ 1656            AD     MPAC
+ 1657            TS     MPAC
+ 1658            TC     +4
+ 1659            CAF    POSMAX
+ 1660            TS     MPAC
+ 1661            TS     MPAC    +1
+ 1662            CAF    FOUR
+ 1663   DSPDCWD1 TS     WDCNT
+ 1664            CAF    BINCON
+ 1665            TC     SHORTMP
+ 1666   TRACE1   INDEX  MPAC
+ 1667            CAF    RELTAB
+ 1668            MASK   LOW5
+ 1669            TS     CODE
+ 1670            CAF    ZERO
+ 1671            XCH    MPAC    +2
+ 1672            XCH    MPAC    +1
+ 1673            TS     MPAC
+ 1674            XCH    DSPCOUNT
+ 1675   TRACE1S  TS     COUNT
+ 1676            CCS    A               DECREMENT DSPCOUNT EXCEPT AT +0
+ 1677            TS     DSPCOUNT
+ 1678            TC     DSPIN
+ 1679            CCS    WDCNT
+ 1680            TC     DSPDCWD1
+ 1681            CS     VD1
+ 1682            TS     DSPCOUNT
+ 1683  2         TC     WDRET
+ 1684  4DECROUND OCT    02476
+R1685   DSP2DEC CONVERTS C(MPAC) AND C(MPAC+1) INTO A SIGN AND 10 CHAR DECIMAL
+R1686  2STARTING IN THE LOC SPECIFIED IN DSPCOUNT.
+ 1687   DSP2DEC  XCH    Q
+ 1688            TS     WDRET
+ 1689            CAF    ZERO
+ 1690            TS     CODE
+ 1691            CAF    THREE
+ 1692            TC     11DSPIN         -R2 OFF
+ 1693            CAF    FOUR
+ 1694            TC     11DSPIN         +R2 OFF
+ 1695            CCS    MPAC
+ 1696            TC     +8D
+ 1697            TC     +7
+ 1698            AD     ONE
+ 1699            TS     MPAC
+ 1700            TC     -ON
+ 1701            CS     MPAC  +1
+ 1702            TS     MPAC  +1
+ 1703            TC     +2
+ 1704            TC     +ON
+ 1705            CAF    R2D1
+ 1706  4END2DEC  TC     DSPDCWD1
+ 1707            SETLOC DSPBANK  +7
+R1708   DSPOCTWD DISPLAYS C(A) UPON ENTRY AS A 5 CHAR OCT STARTING IN THE DSP
+R1709  2CHAR SPECIFIED IN DSPCOUNT. IT STOPS AFTER 5 CHAR HAVE BEEN DISPLAYED.
+ 1710   DSPOCTWD TS     CYL
+ 1711            XCH    Q
+ 1712            TS     WDRET
+ 1713            XCH    DSPCOUNT
+ 1714            AD     BIT14           TO BLANK SIGNS
+ 1715            TS     DSPCOUNT
+ 1716            CAF    FOUR
+ 1717   WDAGAIN  TS     WDCNT
+ 1718            CS     CYL
+ 1719            CS     CYL
+ 1720            CS     CYL
+ 1721            CS     A
+ 1722            MASK   DSPMSK
+ 1723            INDEX  A
+ 1724            CAF    RELTAB
+ 1725            MASK   LOW5
+ 1726            TS     CODE
+ 1727            XCH    DSPCOUNT
+ 1728            TS     COUNT
+ 1729            CCS    A               DECREMENT DSPCOUNT EXCEPT AT +0
+ 1730            TS     DSPCOUNT
+ 1731            TC     POSTJUMP
+ 1732            CADR   DSPOCTIN
+ 1733   OCTBACK  CCS    WDCNT
+ 1734            TC     WDAGAIN         +
+ 1735   DSPLV    CS     VD1             TO BLOCK NUMERICAL CHARACTERS, CLEARS,
+ 1736            TS     DSPCOUNT        AND SIGNS AFTER A COMPLETED DISPLAY.
+ 1737  2         TC     WDRET
+ 1738  4DSPMSK   =      SEVEN
+R1739   DSP2BIT DISPLAYS C(A) UPON ENTRY AS A 2 CHAR OCT BEGINNING IN THE DSP
+R1740   LOC SPECIFIED IN DSPCOUNT BY PRE CYCLING RIGHT C(A) AND USING THE LOGIC
+R1741  2OF THE 5 CHAR OCTAL DISPLAY
+ 1742   DSP2BIT  TS     CYR
+ 1743            XCH    Q
+ 1744            TS     WDRET
+ 1745            CAF    ONE
+ 1746            TS     WDCNT
+ 1747            CS     CYR
+ 1748            CS     CYR
+ 1749            XCH    CYR
+ 1750            TS     CYL
+ 1751  4         TC     WDAGAIN +5
+R1752   FOR DSPIN PLACE 0/25 OCT INTO COUNT, 5 BIT RELAY CODE INTO CODE. BOTH
+R1753   ARE DESTROYED. IF BIT14 OF COUNT IS 1, SIGN IS BLANKED WITH LEFT CHAR.
+R1754   FOR DSPIN1 PLACE 0,1 INTO BIT11 OF CODE, 2 INTO COUNT, REL ADDRESS OF
+R1755  2DSPTAB ENTRY INTO DSREL.
+ 1756  2         SETLOC END2DEC  +1
+ 1757   DSPIN    XCH    Q
+ 1758            TS     DSEXIT
+ 1759            CAF    LOW5
+ 1760            MASK   COUNT
+ 1761            TS     SR
+ 1762            XCH    SR
+ 1763            TS     DSREL
+ 1764            CAF    BIT1
+ 1765            MASK   COUNT
+ 1766            CCS    A
+ 1767            TC     +2              LEFT IF COUNT IS ODD
+ 1768            TC     DSPIN1  -1      RIGHT IF COUNT IS EVEN
+ 1769            XCH    CODE
+ 1770            TC     SLEFT5          DOES NOT USE CYL
+ 1771            TS     CODE
+ 1772            CAF    BIT14
+ 1773            MASK   COUNT
+ 1774            CCS    A
+ 1775            CAF    TWO             BIT14 = 1, BLANK SIGN
+ 1776            AD     ONE             BIT14 = 0, LEAVE SIGN ALONE
+ 1777            TS     COUNT           +0 INTO COUNT FOR RIGHT
+A1778                                   +1 INTO COUNT FOR LEFT(SIGN LEFT ALONE)
+A1779                                   +3 INTO COUNT FOR LEFT(TO BLANK SIGN)
+ 1780   DSPIN1   INHINT
+ 1781            INDEX  DSREL
+ 1782            CCS    DSPTAB
+ 1783            TC     +2              IF +
+ 1784            TC     CCSHOLE
+ 1785            AD     ONE             IF-
+ 1786            TS     DSMAG
+ 1787            INDEX  COUNT
+ 1788            MASK   DSMSK
+ 1789            EXTEND
+ 1790            SU     CODE
+ 1791            CCS    A
+ 1792            TC     DFRNT           IF+
+ 1793            TC     CCSHOLE
+ 1794            TC     DFRNT           IF-
+ 1795            TC     DSLV            IF -0
+ 1796   DFRNT    INDEX  COUNT
+ 1797            CS     DSMSK           MASK WITH 77740,76037, OR 75777
+ 1798            MASK   DSMAG
+ 1799            AD     CODE
+ 1800            CS     A
+ 1801            INDEX  DSREL
+ 1802            XCH    DSPTAB
+ 1803            CCS    A
+ 1804            TC     INCNOUT
+ 1805            TC     CCSHOLE
+ 1806   DSLV     RELINT
+ 1807  2         TC     DSEXIT
+ 1808   DSMSK    OCT    37
+ 1809            OCT    1740
+ 1810            OCT    2000
+ 1811  4         OCT    3740
+R1812   FOR 11DSPIN, PUT REL ADDRESSS OF DSPTAB ENTRY INTO A, 1 IN BIT11 OR 0 IN
+R1813  2BIT11 OF CODE.
+ 1814   11DSPIN  TS     DSREL
+ 1815            CAF    TWO
+ 1816            TS     COUNT
+ 1817            XCH    Q
+ 1818            TS     DSEXIT
+ 1819  4         TC     DSPIN1
+ 1820   DSPOCTIN TC     DSPIN           SO DSPOCTWD DOESNT USE SWCALL
+ 1821            CAF    +2
+ 1822            TC     BANKJUMP
+ 1823  4ENDSPOCT CADR   OCTBACK
+R1824   DSPALARM FINDS TC NVSUBEND IN ENTRET FOR NVSUB INITIATED ROUTINES.
+R1825   ABORT WITH OCT 01501.
+R1826   DSPALARM FINDS TC ENDOFJOB IN ENTRET FOR KEYBOARD INITIATED ROUTINES.
+R1827  2DO TC ENTRET.
+ 1828   CHARALRM CAF    ENDINST         ALARMS WHICH MUST DO ENDOFJOBS COME
+ 1829  2         TS     ENTRET          HERE. ALLOWS ENTRET TO BE TEMP ERASABLE
+ 1830   DSPALARM TC     FALTON          TURN ON CHECK FAIL LIGHT.
+ 1831            CS     NVSBENDL
+ 1832            AD     ENTEXIT
+ 1833            CCS    A
+ 1834            TC     ENTEXIT         NOT NVSUB INITIATED.
+ 1835   NVSBENDL TC     NVSUBEND
+ 1836            TC     ENTEXIT         NOT NVSUB INITIATED.
+ 1837            TC     ABORT           NVSUB INITIATED.
+ 1838  4         OCT    01501
+ 1839   FLASHON1 CAF    BIT11           GETS HERE THRU FLASHON(STANDARD LEAD IN)
+ 1840            TS     CODE
+ 1841            CAF    FLASHLOC
+ 1842            TS     DSREL
+ 1843            CAF    TWO
+ 1844            TS     COUNT
+ 1845            TC     DSPIN1
+ 1846   FLASHOF1 CAF    ZERO            GETS HERE THRU FLASHOFF(STANDARD LEAD IN
+ 1847            TC     FLASHON1 +1
+ 1848  4FLASHLOC OCT    11
+R1849   MMCHANG USES NOUN DISPLAY UNTIL ENTER. THEN IT USES MODE DISP.
+R1850   IT GOES TO MODROUT WITH THE NEW M M CODE IN A, BUT NOT DISPLAYED IN
+R1851  2M M LIGHTS.
+ 1852  2         SETLOC DSP2BIT  +10D
+ 1853   MMCHANG  TC     REQMM
+ 1854            CAF    ZERO
+ 1855            XCH    NOUNREG
+ 1856            TS     MPAC
+ 1857            CAF    ND1
+ 1858            TS     DSPCOUNT
+ 1859            TC     BANKCALL
+ 1860            CADR   2BLANK
+ 1861            XCH    MPAC
+ 1862            TC     POSTJUMP
+ 1863  4         CADR   MODROUTB        GO THRU STANDARD LOC.
+ 1864   REQMM    CS     Q
+ 1865            TS     REQRET
+ 1866            CAF    ND1
+ 1867            TS     DSPCOUNT
+ 1868            CAF    ZERO
+ 1869            TS     NOUNREG
+ 1870            TC     BANKCALL
+ 1871            CADR   2BLANK
+ 1872            TC     BANKCALL
+ 1873            CADR   FLASHON
+ 1874  4         TC     ENTEXIT
+R1875   VBRQEXEC ENTERS REQUEST TO EXEC     FOR ANY ADDRESS WITH ANY PRIORITY.
+R1876   IT DOES ENDOFJOB AFTER ENTERING REQUEST.ASSUMES PRIO  PRELOADED INTO
+R1877   BITS 10-14 OF FIRST REGISTER OF TEMP AREA, WITH BIT1=0 FOR NOVAC, BIT1
+R1878   =1 FOR FINDVAC). THE VERB IS USED WITH NOUN=MACHINE ADDRESS TO BE
+R1879  2SPECIFIED. CADR JOBADDR IS PUNCHED IN. DISPLAY SYST IS RELEASED.
+ 1880   VBRQEXEC CAF    ENDINST
+ 1881            TS     PROGREG +2
+ 1882            TC     RELDSP
+ 1883            CAF    BIT1
+ 1884            MASK   DSPTEM1         ********
+ 1885            CCS    A
+ 1886            TC     SETVAC          IF BIT1 =1, FINDVAC
+ 1887            CAF    TCNOVAC         IF BIT1 =0, NOVAC
+ 1888   REQEX1   TS     PROGREG         TC NOVAC OR TC FINDVAC INTO PROGREG
+ 1889            XCH    NOUNADD
+ 1890            TS     PROGREG +1      CADR JOBADDR INTO PROGREG +1
+ 1891            CS     BIT1
+ 1892            MASK   DSPTEM1         *******
+ 1893            INHINT
+ 1894  2         TC     PROGREG
+ 1895   SETVAC   CAF    TCFINDVC
+ 1896  2         TC     REQEX1
+R1897   VBRQWAIT ENTERS REQUEST TO WAITLIST FOR ANY ADDRESS WITH ANY DELAY.
+R1898   IT DOES ENDOFJOB AFTER ENTERING REQUEST.ASSUMES DELAY PRELOADED IN FIRST
+R1899   REGISTER OF TEMP AREA. THE VERB IS USED WITH NOUN= MACHINE ADDRESS TO
+R1900  2BE SPECIFIED. CADR TASKADDR IS PUNCHED IN. DISPLAY SYST IS RELEASED.
+ 1901   VBRQWAIT CAF    ENDINST
+ 1902            TS     PROGREG +2      TC ENDOFJOB INTO PROGREG+2
+ 1903            TC     RELDSP
+ 1904            CAF    TCWAIT
+ 1905            TS     PROGREG         TC WAITLIST INTO PROGREG
+ 1906            XCH    NOUNADD
+ 1907            TS     PROGREG +1      CADR TASKADDR INTO PROGREG+1
+ 1908            INHINT
+ 1909            XCH    DSPTEM1         DELTA T IN A
+ 1910  4ENDRQWT  TC     PROGREG
+ 1911            SETLOC FLASHLOC +1
+ 1912   VBPROC   CAF    ONE             PROCEED WITHOUT DATA
+ 1913            TS     LOADSTAT
+ 1914            TC     RELDSP
+ 1915            TC     FLASHOFF
+ 1916  4         TC     RECALTST        SEE IF THERE IS ANY RECALL FROM ENDIDLE
+ 1917   VBTERM   TC     KILMONON        TURN ON KILL MONITOR BIT
+ 1918            CS     ONE
+ 1919  4         TC     VBPROC  +1      TERM VERB SETS LOADSTAT NEG
+R1920  4FLASH IS TURNED OFF ONLY BY PROCEED WITHOUT DATA, TERMINATE, END OF LOAD
+R1921   VBRELDSP TURNS OFF RELEASE DISPLAY SYSTEM LIGHT(AND SEARCHES LIST ONLY
+R1922  2IF THIS LIGHT WAS TURNED ON BY NVSUBUSY), AND TURNS OFF UPACT LIGHT.
+ 1923   VBRELDSP CAF    ZERO            RELEASE DISPLAY SYST
+ 1924            TS     CODE            TURN OFF UPACT LIGHT
+ 1925            CAF    SEVEN
+ 1926            TC     11DSPIN
+ 1927            TC     RELDSP          SEARCHES LIST
+ 1928  4         TC     ENDOFJOB
+R1929  2BUMP SHIFTS WORD DISPLAYED IN R2 TO R3, R1 TO R2. IT BLANKS R1.
+ 1930   BUMP     CAF    FIVE            R2D5
+ 1931            TS     DSPCOUNT
+ 1932            TS     COUNT
+ 1933            CAF    ONE             SHIFT DATA OF R2 TO R3, R1 TO R2
+ 1934            MASK   COUNT
+ 1935            XCH    COUNT           +0 INTO COUNT IF EVEN (RIGHT)
+ 1936            TS     SR              +1 INTO COUNT IF ODD (LEFT)
+ 1937            XCH    SR              DSREL IN A
+ 1938            INDEX  A
+ 1939            CCS    DSPTAB
+ 1940            TC     +2
+ 1941            TC     CCSHOLE
+ 1942            AD     ONE             DSMAG IN A
+ 1943            INDEX  COUNT
+ 1944            MASK   DSMSK
+ 1945            INDEX  COUNT
+ 1946            TC     +1
+ 1947            TC     +2              EVEN(RIGHT)  OK
+ 1948            TC     RIGHT5          ODD(LEFT)  SHIFT RIGHT
+ 1949            TS     CODE
+ 1950            CS     FIVE
+ 1951            AD     DSPCOUNT        DSPCOUNT-5
+ 1952            CCS    A               TO PREVENT -0
+ 1953            AD     ONE
+ 1954            TC     +2
+ 1955            TC     CCSHOLE
+ 1956            TS     COUNT
+ 1957            TC     DSPIN           CODE ALREADY IN CODE
+ 1958            CS     DSPCOUNT
+ 1959            AD     R1D1            OCT 16
+ 1960            CCS    A
+ 1961            XCH    DSPCOUNT        +, DSPCOUNT L/ OCT 16
+ 1962            AD     ONE             INCREMENT DSPCOUNT
+ 1963  2         TC     BUMP    +1
+ 1964   SWSGN    CAF    ZERO            -0, DSPCOUNT= OCT 16. DO SIGN SHIFT
+ 1965            TS     DSPCOUNT
+ 1966            AD     SWTAB   +2      OCT 3
+ 1967            INDEX  A               PICKUP ORDER , DSREL=3,4,5,6.
+ 1968            CCS    DSPTAB                           (-R2,+R2,-R1,+R1)
+ 1969            TC     +2
+ 1970            TC     CCSHOLE
+ 1971            AD     ONE
+ 1972            MASK   BIT11
+ 1973            TS     CODE
+ 1974            INDEX  DSPCOUNT
+ 1975            CAF    SWTAB           PUT AWAY ORDER, DSREL= 0,1,3,4.
+ 1976            TC     11DSPIN                          (-R3,+R3,-R2,+R2.)
+ 1977            CS     DSPCOUNT
+ 1978            AD     SWTAB   +2      OCT 3
+ 1979            CCS    A
+ 1980            XCH    DSPCOUNT        +, DSPCOUNT L/ 3
+ 1981            AD     ONE             INCREMENT DSPCOUNT
+ 1982            TC     SWSGN   +1
+ 1983            CAF    R1D1            -0,       DSPCOUNT = 3
+ 1984            TS     DSPCOUNT
+ 1985            TC     5BLANK          BLANKS R1
+ 1986  2         TC     ENTEXIT
+ 1987   SWTAB    OCT    0               -R3
+ 1988            OCT    1               +R3
+ 1989            OCT    3               -R2
+ 1990  4         OCT    4               +R2
+R1991   NVSUB IS USED FOR SUB ROUTINE CALLS FROM WITHIN COMPUTER. IT CAN BE
+R1992   USED TO DO ANY THING THE KEYBOARD CAN CALL. PLACE  ...VVVVVVNNNNNN
+R1993  2INTO A.      V-S ARE 6 BIT VERB CODE. N-S , 6 BIT NOUN CODE.
+R1994   NVSUB CAN BE USED WITH MACH ADDR TO BE SPEC BY PLACING THE ADDRESS  IN
+R1995  2MPAC+2 BEFORE THE STANDARD NVSUB CALL.
+R1996    NVSUB RETURNS TO 2+ CALLING LOC AFTER PERFORMING TASK, IF DISPLAY
+R1997   SYSTEM IS AVAILABLE. THE NEW NOUN AND VERB CODES ARE DISPLAYED.
+R1998   IF V:S =0, THE NEW NOUN CODE IS DISPLAYED ONLY(RETURN WITH NO FURTHER
+R1999   ACTION). IF N-S =0, THE NEW VERB CODE IS DISPLAYED ONLY(RETURN WITH NO
+R2000  2FURTHER ACTION).
+R2001   IT RETURNS TO 1+ CALLING LOC WITHOUT PERFORMING TASK, IF DISPLAY
+R2002   SYSTEM IS BLOCKED (NOTHING IS DISPLAYED IN THIS CASE).
+R2003   IT DOES TC ABORT (WITH OCT 01501) IF IT ENCOUNTERS A DISPLAY PROGRAM
+R2004  2ALARM CONDITION BEFORE RETURN TO CALLER.
+R2005   THE DISPLAY SYSTEM IS BLOCKED BY THE DEPRESSION OF ANY
+R2006   KEY, EXCEPT ERROR LIGHT RESET. ALSO BY ENDIDLE.
+R2007        IT IS RELEASED BY SPECIAL VERB = RELEASE DISPLAY, ALL GO TO VERBS,
+R2008   PROCEED WITHOUT DATA, TERMINATE, INITIALIZE EXECUTIVE,
+R2009   RECALL PART OF RECALTST IF ENDIDLE WAS USED,
+R2010   IN RECALTST IF NVSUB INITIATED LOAD AND ENDIDLE WAS NOT USED,
+R2011   VB = REQUEST EXECUTIVE, VB = REQUEST WAITLIST,
+R2012  2MONITOR SET UP.
+R2013  2A NVSUB CALL THAT PASSES DSPLOCK ENDS OLD MONITOR.
+R2014   DSPLOCK IS THE INTERLOCK FOR USE OF KEYBOARD AND DISPLAY SYSTEM WHICH
+R2015  2LOCKS OUT INTERNAL USE WHENEVER THERE IS EXTERNAL KEYBOARD ACTION.
+R2016   NVSUB IN F/F PLACES 2 + CALLING CADR INTO NVSBCADR, TC NVSUBEND INTO
+R2017   ENTRET. IT WILL HANDLE A CALL FROM F/F OK, BUT WILL NOT RESTORE BANKREG
+R2018  2TO ITS ORIGINAL CONTENTS.
+ 2019            SETLOC MIDSIX  +1
+ 2020   NVSUB    TS     NVTEMP          IN FIXED FIXED
+ 2021            CAF    BIT4
+ 2022            MASK   DSPLOCK         BIT4 OF STATE
+ 2023            CCS    A
+ 2024            TC     Q               DSP SYST BLOCKED. RET TO 1+ CALLING LOC
+ 2025            XCH    Q               DSP SYST AVAILABLE
+ 2026            AD     ONE
+ 2027            TS     TEMQS           2 + CALLING CADR INTO TEMQS
+ 2028            TC     KILMONON        TURN ON KILL MONITOR BIT
+ 2029   NVSUBCOM CAF    NVSUBANK
+ 2030            XCH    BANKREG
+ 2031            TS     BANKTEM
+ 2032            TC     MAKECADR
+ 2033            XCH    ADDRWD
+ 2034            TS     NVSBCADR
+ 2035            TC     NVSUBB          GO TO NVSUB1 THRU STANDARD LOC
+ 2036  2NVSUBANK CADR   NVSUB1          BANK NUMB OF NVSUB1
+ 2037   NVSUBMON XCH    Q               MONDO COMES HERE
+ 2038            AD     ONE
+ 2039            TS     TEMQS
+ 2040  4         TC     NVSUBCOM
+ 2041   NVSUBEND XCH    NVSBCADR
+ 2042  4         TC     SWCALL
+ 2043  2         SETLOC ENDRQWT +1
+ 2044   NVSUB1   CAF    ENTSET          IN BANK
+ 2045            TS     ENTRET          SET RETURN TO NVSUBEND
+ 2046            CAF    LOW6
+ 2047            MASK   NVTEMP
+ 2048            TS     MPAC            TEMP STORAGE
+ 2049            CAF    MID6
+ 2050            MASK   NVTEMP
+ 2051            TC     RIGHT5
+ 2052            TS     CYR
+ 2053            XCH    CYR
+ 2054            TS     MPAC    +1      TEMP STORAGE
+ 2055            CCS    MPAC            TEST NOUN
+ 2056            TC     +4              IF NOUN NOT +0, GO ON
+ 2057            XCH    MPAC    +1
+ 2058            TC     UPDATVB -1      IF NOUN = +0, DISPLAY VERB . THEN RETURN
+ 2059   ENTSET   TC     NVSUBEND
+ 2060            CCS    MPAC    +1      TEST VERB
+ 2061            TC     +4              IF VERB NOT +0, GO ON
+ 2062            XCH    MPAC
+ 2063            TC     UPDATNN -1      IF VERB = +0, DISPLAY NOUN. THEN RETURN
+ 2064            TC     NVSUBEND
+ 2065            XCH    MPAC    +1
+ 2066            TC     UPDATVB -1      IF BOTH NOUN AND VERB NOT +0, DISPLAY
+ 2067            XCH    MPAC            BOTH AND GO TO ENTPAS0
+ 2068            TC     UPDATNN -1
+ 2069            CCS    NNADTEM         NOUN TABLES WERE READ IN UPDATNN.
+ 2070            TC     +3              NORMAL
+ 2071            TC     GODSPALM        NOUN NOT IN USE
+ 2072            TC     MATBSUB
+ 2073   NVSUB2   CAF    ZERO
+ 2074            TS     LOADSTAT        SET FOR WAITING FOR DATA CONDITION
+ 2075            TS     CLPASS
+ 20751           TS     REQRET          SET REQRET FOR PASS 0.
+ 2076  2         TC     ENTPAS0
+ 2077   MATBSUB  XCH    MPAC    +2      NVSUB CALL LEFT ADDRES FOR MATBS IN
+ 2078            TS     NOUNADD         MPAC+2.
+ 2079  4         TC     NVSUB2
+ 2080   LOW6     OCT    77
+ 2081  2MID6     OCT    7700
+ 2082            SETLOC NVSUBEND +2
+ 2083   KILMONON CS     BIT15           FORCE BIT 15 OF MONSAVE1 TO 1.
+ 2084            INHINT                         THIS IS THE KILL MONITOR BIT.
+ 2085            MASK   MONSAVE1
+ 2086            AD     BIT15
+ 2087            TS     MONSAVE1
+ 2088            RELINT
+ 2089  4         TC     Q
+R2090   LOADSTAT  +0 INACTIVE(WAITING FOR DATA). SET BY NVSUB
+R2091             +1  PROCEED NO DATA. SET BY SPECIAL VERB
+R2092            -1 TERMINATE   SET BY SPECIAL VERB
+R2093  4         -0 DATA IN   SET BY END OF LOAD ROUTINE
+R2094   L  TC ENDIDLE  (FIXED FIXED)
+R2095   ROUTINES THAT REQUEST LOADS THROUGH NVSUB SHOULD USE ENDIDLE WHILE
+R2096   WAITING FOR THE DATA TO BE LOADED. ENDIDLE PUTS CURRENT JOB TO SLEEP.
+R2097   RECALTST TESTS LOADSTAT AND WAKES JOB UP TO,
+R2098   L+1      FOR TERMINATE
+R2099   L+2      FOR PROCEED WITHOUT DATA
+R2100   L+3      FOR DATA IN
+R2101  2IT DOES NOTHING     IF LOADSTAT INDICATES WAITING FOR DATA.
+ 2102   ENDIDLE  XCH    Q               NOVAC ROUTINES ENTER HERE
+ 2103            TS     TEMQS
+ 2104            XCH    BANKREG
+ 2105            TS     BANKTEM
+ 2106            TC     MAKECADR
+ 2107            TC     DSPLOCK1        MAKE DSPLOCK BUSY (BIT4 OF STATE)
+ 2108            XCH    ADDRWD
+ 2109            TS     CADRSTOR
+ 2110  4         TC     JOBSLEEP
+ 2111  2ENDINST  TC     ENDOFJOB
+ 2112  4BNKCON   OCT    5777
+R2113   JAMTERM ALLOWS PROGRAMS TO PERFORM THE TERMINATE FUNCTION.
+R2114  2IT DOES ENDOFJOB.
+ 2115   JAMTERM  CAF    TWENTY8
+ 2116            TS     REQRET          LEAVE ENTER AT PASS 0
+ 2117            TC     BANKCALL
+ 2118            CADR   UPDATVB -1      DISPLAY VB 34
+ 2119            TC     POSTJUMP
+ 2120  4         CADR   VBTERM
+R2121   DATAWAIT IS AN ALTERNATIVE TO ENDIDLE. IT RETURNS IMMEDIATELY IF
+R2122   LOADSTAT INDICATES THAT DATA IS ALREADY IN, OR PROCEED OR TERMINATE HAS
+R2123   BEEN EXECUTED. RETURN FORMAT IS SAME AS FOR ENDIDLE.
+R2124  2DATAWAIT SHOULD BE USED ONLY AFTER REQUESTING A LOAD VERB.
+ 2125   DATAWAIT XCH    Q
+ 2126            TS     TEMQS
+ 2127            CCS    LOADSTAT
+ 2128            TC     DATWAIT1        PROCEED.RETURN TO L+2.
+ 2129            TC     ENDIDLE +2      STILL WAITING. GO TO SLEEP.
+ 2130            TC     TEMQS           TERMINATE. RETURN TO L+1.
+ 2131            INDEX  TEMQS           DATA IN. RETURN TO L+3.
+ 2132            TC     2
+ 2133   DATWAIT1 INDEX  TEMQS           RETURN TO L+2
+ 2134  2         TC     1
+R2135   DATAWAIT DOES NOT RELEASE DISPLAY SYST. IT IS RELEASED AT END OF NVSUB
+R2136  4INITIATED LOAD, IF ENDIDLE WAS NOT USED.
+ 2137            SETLOC MID6  +1
+R2138  2DSPMM  PLACE MAJOR MODE CODE INTO MODREG
+ 2139   DSPMM1   CAF    MD1             GETS HERE THRU DSPMM (STANDARD LEAD IN)
+ 2140            XCH    DSPCOUNT        SAVE DSPCOUNT
+ 2141            TS     DSPMMTEM
+ 2142            CS     MODREG
+ 2143            CS     A
+ 2144            TC     DSP2BIT
+ 2145            XCH    DSPMMTEM        RESTORE DSPCOUNT
+ 2146            TS     DSPCOUNT
+ 2147  4ENDSPMM1 TC     UPDATRET
+R2148   RECALTST IS ENTERED DIRECTLY AFTER DATA IS
+R2149   LOADED, TERMINATE VERB IS EXECUTED, OR THE PROCEED WITHOUT DATA VERB IS
+R2150  2EXECUTED. IT WAKES UP JOB THAT DID TC ENDIDLE.
+R2151   IF NVSUB INITIATED LOAD, AND ENDIDLE WAS NOT USED, THEN IT RELEASES
+R2152  2DISPLAY SYST. (NEEDED FOR DATAWAIT)
+ 2153  2         SETLOC SWTAB  +4
+ 2154   RECALTST CCS    CADRSTOR
+ 2155            TC     RECAL1
+ 2156            TC     ENDOFJOB        NORMAL EXIT IF KEYBOARD INITIATED
+ 2157            TC     RECAL1
+ 2158            TS     CADRSTOR        -0. CONCLUSION OF NVSUB INITIATED LOAD.
+ 2159            TC     RECAL3          +0 INTO CADRSTOR, RELEASE DISPLAY,
+A2160                                      AND ENDOFJOB. NEEDED FOR DATAWAIT.
+ 2161   RECAL1   CAF    ZERO
+ 2162            XCH    CADRSTOR
+ 2163            INHINT
+ 2164            TC     JOBWAKE
+ 2165            CCS    LOADSTAT
+ 2166            TC     DOPROC          + PROCEED WITHOUT DATA
+ 2167            TC     ENDOFJOB        PATHALOGICAL CASE EXIT
+ 2168            TC     DOTERM          -   TERMINATE
+ 2169            CS     TWO
+ 2170   RECAL2   INDEX  LOCCTR
+ 2171            AD     LOC             LOC IS - FOR BASIC JOBS
+ 2172            INDEX  LOCCTR
+ 2173            TS     LOC
+ 2174            RELINT
+ 2175   RECAL3   TC     RELDSP1         DOES NOT SEARCH LIST
+ 2176  2         TC     ENDOFJOB
+ 2177   DOTERM   CAF    ZERO
+ 2178  2         TC     RECAL2
+ 2179   DOPROC   CS     ONE
+ 2180            TC     RECAL2
+P2182  4THE FOLLOWING REFERS TO THE NOUN TABLES
+ 2183  2         SETLOC DSPMM1  +6
+R2184  2COMPONENT CODE NUMBER           INTERPRETATION
+R2185   00000                           1 COMPONENT
+R2186   00001                           2 COMPONENT (EACH S P)
+R2187  400010                           3 COMPONENT (EACH SP)
+R2188  2SF ROUTINE CODE NUMBER          INTERPRETATION
+R2189   00000    OCTAL ONLY
+R2190   00001    STRAIGHT FRACTIONAL
+R2191   00010    DEGREES (XXX.XX)
+R2192   00011    ARITHMETIC SF
+R2193   00100    ARITH DP1   OUT(MULT BY 2/14 AT END)      IN(STRAIGHT)
+R2194   00101    ARITH DP2   OUT(STRAIGHT)                 IN(SL 7 AT END)
+R2195   00110    OPTICS DEGREES(XX.XXX MAX 89.999) OR (XXX.XX MAX 179.99)
+R2196   00111    ARITH DP3   OUT ( SL 7 AT END)       IN ( STRAIGHT)
+R2197  4END OF SF ROUTINE CODE NUMBERS
+R2198  2SF CONSTANT CODE NUMBER         INTERPRETATION
+R2199   00000                           WHOLE
+R2200   00000                           TIME SEC(XXX.XX)SAME AS WHOLE(ARITH DP1)
+R2201   00001                           TIME HOURS(XXX.XX) USE ARITH DP2
+R2202   00010                           DEGREES
+R2203   00010                           OPTICS DEGREES
+R2204   00011                           GYRO DEGREES(XX.XXX) USE ARITH DP1
+R2205   00100                           GYRO BIAS DRIFT .BBXXXXX MILLIRAD/SEC
+R2206   00101                           GYRO AXIS ACCEL. DRIFT
+R2207                                   .BBXXXXX (MILLIRAD/SEC) / (CM/SEC SEC)
+R2208   00110                           PIPA BIAS X.XXXX CM/SEC SEC
+R2209   00111                           PIPA SCALE FACTOR ERROR
+R2210                                       XXXXX. PARTS/MILLION
+R2211   01000                           POSITION(XXXX.X KILOMETERS) USE ARITHDP3
+R2212   01001                           VELOCITY(XXXX.X METERS/SEC) USE ARITHDP2
+R2213   01010                           TIME HOURS(XXX.XX)WEEKS INSIDE(ARITHDP2)
+R2214   01011                           ELEVATION DEGREES(89.999MAX) USE ARITH
+R22141  01100                           VG FOR 501 (XXXX.X MET/SEC)  USE ARITH
+R2215  4END OF SF CONSTANT CODE NUMBERS
+R2216   FOR GREATER THAN SINGLE PRECISION SCALES, PUT ADDRESS OF MAJOR PART INTO
+R2217   NOUN TABLES.
+R2218   OCTAL LOADS PLACE +0 INTO MAJOR PART, DATA INTO MINOR PART.
+R2219   OCTAL DISPLAYS SHOW MINOR PART ONLY.
+R2220   TO GET AT BOTH MAJOR AND MINOR PARTS (IN OCTAL), USE NOUN 01.
+P2221   THE FOLLOWING ROUTINES ARE FOR READING THE NOUN TABLES AND THE SF TABLES
+R2222   (WHICH ARE IN A SEPARATE BANK FROM THE REST OF PINBALL). THESE READING
+R2223  4ROUTINES ARE IN THE SAME BANK AS THE TABLES. THEY ARE CALLED BY SWCALL.
+R2224   LODNNTAB LOADS NNADTEM WITH THE NNADTAB ENTRY, NNTYPTEM WITH THE
+R2225   NNTYPTAB ENTRY. IF THE NOUN IS MIXED, IDAD1TEM IS LOADED WITH THE FIRST
+R2226   IDADDTAB ENTRY, IDAD2TEM THE SECOND IDADDTAB ENTRY, IDAD3TEM THE THIRD
+R2227  2IDADDTAB ENTRY. MIXBR IS SET FOR MIXED OR NORMAL NOUN.
+ 2228            SETLOC ENDEXTVS
+ 2229   LODNNTAB XCH    Q
+ 2230            TS     IDAD3TEM        SAVE RETURN ADDRESS IN IDAD3TEM
+ 2231            INDEX  NOUNREG
+ 2232            CAF    NNADTAB
+ 2233            TS     NNADTEM
+ 2234            INDEX  NOUNREG
+ 2235            CAF    NNTYPTAB
+ 2236            TS     NNTYPTEM
+ 2237            CS     NOUNREG
+ 2238            AD     MIXCON
+ 2239            CCS    A
+ 2240            TC     LODNORM         NOUN L/ FIRST MIXED NOUN
+ 2241   MIXCON   OCT    55              FIRST MIXED NOUN = 55.
+ 2242            TC     +1
+ 2243   LODMIXNN CAF    TWO             NOUN G/E FIRST MIXED NOUN
+ 2244            TS     MIXBR
+ 2245            CAF    LOW10
+ 2246            MASK   NNADTEM
+ 2247            TS     Q               IDADDREL INTO Q
+ 2248            INDEX  A
+ 2249            CAF    IDADDTAB
+ 2250            TS     IDAD1TEM        LOAD IDAD1TEM WITH FIRST IDADDTAB ENTRY.
+ 2251            INDEX  Q
+ 2252            CAF    IDADDTAB +1
+ 2253            TS     IDAD2TEM        LOAD IDAD2TEM WITH 2ND IDADDTAB ENTRY.
+ 2254            INDEX  Q
+ 2255            CAF    IDADDTAB +2     LOAD IDAD3TEM WITH 3RD IDADDTAB ENTRY.
+ 2256   LODNLV   XCH    IDAD3TEM        PUT RETURN ADDESS INTO A.
+ 2257  2         TC     A
+ 2258   LODNORM  CAF    ONE
+ 2259            TS     MIXBR
+ 2260  4         TC     LODNLV
+R2261  2GTSFOUT LOADS SFTEMP1, SFTEMP2 WITH THE DP SFOUTAB ENTRIES.
+ 2262   GTSFOUT  INDEX  SFTEMP2         SF CONUM ARRIVES IN SFTEMP2.
+ 2263            CAF    SFOUTAB1
+ 2264            TS     SFTEMP1
+ 2265            INDEX  SFTEMP2
+ 2266            CAF    SFOUTAB2
+ 2267            TS     SFTEMP2
+ 2268  4         TC     Q
+R2269  2GTSFIN LOADS SFTEMP1, SFTEMP2 WITH THE DP SFINTAB ENTRIES.
+ 2270   GTSFIN   INDEX  SFTEMP2         SF CONUM ARRIVES IN SFTEMP2.
+ 2271            CAF    SFINTAB1
+ 2272            TS     SFTEMP1
+ 2273            INDEX  SFTEMP2
+ 2274            CAF    SFINTAB2
+ 2275            TS     SFTEMP2
+ 2276  4         TC     Q
+A2277                                   NN   NORMAL NOUNS
+ 2278   NNADTAB  OCT    00000           00 NOT IN USE
+ 2279            OCT    40000           01 SPECIFY MACHINE ADDRESS (FRACTIONAL)
+ 2280            OCT    40000           02 SPECIFY MACHINE ADDRESS (WHOLE)
+ 2281            OCT    40000           03 SPECIFY MACHINE ADDRESS (DEGREES)
+ 2282            OCT    40000           04 SPECIFY MACHINE ADDRESS (HOURS)
+ 2283            OCT    40000           05 SPECIFY MACHINE ADDRESS (SECONDS)
+ 2284            OCT    40000           06 SPECIFY MACHINE ADDRESS (GYRO DEG)
+ 2285            OCT    40000           07 SPECIFY MACHINE ADDRESS (Y OPT DEG.)
+ 2286            OCT    00000           10 SPARE
+ 2287            OCT    00000           11 SPARE
+ 2288            OCT    00000           12 SPARE
+ 2289            OCT    00000           13 SPARE
+ 2290            OCT    00000           14 SPARE
+ 2291            OCT    77777           15 INCREMENT MACHINE ADDRESS
+ 2292            OCT    00035           16 TIME SECONDS
+ 2293            OCT    00035           17 TIME HOURS
+ 2294            ADRES  CDUX            20 ICDU
+ 2295            ADRES  PIPAX           21 PIPAS
+ 2296            ADRES  THETAD          22 NEW ANGLES I
+ 2297            ADRES  DSPTEM2         23 DELTA ANGLES I
+ 2298            ADRES  DSPTEM1         24 DELTA TIME (SEC)
+ 2299            ADRES  DSPTEM1         25 CHECKLIST
+ 2300            ADRES  DSPTEM1         26 PRIO/DELAY
+ 2301            ADRES  SMODE           27 SELF TEST ON/OFF SWITCH
+ 2302            ADRES  DSPTEM1         30 STAR NUMBERS
+ 2303            ADRES  FAILREG         31 FAILREG, SFAIL, ERCOUNT
+ 2304            ADRES  TDEC            32 DECISION TIME (MIDCOURSE)
+ 2305            ADRES  TET             33 EPHEMERIS TIME(MIDCOURSE)
+ 2306            ADRES  MEASQ           34 MEASURED QUANTITY (MIDCOURSE)
+ 2307            ADRES  ROLL            35 ROLL, PITCH, YAW
+ 2308            ADRES  LANDMARK        36 LANDMARK DATA 1
+ 2309            ADRES  LANDMARK +3     37 LANDMARK DATA 2
+ 2310            ADRES  DSPTEM1         40 VG FOR 501
+ 2311            OCT    00000           41 SPARE
+ 2312            OCT    00000           42 SPARE
+ 2313            OCT    00000           43 SPARE
+ 2314            OCT    00000           44 SPARE
+ 2315            OCT    00000           45 SPARE
+ 2316            OCT    00000           46 SPARE
+ 2317            OCT    00000           47 SPARE
+ 2318            OCT    00000           50 SPARE
+ 2319            OCT    00000           51 SPARE
+ 2320            ADRES  GBIASX          52 GYRO BIAS DRIFT
+ 2321            ADRES  ADIAX           53 GYRO INPUT AXIS ACCELERATION DRIFT
+ 2322  2         ADRES  ADSRAX          54 GYRO SPIN AXIS ACCELERATION DRIFT
+A2323                                   NN  MIXED NOUNS
+ 2324            OCT    02000           55 OCDU
+ 2325            OCT    04002           56 UNCALLED MARK DATA (OCDU & TIME(SEC))
+ 2326            OCT    02005           57 NEW ANGLES OCDU
+ 2327            OCT    04007           60 IMU MODE STATUS
+ 2328            OCT    02012           61 TARGET AZIMUTH AND ELEVATION
+ 2329            OCT    04062           62 RE-ENTRY VARIABLES
+ 2330            OCT    02016           63 OCDUX AND TIME(SEC)
+ 2331            OCT    02020           64 OCDUY AND TIME(SEC)
+ 2332            OCT    02022           65 SAMPLED TIME (HOURS AND SECONDS)
+A2333                                        (FETCHED IN INTERRUPT)
+ 2334            OCT    04024           66 SYSTEM TEST RESULTS
+ 2335            OCT    04027           67 DELTA GYRO ANGLES
+ 2336            OCT    04032           70 PIPA BIAS
+ 2337            OCT    04035           71 PIPA SCALE FACTOR ERROR
+ 2338            OCT    04040           72 DELTA POSITION
+ 2339            OCT    04043           73 DELTA VELOCITY
+ 2340            OCT    04046           74 MEASUREMENT DATA (MIDCOURSE)
+ 2341            OCT    04051           75 MEASUREMENT DEVIATIONS (MIDCOURSE)
+ 2342            OCT    04054           76 POSITION VECTOR
+ 2343  4         OCT    04057           77 VELOCITY VECTOR
+A2344                                   NN        NORMAL NOUNS
+ 2345   NNTYPTAB OCT    00000           00 NOT IN USE
+ 2346            OCT    00040           01 1COMP  FRACTIONAL
+ 2347            OCT    00140           02 1COMP  WHOLE
+ 2348            OCT    00102           03 1COMP  DEGREES
+ 2349            OCT    00241           04 1COMP  HOURS
+ 2350            OCT    00200           05 1COMP  SECONDS
+ 2351            OCT    00203           06 1COMP  GYRO DEGREES
+ 2352            OCT    00302           07 1COMP  Y OPT DEGREES
+ 2353            OCT    00000           10        SPARE
+ 2354            OCT    00000           11        SPARE
+ 2355            OCT    00000           12        SPARE
+ 2356            OCT    00000           13        SPARE
+ 2357            OCT    00000           14        SPARE
+ 2358            OCT    00000           15 1COMP  OCTAL ONLY
+ 2359            OCT    00200           16 1COMP  SECONDS
+ 2360            OCT    00241           17 1COMP  HOURS
+ 2361            OCT    04102           20 3COMP  DEGREES
+ 2362            OCT    04140           21 3COMP  WHOLE
+ 2363            OCT    04102           22 3COMP  DEGREES
+ 2364            OCT    04102           23 3COMP  DEGREES
+ 2365            OCT    00200           24 1COMP  SECONDS
+ 2366            OCT    00140           25 1COMP  WHOLE
+ 2367            OCT    00140           26 1COMP  WHOLE
+ 2368            OCT    00140           27 1COMP  WHOLE
+ 2369            OCT    04140           30 3COMP  WHOLE
+ 2370            OCT    04000           31 3COMP  OCTAL ONLY
+ 2371            OCT    00252           32 1COMP  TIME WEEKS
+ 2372            OCT    00252           33 1COMP  TIME WEEKS
+ 2373            OCT    00350           34 1COMP  POSITION
+ 2374            OCT    04102           35 3COMP  DEGREES
+ 2375            OCT    04000           36 3COMP  OCTAL ONLY
+ 2376            OCT    04000           37 3COMP  OCTAL ONLY
+ 2377            OCT    04154           40 3COMP  VG FOR 501
+ 2378            OCT    00000           41        SPARE
+ 2379            OCT    00000           42        SPARE
+ 2380            OCT    00000           43        SPARE
+ 2381            OCT    00000           44        SPARE
+ 2382            OCT    00000           45        SPARE
+ 2383            OCT    00000           46        SPARE
+ 2384            OCT    00000           47        SPARE
+ 2385            OCT    00000           50        SPARE
+ 2386            OCT    00000           51        SPARE
+ 2387            OCT    04144           52 3COMP  GYRO BIAS DRIFT
+ 2388            OCT    04145           53 3COMP  GYRO AXIS ACCEL. DRIFT
+ 2389  2         OCT    04145           54 3COMP  GYRO AXIS ACCEL. DRIFT
+A2390                                   NN        MIXED NOUNS
+ 2391            OCT    00102           55 2COMP  DEGREES, Y OPT DEGREES
+ 2392            OCT    00102           56 3COMP  DEGREES, Y OPT DEGREES, SECS
+ 2393            OCT    00102           57 2COMP  DEGREES, Y OPT DEGREES
+ 2394            OCT    00000           60 3COMP  OCTAL ONLY
+ 2395            OCT    00542           61 2COMP  DEGREES, ELEVATION DEGREES
+ 2396            OCT    00000           62 3COMP  SECS, WHOLE, WHOLE
+ 2397            OCT    00002           63 2COMP  DEGREES, SECS
+ 2398            OCT    00002           64 2COMP  Y OPT DEGREES, SECS
+ 2399            OCT    00001           65 2COMP  HOURS, SECONDS
+ 2400            OCT    00000           66 3COMP  WHOLE, FRACTIONAL, WHOLE
+ 2401            OCT    06143           67 3COMP  GYRO DEGREES FOR EACH
+ 2402            OCT    14306           70 3COMP  PIPA BIAS FOR EACH
+ 2403            OCT    16347           71 3COMP  PIPA SCALE FACTOR ERR.FOR EACH
+ 2404            OCT    20410           72 3COMP  POSITION FOR EACH
+ 2405            OCT    22451           73 3COMP  VELOCITY FOR EACH
+ 2406            OCT    00412           74 3COMP  TIME WEEKS, POSITION, WHOLE
+ 2407            OCT    20450           75 3COMP  POSITION, VELOCITY, POSITION
+ 2408            OCT    20410           76 3COMP  POSITION FOR EACH
+ 2409  4         OCT    22451           77 3COMP  VELOCITY FOR EACH
+ 2410   SFINTAB1 OCT    00006           WHOLE,TIME(SEC)              HIGH PART
+ 2411            OCT    00253           TIME HOURS(=1.3-, PT. BETWEEN BITS 7-8)
+ 2412            OCT    0               DEGREES
+ 2413            OCT    00021           GYRO DEGREES
+ 2414            OCT    00001           GYRO BIAS DRIFT
+ 2415            OCT    00011           GYRO AXIS ACCEL. DRIFT
+ 2416            OCT    00004           PIPA BIAS
+ 2417            OCT    00314           PIPA SCALE ERROR
+ 2418            OCT    23420           POSITION
+ 2419            OCT    00201           VELOCITY (POINT BETWEEN BITS 7-8)
+ 2420            OCT    01371           TIME WEEKS (POINT BETWEEN BITS 7-8)
+ 2421            OCT    00001           ELEVATION DEGREES
+ 24211           OCT    00003           VG FOR 501
+R2422  4END OF SFINTAB1
+ 2423   SFINTAB2 OCT    03240           WHOLE, TIME(SEC)             LO PART
+ 2424            OCT    25124           TIME HOURS
+ 2425            OCT    0               DEGREES ( SFCON IN DEGINSF)
+ 2426            OCT    30707           GYRO DEGREES
+ 2427            OCT    02133           GYRO BIAS DRIFT
+ 2428            OCT    30322           GYRO AXIS ACCEL. DRIFT
+ 2429            OCT    14021           PIPA BIAS
+ 2430            OCT    31463           PIPA SCALE ERROR
+ 2431            OCT    00000           POSITION
+ 2432            OCT    30327           VELOCITY
+ 2433            OCT    34750           TIME WEEKS
+ 2434            OCT    03434           ELEVATION DEGREES
+ 24341           OCT    04000           VG FOR 501
+R2435  4END OF SFINTAB2
+ 2436   SFOUTAB1 OCT    05174           WHOLE, TIME(SEC)             HIGH PART
+ 2437            OCT    27670           TIME HOURS
+ 2438            OCT    0               DEGREES
+ 2439            OCT    01631           GYRO DEGREES
+ 2440            OCT    35753           GYRO BIAS DRIFT
+ 2441            OCT    03216           GYRO AXIS ACCEL. DRIFT
+ 2442            OCT    07237           PIPA BIAS
+ 2443            OCT    00120           PIPA SCALE ERROR
+ 2444            OCT    00321           POSITION (POINT BETWEEN BITS 7-8)
+ 2445            OCT    37441           VELOCITY
+ 2446            OCT    05300           TIME WEEKS
+ 2447            OCT    34631           ELEVATION DEGREES
+ 24471           OCT    12172           VG FOR 501
+R2448  4END OF SFOUTAB1
+ 2449   SFOUTAB2 OCT    13261           WHOLE, TIME(SEC)             LO PART
+ 2450            OCT    31357           TIME HOURS
+ 2451            OCT    0               DEGREES
+ 2452            OCT    23146           GYRO DEGREES
+ 2453            OCT    32323           GYRO BIAS DRIFT
+ 2454            OCT    06400           GYRO AXIS ACCEL. DRIFT
+ 2455            OCT    37776           PIPA BIAS
+ 2456            OCT    00000           PIPA SCALE ERROR
+ 2457            OCT    26706           POSITION
+ 2458            OCT    14247           VELOCITY
+ 2459            OCT    20305           TIME WEEKS
+ 2460            OCT    23146           ELEVATION DEGREES
+ 24601           OCT    34121           VG FOR 501
+R2461  4END OF SFOUTAB2
+A2462                                   MIXNOUN  SF ROUT        REG
+ 2463   IDADDTAB CADR   OPTX    +04000  01       DEGREES        52
+ 2464            CADR   OPTY    +14000  01       Y OPT DEGREES  53
+ 2465            CADR   DSPTEM1 +04000  02       DEGREES        627
+ 2466            CADR   DSPTEM1 +14001  02       Y OPT DEGREES  630
+ 2467            CADR   DSPTEM1 +10002  02       SEC            631
+ 2468            CADR   DESOPTX +04000  03       DEGREES        724
+ 2469            CADR   DESOPTX +14001  03       Y OPT DEGREES  725
+ 2470            CADR   IN3             04       OCTAL ONLY
+ 2471            CADR   WASKSET         04       OCTAL ONLY
+ 2472            CADR   OLDERR          04       OCTAL ONLY
+ 2473            CADR   DSPTEM1 +04000  05       DEGREES
+ 2474            CADR   DSPTEM1 +06001  05       ELEVATION DEGREES
+ 2475            OCT    00000           N 62 WAS 2COMP. CHANGED TO 3COMP. MOVED
+ 2476            OCT    00000           TO END OF IDADDTAB TO PRESERVE TABLE.
+ 2477            CADR   OPTX    +04000  07       DEGREES        52
+ 2478            CADR   TIME2   +10000  07       SEC            35
+ 2479            CADR   OPTY    +14000  10       Y OPT DEGREES  53
+ 2480            CADR   TIME2   +10000  10       SEC            35
+ 2481            CADR   SAMPTIME +12000 11       HOURS          655
+ 2482            CADR   SAMPTIME +10000 11       SECONDS        655
+ 2483            CADR   DSPTEM2 +06000  12       WHOLE          632
+ 2484            CADR   DSPTEM2 +02001  12       FRACTIONAL     633
+ 2485            CADR   DSPTEM2 +06002  12       WHOLE          634
+ 2486            CADR   OGC     +10000  13       GYRO DEGREES
+ 2487            CADR   OGC     +10002  13       GYRO DEGREES
+ 2488            CADR   OGC     +10004  13       GYRO DEGREES
+ 2489            CADR   PBIASX  +06000  14       PIPA BIAS
+ 2490            CADR   PBIASY  +06000  14       PIPA BIAS
+ 2491            CADR   PBIASZ  +06000  14       PIPA BIAS
+ 2492            CADR   PIPASCFX +06000 15       PIPA SCALE FACTOR ERROR
+ 2493            CADR   PIPASCFY +06000 15       PIPA SCALE FACTOR ERROR
+ 2494            CADR   PIPASCFZ +06000 15       PIPA SCALE FACTOR ERROR
+ 2495            CADR   DELR    +16000  16       POSITION
+ 2496            CADR   DELR    +16002  16       POSITION
+ 2497            CADR   DELR    +16004  16       POSITION
+ 2498            CADR   DELVEL  +12000  17       VELOCITY
+ 2499            CADR   DELVEL  +12002  17       VELOCITY
+ 2500            CADR   DELVEL  +12004  17       VELOCITY
+ 2501            CADR   TDEC    +12000  20       TIME WEEKS
+ 2502            CADR   MEASQ   +16000  20       POSITION
+ 2503            CADR   MEASMODE +06000 20       WHOLE
+ 2504            CADR   DSPTEM1 +16000  21       POSITION
+ 2505            CADR   DSPTEM1 +12002  21       VELOCITY
+ 2506            CADR   DELTAQ  +16000  21       POSITION
+ 2507            CADR   DSPTEM1 +16000  22       POSITION
+ 2508            CADR   DSPTEM1 +16002  22       POSITION
+ 2509            CADR   DSPTEM1 +16004  22       POSITION
+ 2510            CADR   DSPTEM1 +12000  23       VELOCITY
+ 2511            CADR   DSPTEM1 +12002  23       VELOCITY
+ 2512            CADR   DSPTEM1 +12004  23       VELOCITY
+ 2513            CADR   TIME2   +10000  06       SEC
+ 2514            CADR   V       +06000  06       WHOLE
+ 2515            CADR   THETAH  +06000  06       WHOLE
+ 2516            OCT    00000                    SPARE
+ 2517            OCT    00000                    SPARE
+ 2518            OCT    00000                    SPARE
+P2520  4MISCELLANEOUS SERVICE ROUTINES
+ 2521  2         SETLOC DATWAIT1 +2
+ 2522   R1D1     OCT    16
+ 2523   R2D1     OCT    11
+ 2524  2R3D1     OCT    4
+ 2525   RIGHT5   TS     CYR
+ 2526            CS     CYR
+ 2527            CS     CYR
+ 2528            CS     CYR
+ 2529            CS     CYR
+ 2530            XCH    CYR
+ 2531  2         TC     Q
+ 2532   LEFT5    TS     CYL
+ 2533            CS     CYL
+ 2534            CS     CYL
+ 2535            CS     CYL
+ 2536            CS     CYL
+ 2537            XCH    CYL
+ 2538  2         TC     Q
+ 2539   SLEFT5   DOUBLE
+ 2540            DOUBLE
+ 2541            DOUBLE
+ 2542            DOUBLE
+ 2543            DOUBLE
+ 2544  4         TC     Q
+ 2545   LOW5     OCT    37
+ 2546   MID5     OCT    1740
+ 2547  2         OCT    76000           MUST STAY HERE.
+ 2548   TCNOVAC  TC     NOVAC
+ 2549   TCWAIT   TC     WAITLIST
+ 2550   TCTSKOVR TC     TASKOVER
+ 2551  4TCFINDVC TC     FINDVAC
+ 2552   VD1      OCT    23
+ 2553   ND1      OCT    21
+ 2554  2MD1      OCT    25
+ 2555  2BINCON   DEC    10
+ 2556  2TEN      EQUALS BINCON
+ 2557   FALTON   INHINT                 TURN PROGRAM CHECK LIGHT ON
+ 2558            CS     BIT5            OUT1,BIT5(ALSO KNOWN AS ILLEGAL ORDER)
+ 2559            MASK   OUT1
+ 2560            AD     BIT5
+ 2561            TS     OUT1
+ 2562            RELINT
+ 2563  2         TC     Q
+ 2564   FALTOF   INHINT                 TURN PROGRAM CHECK LIGHT OFF
+ 2565            CS     BIT5
+ 2566            MASK   OUT1
+ 2567            TS     OUT1
+ 2568            RELINT
+ 2569  2         TC     Q
+ 2570   RELDSPON INHINT                 TURN ON RELEASE DISPLAY SYST LIGHT
+ 2571            CS     BIT3
+ 2572            MASK   OUT1
+ 2573            AD     BIT3
+ 2574            TS     OUT1
+ 2575            RELINT
+ 2576  2         TC     Q
+ 2577   DSPLOCK0 CS     BIT4
+ 2578            INHINT                 DSPLOCK = BIT4 OF STATE
+ 2579            MASK   DSPLOCK
+ 2580            TS     DSPLOCK
+ 2581            RELINT
+ 2582  2         TC     Q
+ 2583   DSPLOCK1 CS     BIT4
+ 2584            INHINT                 DSPLOCK = BIT 4 OF STATE
+ 2585            MASK   DSPLOCK
+ 2586            AD     BIT4
+ 2587            XCH    DSPLOCK         LEAVES OLD C(DSPLOCK) IN A.
+ 2588            RELINT
+ 2589  2         TC     Q
+ 2590   TSTDSPLK CAF    BIT4            SIMULATES CCS DSPLOCK
+ 2591            MASK   DSPLOCK
+ 2592            CCS    A
+ 2593            TC     Q               DSPLOCK = 1, RETURN TO L+1
+ 2594            INDEX  Q
+ 2595            TC     1               DSPLOCK = 0, RETURN TO L+2
+P2596   INTERNAL ROUTINES THAT USE THE KEYBOARD AND DISPLAY SYSTEM(THRU
+R2597   NVSUB) MUST  TC GRABDSP  BEFOREHAND , TO GRAB THE DISPLAY SYSTEM AND
+R2598  2MAKE IT BUSY TO OTHER INTERNAL USERS.
+R2599         WHEN FINISHED , THERE MUST BE A TC FREEDSP , TO RELEASE THE
+R2600  2SYSTEM FOR OTHER INTERNAL USERS.
+R2601         THE CALLING SEQUENCES ARE
+R2602   L        TC     GRABDSP
+R2603   L+1      RETURN HERE WHEN SYSTEM IS ALREADY GRABBED
+R2604  2L+2      RETURN HERE MEANS YOU HAVE IT
+R2605   L        TC     NVSUB
+R2606   L+1      RETURN HERE IF OPERATOR HAS INTERVENED
+R2607  4L+2      RETURN HERE AFTER EXECUTION
+R2608         A ROUTINE CALLED GRABUSY IS PROVIDED (USE IS OPTIONAL) TO PUT YOUR
+R2609   JOB TO SLEEP UNTIL  THE SYSTEM IS FREED BY THE JOB HOLDING IT.
+R2610  2YOUR CADR IS PUT AT FIRST AVAILABLE SLOT IN A WAITING LIST (FIFO).
+R2611         THE CALLING SEQUENCE IS
+R2612            CAF    WAKECADR
+R2613  2         TC     GRABUSY
+R2614         A ROUTINE CALLED  NVSUBUSY IS PROVIDED (USE IS OPTIONAL)  TO PUT
+R2615   YOUR JOB TO SLEEP UNTIL THE OPERATOR RELEASES IT. YOUR CADR IS PUT
+R2616  2ON TOP OF A WAITING LIST (FIFO). IT ALSO TURNS ON KEY RELEASE LIGHT.
+R2617   THE CALLING SEQUENCE IS
+R2618   CAF WAKECADR
+R2619  4TC NVSUBUSY
+R2620   AFTER A TC FREEDSP, THE INTERNAL INTERLOCK IS KEPT BUSY FOR 10 SECONDS,
+R2621   AFTER WHICH A CADR IS CALLED FROM THE LIST. THIS INSURES THAT ALL
+R2622  4DISPLAYS WAITING WILL BE VISIBLE.
+R2623   GRABLOCK IS THE INTERNAL INTERLOCK FOR THE USE OF THE KEYBOARD
+R2624   AND DISPLAY SYSTEM.
+R2625   +0  FREE
+R2626   +1  SOME INTERNAL ROUTINE HAS GRABBED DSP SYST
+R2627  4+2  SOME INTERNAL ROUTINE HAS GONE TO NVSUBUSY
+ 2628   GRABDSP  CCS    GRABLOCK
+ 2629            TC     Q               GRABBED. RETURN TO L+1
+ 2630            CAF    ONE             NOT GRABBED, SET TO +1
+ 2631            TS     GRABLOCK        AND RETURN TO L+2
+ 2632            INDEX  Q
+ 2633  4         TC     1
+ 2634   PREGBSY  CAF    LOW10           SPECIAL ENTRANCE FOR ROUTINES IN BANKS
+ 2635            MASK   Q               DESIRING THE CADR OF 1 + (LOC FROM WHICH
+ 2636            AD     BANKREG         TC PREGBSY WAS DONE) TO BE ENTERED.
+ 2637   GRABUSY  TC     POSTJUMP
+ 2638            CADR   GRABUSYB
+ 2639  2         SETLOC ENDSPMM1 +1
+ 2640   GRABUSY1 TS     CADRTEM
+ 2641            CCS    GRABLOCK
+ 2642            TC     +3              STILL GRABBED
+ 2643            XCH    CADRTEM         NOT GRABBED SO DO DIRECT CALL
+ 2644            TC     BANKJUMP
+ 2645            CAF    TWO
+ 2646            TS     LSTPTR
+ 2647            INDEX  LSTPTR          SEARCH LIST FOR FIRST AVAILABLE SPACE
+ 2648            CCS    DSPLIST         FROM BOTTOM.
+ 2649            TC     +2
+ 2650            TC     PUTINLST        SPACE FOUND
+ 2651            CCS    LSTPTR          DECREMENT POINTER
+ 2652            TC     -6
+ 2653            TC     LSTFULL
+ 2654   PUTINLST XCH    CADRTEM
+ 2655            INDEX  LSTPTR
+ 2656            TS     DSPLIST
+ 2657  4         TC     JOBSLEEP
+ 2658            SETLOC GRABUSY  +2
+ 2659   PRENVBSY CS     6K+3            SPECIAL ENTRANCE FOR ROUTINES IN BANKS
+ 2660            AD     Q               DESIRING THE CADR OF (LOC FROM WHICH THE
+ 2661            AD     BANKREG         TC PRENVBSY WAS DONE) -2 TO BE ENTERED.
+ 2662   NVSUBUSY TC     POSTJUMP
+ 2663            CADR   NVSUBSYB
+ 2664  26K+3     OCT    6003            TC PRENVBSY WAS DONE) -2 TO BE ENTERED.
+ 2665            SETLOC PUTINLST  +4
+ 2666   NVSUBSY1 TS     CADRTEM
+ 2667            TC     TSTDSPLK        TEST IF REALLY LOCKED OUT
+ 2668            TC     +3              STILL BUSY
+ 2669            XCH    CADRTEM         DSPLOCK = +0 SO RETURN DIRECTLY
+ 2670            TC     BANKJUMP
+ 2671            CAF    TWO             SET FOR GRABBED STATE AND NVSUBUSY USE
+ 2672            TS     GRABLOCK
+ 2673            XCH    CADRTEM
+ 2674            XCH    DSPLIST +2      ENTER CADR INTO FIRST POSITION OF LIST
+ 2675            XCH    DSPLIST +1              (BOTTOM)
+ 2676            XCH    DSPLIST
+ 2677            CCS    A
+ 2678            TC     LSTFULL
+ 2679            TC     +2
+ 2680            TC     LSTFULL
+ 2681            TC     RELDSPON
+ 2682            CS     DSPLIST +2
+ 2683            COM
+ 2684  2ENDNVBSY TC     JOBSLEEP
+ 2685  2         SETLOC NVSUBUSY +3
+ 2686   RELDSP   XCH    Q               SET DSPLOCK TO +0, TURN RELDSP LIGHT
+ 2687            TS     RELRET          OFF,  SEARCH DSPLIST
+ 2688            CAF    NEG1
+ 2689            AD     GRABLOCK
+ 2690            CCS    A               SEARCH LIST ONLY IF GRABLOCK = +2
+ 2691            TC     +4                  (SOMEONE USED NVSUBUSY)
+ 2692            TC     CCSHOLE
+ 2693            TC     RELDSP2
+ 2694            TC     RELDSP2
+ 2695            CAF    ZERO
+ 2696            XCH    DSPLIST
+ 2697            XCH    DSPLIST  +1
+ 2698            XCH    DSPLIST  +2
+ 2699            TS     CADRTEM
+ 2700            CCS    A
+ 2701            TC     +2
+ 2702            TC     RELDSP2         LIST EMPTY
+ 2703            XCH    CADRTEM
+ 2704            INHINT
+ 2705            TC     JOBWAKE
+ 2706            CAF    ONE
+ 2707            TS     GRABLOCK
+ 2708   RELDSP2  CS     BIT3
+ 2709            MASK   OUT1
+ 2710            TS     OUT1
+ 2711            TC     DSPLOCK0        0 INTO DSPLOCK (BIT4 OF STATE)
+A2712                                   RELINT IS DONE IN DSPLOCK0.
+ 2713            TC     RELRET
+ 2714   RELDSP1  XCH    Q               SET DSPLOCK TO +0, RELDSP LIGHT OFF,
+ 2715            TS     RELRET          NO LIST SEARCH
+ 2716            INHINT
+ 2717  4         TC     RELDSP2
+ 2718   FREEDSP  XCH    Q
+ 2719            TS     FREERET
+ 2720            INHINT
+ 2721            CAF    SHOTIME
+ 2722            TC     WAITLIST
+ 2723            CADR   FREEWAIT
+ 2724            RELINT
+ 2725  2         TC     FREERET
+ 2726   SHOTIME  DEC    175             SET FOR 1.75 SECS FOR 501
+ 2728  2         SETLOC ENDNVBSY +1
+ 2729   FREEWAIT CAF    PRIO31          CALLED BY T3RUPT
+ 2730            TC     NOVAC
+ 2731            CADR   FREDSPDO
+ 2732  4         TC     TASKOVER
+ 2733   FREDSPDO CAF    ZERO            CALLED BY EXECUTIVE
+ 2734            XCH    DSPLIST
+ 2735            XCH    DSPLIST +1
+ 2736            XCH    DSPLIST +2
+ 2737            TS     CADRTEM
+ 2738            CCS    A
+ 2739            TC     +2
+ 2740            TC     LSTEMPTY
+ 2741            XCH    CADRTEM
+ 2742            INHINT
+ 2743            TC     JOBWAKE
+ 2744            RELINT
+ 2745            CAF    ONE             SET FOR GRABBED CONDITION
+ 2746            TS     GRABLOCK
+ 2747            TC     ENDOFJOB
+ 2748   LSTEMPTY CAF    ZERO            SET FOR FREE CONDITION
+ 2749  4         TC     -3
+ 2750   LSTFULL  TC     ABORT
+ 2751            OCT    01206           PINBALL WAITING LINE FULL.
 *       ENDOFJOB
