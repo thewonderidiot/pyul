@@ -16979,4 +16979,2279 @@ A2712                                   RELINT IS DONE IN DSPLOCK0.
  2749  4         TC     -3
  2750   LSTFULL  TC     ABORT
  2751            OCT    01206           PINBALL WAITING LINE FULL.
+L       501 MISSION CONTROL PROGRAM
+ 0001            SETLOC 64000
+ 0002   LIFTOFF  INHINT
+ 0003            TC     READTIME +1     SAVE TIME OF LIFTOFF
+ 0004            CS     RUPTSTOR
+ 0005            TS     TLIFTOFF
+ 0006            CS     RUPTSTOR +1
+ 0007  2         TS     TLIFTOFF +1
+ 0008            COM
+ 0011  2         TS     TBASE4
+ 0035   CALL4.11 CAF    ELEVEN
+ 0036            TC     NEWPHASE
+ 0037  2         OCT    00004
+ 0038            CCS    A
+ 0039            TC     SETLIFT
+ 0040  2         TC     SETLIFT
+ 0041            INHINT
+ 0042            CAF    2SEC            ALLOW 2 SECS FOR BACK-UP GRR COMPUTATION
+ 0043            TC     WAITLIST
+ 0044  2         CADR   TARGTASK
+ 0045   SETLIFT  TC     FLAG1UP
+ 0046  2         OCT    00002
+ 0047  2         TC     JAMTERM         FLUSH V75 GRR BACKUP.
+ 0049   TARGTASK CAF    THIRTY1
+ 00491           TC     NEWPHASE
+ 00492 2         OCT    00004
+ 00493           CAF    ZERO
+ 00494 2         TS     TBASE3
+ 00496           CAF    ONE
+ 00497           TC     NEWPHASE
+ 00498 2         OCT    00003
+ 00499           CAF    ZERO            FIX UP TBASE5 FOR READACCS RESTART AND
+ 0050            AD     TBASE5            LOAD 2 SECS INTO TIME COUNTERS (I.E.
+ 00506           AD     TLIFTOFF +1       ZERO THE AGC CLOCK AT LIFT-OFF)
+ 00507           AD     NEG1/2
+ 00508           AD     NEG1/2
+ 00509 2         XCH    TBASE5
+ 0051            CAF    200DEC
+ 00511 2         TS     TIME1
+ 00512           CAF    THIRTY2
+ 00513           TC     NEWPHASE
+ 00514 2         OCT    00004
+ 00515           CS     200DEC          CALL ON BOOST MONITOR
+ 00516           AD     TROLL +1
+ 00517           TC     WAITLIST
+ 00518 2         CADR   MON1TASK
+ 005194 REDO4.32 CAF    PRIO12
+ 005195          TC     FINDVAC
+ 0052  2         CADR   TARGJOB
+ 00521           CAF    ZERO            FINALLY ZERO TIME2
+ 0052152         TS     TIME2
+ 00525 2         TC     TASKOVER
+ 00526  REDO4.31 CAF    PRIO35
+ 00527           TC     NOVAC
+ 00528 2         CADR   ENEMA
+ 00529 4         TC     TARGTASK +3
+ 0052952         BANK   24
+ 0053   TARGJOB  TC     BANKCALL        COMMAND IMUCDU TO ATT. CONTROL MODE
+ 0054  2         CADR   IMUATTC
+ 00544           TC     NEWMODE         SET MAJOR MODE TO BOOST ATTITUDE MONITOR
+ 00546 2         OCT    00011
+ 0055  2         TC     SETHETAD        FORCE THETAD,+1,+2 TO EQUAL CDUX,Y,Z
+ 0056  2         TC     INTPRET
+ 0057            DSU    0               TARGET VECTORS INITIALLY REFERENCED TO
+ 0058                   TLIFTOFF        GRR. WILL NOW UPDATE THEM TO LIFT-OFF
+ 0059                   TIME2GR
+ 0060  2         STORE  DTEAROT
+ 0061            DMOVE  0
+ 0062                   TPACIF1
+ 0063  2         STORE  TPACIFC
+ 0064            DMOVE  0
+ 0065                   TATLAN1
+ 0066  2         STORE  TATLANT
+ 0069            VMOVE  0
+ 0070                   RTPACIF1
+ 0071  2         STORE  RTINIT
+ 0072            ITC    0
+ 0073  2                EARROT1
+ 0074            NOLOD  0
+ 0075  2         STORE  RTPACIFC
+ 0076            VMOVE  0
+ 0077                   RTATLAN1
+ 0078  2         STORE  RTINIT
+ 0079            ITC    0
+ 0080  2                EARROT1
+ 0081            NOLOD  0
+ 0082  2         STORE  RTATLANT
+ 0083  2         EXIT   0
+ 0084   TARGET   TC     BANKCALL        WAIT FOR COMPLETION OF MODE SWITCH
+ 0085            CADR   IMUSTALL
+ 0086  2         TC     CURTAINS        TRAP IF INCOMPLETE
+ 0091            CS     ONE
+ 0092            TC     NEWPHASE
+ 0093  2         OCT    00004
+ 0094  8         TC     ENDOFJOB
+ 00945 2         BANK   32
+ 0095   MON1TASK CAF    PRIO5
+ 0096            TC     FINDVAC
+ 0097  2         CADR   MONITJOB
+ 0098            TC     FLAG1UP         SET MONIT FLAG
+ 0099  2MONITMSK OCT    00040
+ 0100  4         TC     TASKOVER
+ 0101   MONITJOB TC     PHASCHNG
+ 0102  2         OCT    03203
+ 0103  2         TC     INTPRET
+ 0104            RTB    1               FORM TIME SINCE START OF MONITOR
+ 0105            DSU
+ 0106                   LOADTIME
+ 0107                   TPITCH
+ 0108  2         STORE  TMONITOR        SCALED AT 2(+28) CS
+ 01081           NOLOD  2               TEST IF TIME TO START PITCH MONITOR
+ 01082           BPL    LODON
+ 01083           DMOVE
+ 01084                  +3
+ 01085                  DPZERO          NO
+ 01086 2         STORE  TMONITOR
+ 0109   PITCH1   NOLOD  3               TEST IF TIME TO STOP MONITOR
+ 0110            DSU    BMN
+ 0111            LODON  DMOVE
+ 0112            SWITCH
+ 0113                   TENDPTCH
+ 0114                   +4
+ 0115                   TENDPTCH        IF IT IS, SET TMONITOR TO MAX AND REMOVE
+ 0116                   MONITFLG          MONIT FLAG
+ 0117  2         STORE  TMONITOR
+ 0118            DMOVE  2               DO SIGN AGREE AND RESCALE TO 2(+14) CS
+ 0119            RTB    TSLT
+ 0120            RTB    TSLT
+ 0121                   TMONITOR
+ 0122                   SGNAGREE
+ 0123                   14D
+ 01231                  POLYENT1        SOLVE PITCH POLYNOMIAL
+ 01232                  4
+ 01233 2         STORE  20D             CHI SCALED AT 1 REV.
+ 0124            SIN    0
+ 0126  2                20D
+ 01265           DMOVE  0
+ 0127  2                DPZERO
+ 0128            COS    1
+ 0129            VDEF
+ 0130                   20D
+ 0131  2         STORE  22D             UNIT VECTOR ALONG VEHICLE ROLL AXIS
+ 0132            NOLOD  0
+ 0133  2         STORE  XSCD
+ 0134            DMOVE  0
+ 0135                   XSCD +4
+ 0136  2         STORE  22D             FORM VECTOR (XSCD +4, 0, -XSCD) AT 22D
+ 0138            COMP   0
+ 0139                   XSCD
+ 0140  2         STORE  26D
+ 0141   ROLLER   RTB    4               FORM DESIRED ROLL EXCURSION
+ 01415           DSU    DDV
+ 0142            DSU    BMN
+ 0143            LODON  DMOVE
+ 0144            RTB
+ 01445                  LOADTIME
+ 0145                   TROLL
+ 0146                   1/RLLRTE
+ 0147                   MAXROLL
+ 0148                   +3
+ 0149                   DPZERO          IF EXCEEDS MAX VALUE, SET ROLL ATTITUDE
+ 0150  2                FRESHPD           TO ZERO
+ 0151            NOLOD  0
+ 0152  2         STORE  20D             ROLL ANGLE SCALED AT 1 REV.
+ 0153            NOLOD  1
+ 0154            SIN
+ 0155  2         STORE  18D
+ 0156            NOLOD  1
+ 01565           TSLT   VXSC
+ 0157                   1
+ 0158                   22D
+ 0159  2         STORE  YSCD
+ 0160            COS    1
+ 0161            COMP
+ 0162                   20D
+ 0163  2         STORE  YSCD +2
+ 0164            NOLOD  2
+ 0165            COMP   VXSC
+ 0166            VSLT
+ 0167                   22D
+ 0168                   1
+ 0169  2         STORE  ZSCD
+ 0170            DMOVE  0
+ 0171                   18D
+ 0172  2         STORE  ZSCD +2
+ 0173            ITC    0               RESOLVE INTO NB COORDS.
+ 0174  2                CALCSCNB
+ 0175            ITC    0               EXTRACT EULER ANGLES FROM XNB MATRIX
+ 0176  2                CALCCDU
+ 0177            NOLOD  0               STORE THE ANGLES
+ 0178  2         STORE  THETAD
+ 0178022         EXIT   0
+ 017804          CAF    BIT6            TEST IF MONIT FLAG SET
+ 017806          MASK   FLAGWRD1
+ 017808          CCS    A
+ 01781 2         TC     MONITJOB        IT IS. RECYCLE MONITJOB
+ 017812          INHINT                 CALL TUMBLE MONITOR IN TTUMON SECS
+ 017814          CS     TTUMON
+ 017816          COM
+ 017826          TC     WAITLIST
+ 0178282         CADR   TUMBTSK1
+ 017829          CS     TIME1
+ 01783 2         TS     TBASE3
+ 017831          CAF    TWO
+ 017832          TC     NEWPHASE
+ 0178342         OCT    00003
+ 0178364         TC     ENDOFJOB
+ 017838 POLYENT1 CAF    TWELVE          RTB HERE PRIOR TO ENTERING ERASABLE FOR
+ 01784           TS     POLYORDR          POLYNOMIAL
+ 0178422         TC     POLYENTR
+ 0179   TUMBTSK1 CAF    TWENTY7
+ 01791           TC     NEWPHASE
+ 01792 2         OCT    3
+ 01793           CAF    PRIO22
+ 0180            TC     FINDVAC
+ 0181  2         CADR   TUMBJOB1
+ 0182  4         TC     RESET1
+ 0183   TUMBJOB1 TC     BANKCALL        SWITCH IMUCDU MODE TO FINE ALIGN
+ 0184  2         CADR   IMUFINNW
+ 0185            TC     BANKCALL        WAIT FOR COMPLETION OF MODE SWITCH
+ 0186            CADR   IMUSTALL
+ 0187  2         TC     CURTAINS
+ 0188            TC     NEWMODE         SET MAJOR MODE TO TUMBLE MONITOR
+ 0189  2         OCT    00014
+ 01891 2         TC     INTPRET         ...NO 01407 ALARMS, PLEASE....
+ 01892           AXT,1  1
+ 01893           ITC
+ 01894                  6
+ 01895 2                CDUTRIG
+ 01896           VMOVE  0
+ 01897                  CDUTEMP
+ 01898 2         STORE  DUPCDU
+ 01899 2         EXIT   0
+ 0190  2         TC     ENDOFJOB
+ 0191   TUMBTASK CAF    PRIO22
+ 0192            TC     FINDVAC
+ 0193  2         CADR   TUMBJOB
+ 0194            CAF    BIT1            TEST IF TUMBLE FLAG SET
+ 0195            MASK   FLAGWRD1
+ 0196            CCS    A
+ 0197  2         TC     RESET1          IT IS. CONTINUE TO MONITOR
+ 0198            CS     FLAGWRD2        TEST IF BURN IS TUMBLE ARREST (I.E. HAS
+ 0199            MASK   BIT1            CORRECTIVE ACTION STARTED)
+ 0200            CCS    A
+ 0201            TC     TUMTEST1        IT HAS NOT
+ 0202            CS     OUT1            IT HAS. TEST IF ENGINE ON YET. IF NOT,
+ 0203            MASK   BIT13           WAIT BEFORE TURNING IT OFF AGAIN
+ 0204            CCS    A
+ 0205  2         TC     RESET1
+ 0206            TC     POSTJUMP        LEAP TO CUT SPS ENGINE
+ 0207  2         CADR   ENGINOFF
+ 0208   TUMTEST1 CAF    NOTUMASK        TEST IF NEXT BURN HAS BEEN SET
+ 0209            MASK   FLAGWRD2
+ 0210            CCS    A
+ 0211  2         TC     TASK3OUT
+ 0212   RESET1   CAF    1SEC32          RECALL IN 1 SEC
+ 0213            TC     WAITLIST
+ 0214  2         CADR   TUMBTASK
+ 0215  2         TC     TASKOVER
+ 0216   TASK3OUT CS     ONE
+ 0217            TC     NEWPHASE
+ 0218  2         OCT    00003
+ 0219  2         TC     TASKOVER        IT HAS. KILL TUMBLE MONITOR
+ 0220  8NOTUMASK OCT    00016           (OR OF SPS1, ABRT, TABT)
+ 02205 2         BANK   24
+ 0221   TUMBJOB  CAF    NOTUMSK1        SKIP THIS JOB IF NEXT BURN HAS BEEN SET
+ 0222            MASK   FLAGWRD2
+ 0223            CCS    A
+ 0224  2         TC     ENDOFJOB
+ 0227  2         TC     INTPRET
+ 0228            VMOVE  0               SAVE PRESENT CDUX,Y,Z
+ 0229                   DUPCDU
+ 0230  2         STORE  CDUBUF
+ 0231            AXT,1  1               FORM DP CDUX,Y,Z
+ 0232            ITC
+ 0233                   6
+ 0234  2                CDUTRIG
+ 0235            VMOVE  0               SAVE DUPLICATE CDUX,Y,Z
+ 0236                   CDUTEMP         SCALED AT 1 REV
+ 0237  2         STORE  DUPCDU
+ 0238            NOLOD  1
+ 0239            VSU    AXT,1
+ 0240                   CDUBUF
+ 0241                   6
+ 0242  2         STORE  CDUTEMP
+ 0243            ITC    0               COMPUTE SIN OF CDUX,Y,Z
+ 0244  2                SINCOS          DIFFERENCES AND PUT IN SINCDU,+2,+4
+ 0245            ABVAL  2
+ 0246            DSU    BMN
+ 0247            EXIT
+ 0248                   SINCDU
+ 0249                   CRIT
+ 0250  2                NOTUMBLE
+ 0251            TC     FLAG1UP         SET TUMB FLAG
+ 0252  2         OCT    00001
+ 0253  2         TC     ENDOFJOB
+ 0254   NOTUMBLE EXIT   0
+ 0255            TC     FLAG1DWN        REMOVE TUMBLE FLAG
+ 0256  2         OCT    00001
+ 0257  2         TC     ENDOFJOB
+ 02575  NOTUMSK1 OCT    16
+ 0258  8CRIT     2DEC   0.010905        SIN(5DEG/2) SCALED AT 2(+2)
+ 02585 4         BANK   32
+ 0259   S4BSMSEP CS     TIME1           BRANCH HERE ON RECEIPT OF S4B/CSM SEP
+ 0260  2         TS     TBASE4
+ 02604           TC     FLAG1DWN        RESET UPDAT FLAG
+ 02606 2         OCT    20000
+ 0261            TC     RELAYON         SET SCS +X TRANS, ATTITUDE CONTROL MODE,
+ 0262  2         OCT    40221           GIMBAL MOT POWER DISCRETES (C27,23,30)
+ 0263            CAF    BIT1            TEST IF TUMB FLAG SET
+ 0264            MASK   FLAGWRD1
+ 0265            CCS    A
+ 0266  2         TC     SETUMB2
+ 0267            TC     FLAG1UP         SET INTP FLAG
+ 0268  2INTPMASK OCT    01000
+ 0269            TC     PHASCHNG
+ 0270  2         OCT    01404
+ 0271            INHINT
+ 0272            CAF    1.7SEC          WAIT 1.7 SECS FOR RECEIPT OF ABORT SIG.
+ 0273            TC     WAITLIST
+ 0274  2         CADR   ABRTWAIT
+ 02741  TRYGRAB  TC     GRABDSP         TRY TO GRAB DISPLAY
+ 02742 2         TC     CLEANOUT        ALREADY GRABBED. FLUSH OUT GRABBER
+ 02743 2         TC     FREEDSP         WE HAVE IT. AND LET IT GO
+ 0275   SETS4SEP TC     FLAG1UP         SET S4BSM FLAG
+ 0276  2         OCT    00200
+ 0277  2         TC     ENDOFJOB
+ 02771  CLEANOUT INHINT
+ 02772           CAF    PRIO35          MAKE HIGH PRIO JOB TO FLUSH OUT PINBALL
+ 02773           TC     NOVAC
+ 02774           CADR   ENEMA
+ 02775 2         RELINT
+ 02776 2         TC     SETS4SEP
+ 0278   ABRTWAIT CAF    PRIO25          CONTINUE WITH SAME PRIORITY AS S4BSMSEP
+ 0279            TC     NOVAC
+ 0280            CADR   ABORTEST
+ 0281  2         TC     TASKOVER
+ 0282   ABORTEST CAF    ONE             SET VGCNTR FOR 2 PASSES THRU CALCVGB
+ 0283  2         TS     VGCNTR
+ 02832           TC     FLAG1DWN        RESET UPDAT FLAG
+ 02834 2         OCT    20000
+ 0284            CAF    BIT14           TEST IF ABORT SIGNAL RECEIVED
+ 0285            MASK   STATE
+ 0286            CCS    A
+ 0287  2         TC     SETABORT        IT WAS. BRANCH TO ABORT
+ 0288            INHINT
+ 0289            CAF    8.3SEC          SET CALL TO TURN OFF +X 10 SEC AFTER SEP
+ 0290            TC     WAITLIST
+ 0291            CADR   PLUSXOFF
+ 0292  2         RELINT
+ 0293            TC     SETBRNSW        SET BURN TO SPS1
+ 0294  2SPS1MASK OCT    00010
+ 029402          CAF    SPS1LOC         SET LOCATION FOR NOMINAL SPS1 VR COMP
+ 0294042         TS     VRCADR
+ 02942           TC     PHASCHNG
+ 02944 2         OCT    02504
+ 0299   REDO4.21 TC     NEWMODE         SET MAJOR MODE TO PRE-SPS1
+ 0300  2         OCT    00031
+ 0303  2         TC     JAMTERM         FLUSH V75 S4BSMSEP BACKUP.
+ 0304  2SPS1LOC  CADR   501SPS1
+ 03042  SETABORT TC     SETBRNSW        SET BURN TO ABORT
+ 03044 2         OCT    00002
+ 0305            TC     PHASCHNG
+ 0306  2         OCT    02004
+ 0307            INHINT
+ 0308            CAF    3.8SEC          START ENGINE IN 4.3 SECS
+ 0309            TC     WAITLIST
+ 0310            CADR   ATTCNOFF
+ 0311  2         RELINT
+ 0312   REDO4.16 TC     BANKCALL        SET IMU TO ATT. CONTROL MODE
+ 0313  2         CADR   IMUATTC
+ 0314  2         TC     SETHETAD        SET THETAD,+1,+2 TO AGREE WITH CDUX,Y,Z
+ 0315            CAF    ABORTLOC        SET LOCATION FOR ABORT VR COMPUTATIONS
+ 0316  2         TS     VRCADR
+ 0317            CAF    TWO             SET VGCNTR FOR THREE PASSES THROUGH
+ 0318  2         TS     VGCNTR          CALCVGB BEFORE ISSUING STEER COMMANDS
+ 0319            CAF    35DEG           SET THRUST ANGLE TO 35 DEG ABOVE HORIZON
+ 0320  2         TS     LOOKANG
+ 0321            TC     FLAG1UP         SET STEER FLAG FOR ABORT STEERING
+ 0322  2         OCT    00010
+ 0323            TC     NEWMODE         SET MAJOR MODE TO ABORT BURN
+ 0324  2         OCT    00073
+ 0325            TC     BANKCALL        WAIT FOR MODE SWITCH TO COMPLETE
+ 0326            CADR   IMUSTALL
+ 0327  2         TC     CURTAINS        CATCH-ALL FOR FAILURE TO IMU MODE SWITCH
+ 0328  2         TC     JAMTERM         FLUSH OUT V75
+ 0329  2ABORTLOC CADR   501ABORT
+ 0330   SETUMB2  TC     SETBRNSW        SET BURN TO TUMBLE ARREST
+ 0331  2ARRSTMSK OCT    00001
+ 0332            CAF    FIFTN
+ 0333            TC     NEWPHASE
+ 0334  2         OCT    4
+ 0335            INHINT
+ 0336            CAF    2.5SEC          START ENGINE AT 3.0 SECS AFTER SEP.
+ 0337            TC     WAITLIST        SEPARATION
+ 0338            CADR   ATTCNOFF
+ 0339  2         RELINT
+ 0340            TC     NEWMODE         SET MAJOR MODE TO TUMBLE ARREST BURN
+ 0341  2         OCT    00074
+ 0342  2         TC     TRYGRAB
+ 0347   ABORTRPT TC     STATEUP         COME HERE ON RECEIPT OF UPLINK ABORT
+ 0348  2         OCT    20000             VERB,NOUN. SET THE ABORT SIGNAL
+ 0349            TC     RELAYON         SET SCS BACKUP ABORT DISCRETE (C33)
+ 0350  2         OCT    42000
+ 0351  2         TC     ENDOFJOB
+ 0352   8.3SEC   DEC    830
+ 0353   1.7SEC   DEC    170
+ 0354   93.8SEC  DEC    9380
+ 03545  10.5SEC  DEC    1050
+ 0355  83.8SEC   DEC    380
+ 0360   GIMPOWON TC     RELAYON         SET SCS GMP DISCRETE (C30)
+ 0361  2         OCT    40200
+ 0362            CAF    TWENTY4
+ 0363            TC     NEWPHASE
+ 0364  2         OCT    00004
+ 03643           CS     TIME1
+ 03646 2         TS     TBASE4
+ 0365            CAF    TWENTY5
+ 0366            TC     NEWPHASE
+ 0367  2         OCT    00004
+ 0368            CAF    11.5SEC
+ 0369            TC     WAITLIST
+ 0370  2         CADR   ATTCNOFF
+ 0371  2         TC     TASKOVER
+ 0372   ATTCNOFF CAF    EIGHTN
+ 0373            TC     NEWPHASE
+ 0374  2         OCT    00004
+ 0375            CS     TIME1
+ 0376  2         TS     TBASE4
+ 03763           TC     RELAYOFF        REMOVE SCS ATT. CONTROL DISCRETE (C23)
+ 03766 2         OCT    40001
+ 0377            CAF    NINETEEN
+ 0378            TC     NEWPHASE
+ 0379  2         OCT    00004
+ 0382            CAF    0.25SEC
+ 0383            TC     WAITLIST
+ 0384  2         CADR   DVMODEON
+ 0385  2         TC     TASKOVER
+ 0390   DVMODEON TC     RELAYON         SET SCS DV MODE DISCRETE (C24)
+ 0391  2         OCT    40002
+ 0392            CAF    TWENTY0
+ 0393            TC     NEWPHASE
+ 0394  2         OCT    00004
+ 0395            CAF    0.25SEC
+ 0396            TC     WAITLIST
+ 0397  2         CADR   ENGINEON
+ 0398  2         TC     TASKOVER
+ 0399   TASK4OUT CS     ONE
+ 0400            TC     NEWPHASE
+ 0401  2         OCT    00004
+ 0402  2         TC     TASKOVER
+ 0407   ENGINEON CS     BIT13           SET BIT13, OUT1 TO 1  (ENGINE ON)
+ 0408            TS     DVCNTR          MUST BE NEGATIVE INITIALLY
+ 0409            MASK   OUT1
+ 0410            AD     BIT13
+ 0411  2         TS     OUT1
+ 0412            TC     READTIME +1
+ 0413            CS     RUPTSTOR
+ 0414            TS     TENGON
+ 0415            CS     RUPTSTOR +1
+ 0416  2         TS     TENGON +1
+ 0417            TC     FLAG1UP         SET DVMON, STEER FLAGS
+ 0418  2         OCT    00030
+ 0419            CAF    TWENTY4         SEE IF THIS EITHER A SPS1 OR SPS2 BURN
+ 0420            MASK   FLAGWRD2
+ 0421            CCS    A
+ 04215           TC     +2              YES
+ 0422  2         TC     TUMTEST2        NO
+ 04281           CCS    PHASE2          TEST FOR PHASE2 VALUE.
+ 04282           AD     NEG3            WAS IT GREATER THAN 4 ORIGINALLY...
+ 04283           CCS    A               TEST NEW SUM.
+ 0429            TC     ROLLTASK -3
+ 04291           TC     ROLLTASK -3     GOES UNLESS PHASE2 WERE +1,2,3, OR 4.
+ 04292 2         TC     +1              1,2 OR 3 FALL IN HERE
+ 04293           CS     ONE             +4 COMES HERE.
+ 04294           TC     NEWPHASE        IN WHICH CASES, WE MAKE GROUP 2 INACTIVE
+ 04295 2         OCT    2
+ 04296           CAF    PRIO35          AND THEN FLUSH OUT EVERYTHING.
+ 04297           TC     NOVAC
+ 04298 2         CADR   ENEMA           FORCE A PROGRAMMED RESTART
+ 04299 4         TC     ROLLTASK -3
+ 0430   3OR4TEST CAF    SPS34MSK
+ 0431            MASK   FLAGWRD2
+ 0432            CCS    A
+ 0433            TC     +2
+ 0434  2         TC     TUMTEST2        IT IS NOT
+ 0435            CAF    TWENTY3
+ 0436            TC     NEWPHASE
+ 0437  2         OCT    00004
+ 0438            CAF    3SEC            SHUT ENGINE DOWN IN 3 SECS
+ 0439            TC     WAITLIST
+ 0440  2         CADR   ENGINOFF
+ 0441   STEEROFF TC     FLAG1DWN
+ 0442  2STEERMSK OCT    00010
+ 0443  2         TC     TASKOVER
+ 0444   TUMTEST2 CAF    ARRSTMSK        TEST IF BURN IS TUMBLE ARREST
+ 0445            MASK   FLAGWRD2
+ 0446            CCS    A
+ 0447  2         TC     STR4OUT
+ 0448            CAF    TWENTY2
+ 0449            TC     NEWPHASE
+ 0450  2         OCT    4
+ 0451   ROLLTASK CS     FLAGWRD1        TEST IF STEER FLAG SET
+ 0452            MASK   STEERMSK
+ 0453            CCS    A
+ 0454  2         TC     TASKOVER        IT IS NOT. KILL ROLLTASK
+ 0455            CAF    PRIO10          SUBMIT JOB TO DO ROLL STEERING
+ 0456            TC     FINDVAC
+ 0457  2         CADR   ROLLJOB
+ 0458   REDO4.22 CAF    5SEC32          RECALL ROLLTASK IN 5 SECS
+ 0459            TC     WAITLIST
+ 0460  2         CADR   ROLLTASK
+ 0461  2         TC     TASKOVER
+ 0462   STR4OUT  TC     FLAG1DWN
+ 0463  2         OCT    00010
+ 0464  2         TC     TASK4OUT
+ 0465   PLUSXOFF TC     RELAYOFF        REMOVE SCS +X TRANS DISCRETE (C27)
+ 0466  2         OCT    40020
+ 04662           TC     FLAG1UP         SET INITFLAG TO ENABLE MANEUVER TO SPS1
+ 04664 2         OCT    00400             BURN ATTITUDE
+ 04665           CAF    89.5SEC         START ENGINE IN 90 SECS
+ 04666           TC     WAITLIST
+ 04667 2         CADR   ATTCNOFF
+ 04668           CAF    THIRTEEN
+ 04669           TC     NEWPHASE
+ 0466952         OCT    00004
+ 0467  2         TC     TASKOVER
+ 0468   0.25SEC  DEC    25
+ 0469   1SEC32   DEC    100
+ 0471   2.5SEC   DEC    250
+ 0472   3SEC     DEC    300
+ 0473   3.5SEC   DEC    350
+ 0474   5SEC32   DEC    500
+ 0475   6SEC     DEC    600
+ 0476   15SEC    DEC    1500
+ 04765  89.5SEC  DEC    8950
+ 0477   SHTDNMSK EQUALS BIT12
+ 0478  8SPS34MSK OCT    00140
+ 0479   ENGINOFF CS     BIT13           SET ENGINE OFF
+ 0480            MASK   OUT1
+ 0481  2         TS     OUT1
+ 0482            TC     READTIME +1     SAVE TIME OF CUTOFF
+ 0483            CS     RUPTSTOR
+ 0484            TS     TCUTOFF
+ 0485            CS     RUPTSTOR +1
+ 0486  2         TS     TCUTOFF +1
+ 0487            TC     FLAG1DWN        DISABLE DV MONITOR
+ 0488  2         OCT    00020
+ 04881           CS     PIPAX           SAVE DELTAV AT ENGINE OFF TIME.
+ 04882           TS     VAVEGON
+ 04883           CS     PIPAY
+ 04884           TS     VAVEGON + 1     USE VAVEGON AREA FOR THIS.
+ 04885           CS     PIPAZ
+ 04886 2         TS     VAVEGON + 2
+ 04887           TC     RELAYOFF        REMOVE SCS +X TRANS DISCRETE (C27)
+ 04888 2         OCT    40020
+ 0489            CS     FLAGWRD2        TEST IF THAT WAS A TUMBLE BURN
+ 0490            MASK   ARRSTMSK
+ 0491            CCS    A
+ 0492  2         TC     SPS1TEST
+ 0493            CAF    ONE
+ 0494  2         TS     VGCNTR
+ 0495            TC     FLAG1UP         SET INTP,INIT FLAGS
+ 0496  2         OCT    01400
+ 04961           CAF    BIT14           TEST IF ABORT SIGNAL RECEIVED
+ 04962           MASK   STATE
+ 04963           CCS    A
+ 04964 2         TC     VRCAD           IT WAS, JUMP TO DO TUMBLE ABORT BURN
+ 049643          CAF    93.8SEC         START ENGINE IN 94.3 SECS
+ 049644          TC     WAITLIST
+ 0496452         CADR   ATTCNOFF
+ 049646          CAF    SPS1LOC         SET LOCATION FOR NOMINAL SPS1 VR COMP
+ 0496472         TS     VRCADR
+ 04965           CAF    PRIO25          ESTABLISH MORE PRE-SPS1 BURN LOGIC
+ 04966           TC     NOVAC
+ 04967 2         CADR   REDO4.21
+ 049672          CAF    THIRTEEN
+ 049674          TC     NEWPHASE
+ 0496762         OCT    4
+ 049677 REDO4.13 TC     SETBRNSW        SET BURN TO SPS1
+ 0496782         OCT    00010
+ 04968 2         TC     TASK3OUT
+ 0497   VRCAD    CAF    ABORTLOC        SET LOCATION TO ABORT VR COMPUTATION
+ 0498  2         TS     VRCADR
+ 0502            CAF    THREE
+ 0503            TC     NEWPHASE
+ 0504  2         OCT    00003
+ 0505   REDO3.3  TC     SETBRNSW        SET BURN TO ABORT AFTER TUMBLE
+ 0506  2TABTMASK OCT    00004
+ 0507  2         TC     TASKOVER
+ 0508   SPS1TEST CAF    TWENTY8
+ 05081           TC     NEWPHASE
+ 05082 2         OCT    4
+ 05083           CS     TCUTOFF +1
+ 0509            TS     TBASE3
+ 0510  2         TS     TBASE4
+ 0511            CS     FLAGWRD2        TEST IF THAT WAS A SPS1 BURN
+ 0512            MASK   SPS1MASK
+ 0513            CCS    A
+ 0514  2         TC     SETMOD23
+ 0515            CAF    10.5SEC         CALL COAST PHASE IN 10.5 SECS
+ 0516            TC     WAITLIST
+ 0517  2         CADR   COASTPHS
+ 0518            CAF    7SEC            DUPLICATE GMPOFF SEQUENCE BEFORE SETTING
+ 0519            TC     WAITLIST        BURN SWITCH.  (FOR RESTART LOGIC.)
+ 0520  2         CADR   GIMPOWOF
+ 0521            CAF    FOUR            3.4 RESTART KEEPS POWER OFF SEQ. GOING.
+ 0522            TC     NEWPHASE
+ 0523  2         OCT    3
+ 0524            CAF    THREE
+ 0525            TC     NEWPHASE
+ 0526  2         OCT    00004
+ 0527   REDO4.3  TC     SETBRNSW        SET BURN TO SPS2
+ 0528  2SPS2MASK OCT    00020
+ 0529  2         TC     TASKOVER
+ 0530   SPS2TEST CS     FLAGWRD2        TEST IF THAT WAS A SPS2 BURN
+ 0531            MASK   SPS2MASK
+ 0532            CCS    A
+ 0533  2         TC     SPS3TEST
+ 0534            CAF    0.75SEC
+ 0535            TC     WAITLIST
+ 0536  2         CADR   CGTASK
+ 0537            CAF    6SEC            CALL FOR GMP ON IN 6 SECS
+ 0538            TC     WAITLIST
+ 0539  2         CADR   GIMPOWON
+ 0540            CAF    SEVEN
+ 0541            TC     NEWPHASE
+ 0542  2         OCT    00003
+ 0543            CAF    TEN
+ 0544            TC     NEWPHASE
+ 0545  2         OCT    00004
+ 0546   REDO4.10 TC     SETBRNSW        SET BURN TO SPS3
+ 0547  2SPS3MASK OCT    00040
+ 0548  2         TC     TASKOVER
+ 0549   SPS3TEST CS     FLAGWRD2        TEST IF THAT WAS A SPS3 BURN
+ 0550            MASK   SPS3MASK
+ 0551            CCS    A
+ 0552  2         TC     SETMOD23        IT WAS NOT. (EITHER A, TABT, OR SPS4)
+ 0556            CAF    FOURTN
+ 0557            TC     NEWPHASE
+ 0558  2         OCT    00004
+ 0559   GMPON    CAF    6SEC            CALL FOR ENGINE ON IN 10 SECS
+ 0560            TC     WAITLIST
+ 0561  2         CADR   GIMPOWON
+ 05612  REDO4.14 CAF    PRIO7
+ 05614           TC     NOVAC
+ 05616 2         CADR   MODE44
+ 0562            TC     SETBRNSW        SET BURN TO SPS4
+ 0563  2SPS4MASK OCT    00100
+ 0564  2         TC     TASKOVER
+ 0565   SETMOD23 CAF    PRIO7           MAKE JOB TO CHANGE MODE
+ 0566            TC     NOVAC
+ 0567  2         CADR   MODE23
+ 0568            CAF    NINE
+ 0569            TC     NEWPHASE
+ 0570  2         OCT    00003
+ 0571            CS     ONE
+ 0572            TC     NEWPHASE
+ 0573  2         OCT    00004
+ 0576   GMPOFF   CAF    7SEC
+ 0577            TC     WAITLIST
+ 0578  2         CADR   GIMPOWOF
+ 0579            CAF    FOUR
+ 0580            TC     NEWPHASE
+ 0581  2         OCT    00003
+ 0582  2         TC     TASKOVER
+ 0583   GIMPOWOF CAF    3.5SEC          CALL FOR DV MODE OFF IN 3.5 SECS
+ 0584            TC     WAITLIST
+ 0585  2         CADR   DVMODOFF
+ 0586            TC     RELAYOFF
+ 0587  2         OCT    40200
+ 0588            CAF    FIVE
+ 0589            TC     NEWPHASE
+ 0590  2         OCT    00003
+ 0591  2         TC     TASKOVER
+ 0592   GMPOFF3  TC     RELAYOFF        REMOVE SCS GMP DISCRETE (C30)
+ 0593  2         OCT    40200
+ 0594  2         TC     TASK3OUT
+ 0595   DVMODOFF TC     RELAYOFF        REMOVE SCS DV MODE DISCRETE (C24)
+ 0596  2         OCT    40002
+ 0597            CAF    SIX
+ 0598            TC     NEWPHASE
+ 0599  2         OCT    00003
+ 0600            CAF    0.25SEC
+ 0601            TC     WAITLIST
+ 0602  2         CADR   ATTCONON
+ 0603  2         TC     TASKOVER
+ 0604   ATTCONON TC     RELAYON         SET SCS ATT. CONT. DISCRETE (C23)
+ 0605  2         OCT    40001
+ 0606  2         TC     TASK3OUT
+ 0607   MODE23   TC     NEWMODE         SET MAJOR MODE TO ATTITUDE HOLD
+ 0608            OCT    00023
+ 0609  2         TC     ENDOFJOB
+ 0610   MODE44   TC     NEWMODE         SET MAJOR MODE TO SPS4
+ 0611            OCT    00044
+ 0612  4         TC     ENDOFJOB
+ 061202 0.75SEC  DEC    75
+ 061204 1SEC     DEC    100
+ 061206 7SEC     DEC    700
+ 061208811.5SEC  DEC    1150
+ 06125 2         BANK   24
+ 0613   COASTPHS TC     FLAG1UP         GET SET TO START COAST PHASE ACTIVITY
+ 0614  2COASTMSK OCT    40000           SET COAST FLAG
+ 0615            CAF    289.5SEC +1     SET UP LONGCALL TO FDAONTSK IN 289.5 SEC
+ 0616            TS     LONGTIME +1
+ 0617            CAF    289.5SEC
+ 0618  2         TS     LONGTIME
+ 0619            CAF    FDAILOC
+ 0620  2         TS     CALLCADR
+ 0621            TC     IBNKCALL        MAKE WAITLIST CALL MORE THAN 120 SECS
+ 0622  2         CADR   LONGCALL
+ 0623            CAF    PRIO12          ESTABLISH INITIAL VERTICAL JOB
+ 0624            TC     FINDVAC
+ 0625  2         CADR   SOAKINIT
+ 0626            CAF    TWO
+ 0627            TC     NEWPHASE
+ 0628  2         OCT    00002
+ 0629            CAF    FOUR
+ 0630            TC     NEWPHASE
+ 0631  2         OCT    00004
+ 0632  2         TC     TASKOVER
+ 0633   FDAILOC  CADR   FDAONTSK
+ 0634  4289.5SEC 2DEC   28950
+ 0635   FDAONTSK TC     RELAYON         SET SCS FDAI ALIGN DISCRETE (C31)
+ 0636  2         OCT    40400
+ 0637            CAF    10SEC
+ 0638            TC     WAITLIST
+ 0639  2         CADR   FDAOFTSK        CALL FDAI OFF IN 10 SECS
+ 0640            CAF    FIVE
+ 0641            TC     NEWPHASE
+ 0642  2         OCT    00004
+ 0643  2         TC     TASKOVER
+ 0644   FDAOFTSK CAF    -310SEC +1
+ 0645            AD     TCOAST +1
+ 0646  2         TS     LONGTIME +1
+ 0647            CAF    ZERO
+ 0648            AD     -310SEC
+ 0649            AD     TCOAST
+ 0650  2         TS     LONGTIME
+ 0651            CAF    UPTSKLOC
+ 0652  2         TS     CALLCADR
+ 0653            TC     IBNKCALL
+ 0654  2         CADR   LONGCALL
+ 06541           CAF    SIX
+ 06542           TC     NEWPHASE
+ 06543 2         OCT    4
+ 0655   FDOFTSK1 TC     RELAYOFF        REMOVE SCS FDAI ALIGN DISCRETE (C31).
+ 0656  2         OCT    40400
+ 0660  2         TC     TASKOVER
+ 0661   10SEC    DEC    1000
+ 06615  -310SEC  2DEC   -31000
+ 0662  4UPTSKLOC CADR   UPTASK
+ 07055 2         BANK   14
+ 0706   CGTASK   CAF    PRIO21          ESTABLISH CGJOB TO REMOVE ANGULAR CG
+ 0707            TC     FINDVAC         MOTION DEVELOPED DURING SPS2 BURN
+ 0708  2         CADR   CGJOB
+ 0709            CAF    1.25S14
+ 0710            TC     WAITLIST
+ 0711  2         CADR   GMPOFF3
+ 0712            CAF    EIGHT
+ 0713            TC     NEWPHASE
+ 0714  2         OCT    3
+ 0715  2         TC     TASKOVER
+ 0716   CGJOB    TC     NEWMODE         SET MAJOR MODE TO SPS3 BURN
+ 0717  2         OCT    00043
+ 0718  2         TC     INTPRET
+ 0719            VMOVE  1               GET NOMINAL SPS2 CG CHANGE ABOUT IMU
+ 0720            RTB    EXIT            GIMBAL AXES INTO VAC, SCALED AT KE/2 REV
+ 0721                   DELCDU          (KE =1.5), AND DECREMENT THETAD, +1, +2
+ 0722  2                INCRCDUS
+ 0723  2         TC     ENDOFJOB
+ 07233 21.25S14  DEC    125
+ 07235 8         BANK   32
+ 0724   READACCS CAF    PIPCADR         BRANCH TO PIPA READ ROUTINE
+ 0725  2         TC     ISWCALL
+ 0726            CAF    TWO
+ 0727            TC     NEWPHASE
+ 0728  2         OCT    00005
+ 0729   REDO5.2  CS     PIPTIME +1
+ 0730  2         TS     TBASE5
+ 0731            CAF    TWO
+ 0732  2         TS     PIPAGE
+ 0733            CAF    ENTRYMSK        TEST IF ENTRY FLAG SET
+ 0734            MASK   FLAGWRD1
+ 0735            CCS    A
+ 0736  2         TC     SETUPENT
+ 0737            CS     FLAGWRD1        TEST IF COAST FLAG SET
+ 0738            MASK   CSTMASK
+ 0739            CCS    A
+ 0740            TC     CCSHOLE
+ 0741  2         TC     SETUPSOK        IT IS. DO NOT RESET READACCS
+ 0742            CAF    ABORT32         TEST IF ABORT BURN IS SET. IF SO, NEED
+ 0743            MASK   FLAGWRD2        2.5SECS COMPUTING INTERVAL
+ 0744  2         CCS    A
+ 0745  2         TC     CHANGEDT        IT IS
+ 0746            CAF    2SEC            IT IS NOT. CALL READACCS IN 2 SECS
+ 0747            TC     WAITLIST
+ 0748  2         CADR   READACCS
+ 0749   MAKESERV CAF    PRIO16          ESTABLISH SERVICER ROUTINE
+ 0750            TC     FINDVAC
+ 0751  2         CADR   SERVICER
+ 07511           CAF    THREE
+ 07512           TC     NEWPHASE
+ 07513 2         OCT    5
+ 0752  2         TC     TASKOVER
+ 0753   SETUPENT CAF    2SEC            CALL ENTRY ROUTINES IN 2 SECS
+ 0754            TC     WAITLIST
+ 0755  2         CADR   PIPUP
+ 0756  2         TC     MAKESERV
+ 0757   SETUPSOK CAF    2SEC            CALL SOAKTASK IN 2 SECS
+ 0758            TC     WAITLIST
+ 0759  2         CADR   SOAKTASK
+ 0760  2         TC     MAKESERV
+ 0761   CHANGEDT CAF    BIT1            FORCE SERVICER TO SET DELTAT TO 2.5 SECS
+ 0762  2         TS     DELTAT +1
+ 0763            CAF    2.5SEC32        CALL READACCS IN 2.5 SECS
+ 0764  2         TC     MAKESERV -2
+ 0765   REREADAC CAF    ABORT32         READACCS RESTART LOCATION
+ 0766            MASK   FLAGWRD2
+ 0767            CCS    A
+ 0768  2         TC     SET2.5S
+ 0769   CAFREPIP CAF    REPIPCAD
+ 0770  2         TC     READACCS +1
+ 0771   SET2.5S  CS     2.5SEC32
+ 0772            AD     TBASE5
+ 0773            AD     TIME1
+ 0774  2         XCH    RUPTSTOR
+ 0775            CCS    RUPTSTOR
+ 0776            TC     CAFREPIP
+ 0777            TC     CAFREPIP
+ 0778            CAF    2.5SEC32
+ 0779  2         AD     RUPTSTOR
+ 0780            AD     POSMAX
+ 07801           TS     A
+ 07802 2         TC     CAFREPIP
+ 07803           CS     RUPTSTOR
+ 0781            TC     WAITLIST
+ 0782  2         CADR   CAFREPIP
+ 0783  2         TC     TASKOVER
+ 0784   PIPCADR  CADR   PIPASR
+ 0785   REPIPCAD CADR   REPIPASR
+ 0786   CHDTMASK EQUALS BIT11
+ 0787   ENTRYMSK EQUALS BIT3
+ 0788   READMASK EQUALS BIT11
+ 07885  CSTMASK  OCT    40000
+ 0789   ABORT32  OCT    6
+ 0790   2.5SEC32 DEC    250
+ 0791  84SEC     DEC    400
+ 0794   SERVICER TC     BANKCALL        COMPENSATE THE PIPA DATA IN THE DELV
+ 0795  2         CADR   1/PIPA          REGISTERS.
+ 079502          CS     STATE           TEST IF PIPAS BIAS IS TO BE DISREGARDED
+ 079504          MASK   BIT12
+ 079506          CCS    A
+ 0795082         TC     REDO5.3         NO
+ 07951           TS     DELV            YES, CLEAR OUT DELV AS LONG AS BIAS FLAG
+ 079512          TS     DELV +1              IS SET.
+ 079514          TS     DELV +2
+ 079516          TS     DELV +3
+ 079518          TS     DELV +4
+ 07952 2         TS     DELV +5
+ 0796  2REDO5.3  TC     INTPRET
+ 07961           ITC    0               SEE IF TIME FOR STATE VECTOR UPDATE.
+ 07962 2                501UPCHK        (501 & 2 ONLY).
+ 0797   REGSTEP  ITC    0
+ 0798  2                CALCRVG
+ 07981  AVGRET   CAF    ELEVEN          ROUTINE CYCLES 12 TIMES TO SAVE OLD VR,
+ 07982  AGAIN    TS     MPAC              VN FOR RESTARTS
+ 07983           INDEX  MPAC
+ 07984           CS     VR
+ 07985           INDEX  MPAC
+ 07986           TS     VR1             (TEMPORARIES IN AMEMORY)
+ 07987           CCS    MPAC
+ 07988 2         TC     AGAIN
+ 079881          CS     VGCNTR          SAVE FOR RESTARTS
+ 079882          TS     VGCNT1
+ 079883          CS     DVCNTR
+ 0798842         TS     DVCNT1
+ 07989           TC     PHASCHNG
+ 0798952         OCT    02705
+ 0799  2RE5.23   TC     INTPRET
+ 0800            TEST   0               TEST IF ENTRY FLAG SET
+ 0801                   ENTRYFLG
+ 0802                   GETFF           IT IS NOT
+ 0803            DMOVE  0
+ 08035                  LAD
+ 0804  2         STORE  INITL/D
+ 08042           AXT,1  1
+ 08045           TEST   AXT,1
+ 08055                  0
+ 0806                   ABORTSIG
+ 08065                  PACIFIC
+ 0807                   8D
+ 0811   PACIFIC  COMP*  0
+ 0812                   TPACIFC,1
+ 0813  2         STORE  DTEAROT
+ 0814            VMOVE* 0
+ 0815                   RTPACIFC,1
+ 0816  2         STORE  RTINIT
+ 0817            ITC    0
+ 0818  2                EARROT1
+ 0819  2         EXIT   0
+ 0820            CAF    ZERO            RESET DELTAT +1 TO ZERO
+ 0821  2         TS     DELTAT +1
+ 0822            TC     POSTJUMP        GO TO ENTRY INITIALIZATION ROUTINE.
+ 0823  2         CADR   STARTENT
+ 08231  GETFF    ITC    0               COMPUTE TIME TO FREE-FALL TO RTERM
+ 08232 2                CALCTFF
+ 0824   COASTEST TEST   1               TEST IF COAST FLAG SET
+ 0825            VMOVE  VSRT
+ 0826                   COASTFLG
+ 0827                   TFFTEST
+ 0828                   RN              IT IS. TRANSFER RN,VN TO ORBITAL
+ 08281                  RSCALE -15D
+ 0829  2         STORE  RRECT           INTEGRATION ROUTINE
+ 0830            VMOVE  0
+ 0831                   VN
+ 0832  2         STORE  VRECT
+ 0832022         EXIT   0
+ 083204          CS     TFF             SEE IF TFF IS POSMAX (I.E.- WILL NOT
+ 083206          AD     POSMAX            INTERSECT 400,000 FT)
+ 0832082         CCS    A
+ 08321           TC     STATEUP         ALL O.K., SO SET TFF2 FLAG TO ENABLE
+ 083212          OCT    10000             (TFF - TFFMIN) CALCULATIONS FOR SPS2
+ 0832142         TC     NOMCASE           IGNITION SEQUENCE
+ 083216          CS     TFFNOM          WILL NOT INTERSECT 400,000 FT, SO SET
+ 083217          COM                      TFF TO NOMINAL VALUE TO COMPUTE
+ 0832182         TS     TFF               TAVEGON AND TCOAST FOR A SPS2 BURN
+ 08322           CS     TFFNOM +1
+ 083221          COM
+ 0832222         TS     TFF +1
+ 083224          TC     STATEDWN        RESET TFF2 FLAG SO THAT SPS2 IGNITION IS
+ 0832262         OCT    10000             SCHEDULED A FIXED TIME AFTER AVE G. ON
+ 0832282NOMCASE  TC     INTPRET
+ 0833            DSU    0               TIME TO TURN AVE G ON =TFF-23MIN.
+ 0834                   TFF
+ 0835                   23MIN
+ 0836  2         STORE  TAVEGON
+ 0837            NOLOD  2               TIME OF COAST = PIPTIME + (TFF-25MIN)
+ 0838            DSU    BMN             - TCUTOFF
+ 0839            DSU    DAD
+ 08391                  2MIN
+ 08392                  SPS2NOW         TAVEGON TOO SMALL-SCHEDULE SPS2 NOW
+ 08393                  TCUTOFF
+ 08394                  PIPTIME
+ 08395 2         STORE  TCOAST
+ 0840  2         EXIT   0
+ 0841            CS     PIPTIME +1      START UP FREE-FALL GYRO DRIFT COMP.
+ 0842            COM
+ 0843  2         TS     OLDBT1
+ 0844            TC     FLAG2UP         BEGINS WITH NEXT IDLETASK. SET DRIFTFLG
+ 0845  2         OCT    40000
+ 0846  2         TC     ENDOFJOB        SERVICER DIES HERE AT START OF COASTPHS.
+ 0846052SPS2NOW  EXIT   0
+ 08461           TC     FLAG1UP         SET INIT FLAG TO ENABLE MANEUVER TO
+ 0846152         OCT    00400             SPS2 BURN ATTITUDE
+ 08462           CAF    ONE
+ 0846252         TS     VGCNTR
+ 08463           TC     FLAG1DWN        REMOVE COAST FLAG TO CANCEL COLD SOAK
+ 0846352         OCT    40000
+ 08464           CS     ONE             LET ENEMA KILL COLD SOAK MANUEVER
+ 084645          TC     NEWPHASE
+ 08465 2         OCT    00002
+ 084655          CS     ONE             LET ENEMA KILL CALL FOR FDAONTSK
+ 08466           TC     NEWPHASE
+ 0846652         OCT    00004
+ 08467           CAF    PRIO15          DO AN EMEMA AFTER THIS JOB
+ 084675          TC     NOVAC
+ 08468 2         CADR   ENEMA           RESTART READACCS AND WAIT FOR TFFMIN
+ 0846852         TC     INTPRET
+ 0847   TFFTEST  TEST   1               TEST IF TFFMIN SHOULD BE CHECKED.
+ 084702          DSU    BPL             TFF2 FLAG SET AT SPS1 CUTOFF
+ 084704                 TFF2FLAG
+ 084706                 TFFTEST1
+ 084708                 TFF
+ 08471                  TFFMIN
+ 084712                 TFFTEST1
+ 0847142         EXIT   0
+ 084716 TESTTFF  INHINT
+ 084718          CAF    90SEC32
+ 08472           TC     WAITLIST
+ 0847222         CADR   PLUSX2
+ 084724          CCS    S2SWITCH        SEE IF 2ND BURN ATTITUDE TO BE COMPUTED
+ 084726          TC     SET32           NO
+ 084728          TC     SET32
+ 08473           TC     +1
+ 084812          TC     FLAG1UP         SET INIT FLAG TO RE:MANEUVER TO SPS2
+ 0848132         OCT    00400             BURN ATTITUDE
+ 084814          CAF    ONE
+ 0848152         TS     VGCNTR
+ 084816 SET32    TC     NEWMODE         SET MAJOR MODE TO PRE-SPS2
+ 0848172         OCT    00032
+ 084818          TC     SETBRNSW        SET BURN TO SPS2 BACK UP SETTING
+ 0848192         OCT    00020
+ 08482           CS     TIME1
+ 0848222         TS     TBASE4
+ 084825          CAF    THIRTY
+ 084826          TC     NEWPHASE
+ 08483 2         OCT    00004
+ 084835          TC     STATEDWN        REMOVE TFF2FLAG
+ 08484 2         OCT    10000
+ 0848452         TC     INTPRET
+ 0849   TFFTEST1 TEST   2               TEST IF INTP FLAG SET
+ 0850            ABS    DSU
+ 0851            BMN    TEST
+ 0852                   INTPFLAG
+ 0853                   INITEST         IT IS NOT. CONTINUE AT INITEST
+ 0854                   TFF             TEST IF TFF LESS THAN 95 SECS
+ 0855                   DP95SEC
+ 0856                   SHUTDWN1        IT IS. PREPARE TO FREE-FALL RE-ENTER
+ 0857                   INT1FLAG        TEST IF FIRST INTERUPT FLAG SET
+ 0858  2                +3              IT IS NOT
+ 0859            EXIT   0               IT IS. WAIT FOR 95 SEC INTERUPT
+ 0860  2         TC     ENDSER32
+ 0861            NOLOD  1               TEST IF TFF LESS THAN 200 SECS
+ 0862            DSU    BPL
+ 0863                   DP105SEC
+ 0864  2                INITEST         IT IS NOT. CONTINUE
+ 0865            EXIT   0
+ 0866            TC     BANKCALL        IT IS. BRANCH TO SHUTDOWN ROUTINES
+ 0867  2         CADR   SHUTDOWN
+ 0868            TC     FLAG1UP
+ 0869  2         OCT    00100
+ 0870  2         TC     SHTFLGUP
+ 0871   SHUTDWN1 EXIT   0
+ 0872            TC     BANKCALL
+ 0873  2         CADR   SHUTDOWN
+ 0874            TC     FLAG1DWN        REMOVE INTP FLAG (DISABLE TFF DECISIONS)
+ 0875  2         OCT    01000
+ 0876   SHTFLGUP TC     FLAG1UP         SET SHTDN FLAG
+ 0877  2         OCT    04000
+ 0878  4         TC     ENDSER32
+ 08781  REDO5.23 CAF    ELEVEN          RE-ESTABLISH VR, DIFFVECT IN CASE OF
+ 08782           TS     MPAC            5.23 RESTART
+ 08783           INDEX  MPAC
+ 08784           CS     VR1
+ 08785           INDEX  MPAC
+ 08786           TS     VR
+ 08787           CCS    MPAC
+ 08788 2         TC     REDO5.23 +1
+ 087881          CS     VGCNT1
+ 087882          TS     VGCNTR
+ 087883          CS     DVCNT1
+ 0878842         TS     DVCNTR
+ 08789 4         TC     RE5.23
+ 0879   DP2SEC   DEC    0.0
+ 0880   2SEC     DEC    200
+ 088001 23MIN    2DEC   138000 B-28
+ 088002 2MIN     2DEC   12000 B-28
+ 088003 OCT77    OCT    00077
+ 088004 90SEC32  DEC    9000
+ 0881   DP105SEC 2DEC   10500
+ 0882  8DP95SEC  2DEC   9500
+ 0884   INITEST  EXIT   0
+ 0885            CS     FLAGWRD1        TEST IF THIS IS AN INITIAL PASS
+ 0886            MASK   INITMASK
+ 0887            CCS    A
+ 0888  2         TC     DVMNTEST        IT IS NOT
+ 0889            CS     FLAGWRD2        TEST IF BURN IS ABORT AFTER TUMBLE ARRET
+ 0890            MASK   TABTMASK
+ 0891            CCS    A
+ 0892  2         TC     INITISE         IT IS NOT
+ 0893            TC     NEWMODE         SET MAJOR MODE TO POST TUMBLE RECOVERY
+ 0894  2         OCT    00071
+ 0895            CAF    31.8DEG         TO REGAIN ATTITUDE AFTER TUMBLE SET AN
+ 0896  2         TS     LOOKANG         AVERAGE ANGLE TO HORIZON OF 31.8 DEGS.
+ 0897  2INITISE  TC     INTPRET
+ 08972           VMOVE  0               DEFINES TRAJECTORY PLANE FOR YAW
+ 08974                  VN                STEERING. USED IN CALCVGB
+ 08976 2         STORE  VIGNTION
+ 0898            ITC    0               BRANCH TO VG, B VECTOR COMPUTATIONS
+ 0899  2                CALCVGB
+ 0900  2         EXIT   0
+ 0901            CCS    VGCNTR          WAIT FOR SECOND PASS THRU CALCVGB BEFORE
+ 0902            TC     +2              COMPUTING THRUST ATTITUDE
+ 0903  2         TC     +3
+ 0904            TS     VGCNTR
+ 0905  2         TC     ENDSER32
+ 0906  2         TC     INTPRET
+ 0907            ITC    0
+ 0908  2                BURNINIT
+ 0909  2         EXIT   0
+ 0910            INHINT
+ 0911            CAF    PRIO12          ESTABLISH JOB TO COMPUTE MANEUVER TO
+ 0912            TC     FINDVAC         BURN INITIAL ATTITUDE
+ 0913  2         CADR   ATTIJOB
+ 0914            CAF    ONE             SET VGCNTR FOR TWO PASSES THROUGH
+ 0915  2         TS     VGCNTR          CALCVGB BEFORE ISSUINS STEER COMMANDS
+ 0916            CAF    35DEG           RESTORE ANGLE TO HORIZON TO 35 DEGS
+ 0917  2         TS     LOOKANG
+ 0918            TC     PHASCHNG
+ 0919  2         OCT    00402
+ 0920            TC     FLAG1DWN        REMOVE INIT FLAG
+ 0921  2         OCT    00400
+ 0922  2         TC     ENDSER32
+ 0923   31.8DEG  DEC    0.088333        SCALED AT 1 REV
+ 0924   35DEG    DEC    0.097222
+ 0925  2INITMASK EQUALS BIT9
+ 0926  2VRFAIL   EXIT   0               EXIT HERE IF FAILURE TO COMPUTE ABORT VR
+ 0927            CCS    VGCNTR          TEST IF THIS IS LAST PASS
+ 0928            TC     +2
+ 0929  2         TC     ENDSHUT         IT IS. DO SHUTDOWN
+ 0930            TS     VGCNTR          WAIT FOR MORE
+ 0931  2         TC     ENDSER32
+ 0932   DVMNTEST CS     FLAGWRD1        TEST IF DV MONITOR IS ENABLED
+ 0933            MASK   DVMONMSK
+ 0934            CCS    A
+ 0935  2         TC     ENDSER32        IT IS NOT
+ 0936  2         TC     INTPRET
+ 0937            ABVAL  2               TEST IF DELV MAG. EXCEEDS DVMIN
+ 0938            DSU    BMN
+ 0939            EXIT
+ 0940                   DELV
+ 0941                   DVMIN
+ 0942  2                NODELTAV        IT DOES NOT. START DV MONITOR
+ 0943            CS     ONE             IT DOES. (DVCNTR NORMALLY NEGATIVE)
+ 0944  2         TS     DVCNTR
+ 0945            TC     BANKCALL
+ 0946  2         CADR   STRTEST
+ 0947   NODELTAV EXIT   0
+ 0948  2         CCS    DVCNTR
+ 0949            TC     DVALARM         AFTER FIRST TIME SET ALARM
+ 0950  2         TC     SHUTDWN3        5 PASSES UP. PREPARE FOR RE-ENTRY
+ 0951            CAF    NINE            FIRST TIME SET DVCNTR FOR 10 PASSES
+ 0952  2         TS     DVCNTR
+ 0953  2         TC     ENDSER32
+ 0954   DVALARM  TC     ALARM
+ 0955  2         OCT    01402
+ 0958            CCS    DVCNTR
+ 0959  2         TS     DVCNTR
+ 0961  2         TC     ENDSER32
+ 0962   SHUTDWN3 CS     FLAGWRD2
+ 096205          MASK   SPS1MASK
+ 09621           CCS    A
+ 0962152         TC     SHUTDWN4        SHUT DOWN IF NOT DOING SPS1 BURN
+ 09622           INHINT                 CALL ON ENGINE-OFF IMMEDIATELY IF SPS1
+ 096225          CAF    ONE
+ 09623           TC     WAITLIST
+ 096235          CADR   ENGINOFF
+ 09624 2         RELINT
+ 096245          TC     FLAG1DWN        REMOVE STEER FLAG
+ 09625 2         OCT    00010
+ 096255          TC     PHASCHNG
+ 09626 2         OCT    04104
+ 0962652         TC     ENDSER32
+ 09627  SHUTDWN4 TC     FLAG1UP         ENABLE FREE-FALL INTERRUPT
+ 0963  2         OCT    01000
+ 0964   ENDSHUT  TC     BANKCALL
+ 0965  2         CADR   SHUTDOWN
+ 0966   ENDSER32 TC     BANKCALL        EXIT FROM SERVICER FROM BANK 32
+ 0967  2         CADR   ENDSERV
+ 0969            SETLOC 66000
+ 0970   DVMONMSK EQUALS BIT5
+ 0971   DVMIN    2DEC   0.000318008     2FT/S SCALED AT 19.16928 M/CS
+ 0972   STRTEST  CS     FLAGWRD1        TEST IF STEER FLAG SET
+ 0973            MASK   BIT4
+ 0974            CCS    A
+ 0975  2         TC     ENDSERV         IT IS NOT
+ 0976  2         TC     INTPRET
+ 0977            ITC    0
+ 0978  2                CALCVGB
+ 0979  2         EXIT   0
+ 0980            TC     PHASCHNG
+ 0981  2         OCT    00505
+ 0982   REDO5.5  CCS    VGCNTR
+ 0983            TC     +2              BEFORE TESTING VG AND GENERATING STEERIN
+ 0984  2         TC     JUMP10          COMMANDS
+ 0985            TS     ERRORSUM        ZERO STEER ERROR SUM
+ 0986            TS     ERRORSUM +1
+ 0987            TS     ERRORSUM +2
+ 0988            TS     ERRORSUM +3
+ 0989            TS     ERRORSUM +4
+ 0990  2         TS     ERRORSUM +5
+ 0991            CAF    MDTINIT
+ 0992            TS     MDT
+ 0993  2         TS     MDT +1
+ 0996            CCS    VGCNTR
+ 0997  2         TS     VGCNTR
+ 0998  2         TC     ENDSERV
+ 0999  2MDTINIT  DEC    0.00381         16FT/S/S FOR 2.5 SECS AT 2(+5)M/CS
+ 1000   JUMP10   TC     FLAG2DWN        REMOVE CALC FLAG (KILLS ATTITUDE MAN-
+ 1001  2         OCT    02000           EUVER IF STILL ACTIVE)
+ 1002  2         TC     INTPRET
+ 1003            VXSC   1
+ 1004            BVSU   UNIT
+ 1005                   DELV
+ 1006                   KPIP
+ 1007                   CBDT
+ 1008  2         STORE  UNITMDT
+ 1009            NOLOD  1               TEST IF VG INCREASING WITH THRUST
+ 1010            DOT    BPL
+ 1011                   VG
+ 1012                   VGALARM         IT IS. BRANCH TO CUT ENGINE AND WAIT
+ 1013  2         STORE  26D             VG ACTUAL
+ 1014            DAD    0               SUM TWO INTERVALS OF MDT
+ 1015                   30D
+ 1016  2                MDT
+ 1025   JUMP9    DMP    3               RESCALE VG ACTUAL TO 2(+5)M/CS
+ 1026            TSLT   BOV
+ 1027            DDV    BOV             IF NO OVER FLOW ON DIVISION, LESS THAN
+ 1028            DMP    ITC             2 INTERVALS OF VG LEFT
+ 1029                   26D
+ 1030                   0.995
+ 1031                   3
+ 1032                   STEERLAW
+ 1033                   -
+ 1034                   STEERLAW
+ 1035                   DELTAT
+ 1036  2                SETTGO          BRANCH TO SET TIME-TO-GO TO CUT-OFF
+ 1037   STEERLAW DMOVE  0               SAVE NEW VALUE OF MDT
+ 1038                   30D
+ 1039  2         STORE  MDT
+ 1040            DMP    0
+ 1041                   K1STEER         =(0.815...)(STEER GAIN)
+ 1042  2                DELTAT
+ 1043            ABVAL  3               STEERING CROSS PRODUCT COMPUTED HERE
+ 1044            TSLC   BDDV
+ 1045            VXSC   VXV
+ 1046            VSLT*
+ 1047                   VG
+ 1048                   X2
+ 1049                   -
+ 1050                   VG
+ 1051                   UNITMDT
+ 1052                   0,2
+ 1053            STORE  STEERROR        FIRST TERM IN STEERLAW OUTPUT. SCALED
+A1054                                   AT ONE REVOLUTION
+ 1055            NOLOD  1               INCREMENT SUM OF STEER ERRORS
+ 1056            VXSC   VAD
+ 1057                   K2STEER         =(INTEGRATOR GAIN)/(STEER GAIN)
+ 1058  2                ERRORSUM
+ 1059            NOLOD  2               TEST IF MAGNITUDE OF INTEGRATED STEER
+ 1060            ABVAL  DSU             ERROR EXCEEDS MAX ALLOWABLE
+ 1061            BPL
+ 1062                   ERRORMAX
+ 1063  2                SUMPOINT
+ 1064            VMOVE  0
+ 1065  2         STORE  ERRORSUM        STORE NEW STEER ERROR SUM
+ 1066   SUMPOINT VAD    1               SUM ERROR AND INTEGRATED ERROR TERMS
+ 1067            RTB    ITC
+ 1068                   STEERROR
+ 1069                   ERRORSUM
+ 1070                   FRESHPD
+ 1071                   CDUDRIVE        BRANCH WITH TOTAL STEERLAW OUTPUT IN VAC
+A1072                                   SCALED AT ONE REVOLUTION
+ 10721  STREXIT  VSLT   1
+ 10722           COMP   EXIT            RESCALE VG TO 2(+5)M/CS FOR DISPLAY
+ 10723                  VG
+ 10724 2                2
+ 107241          TC     GRABDSP         TRY TO GRAB DISPLAY
+ 1072422         TC     NODISP          ALREADY GRABBED. SKIP VG DISPLAY
+ 10725           INDEX  FIXLOC          LOAD UPPER REGISTERS OF VG INTO DSPTEM1
+ 10726           CS     VAC
+ 10727 2         TS     DSPTEM1
+ 10728           INDEX  FIXLOC
+ 10729           CS     VAC +2
+ 1073  2         TS     DSPTEM1 +1
+ 10731           INDEX  FIXLOC
+ 10732           CS     VAC +4
+ 10733 2         TS     DSPTEM1 +2
+ 10734           CAF    V06N40
+ 10735           TC     NVSUB
+ 10736 2         TC     RELDSPON
+ 10737 2         TC     FREEDSP
+ 10738 2NODISP   TC     ENDSERV
+ 1074   V06N40   OCT    00640           VERB 06 NOUN 40
+ 1075   1.523    2DEC   1.523 B-3
+ 1076   0.995    2DEC   0.995
+ 1077   K1STEER  2DEC   0.101859164     (STEER GAIN =1/8)
+ 1078   K2STEER  2DEC   0.08            (INTEGRATOR GAIN =0.01)
+ 1079   ERRORMAX 2DEC   0.001388888     1 DEGREE SCALED AT 2 REVS
+ 1080   SETTGO   NOLOD  2               COME HERE TO SET ENGINE-OFF CALL
+ 1081            TSRT   COMP
+ 1082            TEST   EXIT
+ 1083                   4               C(MPAC) = TIME-TO-CUTOFF SINCE PIPTIME
+ 1084                   STEERFLG        SCALED AT 2(+14) CS
+ 1085  2                STREXIT
+ 10852           XCH    MPAC
+ 10854 2         TS     LONGTIME        SAVE MPAC  (USED IN RESTARTS)
+ 1086   REDO4.1  INHINT
+ 1087            CS     TIME1
+ 1088            TS     TBASE4
+ 1089            AD     PIPTIME +1
+ 1090            CCS    A
+ 1091            AD     BIT15
+ 1092            TC     +3
+ 1093            AD     ONE
+ 1094  2         COM
+ 1095            AD     LONGTIME        (TEMP FOR MPAC)
+ 1096            AD     TDECAY          EFFECTIVE THRUST DECAY TIME
+ 1097            TS     LONGTIME +1
+ 1098            CCS    A               TEST FOR - OR 0 WAITLIST CALLS
+ 1099            TC     +3
+ 1100            TC     +2
+ 1101            CAF    ZERO
+ 1102            AD     ONE
+ 1103            TC     WAITLIST
+ 1104  2         CADR   ENGINOFF
+ 1105            TC     PHASCHNG
+ 1106  2         OCT    00104
+ 1107            TC     FLAG1DWN        REMOVE STEER FLAG
+ 1108  2         OCT    00010
+ 1109            TC     PHASCHNG
+ 1110  2         OCT    00204
+ 1111  2         TC     ENDSERV
+ 1112   VGALARM  EXIT   0
+ 1113            TC     ALARM
+ 1114  2         OCT    01401
+ 1115            TC     BANKCALL
+ 11155 2         CADR   SHUTDWN3
+ 1121   ENDSERV  CCS    DELTAT +1       IF BIT1 PRESENT IN DELTAT +1, SET DELTAT
+ 1122            CAF    HALFSEC         1/PIPADT TO 2.5SECS (FOR ABORT STEERING)
+ 1123            AD     TWOSEC
+ 1124            TS     DELTAT
+ 1125            DOUBLE
+ 1126  2         TS     1/PIPADT
+ 1127            TC     PHASCHNG
+ 1128  2         OCT    00105
+ 1129  2         TC     ENDOFJOB
+ 1130   HALFSEC  DEC    50 B-9
+ 1131   TWOSEC   DEC    200 B-9
+ 1132  8ALLABORT OCT    7
+ 1134   BURNINIT AXC,1  2               C(X1)= 0  (TABT,ABRT,SPS1)
+ 1135            ITA    TEST                 =-2  (SPS2)
+ 1136            AXC,1
+ 1137                   0
+ 1138                   S2
+ 1139                   SPS2FLAG
+ 1140                   +2
+ 1141  2                2
+ 1142            ITC    0               COMPUTE DESIRED THRUST DIRECTION
+ 1143  2                CALCXSC
+ 1144            RTB    1               SET UP CG ROTATION MATRIX IN PD
+ 1145            SMOVE*
+ 1146                   ZEROVAC
+ 1147                   CGZ,1
+ 1148  2         STORE  6
+ 1149            NOLOD  1
+ 1150            COMP   AST,1
+ 1151                   6
+ 1152  2         STORE  2
+ 1153            SMOVE* 0
+ 1154                   CGY,1
+ 1155  2         STORE  4
+ 1156            NOLOD  1
+ 1157            COMP   AXT,1
+ 1158                   18D
+ 1159  2         STORE  12D
+ 1160   REPEAT2  VMOVE* 2               COMPUTE DESIRED SPACECRAFT ATTITUDE
+ 1161            VXM    VAD*            MATRIX FROM DESIRED THRUST ATT. MATRIX
+ 11615           UNIT
+ 1162                   18D,1
+ 1163                   XSC
+ 1164                   XSC +18D,1
+ 1165  2         STORE  XSCD +18D,1
+ 1166            TIX,1  1
+ 1167            ITCI
+ 1168                   REPEAT2
+ 1169  8                S2
+ 1170  2ROLLJOB  TC     INTPRET
+ 11701           AXT,1  1               GET SIN,COS OF THETAD,+1,+2
+ 11702           AST,2  ITC
+ 11703                  6
+ 11704                  ROLLEXIT
+ 11705 2                THETRIG
+ 1171            ITC    0               COMPUTE NAV. BASE CORRDINATES
+ 1172  2                CALCSMNB
+ 1173            VXSC   0               COMPUTE XSC
+ 1174                   XNB
+ 1175  2                COS33
+ 1176            VXSC   2
+ 11761           VAD    TEST
+ 11762           COMP
+ 11763                  ZNB
+ 11764                  SIN33
+ 11765                  -
+ 11766                  SPS2FLAG        IF SPS2, INVERT XSC
+ 11767                  HEADWN1
+ 11768 2         STORE  22D
+ 1181   HEADWN1  NOLOD  3
+ 1182            VXV    UNIT            =KR(TVC)(UNIT(XSC*RN)*YSC), WHERE
+ 1183            VXV    VXSC                 DT(MAX) = 10 SECS,
+ 1184            VSLT   ITC                  MAX ROLL GAIN = 1.0
+ 1185                   RN
+ 1186                   YNB             ( =YSC)
+ 1187                   KR(TVC)         TVC ROLL CONTROL GAIN
+ 1188                   3
+ 1189  2                CDUDRVE2        SUBENTRY OF CDUDRIVE
+ 1194  2ROLLEXIT EXIT   0
+ 1195            CS     FLAGWRD1        TEST IF STEER FLAG SET BEFORE SETTING
+ 1196            MASK   BIT4            BURN MAJOR MODE
+ 1197            CCS    A
+ 1198  2         TC     ENDOFJOB
+ 1199            CAF    BIT5            TEST IF BURN SWITCH IS SET TO SPS2
+ 1200            MASK   FLAGWRD2
+ 1201            CCS    A
+ 1202  2         TC     SPS2MODE        IT IS
+ 1203            CS     FLAGWRD2        TEST IF BURN IS SPS1
+ 1204            MASK   BIT4
+ 1205            CCS    A
+ 1206  2         TC     ENDOFJOB        IT IS NOT
+ 1207            TC     NEWMODE         SET MAJOR MODE TO SPS1
+ 1208            OCT    00041
+ 1209  2         TC     ENDOFJOB
+ 1210   SPS2MODE TC     NEWMODE         SET MAJOR MODE TO SPS2
+ 1211  2         OCT    00042
+ 1212  2         TC     ENDOFJOB
+ 1213  8KR(TVC)  2DEC   0.0204          ROLL GAIN =0.05,  DT =5.0 SECS
+R1214   THIS ROUTINE CONTROLS THE USE OF CALCMANU IN COMPUTING, TIMING AND PERFO
+ 1215  9RMING THE SEQUENCE OF MANEUVERS DURING
+R1216   A LARGE ATTITUDE MANEUVER. FLIGHT 501 INVOLVES SUCH A MANEUVER WHEN ORIE
+ 1217  9NTING TO
+R1218            1.  ABORT BURN INITIAL ATTITUDE AFTER A TUMBLE ARREST
+R1219            2.  NOMINAL FIRST BURN INITIAL ATTITUDE
+R1220            3.  LOCAL VERTICAL AFTER NOMINAL FIRST BURN
+R1221            4.  NOMINAL SECOND BURN INITIAL ATTITUDE
+R1222            5.  SM/CM SEPARATION ATTITUDE
+R1223  4         6.  CM PRE-ENTRY ATTITUDE
+ 1224   ATTIJOB  TC     BANKCALL
+ 1225  2         CADR   IMUATTC
+ 1226  2         TC     SETHETAD
+ 1227            TC     BANKCALL
+ 1228            CADR   IMUSTALL
+ 1229  2         TC     CURTAINS
+ 1230  2         TC     INTPRET
+ 1231   ATTIJOB1 ITC    0
+ 1232  2                GETMANU
+ 1233  2         EXIT   0
+ 1234            INHINT
+ 1235            CAF    0.01SEC
+ 1236            TC     WAITLIST
+ 1237  2         CADR   DOMANU
+ 1238  4         TC     ENDOFJOB
+ 1239  2ATTIJOB2 TC     INTPRET
+ 1240            ITC    0
+ 1241  2                GETMANU
+ 1242            EXIT   0
+ 1243  4         TC     ENDOFJOB
+ 1244   SNAPOUT  NOLOD  0
+ 1245  2         STORE  THETAD
+ 1246            TEST   1               TEST IF SHTDN FLAG SET (I.E. HAS FREE-
+ 1247            TEST   EXIT            FALL INTERUPT OCCURRED)
+ 1248                   SHTDNFLG
+ 1249                   JUMP7
+ 1250                   CDUXFLAG        TEST IF CDUXFLAG SET (I.E. HAS CM/SM
+ 1251  2                ENDMANU         SEPARATION OCCURRED)
+ 1252            TC     FLAG1UP         SET ENTRY FLAG
+ 1253  2         OCT    00004
+ 1254            CS     ONE
+ 1255            TC     NEWPHASE
+ 1256  2         OCT    00003
+ 1257  2         TC     ENDOFJOB
+ 1258   JUMP7    TEST   1
+ 1259            EXIT
+ 1260                   COASTFLG
+ 1261  2                JUMP6
+ 1262            TC     FLAG1UP         SET SOAK FLAG FOR BEGINNING OF CONTROL
+ 1263  2         OCT    10000             AT COLD SOAK ATTITUDE
+ 1264            TC     NEWMODE
+ 1265  2         OCT    00022
+ 1266  2         TC     ENDMANU +1
+ 1267   JUMP6    TEST   0
+ 1268                   TABTFLAG
+ 1269  2                ENDMANU
+ 1270  2         EXIT   0
+ 1271            INHINT
+ 1272            CAF    0.01SEC
+ 1273            TC     WAITLIST
+ 1274  2         CADR   ATTCNOFF
+ 12742           CAF    TWO             SET VGCNTR FOR THREE PASSES THROUGH
+ 12744 2         TS     VGCNTR          CALCVGB BEFORE STARTING ABORT STEERING
+ 1275  2         TC     ENDMANU +1
+ 1276  2ENDMANU  EXIT   0
+ 1277            CS     ONE
+ 1278            TC     NEWPHASE
+ 1279  2         OCT    2
+ 1280  8         TC     ENDOFJOB
+ 1281   GETMANU  ITA    1
+ 1282            ITC
+ 1283                   EXITCAD1
+ 1284  2                CALCMANU
+ 1285            TEST   0
+ 1286                   CALCFLAG
+ 1287  2                SNAPOUT
+ 1288            AXC,1  2
+ 1289            TEST   AXC,1
+ 1290            TEST   AXC,1
+ 1291                   0
+ 1292                   ROLLFLAG
+ 1293                   SETDTH
+ 1294                   2
+ 1295                   CDUXFLAG
+ 1296                   SETDTH
+ 1297  2                4
+ 1298   SETDTH   DMOVE* 0
+ 1299                   DTH,1
+ 1300  2         STORE  DTHETA
+ 1301            ITCI   0
+ 1302  4                EXITCAD1
+ 1303  80.01SEC  EQUALS BIT1
+ 1304   DOMANU   TC     FLAG2UP         SET DOMANU FLAG
+ 1305  2DOMANMSK OCT    01000
+ 1306   DOMANU1  CS     FLAGWRD2        KILL DOMANU IF CALC FLAG NOT SET
+ 1307            MASK   BIT11           (CALCMASK)
+ 1308            CCS    A
+ 1309  2         TC     DOMANOFF
+ 1310            CAF    DOMANMSK        TEST IF DOMAN FLAG SET
+ 1311            MASK   FLAGWRD2
+ 1312            CCS    A
+ 1313  2         TC     SETMANU         IT IS
+ 1314            CAF    TPAD +1         IT IS NOT. START NEXT MANEUVER IN TPAD
+ 1315            TC     WAITLIST        SECS
+ 1316  2         CADR   DOMANU
+ 1317  2         TC     TASKOVER
+ 1318   SETMANU  CAF    PRIO23          ESTABLISH MANUJOB
+ 1319            TC     FINDVAC
+ 1320  2         CADR   MANUJOB
+ 1321            CAF    0.5SEC          RECALL DOMANU1 IN 0.5 SECS
+ 1322            TC     WAITLIST
+ 1323  2         CADR   DOMANU1
+ 1324  2         TC     TASKOVER
+ 1325   DOMANOFF TC     FLAG2DWN        REMOVE DOMANU FLAG
+ 1326  2         OCT    01000
+ 1327  4         TC     TASKOVER
+ 1328   TPAD     DEC    0.0
+ 1329   5SEC     DEC    500
+ 1330  40.5SEC   DEC    50
+ 1331  2MANUJOB  TC     INTPRET
+ 1332            DSU    1               TEST IF THETAMAN LESS THAN DTHETA.
+ 1333            BPL    COMP
+ 1334                   DTHETA
+ 1335                   THETAMAN
+ 1336                   JUMP4           IT IS. STORE REMAINING THETAMAN
+ 1337  2         STORE  THETAMAN
+ 1338            ITC    0
+ 1339  2                DRIVECDU
+ 1340   JUMP4    DMOVE  0               STORE REMAINING THETAMAN IN DTHETA
+ 1341                   THETAMAN
+ 1342  2         STORE  DTHETA
+ 1343  2         EXIT   0
+ 1344            TC     FLAG2DWN        REMOVE DOMAN FLAG
+ 1345  2         OCT    01000
+ 1346  2         TC     INTPRET
+ 1347   DRIVECDU VXSC   1               FORM INCREMENTAL MANEUVER VECTOR
+ 1348            VSLT   ITC
+ 1349                   WC
+ 1350                   DTHETA
+ 1351                   1
+ 1352  2                CDUDRIVE
+ 1353            TEST   0               TEST IF DOMAN FLAG SET
+ 1354                   DOMANFLG
+ 1355  2                NEXTMAN         IT IS NOT. GET NEXT MANEUVER
+ 1356            EXIT   0
+ 1357  2         TC     ENDOFJOB
+ 1365  2NEXTMAN  EXIT   0
+ 1366            INHINT
+ 1367            CAF    PRIO12          ESTABLISH ATTIJOB2 TO COMPUTE NEXT MAN.
+ 1368            TC     FINDVAC
+ 1369  2         CADR   ATTIJOB2
+ 1370  8         TC     ENDOFJOB
+ 1371   SOAKINIT TC     NEWMODE         SET MAJOR MODE TO MANEUVER TO COLDSOAK
+ 1372  2         OCT    00021
+ 1373  2         TC     INTPRET
+ 1374            SMOVE  0
+ 13745 2                ANGLEZ          COLDSOAK -  Z GIMBAL ANGLE
+ 1375            SMOVE  0
+ 13755 2                ANGLEY          COLDSOAK -  Y GIMBAL ANGLE
+ 1376            SMOVE  1
+ 13765           VDEF   COMP
+ 1377                   ANGLEX          COLDSOAK -  X GIMBAL ANGLE
+ 13775 2         STORE  CDUTEMP
+ 13776           AXT,1  1
+ 1378            ITC
+ 13781                  6
+ 13785 2                SINCOS
+ 1379            ITC    0
+ 13795 2                CALCSMNB        NAV BASE IN SM COORDINATES
+ 1380            ITC    0
+ 13805 2                CALCNBSC        SC IN SM COORDINATES
+ 1383            VMOVE  0
+ 13835                  XSC
+ 1384  2         STORE  XSCD
+ 13845           VMOVE  0
+ 1385                   YSC
+ 13855 2         STORE  YSCD
+ 1386            VMOVE  0
+ 13865                  ZSC
+ 1387  2         STORE  ZSCD
+ 1388            ITC    0               BRANCH TO DO MANEUVER
+ 1389  8                ATTIJOB1
+ 1390   SOAKTASK CS     ZERO            COME HERE FIRST TIME ONLY. CLEAR OUT
+ 1391            TS     DELV            DELV FOR FREE-FALL COMPUTATIONS
+ 1392            TS     DELV +1
+ 1393            TS     DELV +2
+ 1394            TS     DELV +3
+ 1395            TS     DELV +4
+ 1396  2         TS     DELV +5
+ 1397   SOAKTSK1 CAF    BIT15           TEST IF COAST FLAG SET
+ 1398            MASK   FLAGWRD1
+ 1399            CCS    A
+ 1400            TC     CCSHOLE
+ 1401  2         TC     TASKOVER
+ 1402            CAF    SEVEN
+ 1403            TC     NEWPHASE
+ 1404  2         OCT    00005
+ 1405   REDO5.7  CS     TIME1
+ 1406  2         TS     TBASE5
+ 1407            CAF    EIGHT
+ 1408            TC     NEWPHASE
+ 1409  2         OCT    00005
+ 1410            CAF    2SEC33
+ 1411            TC     WAITLIST
+ 1412  2         CADR   SOAKTSK1
+ 1413            CAF    PRIO13
+ 1414            TC     FINDVAC
+ 1415  2         CADR   SOAKJOB
+ 1416  2         TC     TASKOVER
+ 1421  82SEC33   DEC    200
+ 1423   SOAKJOB  CS     FLAGWRD1        TEST SOAKFLAG
+ 1424            MASK   BIT13
+ 1426            CCS    A
+ 1427            TC     SOAKEXIT        SOAKFLAG OFF
+ 1428  2         TC     INTPRET          SOAKFLAG ON
+ 1467            DMOVE  0               SET DELTAT TO 4 SECS FOR ORBITAL INT.
+ 1468                   DT4SEC
+ 1469  2         STORE  DELTAT
+ 14691           VMOVE  0               SAVE VRECT AND RRECT IN CASE OF RESTARTS
+ 14692                  RRECT
+ 14693 2         STORE  RRECCMEM
+ 14694           VMOVE  0
+ 14695                  VRECT
+ 14696 2         STORE  VRECCMEM
+ 1470            EXIT   0
+ 1471            TC     PHASCHNG
+ 1472  2         OCT    01205
+ 1473   REDO5.10 TC     FLAG1DWN        REMOVE COAST, SOAK FLAGS
+ 1474  2         OCT    50000
+ 1475  2         TC     INTPRET
+ 14751           VMOVE  0               RESTORE RRECT AND VRECT FROM CMEMORY.
+ 14752                  RRECCMEM
+ 14753 2         STORE  RRECT
+ 14754           VMOVE  0
+ 14755                  VRECCMEM
+ 14756 2         STORE  VRECT
+ 1476            ITC    0               BRANCH TO DO ORBITAL INTEGRATION
+ 1477  2                AVETOMD1
+ 1478            VMOVE  1
+ 14781           VSLT
+ 1479                   RIG-4SEC
+ 14791                  RSCALE -15D
+ 1480  2         STORE  RN              SET RN TO 4 SECS BEFORE IGNITION
+ 1481            RTB    1
+ 1482            ITC
+ 1483                   FRESHPD
+ 1484  2                CALCGRAV
+ 14842           VMOVE  0
+ 14844                  VIGNTION
+ 14846 2         STORE  VN              SET VN AT IGNITION
+ 1485            AXT,1  1               GET VR AT 4 SECS BEFORE IGNITION
+ 1486            SXA,1  ITC
+ 1487                   501SPS2
+ 1488                   VRCADR
+ 1489  2                CALCVGB
+ 1493            VMOVE  1
+ 14931           VSLT
+ 1494                   RIGNTION
+ 14941                  RSCALE -15D
+ 1495  2         STORE  RN              SET RN AT IGNITION
+ 1496            ITC    0
+ 1497  2                CALCGRAV
+ 1498            ITC    0
+ 1499  2                CALCVGB         GET VR AT IGNITION. COMPUTE CBDT
+ 1500            ITC    0
+ 1501  2                BURNINIT        INITIALISE BURN
+ 1502            DMOVE  0
+ 1503                   DT2SEC
+ 1504  2         STORE  DELTAT          RESTORE DELTAT TO 2 SECS FOR SPS2
+ 1505            VMOVE  0
+ 1506                   VAVEGON
+ 1507  2         STORE  VN              INITIALISE CALCRVG FOR TURN-ON
+ 1508            VMOVE  1
+ 15081           VSLT
+ 1509                   RAVEGON
+ 15091                  RSCALE -15D
+ 1510  2         STORE  RN
+ 1511            ITC    0
+ 1512  2                CALCGRAV
+ 1513  2         EXIT   0
+ 1514            CAF    ONE             SET VGCNTR FOR TWO PASSES THRU CALCVGB
+ 1515  2         TS     VGCNTR          BEFORE SPS2 STEERING
+ 1516            TC     NEWMODE         SET MAJOR MODE TO READY FOR R,V,T UPDATE
+ 1517  2         OCT    00024
+ 1520            TC     PHASCHNG        CHANGE PHASE TO 5.20 TO ENABLE V76 RST.
+ 1521  2         OCT    02405
+ 1523  2         TC     ENDOFJOB
+ 1527   SOAKEXIT TC     PHASCHNG
+ 1528  2         OCT    01305
+ 1529  2         TC     ENDOFJOB
+ 1530   DT2SEC   2DEC   200 B-9
+ 1531   DT4SEC   2DEC   400 B-9
+ 15345           BANK   24
+P1535  2UPTASK AND UPJOB OCCUR 120 SECS BEFORE PLUSX2 AND INCORPORATE STATE VECT
+ 1536  9OR UPDATES VIA VERB 76
+ 1537   UPTASK   CAF    10SEC24         SCHEDULE FDAI ALIGN OFF IN 10 SECS
+ 1538            TC     WAITLIST
+ 1539  2         CADR   FDAIOFF2
+ 15392           TC     RELAYON         SET SCS FDAI ALIGN DISCRETE (C31)
+ 15394 2         OCT    40400
+ 1540            CAF    PRIO6           ESTABLISH UPJOB
+ 1541            TC     FINDVAC
+ 1542  2         CADR   UPJOB
+ 1543            CAF    SEVEN
+ 1544            TC     NEWPHASE
+ 1545  2         OCT    00004
+ 1546            CS     TIME1
+ 1547  2         TS     TBASE4
+ 15471           CS     ONE             REMOVE UPDATE RESTART CAPABILITY
+ 15472           TC     NEWPHASE
+ 15473 2         OCT    5
+ 1548            CAF    EIGHT
+ 1549            TC     NEWPHASE
+ 1550  2         OCT    00004
+ 1551  2         TC     TASKOVER
+ 1552   UPJOB    TC     NEWMODE         REVERT TO ATTITUDE HOLD WITH NO V76.
+ 1553  2         OCT    22
+ 1554            CAF    LDNLST1         REVERT BACK TO DOWNLIST 1.
+ 1555  2         TS     DNLSTADR
+ 1556  2         TC     INTPRET
+ 1557            TEST   2               NO FURTHER ACTION IF NO V76 COMPLETED.
+ 1558            DAD    DAD             IF SO, FORM DT FOR FINAL INTEGRATION.
+ 1559            DSU
+ 1560                   UPDATFLG
+ 1561                   NOSTATE
+ 1562                   TCUTOFF
+ 1563                   TCOAST
+ 1564                   DP120SEC
+ 1565                   STBUFF +12D
+ 1566  2         STORE  TAVEGON
+ 156602          MXV    1
+ 156603          VSLT
+ 156604                 RRECT
+ 156606                 REFSMMAT
+ 156607                 1               THIS ASSUMES THAT UPDATE SCALED 2(26)M
+ 1566082         STORE  RRECCMEM
+ 15661           MXV    1
+ 156611          VSLT
+ 156612                 VRECT
+ 156614                 REFSMMAT
+ 156615                 1               THIS ASSUMES THAT UPDATE SCALED 2(7)M/CS
+ 1566162         STORE  VRECCMEM
+ 156618          EXIT   0
+ 15662           TC     PHASCHNG
+ 1566222         OCT    03504
+ 156624 REDO4.29 TC     INTPRET
+ 156626          VMOVE  0
+ 156628                 RRECCMEM
+ 15663 2         STORE  RRECT
+ 156632          VMOVE  0
+ 156634                 VRECCMEM
+ 1566362         STORE  VRECT
+ 1567            ITC    0
+ 1568  2                AVETOMD2
+ 1569            VMOVE  0               LEAVE RAVEGON, VAVEGON IN RN, VN.
+ 1570                   VAVEGON
+ 1571  2         STORE  VN
+ 1572            VSLT   0
+ 1573                   RAVEGON
+ 15735                  RSCALE -15D
+ 1574  2         STORE  RN
+ 1575            RTB    1
+ 1576            ITC
+ 1577                   FRESHPD
+ 1578  2                CALCGRAV
+ 1579   NOSTATE  ITC    0               GO GET TFF
+ 1579052                CALCTFF
+ 15791           DSU    1               SEE IF TFF IS TOO HIGH
+ 157912          BPL    EXIT
+ 157914                 TFF
+ 157916                 TFFLIMIT
+ 1579182                TFF2DOWN        YES
+ 15792  SETMM23  TC     NEWMODE         HOLD ATTITUDE AFTER ORBITAL INTEGRATION
+ 15794 2         OCT    23
+ 1580            TC     PHASCHNG
+ 1581  2         OCT    01104
+ 1582  4REDO4.9  TC     JAMTERM         FLUSH OUT V76 IF STILL IN PINBALL
+ 158202 TFF2DOWN EXIT   0
+ 158204          TC     STATEDWN        RESET TFF2 FLAG
+ 158206          OCT    10000
+ 1582084         TC     SETMM23
+ 15821  FDAIOFF2 TC     RELAYOFF        REMOVE SCS FDAI ALIGN DISCRETE (C31)
+ 15822 2         OCT    40400
+ 15823           CAF    105SEC
+ 15824           TC     WAITLIST
+ 15825 2         CADR   PREAVGON
+ 15826 4         TC     TASKOVER
+ 1583   PREAVGON CAF    5SEC24
+ 1584            TC     WAITLIST
+ 1585  2         CADR   AVGON
+ 15852           TC     RELAYOFF        BACK-UP FDAI ALIGN OFF IN CASE OF
+ 15854 2         OCT    40400             RESTARTS
+ 1586            TC     FLAG1DWN        REMOVE UPDAT FLAG TO KILL ORB. INTEGR.
+ 1587  2         OCT    20000
+ 1588            CAF    TWENTY7
+ 1589            TC     NEWPHASE
+ 1590  2         OCT    4
+ 1591  2         TC     TASKOVER
+ 1592   DP120SEC 2DEC   12000
+ 15922  10SEC24  DEC    1000
+ 15924  105SEC   DEC    10500
+ 1593   5SEC24   DEC    500
+ 1594   TFFLIMIT 2DEC   .9              JUST SO ITS HIGH
+P1595   SHUTDOWN IS A CLOSED SUBROUTINE WHICH IS ENTERED PRIOR TO CM/SM SEPARATI
+ 1596  9ON. ITS PURPOSE IS TO CLOSE OUT ALL SCS
+R1597  4FUNCTIONS NOT CONCERNED WITH SEPARATION AND ENTRY, AND TO INITIATE THOSE
+ 1598  9 THAT ARE
+ 1600  2         BANK   33
+ 1601   SHUTDOWN INHINT
+ 1602            CAF    PRIO27          ESTABLISH HIGH PRIO JOB TO DO SHUTDOWN
+ 1603            TC     NOVAC
+ 1604            CADR   ENEMA           CLEANS OUT EXEC AND WAITLIST.
+ 1605  2         RELINT
+ 1606            CAF    ONE             EFFECTIVELY STOP ANY WAITLIST ACTIVITY
+ 1607  2         TS     TIME3
+ 1610            CS     ONE
+ 1611            TC     NEWPHASE
+ 1612  2         OCT    00004
+ 1613            CS     ONE
+ 1614            TC     NEWPHASE
+ 1615  2         OCT    00002
+ 1616            CAF    TEN
+ 1617            TC     NEWPHASE
+ 1618  2         OCT    00003
+ 1619  4         TC     SWRETURN        (LOCATION OF TC Q)
+ 1622   SHUTJOB  INHINT
+ 1623            CS     BIT13           SHUT OFF ENGINE BIT
+ 1624            MASK   OUT1
+ 1625  2         TS     OUT1
+ 1626            TC     RELAYOFF        REMOVE SCS +X TRANS DISCRETE
+ 1627  2         OCT    40020
+ 1628            TC     FLAG1DWN        REMOVE DVMON, STEER, INIT FLAGS
+ 1629  2         OCT    00430
+ 1630            TC     BANKCALL        SET IMUCDU TO ATT. CONTROL (MAY BE RE-
+ 1631  2         CADR   IMUATTC         DUNDANT CALL)
+ 1632  2         TC     SETHETAD        FORCE THETAD, +1, +2 TO READ CDUX,Y,Z
+ 1633            CAF    ALLABORT        TEST IF ANY ABORT BURN SET
+ 1634            MASK   FLAGWRD2
+ 1635            CCS    A
+ 1636  2         TC     +3              IT IS
+ 1637            TC     SETBRNSW        IT IS NOT. SET BURN TO LAST (SPS4)
+ 1638  2         OCT    00100
+ 1639            TC     BANKCALL        WAIT FOR MODE SWITCH TO COMPLETE
+ 1640            CADR   IMUSTALL
+ 1641  2         TC     CURTAINS        CATCH-ALL FOR MODE SWITCH FAILURES
+ 16412           CS     TIME1
+ 16414 2         TS     TBASE3
+ 1642            CAF    BIT10           TEST IF INTP FLAG SET (I.E. HAS 95 SEC
+ 1643            MASK   FLAGWRD1        INTERUPT OCCURRED)
+ 1644            CCS    A
+ 1645  2         TC     TESTGMP         IT HAS NOT
+ 1646            CAF    BIT7            TEST IF INT1 FLAG SET (I.E. HAS 200 SEC
+ 1647            MASK   FLAGWRD1        INTEREUPT OCCURRED)
+ 1648            CCS    A
+ 1649  2         TC     SHUTJOB1        IT HAS
+ 1650   TESTGMP  CAF    BIT8            TEST IF SCS GMP DISCRETE SET
+ 1651            MASK   DSPTAB +13D
+ 1652            CCS    A
+ 1653  2         TC     GMPOFF1         IF IT IS, TURN IT OFF
+ 1654            CAF    BIT2            TEST IF DV MODE SET
+ 1655            MASK   DSPTAB +13D
+ 1656            CCS    A
+ 1657  2         TC     DVMODOF1        IF IT IS, TURN IT OFF
+ 1658   SHUTJOB1 CS     FLAGWRD1        TEST IF SHUTDN FLAG SET
+ 1659            MASK   BIT12
+ 1660            CCS    A
+ 1661  2         TC     SETATTC         IT IS NOT. SHUTDOWN NOT DUE TO TFF
+ 1662            CAF    BIT10           TEST IF THIS IS 200 OR 95 SEC INTERRUPT
+ 1663            MASK   FLAGWRD1        (INTP FLAG)
+ 1664            CCS    A
+ 1665  2         TC     SETSEP          200 SEC INTERRUPT
+ 1666   KILLMANU TC     FLAG2DWN        REMOVE CALC FLAG (KILL ANY MANEUVER)
+ 1667  2         OCT    02000
+ 1668            INHINT                 ALLOW 5 SECS FOR CSM TO SETTLE FROM ANY
+ 1669            CAF    5SEC            ATTITUDE MANEUVER BEFORE SEPARATING
+ 1670            TC     WAITLIST
+ 1671            CADR   CDUXTASK
+ 1674            TC     PHASCHNG
+ 1675  2         OCT    01303
+ 1676  2         TC     ENDOFJOB
+ 1677   GMPOFF1  INHINT
+ 1678            CAF    2SEC33          CALL FOR SCS GMP OFF IN 2 SECS
+ 1679            TC     WAITLIST
+ 1680  2         CADR   GMPOFF2
+ 16802           TC     PHASCHNG
+ 16804 2         OCT    02703
+ 1681  2         TC     ENDOFJOB
+ 1682   DVMODOF1 INHINT
+ 1683            CAF    3.5SEC33        CALL FOR DV MODE OFF IN 3.5 SECS
+ 1684            TC     WAITLIST
+ 1685            CADR   DVMODOF2
+ 1686  2         RELINT
+ 16862           TC     PHASCHNG
+ 16864 2         OCT    03003
+ 1687  2         TC     ENDOFJOB
+ 1688   GMPOFF2  TC     RELAYOFF        REMOVE SCS GMP DISCRETE
+ 1689  2         OCT    40200
+ 1690            CAF    3.5SEC33        CALL FOR DV MODE OFF IN 3.5 SECS
+ 1691            TC     WAITLIST
+ 1692  2         CADR   DVMODOF2
+ 16921           CAF    TWENTY5
+ 16922           TC     NEWPHASE
+ 16923 2         OCT    3
+ 1693  2         TC     TASKOVER
+ 1694   DVMODOF2 TC     RELAYOFF        REMOVE SCS DV MODE DISCRETE
+ 1695  2         OCT    40002
+ 1696            CAF    0.25S33         CALL FOR SCS ATT. CONTROL IN U/4 SEC
+ 1697            TC     WAITLIST
+ 1698  2         CADR   SHUTASK
+ 1699  2         TC     TASKOVER
+ 1700   SHUTASK  CAF    PRIO27          ESTABLISH JOB TO RESUME SHUTDOWN PROCESS
+ 1701            TC     NOVAC
+ 1702  2         CADR   SHUTJOB1
+ 1703  2         TC     TASKOVER
+ 1704   SETSEP   INHINT
+ 1705            CAF    PRIO12
+ 1706            TC     FINDVAC         CM/SM SEPARATION ATTITUDE
+ 1707  2         CADR   SEPMANU
+ 1708   SETATTC  TC     RELAYON         SET SCS ATT. CONTROL DISCRETE (C23)
+ 1709  2         OCT    40001
+ 1710  2         TC     ENDOFJOB
+ 1711   0.25S33  DEC    25
+ 1712   3.5SEC33 DEC    350
+ 1713   5SEC33   DEC    500
+ 1714  87SEC33   DEC    700
+ 1715   SEPMANU  TC     NEWMODE         SET MAJOR MODE TO SEPARATION MANEUVER
+ 1716  2         OCT    00061
+ 1717  2         TC     INTPRET
+ 1718            UNIT   1               COMPUTE DESIRED S/C ORIENTATION FOR
+ 1719            VXSC   COMP            CM/SM SEPARATION
+ 1720                   VN
+ 1721  2                COS60
+ 1722            NOLOD  1
+ 1723            VXV    UNIT
+ 1724                   RN
+ 1725  2         STORE  YSCD            YSCD IS ALONG (RN*VN)
+ 1726            NOLOD  3
+ 1727            VXV    UNIT
+ 1728            VXSC   VAD
+ 1729            COMP
+ 1730                   VN
+ 1731                   SIN60
+ 1732  2         STORE  XSCD            XSCD IS 60 DEG ABOVE VELOCITY VECTOR
+ 1733            NOLOD  1
+ 1734            VXV    UNIT
+ 1735                   YSCD
+ 1736  2         STORE  ZSCD
+ 1737            ITC    0               BRANCH TO PERFORM MANEUVER TO THE
+ 1738  2                ATTIJOB1        SEPARATION ATTITUDE
+ 1739   SIN60    2DEC   0.86603
+ 1740  8COS60    2DEC   0.5
+ 1741   CDUXTASK CAF    5SEC            ALLOW 5 SECS FOR CDUX RESOLVER SCALE
+ 1742            TC     WAITLIST        CHANGE
+ 1743  2         CADR   CM/SMTSK
+ 1744            CAF    PRIO20
+ 1745            TC     FINDVAC
+ 1746  2         CADR   CDUXJOB
+ 1749            TC     RELAYOFF        SET SCS TO MONITOR MODE
+ 1750  2         OCT    40007
+ 1751            CAF    TWELVE
+ 1752            TC     NEWPHASE
+ 1753  2         OCT    00003
+ 1754  4         TC     TASKOVER
+ 1755   CDUXJOB  CS     THETAD
+ 1756            COM
+ 1757  2         TS     CDUTEMP
+ 1758            CCS    CDUTEMP         GET MAGNITUDE OF THETAD
+ 1759            AD     ONE
+ 1760            TC     +2
+ 1761            AD     ONE
+ 1762  2         TS     MPAC            AND SAVE IT
+ 1763            EXTEND                 FIND NEAREST INTEGER MULTIPLE OF 1/16
+ 1764            MP     15/16TH
+ 1765            AD     BIT11
+ 1766            MASK   HIGH4
+ 1767  2         XCH    MPAC            AND SAVE IT
+ 1768            EXTEND                 SHIFT ORIGINAL THETAD RIGHT 4 PLACES
+ 1769            MP     BIT11
+ 1770            AD     MPAC            AND ADD INTEGER MULTIPLE
+ 1771            INHINT
+ 1772  2         TS     THETAD
+ 1773            CCS    CDUTEMP         ATTACH SIGN OF ORIGINAL THETAD
+ 1774            XCH    MPAC            MPAC HAS POSITIVE CDUBIAS
+ 1775            TC     +4
+ 1776            CS     THETAD
+ 1777  2         TS     THETAD
+ 1778            CS     MPAC            COMPLEMENT INTEGER MULTIPLE
+ 1779            TS     K1ROLL          SCALED AT 1/2 REV FOR ENTRY
+ 1780            RELINT
+ 1781            TC     PHASCHNG
+ 1782  2         OCT    01503
+ 1783   REDO3.13 TC     FLAG2UP         SET CDUX FLAG
+ 1784  2         OCT    20000
+ 1785            TC     BANKCALL        CHANGE IMUCDU MODE TO RE-ENTRY
+ 1786  2         CADR   IMUREENT
+ 1787            TC     BANKCALL        WAIT FOR COMPLETION OF MODE SWITCH
+ 1788            CADR   IMUSTALL
+ 1789  2         TC     CURTAINS        CATCH-ALL FOR MODE SWITCH FAILURES
+ 1790            TC     PHASCHNG
+ 1791  2         OCT    01603
+ 1792  4         TC     ENDOFJOB
+ 1793   CM/SMTSK TC     RELAYON         SET SCS ENTRY MODE AND CM/SM SEPARATION
+ 1794  2         OCT    40014           DISCRETES
+ 1795            CAF    FIFTN
+ 1796            TC     NEWPHASE
+ 1797  2         OCT    00003
+ 1798            CAF    5SEC            SET CALL TO START PRE-ENTRY ATTITUDE
+ 1799            TC     WAITLIST        MANEUVER IN 5 SECS
+ 1800  2         CADR   ENTATASK
+ 1801  2         TC     TASKOVER
+ 1802   15/16TH  OCT    36000
+ 1803  8HIGH4    OCT    74000
+ 18034  ENTATASK CAF    PRIO12
+ 18035           TC     FINDVAC
+ 18036 2         CADR   ENTAJOB
+ 18037 4         TC     TASKOVER
+ 1804   ENTAJOB  TC     NEWMODE         SET MAJOR MODE TO PRE-ENTRY MANEUVER
+ 1805  2         OCT    00062
+ 1812            CAF    ZERO
+ 18122           TS     ROLLC           ROLLC = +0
+ 1813  2         TS     ROLLC + 1
+ 1814  2         TC     INTPRET
+ 18159  GOGETUNB ITC    0               COMPUTE DESIRED NAV BASE COORDS.
+ 1816  2                GETUNB
+ 1817            ITC    0               GET DESIRED S/C COORSD
+ 1818  2                CALCNBSC
+ 1819            VMOVE  0               TRANSFER DESIRED S/C UNIT VECTORS
+ 1820                   XSC
+ 1821  2         STORE  XSCD
+ 1822            VMOVE  0
+ 1823                   YSC
+ 1824  2         STORE  YSCD
+ 1825            VMOVE  0
+ 1826                   ZSC
+ 1827  2         STORE  ZSCD
+ 1828            ITC    0               BRANCH TO PERFORM MANEUVER TO PRE-ENTRY
+ 1829  2                ATTIJOB1        ATTITUDE
+ 1830  4ABORT33  OCT    00007           (OR OF ARRST,TABT,ABRT)
+ 18301 2         BANK   24
+ 18302  AVGON    CAF    PIPCAD24        CLEAR AND EXCHANGE PIPAS TO SAVE DELV
+ 18304 2         TC     ISWCALL         ACCUMULATED DURING COAST PERIOD
+ 18316           TC     FLAG2DWN        DISABLE FREE-FALL GYRO BIAS COMPENSATION
+ 18318 2         OCT    40000           (REMOVE DRIFT FLAG)
+ 183182          TC     STATEUP         SET BIAS FLAG
+ 1831842         OCT    04000
+ 1832            CS     PIPTIME +1
+ 18322 2         TS     TBASE5
+ 18324           CAF    SIX
+ 18326           TC     NEWPHASE
+ 18328 2         OCT    00005
+ 183296          CAF    BIT13           IF TFF2 FLAG NOT SET, DO WHAT SERVICER
+ 183298          MASK   STATE             WOULD HAVE DONE WHEN TFF = TFFMIN
+ 1833            CCS    A
+ 1833012         TC     GO/ON           TFF2 FLAG SET
+ 183302          TC     SETBRNSW        SET BURN TO SPS2 BACK UP SETTING
+ 1833032         OCT    00020
+ 183304          TC     FLAG1UP         SET INIT FLAG TO RE-MANEUVER TO SPS2 ATT
+ 1833052         OCT    00400
+ 183306          CAF    ONE
+ 1833072         TS     VGCNTR
+ 183308          CCS    REDOSPS1        TFF2 FLAG DOWN, SEE IF DO SPS1 AGAIN
+ 183309          TC     CONTINUE        NO
+ 18331           TC     CONTINUE
+ 1833112         TC     +1
+ 183312          TC     SETBRNSW        YES, SET BURN TO SPS1
+ 1833132         OCT    00010
+ 183314          CAF    LOCSPS1
+ 1833152         TS     VRCADR
+ 183316 CONTINUE CAF    THIRTY
+ 183317          TC     NEWPHASE
+ 1833182         OCT    00004
+ 183319          CS     TIME1
+ 18332 2         TS     TBASE4
+ 183321          CAF    2SEC24          START READACCS IN 2 SECS
+ 183322          TC     WAITLIST
+ 1833232         CADR   READACCS
+ 183324          CAF    90SEC24         SCHEDULE IGNITION IN 2 MINUTES
+ 183325          TC     WAITLIST
+ 1833262         CADR   PLUSX2
+ 18333           CAF    PRIO35
+ 183332          TC     NOVAC
+ 1833342         CADR   MODE32
+ 1833392         TC     TASKOVER
+ 18334  GO/ON    CAF    THREE
+ 183341          TC     NEWPHASE
+ 1833422         OCT    00002
+ 183343          CS     ONE
+ 183344          TC     NEWPHASE
+ 18335 2         OCT    00004
+ 18336           CAF    2SEC24          TURN ON READACCS IN 2 SECS
+ 18338           TC     WAITLIST
+ 1834  2         CADR   READACCS
+ 18342           CAF    PRIO35          JOB TO CHANGE MM AND FINISH DRIFT COMP
+ 18344           TC     NOVAC
+ 18346 2         CADR   MODE26
+ 183462 GO/ON1   CAF    PRIO12          DO ATTITUDE MANEUVER FOR SPS2 BURN
+ 183464          TC     FINDVAC
+ 1834662         CADR   ATTIJOB1 -1
+ 18348 2         TC     TASKOVER
+ 18349  2SEC24   DEC    200
+ 183495 90SEC24  DEC    9000
+ 183497 LOCSPS1  CADR   501SPS1
+ 1835  4PIPCAD24 CADR   PIPASR
+ 183502 MODE32   TC     NEWMODE         SET MAJOR MODE TO PRE-SPS2
+ 1835042         OCT    00032
+ 183506          TC     POSTJUMP        FINISH DRIFT COMPUTATIONS
+ 1835084         CADR   MODE26 +2
+ 18351  PLUSX2   CAF    18SEC24
+ 183512          TC     WAITLIST
+ 18352 2         CADR   GIMPOWON
+ 183521          TC     STATEDWN        REMOVE BIAS FLAG
+ 1835222         OCT    04000
+ 183523          TC     RELAYON         SET SCS +X TRANS DISCRETE (C27)
+ 1835242         OCT    40020
+ 183525          CAF    SEVENTN
+ 183526          TC     NEWPHASE
+ 1835272         OCT    4
+ 1835282         TC     TASKOVER
+ 183529418SEC24  DEC    1800
+ 18353  MODE26   TC     NEWMODE         SET MAJOR MODE TO HOLD SPS2 ATTITUDE
+ 1835312         OCT    00026             UNTIL TFFMIN
+ 183532          TC     FLAG1UP         SET INTP FLAG
+ 1835332         OCT    01000
+ 183534          CS     PIPTIME +1      CALL LASTBIAS ROUTINE
+ 183535          COM
+ 1835362         TS     MPAC
+ 183537          CAF    COMP2SEC
+ 183538          TC     POSTJUMP
+ 1835392         CADR   LASTBIAS
+ 18354 8COMP2SEC DEC    200 B +6
+ 18355 2         BANK   1
+ 18356  RELAYON  INDEX  Q
+ 1836            CS     0
+ 1837            INHINT
+ 1838            MASK   DSPTAB +13D
+ 1839            INDEX  Q
+ 1840            AD     0
+ 1841            TS     DSPTAB +13D
+ 1842            RELINT
+ 1843            INDEX  Q
+ 1844  2         TC     1
+ 1845   RELAYOFF INDEX  Q
+ 1846            CS     0
+ 1847            INHINT
+ 1848            MASK   DSPTAB +13D
+ 1849            AD     BIT15
+ 1850            TS     DSPTAB +13D
+ 1851            RELINT
+ 1852            INDEX  Q
+ 1853  2         TC     1
+ 1854   FLAG1UP  INDEX  Q
+ 1855            CS     0
+ 1856            INHINT
+ 1857            MASK   FLAGWRD1
+ 1858            INDEX  Q
+ 1859            AD     0
+ 1860            TS     FLAGWRD1
+ 1861            RELINT
+ 1862            INDEX  Q
+ 1863  2         TC     1
+ 1864   FLAG1DWN INDEX  Q
+ 1865            CS     0
+ 1866            INHINT
+ 1867            MASK   FLAGWRD1
+ 1868            TS     FLAGWRD1
+ 1869            RELINT
+ 1870            INDEX  Q
+ 1871  2         TC     1
+ 1872   FLAG2UP  INDEX  Q
+ 1873            CS     0
+ 1874            INHINT
+ 1875            MASK   FLAGWRD2
+ 1876            INDEX  Q
+ 1877            AD     0
+ 1878            TS     FLAGWRD2
+ 1879            RELINT
+ 1880            INDEX  Q
+ 1881  2         TC     1
+ 1882   FLAG2DWN INDEX  Q
+ 1883            CS     0
+ 1884            INHINT
+ 1885            MASK   FLAGWRD2
+ 1886            TS     FLAGWRD2
+ 1887            RELINT
+ 1888            INDEX  Q
+ 1889  2         TC     1
+ 188902 STATEUP  INDEX  Q
+ 188904          CS     0
+ 188906          INHINT
+ 188908          MASK   STATE
+ 18891           INDEX  Q
+ 188912          AD     0
+ 188914          TS     STATE
+ 188916          RELINT
+ 188918          INDEX  Q
+ 18892 2         TC     1
+ 188922 STATEDWN INDEX  Q
+ 188924          CS     0
+ 188926          INHINT
+ 188928          MASK   STATE
+ 18893           TS     STATE
+ 188932          RELINT
+ 188934          INDEX  Q
+ 1889362         TC     1
+ 1890   SETBRNSW CS     BURNMASK
+ 1891            INHINT
+ 1892            MASK   FLAGWRD2
+ 1893            INDEX  Q
+ 1894            AD     0
+ 1895            TS     FLAGWRD2
+ 1896            RELINT
+ 1897            INDEX  Q
+ 1898  2         TC     1
+ 1899  4BURNMASK OCT    00177
+ 1900   SETHETAD INHINT
+ 1901            CS     CDUX
+ 1902            COM
+ 1903            TS     THETAD
+ 1904            CS     CDUY
+ 1905            COM
+ 1906            TS     THETAD +1
+ 1907            CS     CDUZ
+ 1908            COM
+ 1909            TS     THETAD +2
+ 1910            RELINT
+ 1911  4         TC     Q
+ 1912   NINE     DEC    9
+ 1913   ELEVEN   OCT    00013
+ 19132  11DEC    EQUALS ELEVEN
+ 1914   TWELVE   OCT    00014
+ 1915   THIRTN   OCT    00015
+ 19152  THIRTEEN EQUALS THIRTN
+ 1916   FOURTN   OCT    00016
+ 1917   FIFTN    OCT    00017
+ 1918   SIXTN    OCT    00020
+ 1919   SEVENTN  OCT    00021
+ 1920   EIGHTN   OCT    00022
+ 1921   NINETEEN DEC    19
+ 1922   TWENTY0  OCT    00024
+ 19222  TWENTY   EQUALS TWENTY0
+ 1923   TWENTY1  OCT    00025
+ 1924   TWENTY2  OCT    00026
+ 1925   TWENTY3  OCT    00027
+ 1926   TWENTY4  OCT    00030
+ 1927  2TWENTY5  OCT    00031
+ 1928  2TWENTY6  DEC    26
+ 1929  2TWENTY7  DEC    27
+ 19292  TWENTY8  DEC    28
+ 19294  TWENTY9  DEC    29
+ 1930   THIRTY   DEC    30
+ 1931   30DEC    EQUALS THIRTY
+ 19315  THIRTY1  DEC    31
+ 19318  THIRTY2  DEC    32
+ 1932   FORTY    DEC    40
+ 1933   40DEC    EQUALS FORTY
+ 1934   FIFTY    DEC    50
+ 1935   50DEC    EQUALS FIFTY
+ 1936   SIXTY    DEC    60
+ 1937   60DEC    EQUALS SIXTY
+ 1940   100DEC   DEC    100
+ 1945   200DEC   DEC    200
+ 1950   300DEC   DEC    300
+ 1955   400DEC   DEC    400
+ 1960   500DEC   DEC    500
+ 1965   600DEC   DEC    600
+ 1966   SIXHNDRD EQUALS 600DEC
+ 1970   1000DEC  DEC    1000
+ 1975   2000DEC  DEC    2000
 *       ENDOFJOB
