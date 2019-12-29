@@ -255,7 +255,8 @@ class Agc4Pass1(Pass1):
 
         # Send equivalent of right operator.
         second_opcode = self.op_thrs[adr_wd] & ~Bit.BIT37
-        popo.health |= second_opcode << 14
+        b25t31m = 0o77400000
+        popo.health |= (second_opcode << 14) & b25t31m
 
     def agc4_bank(self, popo):
         return self.block(popo)
