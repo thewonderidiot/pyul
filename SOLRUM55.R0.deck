@@ -21148,4 +21148,533 @@ A1261                                   BE USED
  20221  R280K    2DEC   6.463509 E6 B-24
  20222  R400K    2DEC   6.500085 E6 B-24
  20223  DP.36    2DEC   .36 B-6
+L      8TIME OF FREE-FALL CALCULATIONS
+P3600   CONIC TIME OF FLIGHT CALCULATION.   PROGRAM CALCULATES THE FREE-FALL TIM
+ 3601  9E OF FLIGHT FROM PRESENT POSITION RN
+R3602   AND VELOCITY VN TO A RADIUS SPECIFIED BY RTERM, CORRESPONDING TO 280K OR
+ 3603  9400K FEET ALTITUDE.
+R3604  2THE POSITION  RN MAY BE ON EITHER SIDE OF THE ELLIPSE, BUT  RTERM  IS
+ 3605  9CONSIDERED ON THE INBOUND SIDE.
+R3606  2THE EQUATION IS    TFF = ( DEL E - (Q2-Q1) ) / (ALFA SQRT( ALFA MUE) )
+R3607   AND                Q2 = -SQRT( RTERM ALFA (2-RTERM ALFA) -LCP ALFA )
+ 3608  9 (INBOUND SIDE)           LEQ +/-  LCE
+R3609                           -  -
+R3610  2                   Q1 = RN.VN  SQRT(ALFA/ MUE)
+ 3611  9                          LEQ +/-  LCE
+R3612   PROGRAM REQUIREMENTS ON ENTERING.
+R3613            1.  PUSHDOWN LIST IS ZEROED
+R3614  2         2.  INPUTS: POSITION  RN 2(-24) M,  VELOCITY  VN  2(-7)  M/CS
+R3615   THE PROGRAM EXITS WITH ONE OF THE FOLLOWING IN TFF.
+R3617                    A. TFF = FLIGHT TIME.  NORMAL CASE FOR POSITIVE FLIGHT
+ 3618  9 TIME LESS THAN ONE ORBITAL PERIOD.
+R3619                    B. TFF=+0.  THIS INDICATES THAT THE TRAJECTORY HAS GONE
+ 3620  9 PAST RTERM AND THE PRESENT ALTITUDE IS
+R3621                       LESS THAN THE SPECIFIED TERMINAL ALTITUDE.
+R3622                    C. TFF = POSMAX.  THIS INDICATES THAT THE ELLIPTICAL CO
+ 3623  9NIC FROM THE PRESENT POSITION WILL NOT
+R3624                       RETURN TO THE SPECIFIED ALTITUDE.
+R3625   THE FOLLOWING QUANTITIES REMAIN IN THE PUSHLIST
+R3626            ALFA                2(+21) IN PDL 10D
+R3627            (2-RTERM ALFA)      2(-3)  IN PDL 6
+R3628            RTERM ALFA          2(-3)  IN PDL 4
+R3629  2         LCP ALFA            2(-6)  IN PDL 2
+R3630   THUS THE CALLING PROGRAM CAN CALCULATE TERMINAL VELOCITY, VTERM, AND COS
+ 3631  9 GAMMA OR SIN GAMMA USING RESIDUE FROM
+R3632  2CALCTFF.
+R3633                 2
+R3634  2         VTERM  (RTERM/MUE) = (2-RTERM ALFA)
+R3635               2
+R3636  2         SIN GAMMA = 1 - (LCP ALFA / RTERM ALFA(2-RTERM ALFA)  )
+R3637               2
+R3638  2         COS GAMMA = LCP ALFA /(RTERM ALFA (2-RTERM ALFA)  )
+R3643   QUANTITIES ARE NORMALIZED BY LCE TO OBTAIN BEST ACCURACY IN COMPUTING, E
+ 3644  9SPACIALLY FOR SPARCTAN.  PROGRAM
+R3645   ACCEPTS LCE  LEQ 1.0.  THE SMALLEST LCE WHICH IS  NORMALIZED IS 2(-4),
+ 3646  9ALTHOUGH THIS MAY BE EXTENDED IF
+R3647   DESIRED.  (LCE  L  2(-3) ALL HAVE SAME SCALING)
+R3648
+P3649  2TEMPORARY ERASABLE ASSIGNMENTS FOR TFF COMPUTATIONS
+ 3650  9PUSHLIST 00 - 19D, X1
+ 3651  2RTERM    =      14D
+ 3652            BANK   31
+ 3653  2CALCTFF  EXIT   0
+ 3654            CCS    REFSWTCH        SEE IF GROUND DESIRES 280K FF REFERENCE
+ 3655            TC     +4              NO
+ 3656            TC     +3
+ 36565           CAF    ZERO
+ 3657  2         TC     +5
+ 365701          CAF    NOMBURN         TEST IF ANY NOMINAL BURN (SPS1,SPS2,
+ 365702          MASK   FLAGWRD2        SPS3, SPS4, ARRST) FLAG SET
+ 365703          CCS    A
+ 365704          CS     TWO
+ 365705          INDEX  FIXLOC          X1=-2 FOR 400K FT. AND 0 FOR 280K FT.
+ 365706          TS     X1
+ 365707          TC     INTPRET
+ 365708          DMOVE* 1
+ 365709          RTB
+ 36571                  R280K,1
+ 365711                 FRESHPD
+ 3661  2         STORE  RTERM            2(-24)
+ 3662            VSQ    2
+ 3663            DMP    DMP
+ 3664            TSLT   BDSU
+ 3665                   VN              VEL  2 (-7)
+ 3666                   1/MUE           2 (+35)
+ 3667                   RMAG            2(-25)
+ 3668                   1
+ 3669  2                DP1/4           RMAG ALFA   2 (-3)          TO PDL 0,1
+ 3670            NOLOD  1
+ 3671            TSRT   DDV
+ 3672                   1
+ 3673                   RMAG
+ 3674  2         STORE  10D
+ 36751           NOLOD  1
+ 36752           BMN
+ 36753 2                HIECC
+ 3676            DMP    2
+ 3677            SQRT   DMP
+ 3678            TSLC   BDDV
+ 3679                   10D             ALFA  2(+21)
+ 3680                   MUE(37)
+ 3681                   10D             ALFA
+ 3682                   19D             -N. SAVE FOR GETTFF1
+ 3683                   DP2PI/16
+ 3684            STORE  12D             ORB PERIOD  2PI/ALFA SQRT(ALFA MUE)
+A3685                                   2(-17-N)
+ 3686            VXV    3
+ 3687            VSLT   VSQ
+ 3688            DMP    DMP
+ 36881           RTB
+ 3689                   RN
+ 3690                   VN              MTRS/CS   2(-7)
+ 36901                  1
+ 3691                   1/MUE           2(+35)
+ 3692                   10D             ALFA  2(+21)
+ 3693                   NORMBYE         GET NORM COUNT BASED ON LCE SQ.
+A3694  2                                LCP ALFA  2(-6)             TO PDL 2,3
+ 36941           NOLOD  1
+ 36942           DSU    BPL
+ 36943                  DP.36
+ 36944 2                LOECC
+ 36945           DSU    1
+ 36946           BMN
+ 36947                  10D
+ 36948                  ALFALIM
+ 36949 2                HIECC
+ 3695   LOECC    DMP    0
+ 3696                   RTERM           2(-24)
+ 3697                   10D             ALFA  2(+21)
+A3698  2                                RTERM ALFA  2(-3)           TO PDL 4,5
+ 3699            DSU    0
+ 3700                   DP1/4
+ 3701                   4               RTERM ALFA  2(-3)
+A3702  2                                (2-RTERM ALFA)  2(-3)       TO PDL 6,7
+ 3703            DMP    1
+ 3704            SQRT
+ 3705                   10D             ALFA  2(+21)
+ 3706  2                1/MUE           2(+35)                      TO PDL 8,9
+ 3707            DOT    2
+ 3708            TSLT    DMP
+ 37082           RTB
+ 3709                   RN
+ 3710                   VN              2(-7)
+ 37101                  1
+ 3711                   -               LEAVE Q1  2(-3) IN MPAC
+ 3712                   ARGQ1           SAVE  MPAC FOR GONE PAST TEST. , NORMLZE
+ 3713  2         STORE  8D              Q1  (OR Q1/2 OR 2Q1 OR 4Q1)
+ 3714            DMP    2                CALCULATE Q2
+ 3715            DSU    RTB
+ 3716            DAD
+ 3717                   -               (2-RTERM ALFA) 2(-3) FROM PDL 6,7
+ 3718                   -               RTERM ALFA 2(-3) FROM PDL 4,5
+ 3719                   -               LCP ALFA 2(-6) FROM PDL 2,3
+ 3720                   ARGQ2           TEST SGN, TAKE ROOT  (RT DOT NEG)
+A3721                                   RETURN -Q2 (OR -Q2/2 OR -2Q2 OR -4Q2)
+ 3722                   8D              Q1  (AT SIMILAR SCALE)
+ 3723            STORE  8D              Q1-Q2  ( OR /2 OR2 OR4)
+A3724  2                                LEQ +/- 2LCE  (OR 1 OR 4 OR 8)
+ 3725            DSU    1
+ 3726            RTB    DMP
+ 3728                   6               2-RTERM ALFA 2(-3)
+ 3729                   -               2-RTERM ALFA-RMAG ALFA  2(-3) IN MPAC
+ 3730                   GETTFF          C(MPAC) = DEN  2(-3)
+ 3731                   12D             ORB PERIOD    2(-17-N)
+ 373201          STORE  TFF
+ 373202          ITCQ   0
+ 3733   ARGQ1    INDEX  FIXLOC
+ 3734            INDEX  16D             COUNT BY ONES
+ 3735            CAF    BIT4            EFFECTIVE SH L 3  ( 2 OR 4 OR 5)
+ 3736            TC     SHORTMP
+ 3737            XCH    MPAC +2         MOVE UP
+ 3738            XCH    MPAC +1
+ 3739            TS     MPAC            MPAC IS L .5 AS REQD BY TEST LATER.
+ 3740            INDEX  FIXLOC
+ 3741            TS     18D             SAVE FOR GONE PAST TEST.
+ 3742  2         TC     DANZIG
+ 3746   ARGQ2    INDEX  FIXLOC
+ 3747            INDEX  17D             SH L BY 2,S
+ 3748            CAF    BIT7            DO EFFECTIVE SHL 6    (4 OR 8 OR 10)
+ 3749            TC     SHORTMP         TP ENTRY , C(MPAC+2) VALID.
+ 3750            CAF    ZERO
+ 3751            XCH    MPAC +2
+ 3752            XCH    MPAC +1
+ 3753  2         TS     MPAC
+ 3754            CCS    MPAC
+ 3755            TC     Q2ROOT
+ 3756            TC     +2
+ 3757  2         TC     NEGQ2           NO FREEFALL CONIC TO RTERM FROM HERE.
+ 3758            CCS    MPAC +1         CK LO WORD. IF NEG, ASSUME ROUNDOFF.
+ 3759            TC     Q2ROOT
+ 3760            TC     DANZIG
+ 3761   NOROOT   CAF    ZERO            NEG ARG FROM ROUNDOFF. SET =0.
+ 3762            TS     MPAC
+ 3763            TS     MPAC +1
+ 3764  2         TC     DANZIG
+ 3765   Q2ROOT   TC     BANKCALL        GO TAKE DP SQRT
+ 3766            CADR   SQRT3           C(MPAC +2) =0
+ 3767  2         TC     DANZIG
+ 3768   NEGQ2    CAF    POSMAX          THIS WILL LEAVE PUSHLOC AT PDL2
+ 3769            TS     TFF
+ 3770            TS     TFF +1
+ 3771            CS     FIXLOC          BUT RESET IT.
+ 3772            COM
+ 3773  2         TS     PUSHLOC
+ 3774  2         TC     INTPRET
+ 3775  2         ITCQ   0               AND RETURN TO CALLING PROGRAM.
+R3776  2ENTER WITH (2-RTERM ALFA-RMAG ALFA) 2(-3) IN MPAC,+1. Q1-Q2 IN PDL 8,9
+ 3777   GETTFF   INDEX  FIXLOC
+ 3778            INDEX  16D             COUNT BY 1,S
+ 3779            CAF    BIT4            EFFECTIVE SL 3  (2 OR 4 OR 5 )
+ 3780            TC     SHORTMP         C(MPAC +1,+2) = DEN    ON RETURN.
+ 3781            INDEX  FIXLOC          (UNSCALD NUM AND DEN LEQ +/- 2 LCE)
+ 3782            CS     8D
+ 3783            XCH    MPAC +1         SAVE Q2-Q1,  GET DEN
+ 3784            TS     MPAC            AND SAVE.
+ 3785            INDEX  FIXLOC
+ 3786            INDEX  16D             COUNT BY 1,S
+ 3787            CAF    -1/2PI
+ 3788            EXTEND
+ 3789            MP     MPAC +1
+ 3790  2         TS     MPAC +2         -(Q2-Q1) /2PI    SAVED
+ 3791            TC     SPARCTAN        NUM=C(MPAC+1),DEN=C(MPAC)
+A3792                                   RETURN WITH DEL ECC. ANOM/2PI IN A
+A3793   RANGE (0,1)
+ 3794            AD     MPAC +2
+ 3795            XCH    MPAC            TFF NORM=(DEL E:(Q2:Q1))/2PI
+A3796   FOLLOWING TEST VALID WHEN SPTEM3 L .5
+ 3797            INDEX  FIXLOC
+ 3798            XCH    18D             IF BOTH SGN Q1 AND SGN ATAN ARE
+ 3799            AD     +2              NEG, THEN SET TFF, +1  =+0.  (-3/4+1 )
+ 3800            AD     SGNATAN         LEFT BY SPARCTAN
+ 3801            TS     A               (=50K =-3/4 +1 FOR OVFL TEST)
+ 3802            TC     GETTFF3         OK, GO ON
+ 3803            CAF    ZERO
+ 3804  2         TC     NEGQ2 +1        GONE PAST. SET TFF=0.
+ 3805   GETTFF3  INDEX  FIXLOC
+ 3806            INDEX  19D             -N.  BIT4 BELOW VALID FOR N LEQ 10D.
+ 3807            CAF    BIT4            SCALE FACTOR,  2(-11+N)
+ 3808            EXTEND
+ 3809            MP     MPAC
+ 3810            TS     MPAC
+ 3811            XCH    LP
+ 3812            TS     MPAC +1         NOW READY TO MULT BY ORB PERIOD
+ 3813  2         TC     DANZIG
+R3814   TO IMPROVE PRECISION OF SPARCTAN AT SMALLER LCE, COME HERE TO GET NORMAL
+ 3815  9IZATION FACTOR
+R3816   BASED ON SIZE OF LCE SQ.  SHIFT BY 2,S. SCALING RESULTING FROM BELOW YIE
+ 3817  9LDS AT LEAST ONE LEAD ZERO IN
+R3818  2NUM AND DEN USED IN SPARCTAN.
+ 3819   NORMBYE  CAF    OCT37440        BRACKET SIZE BY OVFL TESTS
+ 3820            AD     MPAC            C(MPAC)= (1-LCE SQ)  2(-6)
+ 3821            TS     A
+ 3822            TC     ENORM0          HERE IF LCE GEQ 2(-1)
+ 3823            AD     OCTNEG30        (EFFECTIVE CONST  37410)
+ 3824            TS     A
+ 3825            TC     ENORM1          HERE IF LCE GEQ 2(-2)
+ 3826            AD     OCTNEG6         (EFFECTIVE CONST  37402)
+ 3827            TS     A
+ 3828            TC     ENORM2          HERE IF LCE GEQ 2(-3)
+ 3829            CS     BIT2            HERE IF LCE  L  2(-3)
+ 3830   ENORM3   INDEX  FIXLOC
+ 3831            TS     16D             COUNT FOR SL BY 1,S ALSO NEEDED
+ 3832            AD     A
+ 3833            INDEX  FIXLOC
+ 3834            TS     17D             COUNT FOR SL BY 2,S.
+ 3835  2         TC     DANZIG
+ 3836   ENORM0   CAF    BIT1
+ 3837            TC     ENORM3
+ 3838   ENORM1   CAF    ZERO
+ 3839            TC     ENORM3
+ 3840   ENORM2   CS     BIT1
+ 3841  2         TC     ENORM3
+ 3842   OCT37440 OCT    37440
+ 3843   OCTNEG30 OCT    -00030
+ 3844  2OCTNEG6  OCT    -00006
+ 3845   1/MUE    2DEC*  .250876044 E-10 B35*     CS SQ/M CUBE
+ 3846   MUE(37)  2DEC*  3.986032233 E10 B-37*    CS SQ/M CUBE
+ 3847   DP2PI/16 2DEC   .39269909
+ 3848            DEC    -.15915494 B-2
+ 3849            DEC    -.15915494 B-1
+ 3850   -1/2PI   DEC    -.15915494
+ 3851            DEC    -.15915494 B1
+ 385101 NOMBURN  OCT    00171
+ 38515  ALFALIM  2DEC   6.562 E-8 B21
+P3852   INVERSE TANGENT.     THE SINGLE PRECISION ARCTAN IS BASED ON A HASTINGS
+ 3853  9 3 TERM POLYNOMIAL.  THE PROGRAM
+R3854   ACCEPTS  NUM  AND  DEN  , WHERE  TAN(THETA) = NUM/DEN, AND GIVES  THETA/
+ 3855  9PI  IN THE RANGE (0,1)
+R3856   ENTER WITH C(MPAC +1) = NUM, AND C(MPAC) = DEN.   NOTE THAT FOR CALCTFF,
+ 3857  9 THETA = DEL E/2.
+R3858  2SPARCTAN USES 3 SP TEMPORARIES:  SPTEMQ, SPTEM1, SPTEM2
+R3859  2TEMPORARY ERASABLE ASSIGNMENTS FOR SPARCTAN ROUTINE
+ 3860   SPTEMQ   =      VBUF
+ 3861   SPTEM1   =      VBUF +1
+ 3862   SPTEM2   =      VBUF +2
+ 3863   SPATANQ  EQUALS SPTEMQ
+ 3864  2SGNATAN  EQUALS SPTEM1
+ 3865   SPARCTAN XCH    Q
+ 3866  2         TS     SPATANQ
+ 3867            CAF    BIT13           1/4 = PI/4
+ 3868            TS     SPTEM2
+ 3869            TS     SGNATAN         IF NUM=0, THETA=0
+ 3870            CCS    MPAC +1         NUM
+ 3871            TC     TESTDEN         IF DEN =0, THETA=90 DEG SGN(NUM)
+ 3872            TC     TESTDEN         MUST STILL TEST DEN.
+ 3873            TC     +2              INDETERMINATE CASE 0/0 CONSIDERED AS 90D
+ 3874            TC     TESTDEN -1
+ 3875            CS     SGNATAN
+ 3876            TS     SGNATAN
+ 3877            CS     MPAC +1
+ 3878  2         TS     MPAC +1         ABVAL OF NUM.
+ 3879   TESTDEN  CCS    MPAC            DEN
+ 3880            TC     SPATAN1
+ 3881            TC     SPATAN4         90 DEG CASE
+ 3882            TC     +2
+ 3883            TC     SPATAN4         90 DEG CASE
+ 3884            CS     SGNATAN
+ 3885            TS     SGNATAN
+ 3886            CS     MPAC
+ 3887  2         TS     MPAC            ABVAL OF DEN.
+ 3888            CCS    MPAC +1         EITHER POS OR +0. WAS NUM ZERO
+ 3889            TC     TESTDEN         NO, GO ON
+ 3890  2         TC     SPATANQ         YES, THETA =0      RETURN
+ 3891   SPATAN1  EXTEND                 HERE NEGLECT 1 BIT OF CCS. LOST IN MP.
+ 3892            MP     ITANC0          POLY TRANSITION TEST.
+ 3893            AD     MPAC +1         NUM  (PNZ, SO +0 IN CCS IMPOSS)
+ 3894            CCS    A               IF NEG, USE Z=N/D FOR POLY.
+ 3895            TC     SPATAN2         IF POS, USE Z=(N-D)/(N+D) FOR POLY.
+ 3896   ITANC0   DEC    -.2714558       =-(1-K)/(1+K), AND K=.573
+ 3897            CAF    ZERO            THIS FORM OF POLY HAS BETTER BEHAVIOR
+ 3898            TS     SPTEM2          NEAR ORIGIN. REPLACE PI/4 BY ZERO.
+ 3899            XCH    MPAC +1         SET +0 TO FIT IN WITH CALC BELOW.
+ 3900  2         TC     SPATAN3
+ 3901   SPATAN2  CS     MPAC            N-D AND N+D WILL NOT OVFL IN AD IF LCE
+A3902                                   L 1.0 DUE TO NORMALIZATION BY LCE.
+ 3903            AD     MPAC +1         NUM
+ 3904   SPATAN3  TS     SR
+ 3905            XCH    MPAC
+ 3906            AD     MPAC +1
+ 3907            TS     A               DID IT OVFL..
+ 3908            TC     SPATAN5         NO, GO DO DV.
+ 3909            XCH    SR              YES, SHIFT BOTH NUM AND DEN R1.
+ 3910            XCH    SR              (NUM-DEN)/4 IN SR
+ 3911  2         AD     HALF            (NUM+DEN)/2 IN A.
+ 3912   SPATAN5  TS     MPAC            NORMALLY, (NUM+DEN)
+ 3913            XCH    SR              NORMALLY, (NUM-DEN) /2
+ 3914            EXTEND
+ 3915            DV     MPAC            NO OVFL PROB.
+ 3916            TS     MPAC            Z/2= (NUM-DEN)/2(NUM+DEN)
+A3917  2                                Z/2 = NUM/2DEM       NEAR ORIGIN
+ 3918            EXTEND
+ 3919            SQUARE
+ 3920            TS     MPAC +1         Z Z/4
+ 3921            EXTEND
+ 3922            MP     ITANC7
+ 3923            AD     ITANC5
+ 3924            EXTEND
+ 3925            MP     MPAC +1
+ 3926            AD     ITANC3
+ 3927            EXTEND
+ 3928            MP     MPAC +1
+ 3929            AD     ITANC1
+ 3930            DOUBLE
+ 3931            EXTEND
+ 3932            MP     MPAC
+ 3933            AD     SPTEM2          EITHER 1/4=PI/4 OR 0
+ 3934            TS     Q               C(A)=THETA/PI ,RANGE( 0 ,.5) SEE NOTE
+ 3935            CCS    SGNATAN
+ 3936            XCH    Q               AFFIX SGN FOR POLY TO HAVE RANGE (-.5,.5
+ 3937            TC     SPATANQ
+ 3938            CS     Q
+ 3939            AD     HALF
+ 3940   SPATAN4  AD     HALF            90 DEG CASE COME HERE
+ 3941            TC     SPATANQ         RETURN WITH THETA/  PI IN A. RANGE(0,1)
+A3942  2                                POLY GIVES THETA/ PI RANGE(-.5,+.5)
+R3943   NOTE ■■■ RETURN TO  CALCTFF  WITH  DEL E/2 PI IN A, RANGE (0,1).
+ 3944  9SINCE THE OUTPUT OF  SPARCTAN ,
+R3945   IS IN THE RANGE (0,1), THE +/- 90 DEG CASES ARE IDENTICAL.  FURTHER SINC
+ 3946  9E  FOR  CALCTFF, THE ANGLE THETA/PI
+R3947   EQUALS DEL E/2 PI,  SPARCTAN  CONSIDERS BOTH 0 DEG AND 180 DEG AS 0 DEG.
+ 3948  9  SHOULD PROGRAMS OTHER THAN  CALCTFF
+R3949   DESIRE ARC TANGENTS, THEN  SPARCTAN  CAN BE MADE GENERAL.
+R3950  2
+ 3951   ITANC1   DEC    .318060008      =C1 /PI
+ 3952   ITANC3   DEC    -.40894149      = 4 C3/PI
+ 3953   ITANC5   DEC    .7449806        = 16 C5/PI
+ 3954  8ITANC7   DEC    -.79435682      = 64 C5 /PI                         74W
+ 3955   HIECC1   BMN    3
+ 3956            LXC,1  LODON
+ 3957            DMOVE  TSRT*
+ 39575           RTB
+ 3958                   14D
+ 3959                   TFFMAX
+ 3960                   19D
+ 3961                   12D
+ 39615                  11D,1
+ 3962                   FRESHPD
+ 3963  2         STORE  TFF
+ 39635 2         ITCQ   0
+ 3964   TFFMAX   DMOVE  1
+ 3965            RTB
+ 3966                   NEARONE
+ 3967                   FRESHPD
+ 3968  2         STORE  TFF
+ 3969  2         ITCQ   0
+ 4000   HIECC    DMOVE  1
+ 4001            RTB
+ 4002                   10D
+ 4003                   FRESHPD
+ 4004  2         STORE  14D
+ 4006            VXV    1
+ 40062           ABVAL  TSLT
+ 40064                  RN
+ 40066                  VN
+ 40068 2                2
+ 4007            NOLOD  1
+ 4008            DMP    TSLT
+ 4010                   1/MUE
+ 40101 2                1               H/MUE  B5  PD2,3
+ 4011            NOLOD  1
+ 4012            DMP
+ 4013                   0                H H/MUE  B-26  PD4,5
+ 4014            UNIT   2
+ 4015            DOT    DMP
+ 4016            TSLT   DSQ
+ 4017                   RN
+ 4018                   VN
+ 4019                   2
+ 4020                   2
+ 4021            DDV    2
+ 4022            DSU    DSQ
+ 4023            DAD    SQRT
+ 4024                   4D
+ 4025                   RMAG
+ 4026  2                TWO(-2)         E  B-1  PD6,7
+ 40291           NOLOD  0
+ 40292 2         STORE  ECC
+ 4030            NOLOD  1
+ 4031            BDSU   TSRT
+ 4032                   TWO(-2)
+ 4033  2                1               B-2    DEL    PD8,9
+ 4034            TSRT   0
+ 4035                   4
+ 4036  2                1               PD10,11  B-27
+ 4037            DSU    1
+ 4038            BDDV
+ 4039                   TWO(-2)
+ 4040  2                8D              H H/MUE(2-DEL)  B-25  =RPAR  PD10,11
+ 40421           TSRT   1
+ 40422           BDSU   BPL
+ 40423                  R400K
+ 40424                  1
+ 40425                  10D
+ 40426 2                TFFMAX
+ 404261          DOT    1
+ 404262          BPL
+ 404263                 RN
+ 404264                 VN
+ 4042652                HIECC1
+ 4043            DDV    2
+ 4044            DSU    TSRT
+ 4045            DDV
+ 4046                   4D
+ 4047                   RMAG
+ 4048                   TWO(-2)
+ 4049                   1
+ 4050  2                6D              COSTH  PD12,13  B-1
+ 40501           NOLOD  1
+ 4052            BMN    BDSU
+ 40525                  TFFMAX
+ 4053  2                TWO(-2)
+ 4054            DAD    2
+ 4055            BDDV   SQRT
+ 4056            COMP
+ 4057                   TWO(-2)
+ 4058  2                12D             PD14,15 B0  TAN(TH/2)
+ 4060            TSRT   2
+ 4061            BDDV   DSU
+ 4062            TSRT   DDV
+ 4063                   R400K
+ 4064                   1
+ 4065                   4D
+ 4066                   TWO(-2)
+ 4067                   1
+ 40671 2                6D
+ 4069            NOLOD  1
+ 4070            BMN    BDSU
+ 40701                  TFFMAX
+ 4071  2                TWO(-2)
+ 4072            DAD    2
+ 4073            BDDV   SQRT
+ 4074            COMP
+ 4075                   TWO(-2)
+ 4076  2                16D             TAN(TH1/2)  PD18,19
+ 4078            TSRT   1
+ 4079            DAD
+ 4080                   8D
+ 4081                   1
+ 4082  2                TWO(-2)
+ 4083            DSU    1
+ 4084            BMN    DMP
+ 4085                   18D
+ 4086                   14D
+ 40865 2                TFF0            (1+DEL/4)(TANTH1/2)-TAN(TH/2))
+ 4088            DSQ    1
+ 4089            DMP
+ 4090                   18D
+ 4091  2                18D             (TAN(TH1/2))CUBED  PD22,23
+ 4092            DSQ    1
+ 4093            DMP    BDSU
+ 4094                   14D
+ 4095  2                14D             PD22,23   B0
+ 4097            TSRT   2
+ 4098            BDSU   DMP
+ 4099            DAD
+ 5000                   8D
+ 5001                   1
+ 5002                   DP1/3S
+ 5003                   -
+ 5005  2                20D             B-2   PD22,23
+ 5006            DMP    3
+ 5007            TSLT   SQRT
+ 5008            DMP    DMP
+ 5009            TSRT   RTB
+ 5010                   10D
+ 5011                   1/MUE
+ 5012                   1
+ 5013                   10D
+ 5014                   22D
+ 5015                   7D
+ 5016                   FRESHPD
+ 5017  2         STORE  TFF
+ 5018  2         ITCQ   0
+ 5019   TFF0     DMOVE  1
+ 5020            RTB
+ 5021                   ZERODP
+ 5022                   FRESHPD
+ 5023  2         STORE  TFF
+ 5024  2         ITCQ   0
+ 50291 2         ITCQ   0
+ 5032   TWO(-2)  2DEC   .5
+ 5033   DP1/3S   2DEC   .3333333333 B-1
 *       ENDOFJOB
