@@ -19254,4 +19254,1898 @@ R1597  4FUNCTIONS NOT CONCERNED WITH SEPARATION AND ENTRY, AND TO INITIATE THOSE
  1966   SIXHNDRD EQUALS 600DEC
  1970   1000DEC  DEC    1000
  1975   2000DEC  DEC    2000
+L       POWERED FLIGHT SUBROUTINES
+R0001   THIS ROUTINE ENTERED AT CDUTRIG READS PRESENT CDU REGISTERS AND STORES T
+ 0002  9HEM SCALED AT ONE REVOLUTION AS A DP
+R0003   VECTOR IN CDUTEMP. IT COMPUTES SIN,COS(CDUX,Y,Z) AND STORES THEM IN SINC
+ 0004  9DU,+2,+4 AND COSCDU,+2,+4 RESPECTIVELY
+R0005   SCALED AT 2(+1). WHEN ENTERED AT THETRIG THE ROUTINE PERFORMS THE SAME F
+ 0006  9UNCTION WITH THE DESIRED CDU ANGLE REG-
+R0007  4ISTERS THETAD,+1,+2. ENTER WITH C(X1) =6 FOR X,Y,Z ( =4 FOR Y,Z ONLY)
+ 0008            SETLOC 52000
+ 0009  2CDUTRIG  EXIT   0
+ 0010            INHINT
+ 0011            CS     CDUX
+ 0012            TS     CDUTEMP
+ 0013            CS     CDUY
+ 0014            TS     CDUTEMP +2
+ 0015            CS     CDUZ
+ 0016            TS     CDUTEMP +4
+ 0017            RELINT
+ 0018  2         TC     JUMP3
+ 0019  2THETRIG  EXIT   0
+ 0020            INHINT
+ 0021            CS     THETAD
+ 0022            TS     CDUTEMP
+ 0023            CS     THETAD +1
+ 0024            TS     CDUTEMP +2
+ 0025            CS     THETAD +2
+ 0026            TS     CDUTEMP +4
+ 0027  2         RELINT
+ 0028   JUMP3    CS     FLAGWRD2        TEST IF CDUX FLAG SET
+ 0029            MASK   BIT14           (CDUXFLAG MASK)
+ 0030            CCS    A
+ 0031            TC     JUMP8           IT IS NOT
+ 0032            CAF    LOW11
+ 0033            MASK   CDUTEMP
+ 0034            TS     CYL
+ 0035            CS     CYL
+ 0036            CS     CYL
+ 0037            CS     CYL
+ 0038            XCH    CYL
+ 0039  2         XCH    CDUTEMP
+ 0040  2JUMP8    TC     INTPRET
+ 0041   SINCOS   AST,1  0
+ 0042  2                2
+ 0043   REPEAT1  SMOVE* 1
+ 0044            COMP   RTB
+ 0045                   CDUTEMP +6,1
+ 0046                   CDULOGIC
+ 0047  2         STORE  CDUTEMP +6,1
+ 0048            NOLOD  1
+ 0049            SIN
+ 0050  2         STORE  SINCDU +6,1
+ 0051            COS*   0
+ 0052                   CDUTEMP +6,1
+ 0053  2         STORE  COSCDU +6,1
+ 0054            TIX,1  2
+ 0055            ABS    TSLT            TEST IF COS(THETAD+2) LESS THAN COS(60)
+ 00552           BOV    EXIT
+ 00554                  REPEAT1
+ 00556                  COSCDU +4
+ 00558                  2
+ 0056  2                NOGIMLOC        IT IS NOT. NO NEED TO ALARM
+ 00562           TC     ALARM
+ 00564 2         OCT    01407
+ 00566 2         TC     INTPRET
+ 00568 2NOGIMLOC ITCQ   0
+ 0057  8HIGH11   OCT    77760
+R0058   THIS ROUTINE COMPUTES DESIRED CDU(GIMBAL) ANGLES GIVEN THE DESIRED NAV.
+ 0059  9BASE AXES IN XNB AS THREE HALF UNIT
+R0060   VECTORS IN STABLE MEMBER COORDINATES. THE DESIRED CDUX,Y,Z APPEAR IN MPA
+ 0061  9C, +1, +2 AT THE SAME SCALING AS CDUX,
+R0062  4Y,Z WITH THE INTERPRETER SET TO THE TP MODE
+ 0063   CALCCDU  ITA    1
+ 0064            ITC
+ 0065                   S1
+ 0066  2                CALCGTA
+ 0067            TEST   1               IF CDUXFLAG SET, RESCALE OGC TO 8 REVS
+ 0068            RTB
+ 0069                   CDUXFLAG
+ 0070                   GETOGC
+ 0071  2                CDUXFIX
+ 0072   GETOGC   VMOVE  1
+ 0073            RTB    ITCI
+ 0074                   OGC
+ 0075                   V1STO2S
+ 0076  8                S1
+R0077   THIS ROUTINE COMPUTES THE MATRIX WHICH TRANSFORMS FROM STABLE MEMBER COO
+ 0078  9RDINATES TO NAV. BASE COORDINATES. IT
+R0079   REQUIRES SIN,COS(CDUX,Y,Z) IN SINCDU, +2, +4 AND COSCDU, +2, +4 RESPECTI
+ 0080  9VELY SCALED TO ONE HALF. THE MATRIX IS
+R0081  4STORED IN X,Y,ZNB AS THREE HALF UNIT ROW VECTORS
+ 0082   CALCSMNB DMP    1
+ 0083            COMP
+ 0084                   SINCDU +2
+ 0085  2                COSCDU +4
+ 0086            TSRT   0
+ 0087                   SINCDU +4
+ 0088  2                1
+ 0089            DMP    1
+ 0090            VDEF   VSLT
+ 0091                   COSCDU +2
+ 0092                   COSCDU +4
+ 0093                   1
+ 0094  2         STORE  XNB
+ 0095            DMP    1
+ 0096            TSLT
+ 0097                   SINCDU
+ 0098                   SINCDU +4
+ 0099                   1
+ 0100  2         STORE  26D
+ 0101            NOLOD  1
+ 0102            DMP
+ 0103  2                SINCDU +2
+ 0104            DMP    1
+ 0105            DSU
+ 0106                   COSCDU
+ 0107  2                COSCDU +2
+ 0108            DMP    1
+ 0109            COMP
+ 0110                   SINCDU
+ 0111  2                COSCDU +4
+ 0112            DMP    0
+ 0113                   COSCDU
+ 0114  2                SINCDU +2
+ 0115            DMP    2
+ 0116            DAD    VDEF
+ 0117            VSLT
+ 0118                   COSCDU +2
+ 0119                   26D
+ 0120                   -
+ 0121                   1
+ 0122  2         STORE  ZNB
+ 0123            NOLOD  1
+ 0124            VXV    VSLT
+ 0125                   XNB
+ 0126                   1
+ 0127  2         STORE  YNB
+ 0128  8         ITCQ   0
+R0129   ROUTINE CALCSCNB TRANSFORMS A MATRIX OF HALF UNIT VECTORS ALONG SPACECRA
+ 0130  9FT AXES, XSCD, INTO A MATRIX OF HALF
+R0131   UNIT VECTORS ALONG NAV. BASE AXES, XNB. ROUTINE CALCNBSC DOES THE INVERS
+ 0132  9E, STORING THE MATRIX OF UNIT VECTORS
+R0133  4ALONG SPACECRAFT AXES IN XSC
+ 0134   CALCSCNB VXSC   0
+ 0135                   XSCD
+ 0136  2                COS33
+ 0137            VXSC   1
+ 0138            BVSU
+ 0139                   ZSCD
+ 0140                   SIN33
+ 0141  2         STORE  XNB
+ 0142            VMOVE  0
+ 0143                   YSCD
+ 0144  2         STORE  YNB
+ 0145            VXSC   0
+ 0146                   XSCD
+ 0147  2                SIN33
+ 0148            VXSC   1
+ 0149            VAD
+ 0150                   ZSCD
+ 0151                   COS33
+ 0152  2         STORE  ZNB
+ 0153  8         ITCQ   0
+ 0154   CALCNBSC VXSC   0
+ 0155                   XNB
+ 0156  2                COS33
+ 0157            VXSC   1
+ 0158            VAD
+ 0159                   ZNB
+ 0160                   SIN33
+ 0161  2         STORE  XSC
+ 0162            VMOVE  0
+ 0163                   YNB
+ 0164  2         STORE  YSC
+ 0165            VXSC   0
+ 0166                   XNB
+ 0167  2                SIN33
+ 0168            VXSC   1
+ 0169            VSU
+ 0170                   ZNB
+ 0171                   COS33
+ 0172  2         STORE  ZSC
+ 0173  2         ITCQ   0
+ 0174   SIN33    2DEC   0.544639000
+ 0175  8COS33    2DEC   0.838670600
+R0176   THIS ROUTINE COMPUTES INCREMENTAL CHANGES IN CDU(GIMBAL) ANGLES FROM INC
+ 0177  9REMENTAL ANGULAR CHANGES ABOUT SM AXES.
+R0178   IT REQUIRES SM INCREMENTS AS A DP VECTOR IN VAC SCALED AT ONE REVOLUTION
+ 0179  9, SIN,COS(CDUX,Y,Z) IN SINCDU, +2, +4
+R0180  4AND COSCDU, +2, +4 RESPECTIVELY SCALED TO ONE HALF. CDU INCREMENTS APPEA
+ 0181  9R IN THE VAC SCALED AT ONE REV.
+ 0182   SMCDURES DMP    0
+ 0183                   32D
+ 0184  2                COSCDU +2
+ 0185            DMP    1
+ 0186            BDSU   DDV
+ 0187                   36D
+ 0188                   SINCDU +2
+ 0189                   -
+ 0190                   COSCDU +4
+ 0191  2         STORE  22D
+ 0192            NOLOD  2
+ 0193            DMP    TSLT
+ 0194            BDSU
+ 0195                   SINCDU +4
+ 0196                   1
+ 0197                   34D
+ 0198  2         STORE  24D
+ 0199            DMP    0
+ 0200                   32D
+ 0201  2                SINCDU +2
+ 0202            DMP    1
+ 0203            DAD    TSLT
+ 0204                   36D
+ 0205                   COSCDU +2
+ 0206                   -
+ 0207                   1
+ 0208  2         STORE  26D
+ 02085           VMOVE  1
+ 0209            ITCQ
+ 02095 8                22D
+R0210   THIS ROUTINE COMPUTES INCREMENTAL ANGULAR CHANGES ABOUT NAV. BASE AXES F
+ 0211  9ROM INCREMENTAL CDU ANGLE CHANGES. IT
+R0212   REQUIRES THE CDU INCREMENTS AS A DP VECTOR IN DCDU, +2, +4, SCALED AT ON
+ 0213  9E REVOLUTION. SIN,COS(CDUX,Y,Z) MUST BE
+R0214   IN SINCDU, +2, +4, AND COSCDU, +2, +4 RESPECTIVELY SCALED AT ONE HALF. I
+ 0215  9NCREMENTAL NAV. BASE ANGLES APPEAR IN
+R0216  4DNB, +2, +4 SCALED AT ONE REVOLUTION
+ 0217   CDUNBRES DMP    1
+ 0218            TSLT
+ 0219                   COSCDU +4
+ 0220                   DCDU +2
+ 0221                   1
+ 0222  2         STORE  26D
+ 0223            NOLOD  1
+ 0224            DMP
+ 0225  2                SINCDU
+ 0226            DMP    1
+ 0227            DSU
+ 0228                   COSCDU
+ 0229  2                DCDU +4
+ 0230            DMP    0
+ 0231                   26D
+ 0232  2                COSCDU
+ 0233            DMP    1
+ 0234            DAD
+ 0235                   SINCDU
+ 0236  2                DCDU +4
+ 0237            TSRT   0
+ 0238                   DCDU
+ 0239  2                1
+ 0240            DMP    2
+ 0241            DAD    VDEF
+ 0242            VSLT
+ 0243                   SINCDU +4
+ 0244                   DCDU +2
+ 0245                   -
+ 0246                   1
+ 0247  2         STORE  DNB
+ 0248  8         ITCQ   0
+R0249   THIS ROUTINE COMPUTES INCREMENTAL CHANGES TO CDU ANGLES FROM INCREMENTAL
+ 0250  9 ANGULAR CHANGES ABOUT NAV. BASE AXES.
+R0251   IT REQUIRES THE INCREMENTAL NAV. BASE ANGLES AS A DP VECTOR IN VAC SCALE
+ 0252  9D AT 1 REVOLUTION. SIN,COS(CDUX,Y,Z)
+R0253   MUST BE IN SINCDU, COSCDU RESPECTIVELY SCALED AT 2(+1). IT LEAVES CDU IN
+ 0254  9CREMENTS AS A DP VECTOR IN DCDU AT THE
+R0255  4SAME SCALING
+ 0256   NBCDURES DMP    0
+ 0257                   36D
+ 0258  2                SINCDU
+ 0259            DMP    1
+ 0260            DSU    DDV
+ 0261                   34D
+ 0262                   COSCDU
+ 0263                   -
+ 0264                   COSCDU +4
+ 0265  2         STORE  DCDU +2
+ 0266            NOLOD  2
+ 0267            DMP    COMP
+ 0268            TSLT   DAD
+ 0269                   SINCDU +4
+ 0270                   1
+ 0271                   32D
+ 0272  2         STORE  DCDU
+ 0273            DMP    0
+ 0274                   34D
+ 0275  2                SINCDU
+ 0276            DMP    1
+ 0277            DAD    TSLT
+ 0278                   36D
+ 0279                   COSCDU
+ 0280                   -
+ 0281                   1
+ 0282  2         STORE  DCDU +4
+ 0283  8         ITCQ   0
+R0284   THIS ROUTINE RESOLVES THE SMALL ANGLE VECTOR STORED AS SM COMPONENTS IN
+ 0285  9VAC, SCALED TO ONE REVOLUTION, INTO
+R0286   COMMANDED CDU ANGLE CHANGES VAC, +2,+4, SCALED TO ONE REVOLUTION, THROUG
+ 0287  9H THE DESIRED CDU ANGLES DEFINED BY
+R0288  4THETAD,+1,+2. THE ROUTINE THEN INCREMENTS THETAD,+1,+2 IN 2S COMP. AT CD
+ 0289  9UX,Y,Z SCALING
+ 0290   CDUDRIVE ITA    1
+ 0291            AXT,1  ITC
+ 0292                   S2
+ 0293                   4
+ 0294  2                THETRIG
+ 0295   CDUDRVE2 ITC    0
+ 0296  2                SMCDURES
+ 0297            TEST   1               TEST IF CDUX FLAG SET
+ 0298            TSRT
+ 0299                   CDUXFLAG
+ 0300                   CDUDRVE1
+ 0301                   32D
+ 0302                   4
+ 0303  2         STORE  32D
+ 0304   CDUDRVE1 NOLOD  2               RESCALE DCDU AND BRANCH TO
+ 0305            VSLT   RTB             INCREMENT THETAD
+ 0306            ITCI
+ 0307                   1
+ 0308                   INCRCDUS
+ 0309  8                S2
+R0367   THE FOLLOWING SERIES OF CLOSED SUBROUTINES COMPUTE THE REQUIRED VELOCITY
+ 0368  9 VR, SCALED TO 2(+8)M/CS, VELOCITY-TO-BE
+R0369   -GAINED VG, SCALED TO 2(+7)M/CS, AND THE MDOIFIED B-VECTOR CBDT, SCALED
+ 0370  9TO 2(+4)M/CS, FOR THE DIFFERENT PHASES
+R0371  4OF POWERED FLIGHT.
+ 0372   CALCVGB  VMOVE  0
+ 0373                   VR
+ 0374  2         STORE  CBDT            (CBDT USED HERE AS TEMP. STORAGE FOR VR)
+ 0375            ITA    1
+ 0376            LXA,1  ITCI
+ 0377                   S2
+ 0378                   XSHIFT
+ 0379  2                VRCADR
+ 0380   CALCCBDT NOLOD  1
+ 0381            VSU    VSLT
+ 0382                   CBDT            OLD VR
+ 0383  2                4               D(VR) TO PD SCALED AT 2(+4) M/CS
+ 0384            VXSC   1
+ 0385            VAD    VXSC
+ 0386                   GRAVITY
+ 0387                   DELTAT
+ 0388                   -
+ 0389                   CFACTOR         SCALED AT 2(+0)
+ 0390  2         STORE  CBDT            SCALED AT 2(+4) M/CS
+ 0391            VSLT   1
+ 0392            VSU    STZ
+ 0393                   VR
+ 0394                   1
+ 0395                   VN
+ 0396                   OVFIND          FIRST PASS THRU CALCVGB MAY OVERFLOW
+ 0397  2         STORE  VG              SCALED AT 2(+7) M/CS
+ 0398            ITCI   0
+ 0399  8                S2
+R0400   THESE ROUTINES COMPUTE VR FOR THE TWO NOMINAL SPS BURNS OF FLIGHT 501
+ 0401   501SPS1  AXT,1  1               C(X1) = +0  (SPS1)
+ 0402            AXT,2  ITC             C(X2) =+1  (SPS1)
+ 0403                   0
+ 0404                   1
+ 0405  2                +5
+ 0406   501SPS2  AXC,1  1               C(X1) = -2  (SPS2)
+ 0407            AXC,2                  C(X2) =-1  (SPS2)
+ 0408                   2
+ 0409  2                1
+ 0410            DMOVE* 6
+ 0411            DDV    DSU
+ 0412            DSQ    DSU*
+ 0413            ABS    DMP
+ 0414            DDV*   TSRT
+ 0415            SQRT   SIGN
+ 0416            VXSC
+ 0417                   SEMILAT,1       SCALED AT 2(+27)M
+ 0418                   RMAG                      2(+25)M
+ 0419                   DP2(-2)
+ 0420                   ESQ(VR),1       SCALED AT 2(+4)
+ 0421                   MUE             SCALED AT 2(+38) M(+3)/CS(+2)
+ 0422                   SEMILAT,1
+ 0423                   5
+ 0424                   X2
+ 0425  2                UNITR           VRAD TO PD  SCALED AT 2(+11) M/CS
+ 0426            DMOVE  2
+ 0427            DMP*   DDV
+ 0428            SQRT
+ 0429                   MUE(41)
+ 0430                   SEMILAT,1
+ 0431                   RMAGSQ          SCALED AT 2(+50)M(+2)
+A0432                                   VHOR MAG. TO PD SCALED AT 2(+9) M/CS
+ 0433            VXV    3
+ 0434            UNIT   VXV
+ 0435            VXSC   VAD
+ 0436            VSLT
+ 0437                   UNITR
+ 0438                   VIGNTION
+ 0439                   UNITR
+ 0440                   -
+ 0441                   -
+ 0442                   3
+ 0443  2         STORE  VR
+ 0453            ITC    0
+ 0454  8                CALCCBDT
+R0455  4THIS ROUTINE COMPUTES VG, CBDT, FOR LANDING AREA CONTROL DURING BOOST AB
+ 0456  9ORTS ON FLIGHT 501
+ 0457   501ABORT VXV    1
+ 04571           VSLT
+ 0458                   RN
+ 0459                   VN
+ 04591 2                1               4 SCALED 2(+31) M(+2)/CS
+ 0460            NOLOD  1
+ 0461            UNIT
+ 0462  2         STORE  UNITRXV         UNIT NORMAL TO PLANE, IP  2(+1)
+ 0463            DSU    1
+ 0464            TSRT
+ 0465                   RINTALT
+ 0466                   RMAG
+ 0467  2                2               (RE - R) MAG SCALED 2(+27)
+ 0468            VXV    1
+ 0469            VSLT
+ 0470                   UNITRXV         IP
+ 0471                   UNITR           IR
+ 0472                   1               TIMES 2
+ 0473  2         STORE  UNITHORZ        UNIT HORIZONTAL IN PLANE, IHP  2(+1)
+ 0474            NOLOD  1
+ 0475            DOT
+ 0476  2                VN              IHP.V  SCALED 2(+8)
+ 0477            DOT    2
+ 0478            TSRT   DDV
+ 0479            DMP
+ 0480                   VN
+ 0481                   UNITR           IR.V  SCALED 2(+8)
+ 0482                   3               TIMES 2(-3)
+ 0483                   -               DIVIDE BY IHP.V SCALED 2(+8)
+ 0484  2                RINTALT         RE COT(GAMMA) SCALED  2(+28)
+ 0485            VSQ    1
+ 0486            DDV
+ 0487                   0               H SCALED 2(+31)
+ 0488  2                MUE             H(SQ)/MUE = P SCALED 2(+24)
+ 0489            VSQ    1
+ 0490            TSRT   DDV
+ 0491                   VN              V(SQ) 2(+14)
+ 0492                   4               TIMES 2(-4)
+ 0493  2                MUE             V(SQ)/MUE  SCALED 2(-20)
+ 0494            DDV    2
+ 0495            DSU    DMP
+ 0496            BDSU
+ 0497                   DP2(-4)
+ 0498                   RMAG
+ 0499                   -
+ 0500                   RINTALT
+ 0501  2                DP2(-4)         (1+RE((V**2/2 MUE)-1/R))  SCALED 2(+4)
+ 0502            NOLOD  2
+ 0503            BMN    SQRT
+ 0504            DMP    TSLT
+ 0505                   SMACHECK        SMA LESS THAN RE/2
+ 0506                   V400
+ 0507  2                2               VE TO PD SCALED 2(+7)  M/CS
+ 0508            DSU    1
+ 0509            BPL
+ 0510                   VCRIT           22,000 FT/SEC SCALED 2(+7) M/CS
+ 0511                   -               VE SCALED 2(+7) M/CS
+ 0512  2                GETRANGE        SET RANGE TO MINRANGE
+ 0513            DMP    2
+ 0514            DAD    DMP
+ 0515            DAD    TSLT
+ 0516                   14D             VE SCALED 2(+7)
+ 0517                   KRANGE2
+ 0518                   KRANGE1
+ 0519                   14D             VE SCALED 2(+7)
+ 0520                   KRANGE0
+ 0521                   4
+ 0522  2         STORE  20D             ENTRY RANGE ANGLE SCALED 2(+0) REVS.
+ 0523   GOTRANGE NOLOD  1
+ 0524            COS    VXSC
+ 0525  2                RTATLANT        RADIAL COMP UNIT TARG VECT  2(+2)
+ 0526            SIN    1
+ 0527            TSLT
+ 0528                   20D
+ 0529  2                1               SINE OF RANGE ANGLE  2(+0)
+ 0530            VXV    1
+ 0531            UNIT
+ 0532                   RTATLANT
+ 0533                   UNITR
+ 0534  2         STORE  22D             -UNITN, -IN, DESIRED NORMAL SCALED 2(+1)
+ 0535            NOLOD  2
+ 0536            VXV    VXSC
+ 0537            VAD    VSLT
+ 0538                   RTATLANT
+ 0539                   -
+ 0540                   -
+ 0541                   1
+ 0542  2         STORE  RTARG           UNIT TARGET VECTOR SCALED 2(+1)
+ 0543            DMP    5
+ 0544            DDV    DSU
+ 0545            BMN    SQRT
+ 0546            DMP    BDSU
+ 0547            BDDV   BOV
+ 0548            RTB    TSRT
+ 0549                   RINTALT         RE SCALED 2(+25)
+ 0550                   -
+ 0551                   -               P SCALED 2(+24)
+ 0552                   DP2(-6)
+ 0553                   GAMCHECK        COT(GAMMAE) SQ NEGATIVE
+ 0554                   RMAG            R COT(GAMMAE) SCALED 2(+28)
+ 0555                   -               RE COT(GAMMA) SCALED 2(+28)
+ 0556                   -               (RE - R) SCALED 2(+27)
+ 0557                   TANCHECK        TAN(THETAFF/2) EXCEEDS ----
+ 0558                   FRESHPD         ZERO PD POINTER
+ 0559  2                7D              X = TAN(THETAFF/2) SCALED 2(+6)
+ 0560            NOLOD  1
+ 0561            DSQ    DAD
+ 0562  2                DP2(-12)        DENOMINATOR SCALED 2(+12)
+ 0563            NOLOD  2
+ 0564            DSU    COMP
+ 0565            DDV
+ 0566                   DP2(-11)        1 - X(SQ) SCALED 2(+12)
+ 0567  2                2               COSEFF SCALED 2(+0)
+ 0568            DOT    2
+ 0569            TSLT   DSU
+ 0570            BPL
+ 0571                   UNITR
+ 0572                   RTARG
+ 0573                   2               COS ANGLE R TO TARG 2(+0)
+ 0574                   4               COS FREE FALL ANGLE 2(+0)
+ 0575  2                PASTIT          FF ANGLE EXCEEDS ANGLE TO TARGET
+ 0576            TSRT   1
+ 0577            DDV    VXSC
+ 0578                   0
+ 0579                   5
+ 0580                   2               SINEFF SCALED 2(+0)
+ 0581  2                UNITHORZ        IHP SINEFF SCALED 2(+1)
+ 0582            VXSC   1
+ 0583            VAD    VSU
+ 0584                   UNITR
+ 0585                   4               IR COSEFF 2(+1)
+ 0586                   -               UNIT VECTOR ALONG ENTRY-POINT VECT 2(+1)
+ 0587  2                RTARG           MINUS UNIT TARGET VECTOR  2(+1)
+ 0588            NOLOD  1
+ 0589            ABVAL
+ 0590  2         STORE  2               D SCALED 2(+2)
+ 0591            ABVAL  2
+ 0592            VXSC   DOT
+ 0593            TSRT
+ 0594                   VN
+ 0595                   UNITHORZ
+ 0596                   22D             -UNITN 2(+1)
+ 0597  2                1               DELTA V NORMAL SCALED 2(+11)
+ 0598            ABVAL  2
+ 0599            BDSU   TSLT
+ 0600            ABS
+ 0601                   DIFFVECT        MAG OLD DIFFVECT 2(+2) AFTER ABVAL
+ 0602                   2               NEW MAG DIFFVECT 2(+2)
+ 0603  2                1               DELD SCALED 2(+1)
+ 0604            NOLOD  0
+ 0605  2         STORE  0               DELD TO PD 0 ALSO
+ 0606            DMP    3
+ 0607            TSRT   DDV
+ 0608            DAD    BDDV
+ 0609            BOV    TSRT
+ 0610                   DELTAT
+ 0611                   2
+ 0612                   13D
+ 0613                   -
+ 0614                   TGOBIAS         5 SECS
+ 0615                   -               ATTEMPT TO COMPUTE NEW ANORMAL 2(-12)
+ 0616                   ANOVFLOW        IF OVF, ANORMAL = 8 FT/S/S SIGN DELTA V
+ 0617                   3               SCALE AN TRIAL BACK TO 2(-9)
+ 0618  2         STORE  ANORMAL         ANORMAL SCALED 2(-9) M/CS(+2)
+ 0619   GO-ON    NOLOD  1
+ 0620            VXSC
+ 0621  2                UNITRXV         ANORMAL ALONG IP SCALED 2(-8)
+ 0622            VXSC   1
+ 0623            ABVAL
+ 0624                   DELV
+ 0625                   KPIP
+ 0626  2         STORE  4               MEASURED DELTA V SCALED 2(+5)
+ 0627            NOLOD  3
+ 0628            DDV    DMP
+ 0629            TSLT   VXSC
+ 0630            VAD    UNIT
+ 0631                   DELTAT
+ 0632                   FULHAM          APPROX COS OF THRUST ONTO HORIZ PLANE
+ 0633                   5
+ 0634  2                UNITHORZ        COEF OF SIN TERM OF IT SCALED 2(+1)
+ 0635            DDV    1
+ 0636            ASIN   DAD
+ 0637                   RVH             RADIUS TO VISUAL HORIZON SCALED 2(+26) M
+ 0638                   RMAG            R SCALED 2(+25)
+ 0639  2                LOOKANG         PHI SCALED 2(+0) REV.
+ 0640            NOLOD  1
+ 0641            COS    VXSC
+ 0642  2                UNITR           COS(PHI) IR SCALED 2(+2)
+ 0643            SIN    2
+ 0644            VXSC   VSU
+ 0645            VSLT
+ 0646                   18D             PHI
+ 0647                   12D             SIN COEF SCALED 2(+1)
+ 0648                   -               COS(PHI) SCALED 2(+2)
+ 0649  2                1               UNIT FINAL, IT, SCALED 2(+1)
+ 0650            DMP    3
+ 0651            DDV    TSLT
+ 06515           BOV    TSRT
+ 0652            VXSC   RTB
+ 0653                   2               D  2(+2)
+ 0654                   4               DELTA V  2(+5)
+ 0655                   0               DELTA D  2(+1)
+ 06554                  1               IS MAG VG GR THAN 2(+5) M/CS
+ 06556                  FIXVG           IF YES, SET MAG VG TO 2(+5) M/CS
+ 06558                  1               IF NO, SCALE MAG VG BACK TO 2(+6)
+ 0656                   -               IT  2(+1)
+ 0657                   FRESHPD         ZERO PD POINTER
+ 0658  2         STORE  VG              VG SCALED 2(+7) M/CS
+ 0659   PREXIT   VMOVE  0
+ 0660                   6
+ 0661  2         STORE  DIFFVECT        SAVE NEW DIFFVECT SCALED 2(+1)
+ 0662            VMOVE  0
+ 0663                   ZEROVEC
+ 0664  2         STORE  CBDT            CBDT = 0 FOR 501 ABORTS
+ 0665            ITCI   0
+ 0666  2                S2              RETURN
+ 0667  2CHEKEXIT TC     INTPRET         EXIT FOR VR CHECK FAILURES
+ 0668            RTB    1
+ 0669            ITC
+ 0670                   FRESHPD         ZERO PD POINTER
+ 0671  2                VRFAIL
+ 0672   ANOVFLOW SIGN   0
+ 0673                   ANPSEUDO        AN = 8 FT/S/S SIGNED WITH DELTA V
+ 0674                   12D             DELTA V
+ 0675  2         STORE  ANORMAL
+ 0676            ITC    0
+ 0677  2                GO-ON
+ 06771  FIXVG    VMOVE  1
+ 06772           VXSC   RTB
+ 06773                  -               IT  2(+1)
+ 06774                  DP2(-1)
+ 06775                  FRESHPD         ZERO PD POINTER
+ 06776 2         STORE  VG              MAG VG 2(+5) M/CS SCALED 2(+7)
+ 06777           ITC    0
+ 06778 2                PREXIT          GO CLOSE OUT 501 ABORT
+ 0678   GETRANGE DMOVE  0
+ 0679                   MINRANGE
+ 0680  2         STORE  20D             FREEZE RANGE ANGLE AT MINRANGE
+ 0681            ITC    0
+ 0682  2                GOTRANGE        CONTINUE
+ 0683   PASTIT   EXIT   0
+ 0684            TC     ALARM
+ 0685            OCT    01403
+ 0686  2         TC     CHEKEXIT
+ 0687   SMACHECK EXIT   0
+ 0688            TC     ALARM
+ 0689            OCT    01404
+ 0690  2         TC     CHEKEXIT
+ 0691   GAMCHECK EXIT   0
+ 0692            TC     ALARM
+ 0693            OCT    01405
+ 0694  2         TC     CHEKEXIT
+ 0695   TANCHECK EXIT   0
+ 0696            TC     ALARM
+ 0697            OCT    01406
+ 0698  2         TC     CHEKEXIT
+ 0699   RINTALT  2DEC   6500085 B-25    400K FT RADIUS
+ 0700   DP2(-4)  2DEC   0.0625
+ 0701   DP2(-6)  2DEC   0.015625
+ 0702   DP2(-11) 2DEC   0.000488281
+ 0703   DP2(-12) 2DEC   0.000244141
+ 0704   KRANGE0  2DEC   0.188045173                     2(+4)
+ 0705   KRANGE1  2DEC   -.713839193                     2(+11)
+ 0706   KRANGE2  2DEC   0.681759381                     2(+18)
+ 0707   MINRANGE 2DEC   0.019010080     6.8436288 DEG   2(+0) REVS.
+ 0708   V400     2DEC   0.865198746     110.7454396     2(+7) M/CS
+ 0709   TGOBIAS  2DEC   0.000059605     5 SECS          2(+23) CS
+ 0710   VCRIT    2DEC   0.523875000     22,000 FT/SEC   2(+7) M/CS
+ 0711   ANPSEUDO 2DEC   0.124846080     8 FT/S/S        2(-9) M/CS/CS
+ 0712   RE       2DEC   0.190084130     6.378165 E6 M   2(+25) M
+ 0713   RVH      2DEC   0.095042065     6.378165 E6 M   2(+26) M
+ 0714  8FULHAM   2DEC   0.9397046       COS 20 DEG.
+R0715  4THESE ROUTINES COMPUTE VR TO ACHIEVE A CIRCULAR EARTH- OR MOON-CENTERED
+ 0716  9ORBIT
+ 0717   EARTHORB DMOVE  1
+ 0718            ITC
+ 0719                   MUE
+ 0720  2                SQRTMU/R
+ 0721   LUNDEBST DMOVE  1
+ 0722            INCR,1
+ 0723                   MUM
+ 0724  2                6D
+ 0725   SQRTMU/R NOLOD  2
+ 0726            DDV    TSLT*
+ 0727            SQRT
+ 0728                   RMAG
+ 0729                   8D,1            C(X1) =14-N  (EARTH)
+A0730                                         =20-N  (MOON)
+ 0731            VXV    1
+ 0732            UNIT   VXSC
+ 0733                   UNITR
+ 0734                   UNITN
+ 0735  2         STORE  VR              VR SCALED AT 2(+8)M/CS
+ 0736            ITC    0
+ 0737  8                CALCCBDT
+R0738  4THIS ROUTINE COMPUTES VR TO ACHIEVE HYPERBOLIC VELOCITY VF FOR TRANSEART
+ 0739  9H INJECTION
+ 0740   TRANSEAR DDV    1
+ 0741            TSLT*
+ 0742                   MUM
+ 0743                   RMAG
+ 0744  2                4,1
+ 0745            UNIT   0
+ 0746                   VF              VF SCALED AT 2(+4)M/CS
+ 0747  2         STORE  UNITF
+ 0748            NOLOD  4
+ 0749            DOT    DAD
+ 0750            DMP    TSLT
+ 0751            BDDV   DAD
+ 0752            SQRT
+ 0753                   UNITR
+ 0754                   DP2(-2)
+ 0755                   28D             (VF SQ)
+ 0756                   3
+ 0757                   -
+ 0758                   DP2(-10)
+ 0759  2         STORE  26D             SCALED AT 2(+5)
+ 0760            NOLOD  1
+ 0761            DAD    VXSC
+ 0762                   DP2(-5)
+ 0763  2                UNITF
+ 0764            DSU    2
+ 0765            VXSC   VAD
+ 0766            VXSC   VSLT
+ 0767                   26D
+ 0768                   DP2(-5)
+ 0769                   UNITR
+ 0770                   -
+ 0771                   30D             (VF)
+ 0772                   2
+ 0773  2         STORE  VR              VR SCALED AT 2(+8)M/CS
+ 0774            ITC    0
+ 0775  2                CALCCBDT
+ 0776   DP2(-5)  2DEC   0.03125
+ 0777  8DP2(-10) 2DEC   0.000976563
+R0778   THIS ROUTINE COMPUTES VR TO ACHIEVE A TRANSLUNAR ELLIPSE DEFINED BY A TA
+ 0779  9RGET VECTOR RTRNSLUN AND A SEMI MAJOR
+R0780  4AXIS SMA
+ 0781   TRANSLUN TSLT   1
+ 0782            SQRT
+ 0783                   MUE
+ 0784  2                1
+ 0785            DMOVE  1
+ 0786            TSRT*
+ 0787                   30D             (RN)
+ 0788  2                10D,1           RN RESCALED TO 2(+26)M
+ 0789            VMOVE  2
+ 0790            VSRT*  BVSU
+ 0791            UNIT   VSRT
+ 0792                   RN
+ 0793                   10D,1           RTRNSLUN-RMAG SCALED AT 2(+25)M
+ 0794                   RTRNSLUN
+ 0795  2                1
+ 0796            VSRT   1
+ 0797            BVSU
+ 0798                   UNITR
+ 0799                   1
+ 0800  2         STORE  UNITD
+ 0801            NOLOD  1
+ 0802            VAD
+ 0803                   UNITR
+ 0804  2         STORE  UNITS
+ 0805            ABVAL  2
+ 0806            DAD    DAD
+ 0807            TSRT
+ 0808                   RTRNSLUN
+ 0809                   30D             (C)
+ 0810                   -               (RN)
+ 0811                   1
+ 0812  2         STORE  S               S SCALED AT 2(+26)M
+ 0813            NOLOD  1
+ 0814            DSU    TSLC
+ 0815                   30D             (C)
+ 0816                   X2
+ 0817  2         STORE  DN
+ 0818            NOLOD  1
+ 0819            TSRT*  BDSU
+ 0820                   6,2
+ 0821  2                SMA
+ 0822            DMP    3
+ 0823            BDDV   INCR,2
+ 0824            TSLT*  SQRT
+ 0825            SIGN   VXSC
+ 0826                   SMA
+ 0827                   DN
+ 0828                   -
+ 0829                   16D
+ 0830                   0,2
+ 0831                   SGNTHETA
+ 0832  2                UNITS
+ 0833            TSRT   1
+ 0834            BDSU   TSRT
+ 0835                   S
+ 0836                   6D
+ 0837                   SMA
+ 0838  2                4
+ 0839            DMP    4
+ 0840            BDDV   SQRT
+ 0841            TSRT   VXSC
+ 0842            VAD    VSLT
+ 0843            VXSC
+ 0844                   SMA
+ 0845                   S
+ 0846                   -
+ 0847                   6
+ 0848                   UNITD
+ 0849                   -
+ 0850                   9D
+ 0851  2         STORE  VR              VR SCALED AT 2(+8)M/CS
+ 0852            ITC    0
+ 0853  2                CALCCBDT
+ 0854   MUE      2DEC   0.145011008     3.98603223 E14 SCALED 2(+38)M(+3)/CS(+2)
+ 0855   MUM      2DEC   0.114151696     4.90277800 E08 SCALED 2(+32)M(+3)/CS(+2)
+P0856   THIS ROUTINE COMPUTES THE DESIRED THRUST DIRECTION AS A HALF UNIT VECTOR
+ 0857  9 XSC. IT COMPUTES THE HALF UNIT VECTOR
+R0858   YSC ALONG RN*XSC  (I.E. DEFINES A PITCH AXIS HORIZONTAL, YAW AXIS UP ROL
+ 0859  9L ATTITUDE) AND ZSC ALONG XSC*YSC. IT
+R0860   REQUIRES PRIOR PASSES THROUGH ROUTINES CALCRVG AND CALCVGB TO ESTABLISH
+ 0861  9UNITR, VG, AND CBDT. X1 MUST CONTAIN
+R0862  40,2,4... TO LOAD THE APPROPRIATE INTEGRATED INITIAL THRUST ACCELERATION
+ 0863  9MAGNITUDE ATDT
+ 0864   CALCXSC  UNIT   0
+ 0865                   VG
+ 0866  2         STORE  UNITVG
+ 0867            NOLOD  2
+ 0868            VPROJ  VSLT
+ 0869            BVSU
+ 0870                   CBDT            SCALED AT 2(+4) M/CS
+ 0871                   2
+ 0872  2                CBDT
+ 0873            NOLOD  5
+ 0874            ABVAL  DDV*
+ 0875            DSQ    BDSU
+ 0876            SQRT   DMP*
+ 0877            TSLT   VXSC
+ 0878            VAD    UNIT
+ 0879                   ATDT,1          SCALED AT 2(+5)M/CS
+ 0880                   NEARONE
+ 0881                   ATDT,1
+ 0882                   2
+ 0883                   UNITVG
+ 0884  2         STORE  XSC
+ 0885            NOLOD  2
+ 0886            VXV    UNIT
+ 0887            COMP
+ 0888                   UNITR
+ 0889  2         STORE  YSC
+ 08891           TEST   1
+ 08892           VMOVE  COMP
+ 08893                  SPS2FLAG
+ 08894                  HEADWN2
+ 08895                  YSC
+ 08896 2         STORE  YSC
+ 0890   HEADWN2  NOLOD  2
+ 0891            VXV    UNIT
+ 0892            COMP
+ 0893                   XSC
+ 0894  2         STORE  ZSC
+ 0895  8         ITCQ   0
+R0896            THIS ROUTINE RESOLVES THE VECTOR IN RTINIT THROUGH AN ANGULAR R
+ 0897  9OTATION WIE(DTEAROT) SCALED AT ONE REV-
+R0898   OLUTION ABOUT THE UNIT POLAR AXIS UMITW. IT REQUIRES DTEAROT SCALED AT 2
+ 0899  9(+28)CS. IT LEAVES THE RESOLVED
+R0900   VECTOR IN RT WITH EASTERLY AND NORMAL COMPONENTS IN RTEAST AND RTNORM RE
+ 0901  9SPECTIVELY, AT THE SAME SCALING. FOR
+R0902  4CONTINUOUS UPDATING ONLY ONE ENTRY AT EARROT1 IS REQUIRED, WITH SUBSEQUE
+ 0903  9NT ENTRIES AT EARROT2
+ 0904   EARROT1  VXV    1
+ 0905            VSLT
+ 0906                   UNITW
+ 0907                   RTINIT
+ 0908                   2
+ 0909  2         STORE  RTEAST
+ 0910            NOLOD  1
+ 0911            VXV    VSLT
+ 0912                   UNITW
+ 0913                   1
+ 0914  2         STORE  RTNORM
+ 0915   EARROT2  STZ    1               BRANCH TO OVERADAY UNTIL DTEAROT
+ 0916            DDV    BOV             LESS THAN ONE SIDEREAL DAY
+ 0917                   OVFIND
+ 0918                   DTEAROT
+ 0919                   1/WIE           TIME FOR ONE SIDEREAL REVOLUTION
+ 0920                   OVERADAY
+ 0921  2         STORE  30D
+ 0922            NOLOD  2
+ 0923            COS    DSU
+ 0924            VXSC
+ 0925                   DP2(-1)
+ 0926  2                RTNORM
+ 0927            SIN    2
+ 0928            VXSC   VAD
+ 0929            VAD
+ 0930                   30D
+ 0931                   RTEAST
+ 0932                   RTINIT
+ 0933  2         STORE  RT
+ 0934  2         ITCQ   0
+ 0935   OVERADAY SIGN   1
+ 0936            BDSU
+ 0937                   1/WIE
+ 0938                   DTEAROT
+ 0939                   DTEAROT
+ 0940  2         STORE  DTEAROT
+ 0941            BPL    0               GO BACK WITHOUT DISTURBING QPRET.
+ 0942                   1/WIE           ANY POSITIVE CONSTANT WILL DO.
+ 0943  2                EARROT2
+ 0944  81/WIE    2DEC   0.032098629     8.61641000 E4 SECS SCALED AT 2(+28)CS
+R0945  2CONVERSION CONSTANTS FOR FREE FALL INTEGRATION PROGRAM
+ 0946   SCLRAVMD 2DEC   .512
+ 0947   SCLRMDAV 2DEC   1000 B-10
+ 0948   SCLTAVMD 2DEC   4.4384169 B-3
+ 0949   SCLVAVMD 2DEC   .64876819
+ 0950  3SCLVMDAV 2DEC   .770691300
+R0951   POWERED FLIGHT CONSTANTS. DELCDU SCALED AT KE/2 REVS (KE =A/P GAIN=1.5)
+ 0952  9EVS (KE =A/P GAIN =1.5)
+ 0957   DELCDU   2DEC   0.00566                            ( =1.02 DEG)
+ 0958            2DEC   0.00462                            ( =0.83 DEG)
+ 0959            2DEC   0.00872                            ( =1.57 DEG)
+ 0960   MUE(41)  2DEC   .145011008 B-3  SCALED AT 2(+41)M(+3)/CS(+2)
+P0963   ROUTINE CALCMANU COMPUTES THE SEQUENCE OF MANUEVERS REQUIRED IN GOING FR
+ 0964  9OM AN INITIAL ATTITUDE DEFINED BY THE
+R0965   EULER ANGLES IN THETAD,+1,+2 WHICH ARE THE PRESENT OUTER, MIDDLE, INNER
+ 0966  9GIMBAL ANGLES, TO AN ATTITUDE DEFINED
+R0967   BY THE MATRIX X,Y,ZSCD, THE DESIRED BODY AXES. CALCMANU WILL EXIT WITH A
+ 09671 9 MANEUVER ANGLE IN THETAMAN SCALED AT
+R09672  1 REV, AND THE HALF UNIT VECTOR IN WC. ROTATIONS ARE BASED ON A PITCH/YA
+ 09673 9W-THEN ROLL POLICY. IF THIS
+R09674  POLICY WOULD CAUSE GIMBAL LOCK, A ROLL-PITCH/YAW-ROLL IS ADOPTED. IN EXT
+ 09675 9REMELY RARE CASES, INVOLVING MANEU-
+R09676  VERS FROM ONE GIMBAL LOCK AREA TO THE OTHER, THE POLICY MAY BE PITCH/YAW
+ 09677 9-ROLL-PITCH/YAW-ROLL, OR EVEN ROLL-
+R09678  PITCH/YAW-ROLL-PITCH/YAW-ROLL. IN ALL CASES, IF THE MANEUVER IS A ROLL,
+ 09679 9ROLLFLAG WILL BE ON. IF THERE IS NO
+R0968   MANEUVER REQUIRED,(VEHICLE LESS THAN ABOUT 3 DEGS AWAY FROM DESIRED ATTI
+ 09681 9TUDE),  CALCFLAG WILL BE OFF.
+R09682  OTHERWISE, CALCFLAG IS ON. CALCMANU PRESUMES THAT INITIAL CONDITIONS AND
+ 0969  9 FINAL CONDITIONS ARE NOT IN GIMBAL LOCK
+ 0970            SETLOC 54000
+ 0971  2CALCMANU EXIT   0
+ 0972            TC     FLAG2UP
+ 0973  2         OCT    12000           SET BACKFLAG, CALCFLAG
+ 0974            TC     FLAG2DWN
+ 0975  2         OCT    04600           REMOVE ROLLFLAG  ,NEGFLAG,BEGINFLG
+ 0976  2         TC     INTPRET
+ 0977            AXT,1  1
+ 0978            ITA    ITC
+ 0979                   6
+ 0980                   EXITCADR
+ 0981  2                THETRIG
+ 0982            ITC    0
+ 0983  2                CALCSMNB        COMPUTE X,Y,ZNB
+ 0984            ITC    0
+ 0985  2                CALCNBSC        COMPUTE X,Y,ZSC
+ 0986            AXT,2  1
+ 0987            RTB                    SET X2 TO 0
+ 0988                   0
+ 0989  2                FRESHPD         SET PD POINTER TO 0
+ 0990            DOT    2
+ 0991            ABS    DSU
+ 0992            BPL
+ 0993                   XSC
+ 0994                   XSCD
+ 0995                   COSSIX
+ 0996  2                180/ZERO
+ 0997   NOT179   VXV    1
+ 0998            UNIT
+ 0999                   XSC
+ 1000                   XSCD
+ 1001  2         STORE  WC
+ 1002   ACCEPTWC ABS    1
+ 1003            DSU    BPL
+ 1004                   WC +2
+ 1005                   COS27           IF WC IS 27 OR LESS DEGS AWAY FROM
+ 1006  2                GETPTCH         +,- YSM, GIMBAL LOCK IS IMPOSSIBLE
+ 1007            VXV    1               PITCH/YAW MAY CAUSE GIMBAL LOCK. VARIOUS
+ 1008            VXV    UNIT            TESTS MUST BE MADE
+ 1009                   WC
+ 1010                   UNITY           MP IS POINT OF CLOSEST APPROACH TO +YSM
+ 1011  2                WC              MP TO PD AT 0
+ 10111           DMOVE  0
+ 10112                  ZEROVEC
+ 10113 2         STORE  15D
+ 1012            NOLOD  1
+ 1013            VXV
+ 1014  2                XSCD            MP*XSCD TO PD AT 6
+ 1015            VXV    1
+ 1016            DOT    BPL
+ 1017                   0
+ 1018                   XSC
+ 1019                   -               BRANCH TO BEGINARC IF ARC FROM XSC TO
+ 1020  2                BEGINARC        XSCD DOES NOT INCLUDE MP OR -MP
+ 1021            VAD    1
+ 1022            DOT    BPL
+ 1023                   XSC
+ 1024                   XSCD
+ 1025                   0
+ 1026  2                PLUSPOLE
+ 1027            SWITCH 0
+ 1028  2                NEGFLAG         -MP IS ON ARC
+ 1029   PLUSPOLE ITC    0
+ 1030  2                NORMLIMS
+ 1031            ITC    0
+ 1032  2                FILENORM
+ 1033   180/ZERO DOT    1
+ 1034            BMN
+ 1035                   XSC
+ 1036                   XSCD
+ 1037  2                180CASE
+ 10371           NOLOD  1
+ 10372           DSU    BMN
+ 10373                  COS3
+ 10374 2                NOGIMTST
+ 1038            DOT    3
+ 10382           VXSC   VSLT
+ 10384           VSU    COMP
+ 10386           UNIT   DOT
+ 10388                  ZSCD
+ 1039                   XSC
+ 10392                  XSC
+ 10394                  2
+ 10396                  ZSCD
+ 1040  2                ZSC             COSROLL TO PD AT 0 SCALED AT 2(2)
+ 1041            NOLOD  1
+ 1042            DSU    BPL
+ 1043                   COSSIX
+ 1044  2                CALCSNAP
+ 1045            VXV    1               ROLL IS REQUIRED
+ 1046            DOT
+ 1047                   ZSC
+ 1048                   ZSCD
+ 1049  2                XSC             XSC.(ZSC*ZSCD) TO PD AT 2
+ 1050            TSLT   1
+ 1051            ACOS   SIGN
+ 1052                   0
+ 1053                   1
+ 1054  2         STORE  THETAMAN
+ 1055            ABS    2
+ 1056            DSU    BMN
+ 1057            ITC
+ 1058                   XSC +2
+ 1059                   COS63
+ 1060                   NOTEST
+ 1061  2                ROLLTEST        SHORT ROLL MAY GO THROUGH GIMBAL LOCK
+ 1062   NOTEST   SIGN   1               ATTACH SIGN OF THETAMAN TO WC
+ 1063            VXSC
+ 1064                   NEARONE
+ 1065                   THETAMAN
+ 1066                   XSC
+ 1067  2         STORE  WC
+ 1068            ABS    0               THETAMAN MUST BE +VE FOR MANUJOB
+ 1069                   THETAMAN
+ 1070  2         STORE  THETAMAN
+ 1071  2         EXIT   0
+ 1072            TC     FLAG2UP
+ 1073  2         OCT    04000           SET ROLLFLAG
+ 1074  2         TC     INTPRET
+ 1075            ITCI   0
+ 1076  2                EXITCADR        EXIT ON THE ROLL WHEN PITCH/YAW IS OVER
+ 1077   CALCSNAP SWITCH 1               WE ARE THERE
+ 1078            ITC
+ 1079                   CALCFLAG        REMOVE CALCFLAG
+ 1080  2                CALCSCNB
+ 1081            ITC    0
+ 1082  2                CALCCDU         SET THETAD,S TO CORRECT VALUES
+ 1083            ITCI   0
+ 1084  2                EXITCADR        THIS IS THE LAST EXIT FROM CALCMANU
+ 1085   NORMLIMS ITA    2
+ 1086            RTB    AXC,1           SET PD TO 18
+ 1087            ABS    ACOS
+ 10875                  THETAMAN        (TEMPORARY STORAGE)
+ 1088                   SETPD18
+ 1089                   2               -2 TO X1
+ 1090  2                2               C TO 18
+ 1091   BACKLIM  NOLOD  1
+ 1092            BDSU
+ 1093  2                30DEG           30-C TO 20 AT 4PI
+ 1094            COS    0
+ 1095  2                20D             COS(30-C) TO PD AT 22
+ 1097            SIN    2
+ 1098            DDV    DMP
+ 1099            ACOS   TSRT
+ 1100                   20D
+ 1101                   -
+ 1102                   1/TAN33         (1/TAN33 SCALED AT 2(1) )
+ 1103  2                1               OKA TO 22 AT 4PI
+ 1104            DMOVE  0
+ 1105  2                90DEG           90 DEGREES TO 24
+ 1106            SMOVE  0
+ 1107  2                X1              X1 TO 26
+ 1108            DMOVE  2
+ 1109            COMP   SIGN
+ 1110            DAD    COMP
+ 1111  2                90DEG           -180 IF X1=-2,0 IF X1=0, TO 24
+ 1114            DMOVE  1
+ 1115            TEST   COMP
+ 1116                   90DEG           90DEG SCALED AT 4PI
+ 1117                   NEGFLAG
+ 1118                   POSPOLE
+ 1119  2         STORE  26D
+A1120                                   +90 IN MPAC IF FLAG=0
+A1121                                   -90 IN MPAC IF FLAG=1
+ 1122   POSPOLE  NOLOD  1
+ 1123            SIGN
+ 1124  2                WC +2
+A1125                                   +90 IN 24 IF
+A1126                                     A) FLAG=0, WC +2 POS
+A1127                                     B) FLAG=1, WC +2 NEG
+A1128                                   -90 IN 24 IF
+A1129                                     A) FLAG=0, WC +2 NEG
+A1130                                     B) FLAG=1, WC +2 POS
+ 1131            NOLOD  1
+ 1132            DSU
+ 1133  2                24D             180J-90SIGMIM TO 28
+ 1134            SMOVE  1
+ 1135            BZE
+ 1136                   X1
+ 1137  2                CNEGLIMS        TO CNEGLIMS IF X1 IS ZERO
+ 1138            DSU    0
+ 1139                   28D
+ 1140                   22D
+ 1141  2         STORE  6               NBL1 TO 6, SCALED AT 4PI
+ 1142            DAD    0
+ 1143                   22D
+ 1144  2         STORE  7               NEL1 TO 7
+ 1145            DSU    1
+ 1146            BPL
+ 1147                   18D
+ 1148                   3DEG
+ 1149  2                ENDNORMS
+ 1150            AXT,1  1
+ 1151            RTB    COMP
+ 1152                   0               SET X1 TO 0
+ 1153                   SETPD20
+ 1154                   18D             COMPLEMENT C
+ 11545 2         STORE  18D
+ 1155            ITC    0
+ 1156  2                BACKLIM         BACKLIMITS EXIST IF C LESS THAN 3
+ 1157   CNEGLIMS DSU    0
+ 1158                   28D
+ 1159                   22D
+ 1160  2         STORE  8D              NBL0 TO 8
+ 1161            DAD    2
+ 1162            LXA,1  SXA,1
+ 1163            AXT,1
+ 1164                   28D
+ 1165                   22D
+ 1166                   MPAC
+ 1167                   9D              NEL0 TO 9,PROTECTING 10
+ 1168  2                0               RESET X1 TO 0
+ 1169   ENDNORMS ITCI   0               END OF NORMLIMS CALCULATIONS
+ 1170  2                THETAMAN        END OF NORMLIMS CALCS
+ 1171   FILENORM SMOVE  0
+ 1172                   6D              6 INTO 10 IF X1=0 ,OR
+ 1173  2         STORE  10D,1           6 INTO 12 IF X1=-2
+ 1174            SMOVE  1               7 INTO 11 IF X1=0  , OR
+ 1175            INCR,2                 7 INTO 13 IF X1=-2
+ 1176                   7
+ 1177           -       2               MOVE LIMIT LIST POINTER BY -2 (TO -2)
+ 1178  2         STORE  11D,1
+ 1179            SMOVE  1
+ 1180            BMN    SWITCH
+ 1181                   X1
+ 1182                   SET15D
+ 1183  2                BACKFLAG        SET BACKFLAG
+ 1184            SMOVE  0
+ 1185                   8D
+ 1186  2         STORE  12D             8 INTO 12 IF X1=0
+ 1187            SMOVE  0
+ 1188                   9D
+ 1189  2         STORE  13D             9 INTO 13 IF X1=0
+ 11892  SET15D   DMOVE  1
+ 11893           TEST   COMP
+ 11894                  UNITX
+ 11895                  NEGFLAG
+ 11896                  PLUSMP
+ 11897 2         STORE  15D
+ 11898  PLUSMP   NOLOD  0
+ 11899 2         STORE  15D
+ 1190   BEGINARC AXT,1  1
+ 1191            SWITCH                 SET X1 TO 0
+ 1192                   0
+ 1193  2                BEGINFLG        SET BEGINFLG
+ 1194   ENDCHEK  RTB    1
+ 1195            EXIT
+ 1196  2                SETPD18
+ 1197            TC     FLAG2DWN
+ 1198  2         OCT    00400           REMOVE NEGFLAG
+ 1199  2         TC     INTPRET
+ 1200            ABS*   1
+ 1201            BDSU   BPL
+ 1202                   XSC +2,1
+ 1203                   COS63           IS END CLOSE TO A POLE Q.
+ 1204  2                OVERYET         BRANCH TO OVERYET IF NOT
+ 1205   SETWARN  TEST   1
+ 1206            SWITCH
+ 1207                   BEGINFLG
+ 1208                   DONTSET         SET ROLLFLAG IF BEGINNING OF ARC NEAR
+ 1209  2                ROLLFLAG          LOCK
+ 1210   DONTSET  DMOVE* 1
+ 1211            BPL    SWITCH
+ 1212                   XSC +2,1
+ 1213                   POSPOLE1        IF XSC +2,1 NEG, SET NEGFLAG
+ 1214  2                NEGFLAG
+ 1228   POSPOLE1 SMOVE  2
+ 1229            TEST   BMN
+ 1230            ITC
+ 1231                   15D
+ 1232                   NEGFLAG
+ 1233                   NEAR+MP
+ 1234                   OVERYET
+ 1235  2                F2
+ 1236   NEAR+MP  NOLOD  1
+ 1237            BZE    BPL
+ 1238                   F2
+ 1239  2                OVERYET
+ 1240   F2       DOT    0
+ 12401                  XSCD
+ 12402 2                0
+ 12403           DOT    2
+ 12404           DSU    TEST
+ 12405           COMP
+ 12406                  XSC
+ 12407                  0
+ 12408                  -
+ 12409                  NEGFLAG
+ 1241                   BEGIN1
+ 12411 2         STORE  DTEMP1
+ 12412  BEGIN1   NOLOD  1
+ 12413           TEST   COMP
+ 12414                  BEGINFLG
+ 1242                   BEGIN2
+ 12421 2         STORE  DTEMP1
+ 1243   BEGIN2   NOLOD  1
+ 12431           BPL
+ 12432 2                OVERYET
+ 1246   F3       SMOVE  2               SPLITMANU( IF IT HAPPENS) NEEDS TO KNOW
+ 1247            DSU    TEST            WHICH LIMITS REFER TO THE BEGINNING OF
+ 1248            COMP
+ 1249                   X2
+ 1250                   DP2(-13)
+ 1251                   BEGINFLG
+ 1252                   F4
+ 1253  2         STORE  S1
+A1254                                   IF S1=+,-2, THEN THE LIMITS ABOUT TO BE
+A1255                                   CALCULATED WILL END UP IN PD AT 0
+A1256                                   IF S1=+,-4, THE LIMITS WILL END UP AT
+A1257                                   2,4 IN PD
+A1258                                   IF S1 IS NEG, THEN THE TAGGED LIMITS
+A1259                                   ARE THE ONES NOT TO USE IN SPLTMANU
+A1260                                   IF S1 IS POS, THE TAGGED LIMITS SHOULD
+A1261                                   BE USED
+ 1262   F4       NOLOD  0
+ 1263  2         STORE  S1
+ 12631           DMOVE  1
+ 12632           TEST   COMP
+ 12633                  UNITX
+ 12634                  BEGINFLG
+ 12635                  F5
+ 12636 2         STORE  DTEMP1
+ 12637  F5       NOLOD  1
+ 12638           TEST   COMP
+ 12639                  NEGFLAG
+ 1264                   F6
+ 12641 2         STORE  DTEMP1
+ 12642  F6       NOLOD  1
+ 12643           SIGN
+ 12644                  WC +2
+ 12645 2         STORE  DTEMP1
+ 12646           ABS*   0
+ 12647 2                XSC +2,1        COSC TO 18 AT 2(1)
+ 12648           TSRT   2
+ 1265            DSU    INCR,2
+ 12655           BMN
+ 1267                   18D
+ 1268                   1
+ 1269                   COS3
+ 12695          -       2
+ 1270  2                SOMESUN
+ 1271            ITC    0
+ 12711 2                NORMLIMS
+ 1272            ITC    0
+ 1273  2                ALLSHADE
+ 12731  SOMESUN  VMOVE* 3
+ 12732           VXV    VXV*
+ 12733           UNIT   COMP
+ 12734           TEST   COMP
+ 12735                  XSC,1
+ 12736                  UNITY
+ 12737                  XSC,1
+ 12738                  NEGFLAG
+ 12739                  POSP1
+ 1274  2         STORE  20D
+ 12741  POSP1    LXA,1  1
+ 12742           NOLOD
+ 12743 2                X1
+ 12745           ACOS   1
+ 1275            TSRT
+ 1276                   18D
+ 1277  2                1               C/2 TO 26 SCALED AT 2PI
+ 1278            NOLOD  1
+ 1279            DSU    SIN
+ 1280  2                1.5DEG          SIN(C/2-1.5) TO 28
+ 1281            DSU    1
+ 1282            SIN    DMP
+ 1283                   31.5DEG
+ 1284  2                26D             SIN(C/2-1.5)SIN,31.5-C/2) TO 28
+ 1285            DAD    1
+ 1286            SIN
+ 1287                   26D             SIN(C/2+1.5) TO PD AT 30
+ 1288  2                1.5DEG
+ 1289            DAD    2
+ 1290            SIN    DMP
+ 1291            BDDV   SQRT
+ 1292                   26D
+ 1293                   31.5DEG
+ 1294  2         STORE  VACZ
+ 1295            DMOVE  0
+ 1296                   NEARONE
+ 1297  2         STORE  VACX
+ 1298            RTB    1               PD SET TO AVOID CONFLICT WITH ARCTAN
+ 1299            RTB    BDSU
+ 1300                   SETPD6
+ 1301                   ARCTAN
+ 1302                   DP2(-2)
+ 1303  2         STORE  26D             SA AT 26 SCALED AT 4PI
+ 1304            DOT    0
+ 1305                   WC
+ 1306  2                20D             TO PD TO SIGN AR IN NEXT EQUATION
+ 1308            VMOVE* 4
+ 1309            VXV    UNIT
+ 1310            DOT    COMP
+ 1311            TSLT   ACOS
+ 1312            TSRT   SIGN
+ 1313                   XSC,1           POINT.UNIT(WC*XSC,1)
+ 1314                   WC
+ 1315                   20D
+ 1316                   1
+ 1318                   1               AR TO THETAMAN, SCALED AT 4PI
+ 1319  2         STORE  THETAMAN
+ 1320            DSU    0
+ 1321                   THETAMAN
+ 1322                   26D
+ 1323  2         STORE  10D,2           AR-SA
+ 1324            RTB    1
+ 1325            DAD
+ 1326                   SETPD28
+ 1327                   THETAMAN
+ 1328  2         STORE  11D,2           AR+SA
+ 1329            VMOVE* 1
+ 1330            DOT    ABS
+ 1331                   XSC,1           ABS(XSC,1.MP) TO 26 AT 2(2)
+ 1332  2                0
+ 1333            ABS    1
+ 1334            ACOS
+ 1335  2                2               ACOS(ABS(MP.UNITY)) TO 28
+ 1336            NOLOD  2
+ 1337            DAD    COS
+ 1338            DMP    TSLT
+ 1339                   30DEG
+ 1340                   26D
+ 1341                   1
+ 1342  2         STORE  16D             COSB TO 16 AT 2(2)
+ 1343            DSU    3
+ 1344            ABS    COS
+ 1345            DMP    TSLT
+ 1346            BDSU   BPL
+ 1347                   30DEG
+ 1348                   -
+ 1349                   -
+ 1350                   1
+ 1351                   C33
+ 1352  2                OVERYET         IF C33-COSA POS
+ 1364            ITC    0
+ 1365  2                NORMLIMS
+ 1372            DSU    1
+ 1373            BMN
+ 1374                   C33
+ 1375                   16D
+ 1376  2                ALLSHADE
+ 1377            DMOVE* 0
+ 1378  2                11D,2           11D,2 TO PD FOR PROTECTION
+ 1381            BPL    0
+ 1382                   DTEMP1
+ 1383  2                11MANU
+ 1384            SMOVE  0
+ 1385                   6               NBL1 REPLACES AR-SA
+ 1386  2         STORE  10D,2
+ 1387            DMOVE  0
+ 1388  2         STORE  11D,2           NOW REINSERT 11,2
+ 1389            ITC    0
+ 1390  2                OVERYET
+ 1391   11MANU   SMOVE  0
+ 1392                   7
+ 1393  2         STORE  11D,2
+ 1394            ITC    0
+ 1395  2                OVERYET
+ 1396   ALLSHADE BPL    1
+ 1397            LODON  DMOVE
+ 1398                   DTEMP1
+ 1400                   12MANU
+ 1401                   6
+ 1402  2         STORE  10D,2
+ 1403            SMOVE  0
+ 1404                   9D
+ 1405  2         STORE  11D,2
+ 1406            ITC    0
+ 1407  2                OVERYET
+ 1408   12MANU   SMOVE  0
+ 1409                   8D
+ 1410  2         STORE  10D,2
+ 1411            SMOVE  0
+ 1412                   7
+ 1413  2         STORE  11D,2
+ 14131  OVERYET  SMOVE  1
+ 14132           DAD    BZE
+ 14133                  X2
+ 14134                  DP2(-12)
+ 14136 2                FINISHUP
+ 1414            TEST   2               ENDCHEK IS DONE TWICE, FOR THE
+ 1415            AXC,1  SWITCH          BEGINNING AND FOR THE END OF THE ARC
+ 1416            ITC
+ 1417                   BEGINFLG
+ 1418                   FINISHUP
+ 1419                   18D             -18 TO X1
+ 1420                   BEGINFLG        REMOVE BEGINFLG
+ 1421  2                ENDCHEK         GO BACK, GET LIMITS FOR END OF ARC
+ 1422   FINISHUP SMOVE  1
+ 1423            BZE
+ 1424                   X2
+ 1425  2                GETPTCH         NO LIMITS DETECTED
+ 1426            RTB    1
+ 1427            VXV
+ 1428                   SETPD20
+ 1429                   XNB
+ 1430  2                XSC             XNB*XSC TO PD AT 20
+ 1431            VXV    1
+ 1432            DOT
+ 1433                   WC
+ 1434                   XSC
+ 1435                   20D
+ 1436  2         STORE  18D             (WC*XSC).(XNB*XSC) TO 18
+ 1437            UNIT   3
+ 1438            DOT    COMP
+ 1439            TSLT   ACOS
+ 1440            SIGN   TSRT
+ 1441                   -
+ 1442                   WC
+ 1443                   1
+ 1444                   -
+ 1445                   1
+ 1446  2         STORE  12D,2           SCALED AT 4PI
+ 1447            SMOVE  1
+ 1448            AXC,2  AXT,1
+ 1449                   X2
+ 1450                   0
+ 1451                   0               0 INTO X2 AND X1
+ 1452  2         STORE  30D             SAVE X2
+ 1453   22MANU   SMOVE* 1
+ 1454            DSU
+ 1455                   13D,2
+ 1456  2                12D
+ 1457   23MANU   NOLOD  1
+ 1458            DSU    BPL
+ 1459                   360DEG
+ 1460  2                23MANU
+ 1461   20MANU   NOLOD  1
+ 1462            DAD    BMN
+ 1463                   360DEG
+ 1464                   20MANU
+ 1465  2         STORE  0,1
+ 1466            LXA,1  1
+ 1467            INCR,2 INCR,1
+ 1468                   X1
+ 1469           -       1
+ 1470  2        -       2
+ 1471            SMOVE  1
+ 1472            BDSU   BMN
+ 1473                   X2
+ 1474                   30D
+ 1475  2                22MANU
+ 1476            DAD    1
+ 1477            BZE
+ 1478                   30D
+ 1479                   DP2(-13)
+ 1480  2                EZCASE
+ 1481            DSU    1
+ 1482            BMN
+ 1483                   4
+ 1484                   0
+ 1485  2                30MANU
+ 1486            DSU    1
+ 1487            BMN
+ 1488                   2
+ 1489                   0
+ 1490  2                31MANU
+ 1491            DSU    1
+ 1492            BMN
+ 1493                   2
+ 1494                   4
+ 1495  2                SPLITMNU
+ 1496            DSU    1
+ 1497            BMN
+ 1498                   6
+ 1499                   0
+ 1500  2                GETPTCH
+ 1501            TEST   2
+ 1502            TSRT   DSU
+ 1503            ITC
+ 1504                   BACKFLAG        (BACKFLAG DOWN MEANS DO BACKTEST
+ 1505                   BACKTEST
+ 1506                   0
+ 1507                   1
+ 1508                   6
+ 1509  2                40MANU
+ 1510   31MANU   DSU    1
+ 1511            BMN
+ 1512                   6
+ 1513                   0
+ 1514  2                33MANU
+ 1515   333MANU  TEST   2
+ 1516            DAD    TSRT
+ 1517            DSU    ITC
+ 1518                   BACKFLAG
+ 1519                   BACKTEST
+ 1520                   0
+ 1521                   2
+ 1522                   1
+ 1523                   6
+ 1524  2                40MANU
+ 1525   33MANU   DSU    1
+ 1526            BMN    ITC
+ 1527                   6
+ 1528                   2
+ 1529                   333MANU
+ 1530  2                GETPTCH
+ 1531   30MANU   DSU    1
+ 1532            BMN
+ 1533                   2
+ 1534                   0
+ 1535  2                35MANU
+ 1536            DSU    1
+ 1537            BMN
+ 1538                   6
+ 1539                   4
+ 1540  2                GETPTCH
+ 1541   38MANU   TEST   2
+ 1542            TSRT   DSU
+ 1543            ITC
+ 1544                   BACKFLAG
+ 1545                   BACKTEST
+ 1546                   4
+ 1547                   1
+ 1548                   6
+ 1549  2                40MANU
+ 1550   35MANU   DSU    1
+ 1551            BMN
+ 1552                   2
+ 1553                   4
+ 1554  2                36MANU
+ 1555            DSU    1
+ 1556            BMN
+ 1557                   6
+ 1558                   2
+ 1559  2                37MANU
+ 1560            DSU    1
+ 1561            BPL    ITC
+ 1562                   6
+ 1563                   0
+ 1564                   38MANU
+ 1566  2                GETPTCH
+ 1567   36MANU   DSU    1
+ 15671           BMN
+ 15672                  6
+ 15673                  4
+ 15674 2                366MANU
+ 15675  368MANU  TEST   2
+ 1568            DAD    TSRT
+ 1569            DSU    ITC
+ 1570                   BACKFLAG
+ 1571                   BACKTEST
+ 1572                   4
+ 1573                   2
+ 1574                   1
+ 1575                   6
+ 1576  2                40MANU
+ 1577   37MANU   DSU    1
+ 1578            BMN    ITC
+ 1579                   6
+ 1580                   4
+ 1581                   GETPTCH
+ 1582  2                38MANU
+ 1583   366MANU  DSU    1
+ 1584            BMN    ITC
+ 1585                   6
+ 1586                   2
+ 1587                   368MANU
+ 1588  2                GETPTCH
+ 1591   40MANU   NOLOD  2               ROLL IS IN MPAC,MPAC +1,SCALED AT 4PI
+ 1592            DSU    BMN
+ 1593            DSU    ITC
+ 1594                   DP2(-2)
+ 1595                   41MANU
+ 1596                   DP2(-2)
+ 1597  2                42MANU
+ 1598   41MANU   NOLOD  2
+ 1599            DAD    BPL
+ 1600            DAD    ITC
+ 1601                   360DEG
+ 1602                   43MANU
+ 1603                   DP2(-2)
+ 1604  2                42MANU
+ 1605   43MANU   NOLOD  1
+ 1606            DSU
+ 1607  2                DP2(-2)
+ 1608   42MANU   NOLOD  1
+ 1609            TSLT
+ 1610                   1
+ 1611  2         STORE  THETAMAN        ROLL IN THETAMAN, SCALED AT 2PI
+ 1612            TEST   0
+ 1613                   ROLLFLAG        IF ROLLFLAG ISNT ON
+ 1614  2                DONE            WE ARE DONE
+ 1615            ITC    0
+ 1616  2                ROLLTEST        SHORT WAY ROLL MAY HIT GIMBAL LOCK
+ 1617            ITC    0
+ 1618  2                DONE
+ 1619   ROLLTEST RTB    2
+ 1620            VXV    VXV
+ 1621            UNIT
+ 1622                   FRESHPD
+ 1623                   XSC
+ 1624                   XNB
+ 1625  2                XSC             TEMP1 TO DP AT 0
+ 1626            SIGN   2
+ 1627            VXSC   VXV
+ 1628            VXV    UNIT
+ 1629                   NEARONE
+ 1630                   XSC +2
+ 1631                   XSC
+ 1632                   UNITY
+ 1633  2                XSC
+ 1634            DOT    1
+ 1635            TSLT   ACOS
+ 1636                   0
+ 1637                   6
+ 1638                   1
+ 1639  2         STORE  16D
+ 1640            ABS    1
+ 1641            DSU    BMN
+ 1642                   THETAMAN
+ 1643                   16D
+ 1644  2                ENDTST
+ 1645            VMOVE  2
+ 1646            VXV    DOT
+ 16465           BMN
+ 1647                   -
+ 1648                   -
+ 1649                   XSC
+ 1650  2                50MANU
+ 1651            DMOVE  1
+ 1652            BPL    DAD
+ 1653                   THETAMAN
+ 1654                   ENDTST
+ 1655                   NEARONE
+ 1656  2         STORE  THETAMAN
+ 1657  2         ITCQ   0
+ 1658   50MANU   DMOVE  1
+ 1659            BMN    DSU
+ 1660                   THETAMAN
+ 1661                   ENDTST
+ 1662                   NEARONE
+ 1663  2         STORE  THETAMAN
+ 1664  2ENDTST   ITCQ   0
+ 1665   BACKTEST LXA,2  1
+ 1666            SWITCH
+ 1667                   30D             RESET SAVED X2
+ 1668  2                BACKFLAG        TURN BACKFLAG ON (DONT DO AGAIN)
+ 1669            SMOVE  0
+ 1670                   10D
+ 1671  2         STORE  12D
+ 1672            LXA,1  1
+ 1673            SXA,1  ITC
+ 1674                   11D
+ 1675                   13D
+ 1677  2                FINISHUP
+ 1678   EZCASE   DSU    1
+ 1679            BMN
+ 1680                   2
+ 1681                   0
+ 1682  2                GETPTCH         NO ROLL REQ,D
+ 1683            TEST   2
+ 1684            TSRT   DSU
+ 1685            ITC
+ 1686                   BACKFLAG
+ 1687                   BACKTEST
+ 1688                   0
+ 1689                   1
+ 1690                   2
+ 1691  2                40MANU
+ 16911  180CASE  NOLOD  1
+ 16912           DAD    BPL
+ 16913                  COSONE
+ 16914 2                NOT179
+ 1692            DOT    2
+ 1693            ABS    DSU
+ 1694            BPL
+ 1695                   XSC
+ 1696                   UNITY
+ 1697                   COSONE
+ 1698  2                ZEROWC
+ 1699            VXV    1
+ 1700            VXV    UNIT
+ 1701                   XSC
+ 1702                   UNITY
+ 1703                   XSC
+ 1704  2         STORE  WC
+ 1705            ITC    0
+ 1706  2                ACCEPTWC
+ 1707   ZEROWC   VMOVE  0
+ 1708                   ZSC
+ 1709  2         STORE  WC
+ 1710            ITC    0
+ 1711  2                ACCEPTWC
+ 1720   NOGIMTST VXV    1
+ 1721            UNIT
+ 1722                   XSC
+ 1723                   XSCD
+ 1724  2         STORE  WC
+ 1725            ITC    0
+ 1726  2                GETPTCH
+ 1730   DONE1    ABS    1
+ 1731            DSU    BMN
+ 1732                   THETAMAN
+ 1733                   1.5DEG
+ 1734  2                GETPTCH
+ 1761            SIGN   1
+ 1762            VXSC
+ 1763                   NEARONE
+ 1764                   THETAMAN
+ 1765                   XSC
+ 1766  2         STORE  WC
+ 1767            ABS    0
+ 1768                   THETAMAN
+ 1769  2         STORE  THETAMAN
+ 1770  2         EXIT   0
+ 1771            TC     FLAG2UP
+ 1772  2         OCT    04000           SET ROLLFLAG
+ 1773  2         TC     INTPRET
+ 1774            ITCI   0               EXIT FOR ROLL THAT AVOIDS GIMBAL LOCK IN
+ 1775  2                EXITCADR        SUBSEQUENT PITCH/YAW MANEUVER
+ 1776   SPLITMNU SMOVE  3
+ 1777            ABS    DSU
+ 1778            BHIZ   LODON
+ 1779            SMOVE  BPL
+ 1780                   S1
+ 1781                   DP2(-13)
+ 1782                   SPLIT1
+ 1783                   S1
+ 1784  2                SPLIT3
+ 1785   SPLIT2   DSU    1
+ 1786            BMN
+ 1787                   6
+ 1788                   0
+ 1789  2                SPLIT5
+ 1790            TSRT   1
+ 1791            DSU    ITC
+ 1792                   0
+ 1793                   1
+ 1794                   6
+ 1795  2                40MANU
+ 1796   SPLIT3   DSU    1
+ 1797            BPL
+ 1798                   6
+ 1799                   4
+ 1800  2                SPLIT4
+ 1801            DSU    1
+ 1802            BPL
+ 1803                   6
+ 1804                   2
+ 1805  2                SPLIT5
+ 1806   SPLIT4   DAD    2
+ 1807            TSRT   DSU
+ 1808            ITC
+ 1809                   2
+ 1810                   4
+ 1811                   1
+ 1812                   6
+ 1813  2                40MANU
+ 1814   SPLIT1   SMOVE  1
+ 1815            BPL    ITC
+ 1816                   S1
+ 1817                   SPLIT2
+ 1818  2                SPLIT3
+ 1819   SPLIT5   ITC    0
+ 1820  2                CALCPTCH
+ 1821            DMOVE  1
+ 1822            TSRT
+ 1823                   THETAMAN
+ 1824                   1
+ 1825  2         STORE  THETAMAN
+ 1826            ITC    0
+ 1827                   GETPTCH2
+ 1832   GETPTCH  ITC    0
+ 1833  2                CALCPTCH
+ 1834  2GETPTCH2 EXIT   0
+ 1835            TC     FLAG2DWN
+ 1836  2         OCT    04000           REMOVE ROLLFLAG
+ 1837  2         TC     INTPRET
+ 1838            ITCI   0
+ 1839  2                EXITCADR        EXIT FOR PITCH/YAW PORTION OF MANEUVER
+ 1840   CALCPTCH DOT    1
+ 1841            TSLT   ACOS
+ 1842                   XSC
+ 1843                   XSCD
+ 1844                   1
+ 1845  2         STORE  THETAMAN
+ 1846  2         ITCQ   0
+ 18461           TC     CCSHOLE
+ 18465 2         TC     CCSHOLE
+ 1847   COS3     2DEC   .249657385      SCALED AT 2(4)
+ 1848   COS27    2DEC   .445503260      SCALED AT 2(1)
+ 1849   COS63    2DEC   .226995250      SCALED AT 2(1)
+ 1850   COS30    2DEC   .433012700      SCALED AT 2(1)
+ 1851   1/TAN33  2DEC   .76993250       SCALED AT 2(1)
+ 1852   1.5DEG   2DEC   .004166666      SCALED AT 2PI
+ 1853   31.5DEG  2DEC   .0875           SCALED AT 2PI
+ 1854   30DEG    2DEC   .08333333       SCALED AT 2PI
+ 1855   3DEG     2DEC   .00833333       SCALED AT 2PI
+ 1856   90DEG    2DEC   0.125           SCALED AT 4PI
+ 1861   DP2(-2)  2DEC   0.25
+ 1862   SIN30    EQUALS DP2(-2)
+ 1863   DP2(-13) 2OCT   0000200000
+ 1864   C33      2DEC   .209667643
+ 1865   UNITX    2DEC   0.5
+ 1866   ZEROVEC  2DEC   0.0
+ 1867            2DEC   0.0
+ 1868   UNITY    2DEC   0.0
+ 1869            2DEC   0.5
+ 1870            2DEC   0.0
+ 1871   SCNBMAT  2DEC   0.419335300
+ 1872            2DEC   0.0
+ 1873            2DEC   -.272319500
+ 1874            2DEC   0.0
+ 1875            2DEC   0.5
+ 1876            2DEC   0.0
+ 1877            2DEC   0.272319500
+ 1878            2DEC   0.0
+ 1879            2DEC   0.419335300
+ 1880   DTH      2DEC   0.005555        2.0 DEG SCALED AT 2PI
+ 1881            2DEC   0.01            3.6 DEG
+ 1882  4         2DEC   0.020833        7.5 DEG
+ 1883   SETPD16  CAF    SIXTN
+ 1884            AD     FIXLOC
+ 1885            TS     PUSHLOC
+ 1886  2         TC     RE-ENTER
+ 1887   SETPD6   CAF    SIX
+ 1888  2         TC     SETPD16 +1
+ 1889   SETPD18  CAF    EIGHTN
+ 1890  2         TC     SETPD16 +1
+ 1891   SETPD28  CAF    TWENTY8
+ 1892  2         TC     SETPD16 +1
+ 1893   SETPD20  CAF    TWENTY0
+ 1894  2         TC     SETPD16 +1
+ 18943  COSONE   2DEC   .2499625        SCALED AT 2(4)
+ 18945  COSSIX   2DEC   .2480300        SCALED AT 2(4)
+ 1895   180DEG   EQUALS UNITX           SCALED AT 2PI.
+ 1896   DP2(-1)  EQUALS UNITX
+ 1897   360DEG   EQUALS UNITX           SCALED AT 4PI.
+ 1900  2CFACTOR  EQUALS UNITX
+ 2001   DONE     DOT    2
+ 2002            DAD    BPL
+ 2003            LODON  VXV
+ 2005                   XSC
+ 2006                   XSCD
+ 2007                   COSSIX
+ 2008                   DONE1
+ 2009                   UNITY
+ 2010  2                XNB
+ 2011            SIGN   1
+ 2012            VXSC   UNIT
+ 2013                   NEARONE
+ 2014                   XNB +2
+ 2015  2         STORE  WC
+ 2016            DMOVE  1
+ 2017            TSRT
+ 2018                   30DEG
+ 2019                   1
+ 2020  2         STORE  THETAMAN
+ 2021            ITC    0
+ 2022  2                GETPTCH2
+ 20221  R280K    2DEC   6.463509 E6 B-24
+ 20222  R400K    2DEC   6.500085 E6 B-24
+ 20223  DP.36    2DEC   .36 B-6
 *       ENDOFJOB
