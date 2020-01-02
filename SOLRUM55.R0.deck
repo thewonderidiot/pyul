@@ -23582,4 +23582,79 @@ P0105  2         TASKS FOR WAITLIST TESTER.
  0116  2QTSK10   TC     TASKOVER
  0117   QTSK4DEL DEC    77              TUNING CONSTANTS.
  0118   QTSK6DEL DEC    78
+L 000   SUM-CHECK END OF RECORD MARKS
+R0001   EACH VALID BANK MUST HAVE AN EOR CONSISTING OF TWO TC SELF WORDS TO
+R0002  2SIGNIFY THE END OF GOOD PARITY DATA.
+ 0004  2         BANK   1
+ 0005            TC
+ 0006  2         TC
+ 0008  2         BANK   2
+ 0009            TC
+ 0010  2         TC
+ 0012  2         BANK   3
+ 0013            TC
+ 0014  2         TC
+ 0016  2         BANK   4
+ 0017            TC
+ 0018  2         TC
+ 0020  2         BANK   5
+ 0021            TC
+ 0022  2         TC
+ 0024  2         BANK   6
+ 0025            TC
+ 0026  2         TC
+ 0028  2         BANK   7
+ 0029            TC
+ 0030  2         TC
+ 0032  2         BANK   10
+ 0033            TC
+ 0034  2         TC
+ 0036  2         BANK   11
+ 0037            TC
+ 0038  2         TC
+ 0040  2         BANK   12
+ 0041            TC
+ 0042  2         TC
+ 0044  2         BANK   13
+ 0045            TC
+ 0046  2         TC
+ 0048  2         BANK   14
+ 0049            TC
+ 0050  2         TC
+ 0052  2         BANK   21
+ 0053            TC
+ 0054  2         TC
+ 0056  2         BANK   22
+ 0057            TC
+ 0058  2         TC
+ 0060  2         BANK   23
+ 0061            TC
+ 0062  2         TC
+ 0064  2         BANK   24
+ 0065            TC
+ 0066  2         TC
+ 0068  2         BANK   25
+ 0069            TC
+ 0070  2         TC
+ 0072  2         BANK   26
+ 0073            TC
+ 0074  2         TC
+ 0076  2         BANK   27
+ 0077            TC
+ 0078  2         TC
+ 0080  2         BANK   30
+ 0081            TC
+ 0082  2         TC
+ 0084  2         BANK   31
+ 0085            TC
+ 0086  2         TC
+ 0088  2         BANK   32
+ 0089            TC
+ 0090  2         TC
+ 0092  2         BANK   33
+ 0093            TC
+ 0094  2         TC
+ 0096  2         BANK   34
+ 0097            TC
+ 0098            TC
 *       ENDOFJOB
