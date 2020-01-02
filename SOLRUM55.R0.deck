@@ -23225,4 +23225,242 @@ R3001    -----------------------------
  3262   NU/PIPDT DEC    200 B6
  3264   ENTMASK  OCT    01741
  3265   ENTRYSW  OCT    01341
+L      2AVERAGE G INTEGRATOR
+R0001            ROUTINE CALCRVG INTEGRATES THE EQUATIONS OF MOTION BY AVERAGING
+ 0002  9 THE THRUST AND GRAVITATIONAL ACCELERA-
+R0003   TIONS OVER A TIME INTERVAL, DELTAT
+R0004            FOR THE EARTH-CENTERED GRAVITATIONAL FIELD THE PERTURBATION DUE
+ 0005  9 TO OBLATENESS IS COMPUTED TO THE FIRST
+R0006   HARMONIC COEFFICIENT J
+R0007            ROUTINE NORMLISE MUST BE CALLED PRIOR TO THE FIRST ENTRY INTO C
+ 0008  9ALCRVG. IT REQUIRES RN SCALED TO 2(+29)M
+R0009   IT LEAVES RN NORMALISED, SO THAT THE SCALED MAGNITUDE OF THE VECTOR CONT
+ 0010  9AINS ONE LEADING ZERO, BY SHIFTING THE
+R0011   VECTOR LEFT N BINARY PLACES
+R0012            ROUTINE CALCRVG REQUIRES
+R0013                   1) THRUST ACCELERATION INCREMENTS IN DELV SCALED SAME AS
+ 0014  9 PIPAX,Y,Z
+R0015                   2) VN SCALED AT 2(+7) M/CS
+R0016                   3) ADDRESS OF CALCGLUN OR CALCGEAR IN CALCG
+R0017                   4) DELTAT SCALED AT 2(+9) CS
+R0018                   5) PUSH-DOWN COUNTER SET TO ZERO
+R0019  4IT LEAVES UPDATED RN, SCALED AT 2(29-N) M, VN, AND GRAVITY SCALED AT 2(-
+ 0020  95) M/CS/CS
+R0021  2  CONTINUE ON IN BANK 30.
+ 0022   NORMLISE ABVAL  3               COUNT NUMBER OF LEADING ZEROS IN
+ 0023            TSLC   INCR,1          ABVAL (RN) AND STORE -N(=2-M) IN NSHIFT
+ 0024            SXA,1  INCR,1          RN MUST BE SCALED AT 2(+29)M
+ 0025            SXA,1  ITA
+ 0026                   RN
+ 0027                   X1
+ 0028                   2
+ 0029                   NSHIFT          SAVE C(X1)=-N
+ 0030                   14D
+ 0031                   XSHIFT          SAVE C(X1) =14-N
+ 0032  2                S2
+ 0033            VMOVE  1
+ 0034            VSLT*
+ 0035                   RN
+ 0036                   14D,1
+ 0037  2         STORE  RN              RN SCALED AT 2(29-N)METRES
+ 0038            ITC    0
+ 0039  2                CALCGRV1
+ 0040            ITCI   0
+ 0041  8                S2
+ 0042   CALCRVG  VXSC   0
+ 0043                   DELV
+ 0044  2                KPIP            DV TO PD SCALED AT 2(+4)M/CS
+ 0045            VXSC   1
+ 0046            LXA,1  BVSU
+ 0047                   GRAVITY
+ 0048                   DELTAT
+ 0049                   XSHIFT
+ 0050  2                0               (DV-(OLD GDT))/2 TO PD SCALED 2(+3)M/CS
+ 0051            NOLOD  3
+ 0052            VSRT   VAD
+ 0053            VXSC   VSLT*
+ 0054            VAD    ITA
+ 0055                   4
+ 0056                   VN
+ 0057                   DELTAT
+ 0058                   0,1
+ 0059                   RN
+ 0060                   S2
+ 0061  2         STORE  RN1             SCALED AT 2(29-N) METERS
+ 0062            ITC    0
+ 0063  2                CALCGRV1
+ 0064            NOLOD  3
+ 0065            VXSC   BVSU
+ 0066            VAD    VSRT
+ 0067            VAD
+ 0068                   DELTAT
+ 0069                   -               (DV-(OLD GDT))/2
+ 0070                   -               DV/2
+ 0071                   4
+ 0072                   VN
+ 0073  2         STORE  VN1             SCALED AT 2(+7) MET/CS
+R0074  2 IN AVERAGE G, UP THE PHASE BITS BY 2 OF ACTIVE PROG BEFORE COPY CYCLE.
+ 0075  2         EXIT   0
+ 0076            INDEX  FIXLOC
+ 0077            CS     S2              SAVE NEG RETURN ADDRESS IN NON-VAC AREA.
+ 0078  2CALCRVG2 TS     AVGRETRN        SAVE NEGATIVE OF RETURN ADDRESS.
+ 0079            CS     -PHASE1 + 4     PICK UP PHASE5.
+ 0080            AD     ONE             INCREMENT BY 1.
+ 0081            TC     NEWPHASE        AND CALL ROUTINE TO CHANGE PHASE.
+ 0082  2         OCT    00005
+ 0083   REFAZE6  INHINT
+ 0084            CAF    ELEVEND
+ 0085            TS     MPAC            USE MPAC FOR LOOP COUNTER.
+ 0086            INDEX  MPAC
+ 0087            CS     RN1             RN1 AND VN1 MUST BE IN ORDER.
+ 0088            COM                    LEAVE RN1 ALONE IN CASE OF RESTARTS.
+ 0089            INDEX  MPAC            SELECT THE RIGHT TERM.
+ 0090  2         TS     RN              ...AND GO THRU COPY CYCLE.
+ 0091            CCS    MPAC            ARE WE DONE..
+ 0092            TC     REFAZE6 + 2     NO, NOT YET.
+ 0093            CS     BIT2            YES, MPAC = 0.
+ 0094            MASK   TMMARKER
+ 0095            AD     BIT2            SET BIT 2 TO ONE IN TMMARKER.
+ 0096  2         TS     TMMARKER
+A0097                                   WHAT ABOUT GRAVITY FOR RESTART..
+ 0098            RELINT
+ 0099            CS     AVGRETRN        NEG OF ADDRESS WAS STORED.
+ 0100  4         TC     BANKJUMP
+ 0101  4ELEVEND  DEC    11              11D  (ELEVEN DECIMAL, OF COURSE.)
+ 0102   CALCGRAV LXA,1  0
+ 0103  2                XSHIFT
+ 0104   CALCGRV1 NOLOD  1
+ 0105            UNIT
+ 0106  2         STORE  UNITR
+ 0107            DMOVE  1
+ 0108            TSLT
+ 01081                  30D
+ 01082                  1
+ 0109  2         STORE  RMAG            SCALED AT 2(30-N)M
+ 0110            TSLT   0
+ 0111                   28D
+ 0112                   2
+ 0113  2         STORE  RMAGSQ          SCALED AT 2(+50)M(+2)
+ 0114            ITA    1
+ 0115            XAD,1
+ 0116                   27D
+ 0117  2                NSHIFT
+ 0119   CALCGEAR DOT    0
+ 0120                   UNITR
+ 0121                   UNITW
+ 0122  2         STORE  25D
+ 0123            NOLOD  2
+ 0124            DSQ    DMP
+ 0125            TSLT   BDSU
+ 0126                   DP(5/8)
+ 0127                   4
+ 0128  2                DP2(-3)
+ 0129            DDV    1
+ 0130            TSLT*
+ 0131                   J(RE)SQ         SCALED AT 2(+40) M(+2)
+ 0132                   RMAGSQ
+ 0133                   0,1
+ 0134  2         STORE  23D             J(RE/RN) SQ SCALED AT 2(-3)
+ 0135            NOLOD  2
+ 0136            DMP    VXSC
+ 0137            VAD
+ 0138                   -
+ 0139                   UNITR
+ 0140  2                UNITR
+ 0141            DMP    1
+ 0142            VXSC   VAD
+ 0143                   23D
+ 0144                   25D
+ 0145  2                UNITW
+ 0146            DMOVE  1
+ 0147            ITC
+ 0148                   MUEARTH
+ 0149  2                MU/RSQ
+ 0150   CALCGLUN VMOVE  0
+ 0151  2                UNITR
+ 0152            DMOVE  1
+ 0153            INCR,1
+ 0154                   MUMOON
+ 0155  2                6
+ 0156   MU/RSQ   NOLOD  2
+ 0157            DDV    TSLT*
+ 0158            VXSC
+ 0159                   RMAGSQ          C(X1)=14-2N  (EARTH)
+ 0160                   5,1                  =20-2N  (MOON)
+ 0161  2         STORE  GRAVITY         SCALED AT 2(-5) M/CS/CS
+ 0162            ITCI   0
+ 0163  2                27D
+ 0164   KPIP     2DEC   0.59904
+ 0165   DP2(-3)  2DEC   0.125
+ 0166   DP(5/8)  2DEC   0.625
+ 0167   MUEARTH  2DEC   .009063188 B-3  SCALED AT 2(+45)M(+3)/CS(+2)
+ 0168   MUMOON   2DEC   0.007134481     4.90277800 E12        2(+36)M(+3)/CS(+2)
+ 0169   J(RE)SQ  2DEC   .06006663 B-3   SCALED AT 2(+43)M(+2)
+P0200            ROUTINE FOR FLIGHTS 501 &2 TO INCORPORATE STATE VECTOR UPDATE D
+ 0201  9URING AVERAGE G. EACH PASS THROUGH
+R0202  2SERVICER COMES HERE TO SEE IF AN UPDATE IS READY.
+ 0203  2         BANK   26
+ 0204   501UPCHK DSU    2               IF PIPTIME IS GREATER THAN OR EQUAL TO
+ 0205            BMN    TEST              UPTIME, AND UPTIME IS NOT TOO OLD, AND
+ 02055           DSU    BPL               UPDATFLG IS SET, DO THE UPDATE. UPTIME
+ 0206                   PIPTIME           IS NORMALLY SET TO POSMAX
+ 0207                   UPTIME          POSMAX.
+ 0208                   REGSTEP
+ 0209                   UPDATFLG
+ 0210  2                REGSTEP
+ 02104                  2.5SEC26
+ 02108                  BADUPTIM
+ 0211            MXV    1               TRANSFORM DATA IN STBUFF TO SM COORDS.
+ 0212            VSLT
+ 0213                   STBUFF +6
+ 0214                   REFSMMAT
+ 0215                   1               THIS ASSUMES THAT UPDATE SCALED 2(7)M/CS
+ 0216  2         STORE  VN1
+ 0217            MXV    1
+ 02175           VSLT
+ 0218                   STBUFF
+ 0219                   REFSMMAT
+ 0220                   2               THIS ASSUMES THAT UPDATE SCALED 2(26)M
+ 0221  2         STORE  RN1
+ 0222            ITC    0               CALCULATE THE ASSOCIATED GRAVITY VECTOR
+ 0223  2                CALCGRAV        FOR THE NEXT TIME STEP.
+ 0224  2         EXIT   0
+ 0225            TC     PHASCHNG        UPDATE RESTART POINT BEFORE SETTING
+ 0226  2         OCT    03005           UPTIME TO SHOW THAT THE DATA HAS BEEN
+ 0227   REDO5.24 TC     FLAG1DWN        INCORPORATED. ALSO, INDICATE THIS TO THE
+ 0228  2         OCT    20000           GROUND BY RESETTING UPDATFLG.
+ 0229            CAF    POSMAX
+ 0230            TS     UPTIME
+ 0231  2         TS     UPTIME +1
+ 0233            CS     501AVEX         SET UP FOR AVERAGE G TO RETURN TO USUAL
+ 0234            TC     POSTJUMP        POINT IN SERVICER
+ 02345 2         CADR   CALCRVG2
+ 02346  BADUPTIM EXIT   0               COME HERE IF UPTIME REPRESENTS PAST TIME
+ 02347           TC     ALARM
+ 02348 2         OCT    01411
+ 02349           CAF    POSMAX
+ 0235            TS     UPTIME
+ 02351 2         TS     UPTIME +1
+ 02352           TC     FLAG1DWN        RESET UPDAT FLAG
+ 02353 2         OCT    20000
+ 02354 2         TC     INTPRET
+ 02355           ITC    0
+ 02356 2                REGSTEP
+ 02357  2.5SEC26 2DEC   250
+ 02358  501AVEX  CADR   AVGRET
+P0500  4SIM FLIGHT SPECIAL
+ 0501  2         BANK   31
+ 0502  2MALSJOB  TC     INTPRET
+ 0503            VXM    0
+ 0504                   STBUFF
+ 0505                   REFSMMAT
+ 0506  2         STORE  STBUFF
+ 0507            VXM    1
+ 0508            VSLT
+ 05085                  STBUFF +6
+ 0509                   REFSMMAT
+ 05095                  1
+ 0510  2         STORE  STBUFF +6
+ 0511  2         EXIT   0
+ 0512            TC     ENDOFJOB
 *       ENDOFJOB
