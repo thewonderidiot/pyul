@@ -21710,4 +21710,1519 @@ L       DUMMY 501 INITIALISATION
  0021            TC     FINDVAC
  0022  2         CADR   S4BSMSEP
  0023            TC     TASKOVER
+L      2RE-ENTRY CONTROL
+ 0001  2         SETLOC 56000
+R0002            THE PIPUP SECTION IS A TASK WHICH READS THE PIPAS EVERY .5
+R0003   SECONDS. ACCELERATION HISTORY OVER THE LAST TWO SECONDS (FOUR READINGS)
+R0004   IS MAINTAINED  IN THE XPIPBUF, YPIPBUF, AND ZPIPBUF REGISTERS. EACH PIPA
+R0005   READING IS SUMMED INTO THE XPIPSUM ETC. REGISTERS, AND EVERY FOURTH READ
+R0006   ING AVERAGE G IS CALLED TO USE THE SUMMED READINGS TO UPDATE POSITION
+R0007  2AND VELOCITY AND SET THE PIPSUM REGISTERS TO ZERO.
+R0014  2  GOES THRU PIPUP ONLY EVERY 2 SEC.  (ELSEWHERE MORE OFTEN.)
+ 00143           CADR   REPIPASR
+ 00145  REPIPUP  CAF    -1
+ 00147 2         TC     PIPUP + 1       REREAD PIPAS IF NECESSARY.
+ 0015            CADR   PIPASR
+ 0016   PIPUP    CAF    -1
+ 0017  2         TC     ISWCALL          GO TO PIPAREAD SUBROUTINE.
+ 0018            CAF    THIRTN          PICK UP AT REDO5.13
+ 00181           TC     NEWPHASE
+ 00182 2         OCT    5               5.13 RESTART.  (NO TIME CALL.)
+ 00188  REDO5.13 CAF    DT
+ 0019            TC     WAITLIST
+ 0020  2         CADR   PIPUP
+ 00202           CS     PIPTIME + 1
+ 00205 2         TS     TBASE5          SAVE NEW TIME.
+ 0022            CAF    IPIPDT
+ 0023            TC     WAITLIST
+ 0024  2         CADR   INTERPIP         READ ACCELERATION MORE OFTEN.
+ 0026            CAF    PRIO16
+ 0027            TC     FINDVAC
+ 0028  2         CADR   ENTRYTOP
+ 0035            CAF    TWO
+ 0036  2         TS     PIPCTR
+ 00362           CAF    FOURTN          THIS WILL PICK UP AT ENTRYTOP + 3.
+ 00364           TC     NEWPHASE
+ 00366 2         OCT    5               5.14 RESTART.
+ 0037  4         TC     TASKOVER
+ 0041   IPIPDT   DEC    50
+P0042  2         JOB WHICH PROCESSES PIPA READINGS TO UPDATE POSITION AND VELOCI
+ 0043   ENTRYTOP XCH    TENTRY          UPDATE ENTRY TIME.
+ 0044            AD     TWO
+ 0045  2         XCH    TENTRY          IN SECS SINCE START OF ENTRY.
+ 0046            CAF    ONE
+ 0047  2         TS     PIPAGE
+ 0048            CS     DELVX
+ 0049            TS     XPIPBUF + 3
+ 0050            CS     DELVY
+ 0051            TS     YPIPBUF + 3
+ 0052            CS     DELVZ            SAVE PIP COUNTS.
+ 0053  2         TS     ZPIPBUF + 3
+ 00581           TC     PHASCHNG
+ 00582           OCT    01705           5.15 RESTART PICKS UP AT REFAZE4.
+ 00586           TC     BANKCALL        COMPENSATE THE PIPA DATA
+ 00587 2         CADR   1/PIPA
+ 0059  2REFAZE4  TC     INTPRET
+ 0060            ITC    0               GO TO AVERAGE G INTEGRATION ROUTINES TO
+ 0061                   CALCRVG         USE PIPA READINGS TO UPDATE POSIITON AND
+A0062                                   VELOCITY.
+ 00622           TC     PHASCHNG
+ 00623 2         OCT    02105           5.17 RESTART AT REFAZE8.
+ 00625  REFAZE8  TC     INTPRET
+P0063  2 PROCESS AVERAGE G OUTPUT...SCALE IT AND GET INPUT DATA
+ 0064   SCALEPOP VXSC   0
+ 0065                   VPIP             KVSCALE = (12800/.3048)0(25766.1973 X2)
+ 0066                   KVSCALE          KVSCALE = .81491944
+ 0067  2         STORE  (V)              V VECTOR
+ 0068            TEST   2
+ 0069            VXV    VXSC             (VREL) = (V) + KWE UNITR*UNITW
+ 0070            VAD
+ 0071                   RELVELSW         SWITCH NUMBER.
+ 0072                   GETUNITV
+ 0073                   UNITR
+ 0074                   UNITW
+ 0075                   KWE
+ 0076                   (V)
+ 0077  2         STORE  (V)              NEW V VECTOR IS RELATIVE.
+ 0078   GETUNITV NOLOD  1
+ 0079            UNIT
+ 0080  2         STORE  UNITV            HALF MAX, OF COURSE.
+ 0081            TSLT   0
+ 0082                   28D              RESCALE MAGNITUDE SQUARED.
+ 0083                   2                SHIFT COUNT.  (2 BECAUSE HALF-LEN SQRD
+ 0084  2         STORE  VSQUARE          VELOCITY SQUARED. (NORMAL SCALING)
+ 0085            DSU    0                LEQ = VSQUARE-1
+ 0086                   VSQUARE          4 G-S FULL SCALE
+ 0087                   FOURTH
+ 0088  2         STORE  LEQ
+ 0089            TSLT   0
+ 0090                   30D
+ 0091                   1
+ 0092  2         STORE  V
+ 0093            DOT    1
+ 0094            TSLT
+ 0095                   (V)              RDOT = V.UNITR
+ 0096                   UNITR
+ 0097                   1                AND SCALE BACK UP, UNITS ARE 1/2.
+ 0098  8         STORE  RDOT
+ 0099            DMOVE  0                SAVE OLD DRAG VALUE.
+ 0100                   D
+ 0101  2         STORE  DOLD
+ 0102            ABVAL  2
+ 0103            TSLT   DMP
+ 0104            BZE
+ 0105                   DELV             KASCALE=5.85 16384/(4 .3048 805 100)
+ 0106                   2                2 FOR 2 SEC,  3 FOR 1 SEC, 4 FOR  .5 --
+ 0107                   KASCALE           = 3.   /4                       /25
+ 0108                   SETMIND
+ 0109  2         STORE  D                ACCELERATION   (DRAG, ALMOST)
+ 0110   GETUNI   VXV    1                UNI = UNIT(V*R)
+ 0111            UNIT
+ 0112                   (V)              COULD USE UNITV.
+ 0113                   UNITR
+ 0114  2         STORE  UNI              INERTIAL OR RELATIVE AS IS (V).
+R0115  2   SOME OF THE FOLLOWING TARGETTING MIGHT BE DONE LESS OFTEN THAN ABOVE.
+ 0116            TEST   1                THIS TEST MIGHT BE COMBINED WITH  THE
+ 0117            DMOVE                   PREVIOUS ONE IF ALL CALCULATIONS ARE
+ 0118                   RELVELSW         DONE EVERY CYCLE.
+ 0119                   GETETA
+ 0120                   PIPTIME
+ 0121  8         STORE  DTEAROT
+ 0122   UPDATERT ITC    0                UPDATE PREDICTED TARGET VECTOR RT
+ 0123  2                EARROT2
+ 0124            NOLOD  1
+ 0125            DOT    RTB              SINCE (RT) UNIT VEC, THIS IS 1/4 MAX.
+ 0126                   UNI              LATANG = RT.UNI
+ 0127                   FRESHPD
+ 0128            STORE  LATANG           LATANG = MAC LATANGLE/4 (NO 2 PI)
+A0129  2                                 UNUSUAL SCALING FOR LATANG. ( = ASIN L.
+ 0130   GETANGLE DOT    3                THETA = ARCCOS(RT.UNITR)
+ 0131            DSU    BPL              RT IS UNIT VECTOR
+ 0132            DAD    TSLT
+ 0133            ACOS
+ 0134                   RT
+ 0135                   UNITR
+ 0136                   NEAR1/4          TO IMPROVE ACCURACY, CALC RANGE BY
+ 0137                   TINYTHET         TINYTHET IF HIGH ORDER PART OF
+ 0138                   NEAR1/4          ARCCOS ARGUMENT IS ZERO
+ 0139                   1
+ 0140  2         STORE  THETAH
+ 01402 2         EXIT   0
+ 01404  REFAZE10 TC     PHASCHNG
+ 01405           OCT    02205           5.18 RESTART AT REFAZE10
+ 01407           TC        INTPRET
+P0141  2         JUMP TO PARTICULAR RE-ENTRY PHASE.
+ 0142   SEQUENCE ITCI   0               BRANCHES TO VARIOUS CONTROL PHASES.
+ 0143  2                GOTOADDR        ADDRESS OF PHASE EQS STORED HERE.
+R0144            GOTOADDR CONTAINS THE ADDRESS OF THE ROLL COMMAND EQUATIONS
+R0145  2APPROPRIATE TO THE CURRENT PHASE OF RE-ENTRY.  SEQUENCING IS AS FOLLOWS:
+R0146   INITROLL SET HERE INITIALLY.  HOLDS INITIAL ROLL ATTITUDE UNTIL KAT  EX-
+R0147            CEEDED. THEN HOLDS NEW ROLL ATTITUDE UNTIL VRTHRESH EXCEEDED.
+R0148  2         THEN BRANCHES TO
+R0149   HUNTEST  THIS SECTION CHECKS TO SEE IF THE PREDICTED RANGE AT NOMINAL
+R0150            L/D FROM PRESENT CONDITIONS IS LESS THAN THE DESIRED RANGE
+R0151              IF NOT-- A ROLL COMMAND IS GENERATED BY THE CONSTANT DRAG
+R0152              CONTROLLER.
+R0153              IF SO-- CONTROL AND GOTOADDR ARE SET TO UPCONTRL
+R0154            USUALLY NO ITERATION IS INVOLVED EXCEPT IF THE RANGE DESIRED IS
+R0155  2         TOO LONG ON THE FIRST PASS THRU HUNTEST.
+R0156   UPCONTRL CONTROLS ROLL DURING THE SUPER-CIRCULAR PHASE. UPCONTRL IS TERM
+R0157            INATED EITHER (A) WHEN THE DRAG (AS MEASURED BY THE PIPAS)
+R0158            FALLS BELOW Q7 OR (B) IF RDOT IS NEGATIVE AND REFERENCE VL
+R0159            EXCEEDS V.  IN CASE (A), GOTOADDR IS SET TO KEP2 AND IN (B) TO
+R0160  2         PREDICT3, SKIPPING THE KEPLER PHASE OF ENTRY.
+R0161   KEP2     GOTOADDR IS SET HERE DURING THE KEPLER PHASE TO MONITOR DRAG.
+R0163            SPACECRAFT IS INSTANTANEOUSLY TRIMMED IN PITCH AND YAW TO THE
+R0164            COMPUTED RELATIVE VELOCITY VECTOR.  THE LAST COMPUTED ROLL
+R0165            ANGLE IS MAINTAINED.  WHEN THE MEASURED DRAG EXCEEDS Q7+.5,
+R0166  2         GOTOADDR IS SET TO
+R0167   PREDICT3 THIS CONTROLS THE FINAL SUB-ORBITAL PHASE. ROLL COMMANDS CEASE
+R0168            WHEN V IS LESS THAN VQUIT.  AN EXIT IS MADE TO TERMALT WHEN
+R0169            TERMINAL ALTITUDE IS REACHED.
+P0180  2  OUT OF SEQUENCE SUBSECTION TO COMPUTE ETA.
+ 01805           BANK   30
+ 0181   GETETA   TEST   1
+ 0182            DMP                     NOT USED AT LOW VEL WHERE THETA NEG.
+ 0183                   EGSW
+ 0184                   SUBETA           BRANCHES IF INTO EQ. GLIDE PHASE.
+ 0185                   THETAH
+ 0186                   KTETA             = 1000X2PI/(2)E14 163.84
+ 0187  2         STORE  ETA              DONT REALLY WANT IT, BUT NO PUSH WANTED
+ 0188   GETETA2  NOLOD  1
+ 0189            DAD
+ 0190                   PIPTIME
+ 0191  2         STORE  DTEAROT
+ 0192            ITC    0
+ 0193  2                UPDATERT
+ 0194   SUBETA   DSU    1                SWITCH FROM INERTIAL TO RELATIVE
+ 0195            BPL    SWITCH           VELOCITY WHEN V LESS THAN .5 VSAT.
+ 0196                   V
+ 0197                   FOURTH
+ 0198                   SUBETA2
+ 0199  2                RELVELSW         SHOULD CHANGE TO OFF (NON-BRANCH) STATE
+ 0200   SUBETA2  DMP    1
+ 0201            DDV    ITC
+ 0202                   THETAH
+ 0203                   KT               KT = RE(2 PI)/ 2 VS 16384 163.84
+ 0204                   V                                       /2 VSAT
+ 0205  2                GETETA2
+ 0206   SETMIND  DMOVE  0                MAKE D NON-ZERO.
+ 0207                   1BITDP
+ 0208  2         STORE  D
+ 0209            ITC    0
+ 0210  2                GETUNI
+ 0211   TINYTHET NOLOD  3                ENTER WITH  X-.249
+ 0212            DSU    ABS              GET 1/4 - MPAC
+ 0213            TSLT   SQRT             SCALE UP BEFORE SQRT.
+ 0214            DMP                     HAS FACTOR FOR UP SCALING.
+ 0215                   1BITDP + 1       X = SQRT(2(1-COSX)),   IN RADIANS
+ 0216                   13D              X/2PI=(1/64PI)(SQRT(((1-COSX)/4)2EXP13)
+ 0217                   KACOS
+ 0218  2         STORE  THETAH
+ 02181           RTB    0                OFF TO PRE-SEQUENCER...
+ 02182                  REFAZE10
+P02183           MAINTAINS INITIAL ROLL UNTIL D = KAT, GOES INTO HUNTEST WHEN
+R02184 4RDOT = VRCONT.
+ 02186 2         BANK   31
+ 021865 KEPCADR1 CADR   KEP2
+ 02187 2HUNTCADR CADR   HUNTEST
+ 0219   INITROLL DMOVE  0
+ 02192                  INITL/D
+ 02194 2         STORE  L/D
+ 02196           TEST   2               IF D-.05 G NEG, GO TO LIMITL/D
+ 0220            DSU    BMN              IF NOT, SET .05 G SWITCH FOR SCS
+ 0221            EXIT
+R02215 4RDOT = VRCONT.
+ 0222                   INRLSW
+ 0223                   INITRL1
+ 02231                  D
+ 02232                  .05G
+ 02233 2                LIMITL/D
+ 0224            TC     RELAYON          SEND .05 G SIGNAL TO SCS.
+ 0225            OCT    40100
+ 0226            TC     NEWMODE          SET MODE TO AFTER .05 G STATE.
+ 0227            OCT    00064
+ 0228  2         TC     INTPRET
+ 022802          DMOVE  0               MAY WANT THIS IN UPDWNTST FOR 278
+ 022804                 LAD
+ 0228052         STORE  L/D
+ 022806          NOLOD  0
+ 0228072         STORE  INITL/D
+ 022808          SWITCH 2                IF V-VFINAL NEG, GO TO FINAL PHASE
+ 02281           DSU    BPL
+ 022812          EXIT
+ 022814                 INRLSW
+ 022816                 V
+ 022818                 VFINAL
+ 02282 2                UPDWNTST
+ 022822          CAF    KEPCADR1
+ 022824          TS     GOTOADDR
+ 0228262         TC     INTPRET
+ 022828          ITC    0
+ 02283 2                LIMITL/D
+ 022832 UPDWNTST DDV    0
+ 022834                 RDOT
+ 0228362                V                RESULT INTO PD
+ 022838          NOLOD  5                IF V-VFINAL+K(RDOT/V)CUBED POS,L/D=-LAD
+ 02284           DSQ    DMP
+ 022842          DDV    DSU
+ 022844          DAD    BOV
+ 022846          BMN    LODON
+ 022848          COMP
+ 02285                  -
+ 022854                 K44
+ 022856                 VFINAL
+ 022858                 V
+ 02286                  LIMITL/D
+ 022862                 LIMITL/D
+ 022864                 LAD
+ 02287 2         STORE  INITL/D
+ 022872          NOLOD  0
+ 0228752         STORE  L/D
+ 02288           ITC    0
+ 0228852                LIMITL/D
+ 0229   INITRL1  DSU    2                IF KAT-D POS, GO TO OUT WITH COMMAND
+ 0230            BPL    LODON                IF NEG,  L/D = LAD
+ 0231            DMOVE
+ 0232                   KAT
+ 0233                   D
+ 0234                   VRTHRES
+ 0236                   LAD              WHEN D GREATER THAN KAT, L/D = LAD
+ 0237  2         STORE  L/D
+ 0238   VRTHRES  DAD    1               IF RDOT + VRCONT NEG, GO TO STEER
+ 0239            BMN    EXIT            IF POS, SET SELECTOR TO HUNTEST.
+ 0240                   RDOT
+ 0241                   VRCONT
+ 0242                   LIMITL/D         DO LATERAL CONTROL IF NEEDED.
+A0243                                                                 SPACER.
+ 0244            CAF    HUNTCADR
+ 0245            TS     GOTOADDR        AND FALL THRU INTO HUNTEST.
+P0246  2 ... HUNTEST SECTION... CHECKS TO SEE WHEN PREDICTED RANGE = DESIRED ONE
+A02465 2KEEP WITH ABOVE CODING........
+ 0247  2         TC     INTPRET
+ 0248   HUNTEST  DMOVE  0
+ 0249                   LEWD1
+ 0250  2         STORE  LEWD
+ 0251            DSU    2
+ 0252            BMN    LODON
+ 02525           DMOVE
+ 0253                   D
+ 0254                   C20
+ 0255                   HUNTESTA
+ 02555                  LEWD2
+ 0256  2         STORE  LEWD
+ 02562           DMOVE  0
+ 02564                  D               A1 = D
+ 02566 2         STORE  A1
+ 0257   HUNTESTA DMOVE  0                IF RDOT POS, TEM1B = LAD
+ 0258                   LAD
+ 0259  2         STORE  TEM1B
+ 0260            BMN    1
+ 0261            LODON  DMOVE
+ 0262                   RDOT
+ 0263                   A0CALC
+ 0264                   LEWD
+ 0265  2         STORE  TEM1B
+ 0266   A0CALC   DDV    1                V1 = V + RDOT/TEM1B
+ 0267            DAD
+ 0268                   RDOT
+ 0269                   TEM1B
+ 0270                   V
+ 0271  2         STORE  V1
+ 0272            DSQ    3                A0=(V1/V)SQ(D0+RDOT SQ/(TEM1B 2 C1 HS)
+ 0273            DDV    DDV
+ 0274            DAD    DMP
+ 0275            DMP    DDV
+ 0276                   RDOT
+ 0277                   TEM1B
+ 0278                   2C1HS
+ 0279                   D
+ 0280                   V1
+ 0281                   V1
+ 0282                   VSQUARE
+ 0283  2         STORE  A0
+ 02832           BPL    0               IF RDOT NEG, A1 = A0
+ 02834                  RDOT
+ 02836 2                TESTHSW
+ 02837           DMOVE  0
+ 02838                  A0
+ 02839 2         STORE  A1
+ 0284   TESTHSW  TEST   1                IF HUNTSW1 ON (BRANCH), GO TO HUNTEST1
+ 0285            SWITCH
+ 0286                   HUNTSW1
+ 028702                 HUNTEST1
+ 0287042                HUNTSW1
+ 028706          DMOVE     0             ZERO DIFFOLD THE FIRST TIME THRU.
+ 028708                 3ZEROS
+ 02871 2         STORE  DIFFOLD
+ 028712          DAD    0                V1OLD = V1 + C18  (500FPS)
+ 028714                 V1               MAKES OLD VCORR -500 AND NEW +500 ..
+ 028716                 C18              INITIAL VALUE ON VCORR = -500 FPS SO
+ 0287182         STORE  V1OLD            (IN+TIAL 0ALUES IF NEEDED ON 1ST PASS+
+ 02872           DMOVE  0                Q7 = Q7F
+ 028722                 Q7F
+ 0287242         STORE  Q7
+ 028726 HUNTEST1 DMP    2                ALP = A0 2HSD/LWD / V1 V1
+ 0288            DDV    RTB
+ 0289            DDV    DDV
+ 0290                   A0
+ 0291                   2C1HS
+ 0292                   V1
+ 0293                   FRESHPD
+ 0294                   V1
+ 02945                  LEWD
+ 0295  2         STORE  ALP
+ 0296            NOLOD  1
+ 0297            BDSU   BDDV
+ 0298                   NEARONE          FACT1 = V1 / (1 - ALP)
+ 0299                   V1
+ 0300  2         STORE  FACT1
+ 0301            DSU    1
+ 0302            DMP    DDV              FACT2 = ALP(ALP - 1) / A0
+ 0303                   ALP
+ 0304                   NEARONE
+ 0305                   ALP
+ 0306                   A0
+ 0307  2         STORE  FACT2
+ 0308            DMP    2                VL = FACT1(1 - SQRT(ALP + Q7 FACT2))
+ 0309            DAD    SQRT
+ 0310            BDSU   DMP
+ 0311                   Q7
+ 0312                   FACT2
+ 0313                   ALP
+ 0314                   NEARONE
+ 0315                   FACT1
+ 0316  2         STORE  VL
+ 0317            NOLOD  2                GAMMAL = LEWD(V1-VL)/VL
+ 0318            BDSU   DMP
+ 0319            DDV
+ 0320                   V1
+ 0321                   LEWD
+ 0322                   VL
+ 0323  2         STORE  GAMMAL1          GAMMAL1 USED IN UPCONTRL
+ 0324            DSU    1                IF VL-VMIN NEG, GO TO SHORT
+ 0325            BMN
+ 0326                   VL
+ 0327                   VMIN
+ 0328  2                PREFINAL         PREFINAL = SHORT
+ 0329            DSQ    0                VBARS = VL VL
+ 0330                   VL
+ 0331  2         STORE  VBARS
+ 0332            DSU    1                IF VSAT - VL NEG,  GO TO CONSTD.
+ 0333            BMN
+ 0334                   HALVE            VSAT = .5
+ 0335                   VL
+ 0336                   BECONSTD         GOTOADDR MAY BE SIDETRACKED.
+ 0337  2         STORE  DVL              DVL = VSAT - VL
+ 0338            DMOVE  0
+ 0339                   HALVE            VS = VSAT
+ 0340  2         STORE  VS
+ 0341            NOLOD  2
+ 0342            DSU    BMN              IF V1 GREATER THAN VSAT, GO ON.
+ 0343            BDSU
+ 0344                   V1
+ 0345                   GETDHOOK
+ 0346                   DVL              DVL = DVL - (VSAT-V1) =  V1 - VL
+ 0347  2         STORE  DVL
+ 0348            DMOVE  0
+ 0349                   V1
+ 0350  2         STORE  VS               VS = V1
+ 0351   GETDHOOK TSRT   3                DHOOK = ((1-VS/FACT1)SQ - ALP)/FACT2
+ 0352            DDV    BDSU
+ 0353            TSLT   DSQ
+ 0354            DSU    DDV
+ 0355                   VS
+ 03552                  1
+ 0356                   FACT1
+ 0357                   HALVE
+ 0358                   1
+ 0359                   ALP
+ 0360                   FACT2
+ 0361  2         STORE  DHOOK
+ 0362            TSRT   1               RESCALE BY 32.
+ 0363            DDV    DSU
+ 0364                   DHOOK
+ 0365                   5
+ 03655                  Q7
+ 0366                   CHOOK
+ 0367  2         STORE  AHOOKDV
+ 0368            NOLOD  4
+ 0369            DAD    DMP              GAMMAL = GAMMAL1-CH1 DVLSQ(1+AHOOK DVL
+ 0370            DMP    DMP                     /DHOOK VBARS
+ 0371            DDV    DDV
+ 0372            BDSU   BMN
+ 0373                   1/8TH
+ 0374                   CH1
+ 0375                   DVL
+ 0376                   DVL
+ 0377                   DHOOK
+ 0378                   VBARS
+ 0379                   GAMMAL1
+ 0380                   NEGAMA           FIND CONDITIONS FOR GAMMAL = 0.
+ 0381            STORE  GAMMAL
+P0382  2   ... PREDICT RANGES FOR EACH PHASE OF TRAJECTORY...
+ 0383   RANGER   DSQ    1
+ 0384            TSRT   BDSU             COSG = 1-GAMMAL SQ/2 , TRUNCATED SERIES
+ 0385                   GAMMAL
+ 0386                   2
+ 0387                   HALVE
+ 0388  2         STORE  COSG/2
+ 0389            DSU    3
+ 0390            DMP    DMP              E=SQRT(1+VBARS-2)VBARS COSG COSG)
+ 0391            DMP    TSLT
+ 0392            DAD    SQRT
+ 0393                   VBARS
+ 0394                   HALVE
+ 0395                   VBARS
+ 0396                   COSG/2
+ 0397                   COSG/2
+ 0398                   2                MULT BY 4
+ 0399  2                C1/16            E  (E/4 REALLY) INTO PD.
+ 0400            DMP    2                ASKEP/2 = ARCSIN(VBARS COSG SING/E)
+ 0401            DMP    DDV
+ 0402            ASIN   TSLT
+ 0403                   VBARS
+ 0404                   COSG/2
+ 0405                   GAMMAL
+ 0406                   -                E FROM PD.
+ 0407  2                1                ASKEP INTO PD.
+ 0408            DMP    1                ASP1 = Q2 + Q3(VL-Q4) = Q2' + Q3 VL
+ 0409            DAD    DAD
+ 0410                   VL
+ 0411                   Q3
+ 0412  2                Q2               ASP1 + ASKEP INTO PD.
+ 041202          DMP    0               MODIFY GAMMAL1
+ 041204                 GAMMAL1
+ 041206                 POINT8
+ 041208          DMP    1
+ 04121           DAD
+ 041212                 GAMMAL
+ 041214                 POINT2
+ 0412162         STORE  GAMMAL1
+ 0413            DSQ    3                ASPUP = -C12 LOG(V1 V1 Q7/VBARS D)/GAMM
+ 0414            DMP    DDV                                             AL1
+ 0415            DDV    RTB
+ 0416            DMP    DDV
+ 0417                   V1
+ 0418                   Q7
+ 0419                   VBARS
+ 0420                   A0
+ 0421                   LOG
+ 0422                   C12
+ 0423  2                GAMMAL1          ASPUP UNTO PD
+ 0424            DMP    1                ASPDWN = KC3 RDOT V / A0
+ 0425            DMP    DDV
+ 0426                   KC3
+ 0427                   RDOT
+ 0428                   V
+ 0429  2                A0               ASPDWN INTO PD.
+ 0430            DSU    2                ASP3 = Q5(Q6-GAMMAL)
+ 0431            DMP    DAD
+ 0432            DAD    DAD
+ 0433                   Q6
+ 0434                   GAMMAL           ASP = ASP1+ASKEP+ASPUP+ASP3
+ 0435  2                Q5               ASP INTO PD
+ 0436            NOLOD  1
+ 0437            BDSU   TSRT
+ 0438                   THETAH
+ 0439                   4                DIFF = (ASP-THETA)/16
+ 0440  2         STORE  DIFF             END OF TEST
+ 0441            NOLOD  4
+ 0442            ABS    DSU              IF ABS((THETAH-ASP) - 25NM NEG,GOTOUPSY
+ 0443            BMN    TEST             IF HIND SET, GO TO GET LV THE REPEATWAY
+ 0444            LODON  BMN              IF  DIFF NEG, GO TO CONSTD
+ 0445            LODON  DSU              VCORR = V1 - V1OLD
+ 0446                   25NM
+ 0447                   GOTOUPSY
+ 0448                   HIND
+ 0449                   GETVCOR
+ 0450                   DIFF
+ 0451  2                DCONSTD          SETTING UP DIFFOLD ON THE WAY
+ 0452                   V1
+ 0453                   V1OLD            VCORR = V1 - V1OLD
+ 0454  2         STORE  VCORR
+ 0455   GETVCOR  DSU    2
+ 0456            TSRT   DDV
+ 0457            BDDV   TSRT
+ 0460                   DIFFOLD
+ 0461                   DIFF
+ 04615                  2
+ 0462                   VCORR
+ 0463                   DIFF
+ 04635                  2
+ 0464  2         STORE  VCORR
+ 04641 2         EXIT   0
+ 04642           TC     PHASCHNG        HAVE GROUP 3 PICK UP AT PREHUNT.
+ 04643 2         OCT    02003           3.16 RESTART.
+ 04644           CAF    ADENDEXT        SIDETRACK NEXT PASS UNTIL THIS ONE DONE.
+ 04645 2         TS     GOTOADDR        ONLY AFTER RESTART IS LEFT AFTER DETOUR.
+ 04646           CAF    ZERO            ZERO OVFIND TO GUARD AGAINST FUTURE BOV
+ 04647 2         TS     OVFIND
+ 04649 2         TC     INTPRET
+ 0465            NOLOD  2
+ 0466            BDSU   BPL              IS VCORR - 1000 POS,
+ 0467            DAD                     VCORR = 1000
+ 0468                   VCORLIM
+ 0469                   CHKVL
+ 0470                   VCORR            LEAVING VCORLIM IN MPAC
+ 0471  2         STORE  VCORR
+ 0472   CHKVL    DAD    2
+ 0473            DSU    BMN              IF VL + VCORR - VSAT POS, VCORR=VCORR/
+ 0474            LODON  TSRT
+ 0475                   VCORR
+ 0476                   VL
+ 0477                   HALVE
+ 0478                   GETNUV1
+ 0479                   VCORR
+ 0480                   1
+ 0481  2         STORE  VCORR
+ 0482   GETNUV1  DAD    0
+ 0483                   V1
+ 0484                   VCORR
+ 0485  2         STORE  V1
+ 0486            DMOVE  0                SAVE OLD VALUE OF ASP
+ 0487                   DIFF
+ 0488  2         STORE  DIFFOLD
+ 0489            TEST   1                SET HIND AND GO TO HUNTEST1
+ 0490            SWITCH ITC
+ 0491                   HIND
+ 0492                   HUNTEST1
+ 0493                   HIND
+ 0494  4                HUNTEST1
+ 0495   NEGAMA   NOLOD  1                ENTER WITH GAMMAL IN  MPAC
+ 0496            DMP    DMP              FIND GAMMAL VL / 3
+ 0497                   VL
+ 0498  2                1/3RD               .. AND PUSH DOWN PARTIAL RESULT..
+ 04982           DMP    0
+ 04984                  LEWD
+ 04986                  1/3RD           PUSH LEWD/3 ALSO
+ 0499            DAD    3
+ 0500            DMP    DMP              DEL VL = GAMMAL VL/3)/(LEWD/3 - DVL(2/3
+ 0501            DDV    DDV                  + AHOOKDV)(CH1 GS/DHOOK VL))
+ 0502            BDSU   BDDV
+ 0503                      AHOOKDV
+ 0504                      1/12TH
+ 0505                      DVL
+ 0506                      CH1
+ 0507                      DHOOK
+ 0508  2                VL              2 OUT OF ,1 INTO PUSH
+ 0510            DAD    0
+ 0511                   VL
+ 0512  2         STORE  VL               VL = VL + DEL VL
+ 0513            NOLOD  3                VL IS IN MPAC
+ 0514            DDV    BDSU             Q7 = ((1-VL/FACT1)SQ - ALP)/ FACT2
+ 0515            DSQ    DSU
+ 0516            DDV
+ 0517                      FACT1
+ 0518                      NEARONE
+ 0519                      ALP
+ 0520                      FACT2
+ 0521  2         STORE  Q7
+ 05212           DSQ    0               GET NEW VBARS.
+ 05213                  VL
+ 05214 2         STORE  VBARS
+ 0522            DMOVE   0
+ 0523                   3ZEROS
+ 0524  2         STORE  GAMMAL           GAMMAL = 0
+ 0525            ITC    0
+ 0526  4                RANGER
+ 05262 2ADENDEXT CADR   ENDEXIT
+ 052622 PREHUNT  TC     STATEUP         SET HUNTSW1 AND HIND SWITCHES
+ 0526242         OCT    00140
+ 0526262         TC     HUNTEST -1
+ 05264 2         BANK   27
+ 0527  2UPCADR   CADR   UPCONTRL
+ 0528  2GOTOUPSY EXIT   0               BACK TO BASIC.
+ 0529   HUNTDUMP CAF    UPCADR          RESET GOTOADDR
+ 05292           TS     GOTOADDR
+ 05295           TC     NEWMODE         CHANGE MODE TO SIGNAL END OF HUNT-TEST.
+ 05297 2         OCT    00065
+ 05298           CS     ONE             MAKE GROUP 3 INACTIVE WHEN DONE WITH
+ 052985          TC     NEWPHASE               THE ITERATIONS.
+ 05299 2         OCT    3               GROUP 3.
+ 0530            CS     FIXLOC          RESET PUSHDOWN POINTER
+ 05302           COM
+ 05304 2         TS     PUSHLOC
+ 05306           TC     INTPRET         ...AND FALL INTO UPCONTROL...
+P0531  2THIS SECTION IS THE UPCONTROL FOR THE SUPERCIRCULAR PHASE
+ 0532   UPCONTRL DSU    3                IF V-V1 POS, GO TO DOWNCONTROL
+ 0533            BPL    LODON            IF D-Q7 NEG, GO TO KEP
+ 0534            DSU    BMN
+ 0535            LODON  BMN              IF RDOT NEG, GO TO VLTEST
+ 0536                   V                VLTEST TESTS FOR START OF FINAL PHASE
+ 0537                   V1
+ 0538                   DOWNCNTL
+ 0539                   D
+ 0540                   Q7
+ 0541                   KEP              SET CONSTS, ETC FOR BALLISTIC PHASE.
+ 0542                   RDOT
+ 0543  2                VLTEST
+ 0544   CONT1    DSU    1
+ 0545            BPL
+ 0546                   D                IF D-A0 NEG,L/D=LAD,GO TO 310
+ 0547                   A0
+ 0548                   GOPOSLAD
+ 0549            DMP    2                VREF=FACT1(1-SQRT(FACT2 D + ALP))
+ 0550            DAD    SQRT
+ 0551            BDSU   DMP
+ 0552                   D
+ 0553                   FACT2
+ 0554                   ALP
+ 0555                   NEARONE
+ 0556                   FACT1
+ 0557  2         STORE  VREF
+ 0558            NOLOD  1                RDOTREF = LEWD(V1-VREF)
+ 0559            BDSU   DMP
+ 0560                   V1
+ 0561                   LEWD
+ 0562  2         STORE  RDOTREF
+ 0563            DSU    1                IF VSAT - VREF NEG, GO TO CONTINU2
+ 0564            BMN    NOLOD            NOLOD TO PUSH DOWN (HALVE-VREF)
+ 0565                   VS
+ 0566                   VREF             NO RDHOOK UNTIL VREF LESS THAN VSAT.
+ 0567  2                CONTINU2         PUSHING DOWN IF NO BRANCH.
+ 0568            NOLOD  5                RDHOOK=CH1(AHOOKDVL/DVL(DV+1))DV DV
+ 0569            DMP    DDV                    /DHOOK VREF
+ 0570            DAD    DMP              WHERE DV = VS - VREF
+ 0571            DMP    DMP
+ 0572            DDV    DDV
+ 0573            BDSU
+ 0574                   AHOOKDV
+ 0575                   DVL
+ 0576                   1/8TH
+ 0577                   CH1
+ 0578                   0                ABOVE SHOULD HAVE PUSHED INTO LOC 0.
+ 0579                   -
+ 0580                   DHOOK
+ 0581                   VREF
+ 0582                   RDOTREF
+ 0583  2         STORE  RDOTREF          RDOTREF = RDOTREF - RDHOOK
+ 05832  CONTINU2 DSU    1               BYPASS FACTOR CALC, IF D-Q7MIN NEG.
+ 05834           BMN
+ 05836                  D
+ 05838                  Q7MIN
+ 05839 2                CONTINU3
+ 0584            DSU    0
+ 0585                   A1              FACTOR = (D-Q7)/(A1-Q7)
+ 0586  2                Q7               PARTIAL RESULT IN PD
+ 0587            DSU    1
+ 0588            DDV
+ 0589                   D
+ 0590                   Q7
+ 0591  2         STORE  FACTOR
+ 0592   CONTINU3 DSU    3               L/D = LEWD
+ 0593            DMP    DDV             -((RDOT-RDOTREF)F1/KB1+V-VREF)F1/KB2
+ 0594            DAD    DSU
+ 0595            DMP    DDV
+ 0596                   RDOT
+ 0597                   RDOTREF
+ 0598                   FACTOR
+ 0599                   KB1
+ 0600                   V
+ 0601                   VREF
+ 0602                   FACTOR
+ 0603  2                KB2             DELTA L/D INTO PD
+ 0604            BOV    3               NONLINEAR CIRCUIT FOR REDUCING HIGH
+ 0605            ABS    DSU             GAINS HERE
+ 0606            BMN    DMP
+ 0607            DAD    SIGN
+ 0608                   GOMXL/D1
+ 0609                   0
+ 0610                   PT1/16
+ 0611                   NEXT1
+ 0612                   POINT1
+ 0613                   PT1/16
+ 0614   NEXT1    TSLT   1
+ 0615            DAD    BOV
+ 0616                   -
+ 0617                   4
+ 06175                  LEWD
+ 0618  2                GOMXL/D1        PUSHES IF NO BRANCH, NO MATTER
+ 0619   NEGTESTS NOLOD  0
+ 0620  2         STORE  L/D
+ 062002          NOLOD  3               IF L/D NEG, AND D-C20 POS, L/D = 0
+ 062004          BPL    LODON
+ 062006          DSU    BMN
+ 062008          DMP
+ 06201                  LIMITL/D
+ 062012                 D
+ 062014                 C20
+ 062016                 LIMITL/D
+ 062018                 3ZEROS          L/D=0 NO NEG LIFT
+ 06202 2         STORE  L/D
+ 062022          ITC    0
+ 0620242                LIMITL/D
+ 062026 GOMXL/D1 RTB    1
+ 06203           DMP    ITC
+ 062032                 SIGNMPAC
+ 062034                 LAD
+ 062036                 NEGTESTS
+P0621            CONSTANT DRAG CONTROLLER
+ 0624   DCONSTD  DMOVE  0
+ 0625                   DIFF             SAVE OLD VALUE OF DIFF FOR NEXT PASS.
+ 0626  2         STORE  DIFFOLD
+ 0627            DMOVE  0                V1OLD = V1
+ 0628                   V1
+ 0629  2         STORE  V1OLD
+ 0630   BECONSTD AXT,1  1                RESETS GOTOADDR  TO GO TO HUNTEST
+ 0631            RTB    SXA,1
+ 0632                   HUNTEST
+ 06325                  FRESHPD
+ 0633  2                GOTOADDR
+ 0634   CONSTD   DMP    0
+ 0635                   LEQ
+ 0636  2                C/D0             C/D0 LEQ INTO PD
+ 0637            DMP    2
+ 0638            DDV    DAD
+ 0639            DMP    DAD
+ 0640                   2HS              RDOTREF = - 2 HS D0/V
+ 0641                   C19             D0 = C19
+ 0642                   V
+ 0643                   RDOT
+ 0644  2                K2D              C/D0 LEQ + K2D(RDOT-RDOTREF) INTO PD
+ 0645            DMOVE  0
+ 0646                   C19
+ 0647   CONSTD1  DSU    3
+ 0648            DMP    DAD
+ 0649            TSLT   BOV
+ 06495           ITC
+ 0650                   D
+ 0651                   -
+ 0652                   K1D
+ 0653                   -
+ 0654                   8D
+ 0655                   GOMXL/D1
+ 0656  2                NEGTESTS
+ 0659   DOWNCNTL DSU    2                RDTR = LAD(V1-V)
+ 0660            DMP    DAD
+ 0661            DMP    DAD
+ 0662                   V
+ 0663                   V1
+ 0664                   LAD
+ 0665                   RDOT
+ 0666                   K2D
+ 0667  2                LAD/256          LAD + K2D(RDOT-RDTR) INTO PD
+ 0668            DSU    1
+ 0669            DSQ    DDV
+ 0670                   V1
+ 0671                   V
+ 0672  2                2C1HSLAD         (V1-V)SQ/(2 C1 HS/LAD) INTO PD
+ 0673            DSQ    2                DREF = (V/V1)SQ A0 - PD
+ 0674            DDV    BDDV
+ 0675            DSU
+ 0676                   V1
+ 0677                   VSQUARE
+ 0678  2                A0
+ 0679            ITC    0
+ 06791 2                CONSTD1
+ 0680  2KEP      EXIT   0
+ 0681            CAF    KEPCADR         SET GOTOADDR TO KEPLER PHASE.
+ 06815           TS     GOTOADDR
+ 0682            TC     NEWMODE         SET MODE TO KEPLER PHASE.
+ 06825 2         OCT    00066
+ 0683  2         TC     INTPRET
+ 0684   KEP2     DSU    1
+ 06841           BMN    EXIT
+ 06842                  D
+ 06843                  .05G
+ 06844 2                NO.05G
+ 06845           TC     RELAYON
+ 06846           OCT    40100           SEND .05G INDICATION
+ 06847 2         TC     INTPRET
+ 06848  KEP3     DAD    1               IF Q7+KDMIN - D NEG, GO TO FINAL PHASE
+ 0685            DSU    BMN
+ 0686                   Q7               MIN DRAG = Q7 + .5 FT/SEC/SEC
+ 0687                   KDMIN
+ 0688                   D
+ 0689  2                PREFINAL         FALL THRU IF POS...
+ 0690   ENDEXIT  EXIT   0                GOTOADDR IS SET HERE DURING VLHUNT.
+ 0691  2         TC     OVERNOUT
+ 06912  NO.05G   EXIT   0
+ 06914           TC     RELAYOFF        REMOVE .05G INDICATION
+ 06916           OCT    40100
+ 06918 2         TC     KEP3 -1
+ 06919  KEPCADR  CADR   KEP2
+ 0691952P3CADR   CADR   PREDICT3
+ 0692   VLTEST   DSU    1                IF V-VL-C18 NEG,EGSW=1,SELECTOR=PREDIC
+ 0693            DSU    BPL              GO TO PREDICT3
+ 0694                   V
+ 0695                   VL
+ 0696                   C18
+ 0697  2                CONT1
+ 0698   PREFINAL SWITCH 1                CHANGE GOTOADDR TO PREDICT3 AND FALL
+ 0699            EXIT                    INTO PREDICT3
+ 06995 2                EGSW
+ 06997           CS     ONE
+ 06998           TC     NEWPHASE
+ 06999 2         OCT    3
+ 0700            CAF    P3CADR
+ 07005           TS     GOTOADDR        SET TO PREDICT3 PHASE.
+ 0701            TC     NEWMODE
+ 07015 2         OCT    00067
+ 0702            TC     INTPRET         ... AND FALL INTO PREDICT3...
+P0703  2  SUBORBITAL CONTROL  (REFERENCE TRAJECTOORY BY TABLE LOOK-UP.)
+ 0704   PREDICT3 DSU    4
+ 0705            BMN    LODON            IF V - VQUIT NEG,  STOP STEERING
+ 0706            TEST
+ 0707            VXV    DOT              IF (RT)*UNITR.UNI NEG, SET GONEPAST
+ 0708            BMN    EXIT
+ 0709                   V
+ 0710                   VQUIT
+ 0711                   STEER
+ 0712                   GONEPAST
+ 0713                   GONEGLAD
+ 0714                   RT
+ 0715                   UNITR
+ 0716                   UNI              (MIGHT SAVE THIS FROM EARLIER..
+ 0717  2                SETGPAST
+ 0718            CS     NEG14
+ 0719  2BACK     TS     JJ
+ 0720            CS     V
+ 0721            INDEX  JJ
+ 0722            AD     VREFER           VREF - V, HIGHEST VREF AT END OF TABLE.
+ 0723            CCS    A                IF VREF-V POS LOOP BACK
+ 0724            CCS    JJ               DECREMENT JJ , JJ CANNOT BE ZERO
+ 0725  2         TC     BACK
+ 0726            AD     ONE
+ 0727  2         TS     TEM1B            V-VREF IN TEM1B (MUST BE POSITIVE NUM)
+ 0728            INDEX  JJ
+ 0729            CS     VREFER
+ 0730            INDEX  JJ
+ 0731            AD     VREFER + 1       V(K+1) - V(K)     (POS NUM)
+ 0732            XCH    TEM1B
+ 0733            EXTEND
+ 0734            DV     TEM1B
+ 0735  2         TS     GRAD             GRAD = (V-VREF)/(VK+1 - VK)   (POS NUM
+ 0736            CAF    FIVE
+ 0737   BACK2    TS     M1
+ 0738            CAF    DEC15
+ 0739            AD     JJ
+ 0740            TS     JJ
+ 0741            INDEX  A
+ 0742            CS     VREFER
+ 0743            INDEX  JJ
+ 0744            AD     VREFER + 1       X(K+1) - X(K)
+ 0745            EXTEND
+ 0746            MP     GRAD
+ 0747            INDEX  JJ
+ 0748            AD     VREFER
+ 0749            INDEX  M1
+ 0750            TS     FX               FX = AK + GRAD (AK+1 - AK)
+ 0751            CCS    M1
+ 0752  2         TC     BACK2
+ 0753            CS     FX +1           DON:T DESTROY FX +1
+ 0754            COM
+ 0755            AD     D
+ 0756            EXTEND
+ 0757            MP     FX + 5           F1
+ 0758  2         TS     TEM1B            TEM1B= F1(D-DREF)
+ 0759            CS     RDOT             FORM RDOTREF - RDOT
+ 0760            DOUBLE
+ 0761            DOUBLE                  SCALE UP BY 8 FOR THIS PHASE.
+ 0762            DOUBLE
+ 0763            AD     FX + 3           RDOTREF
+ 0764            EXTEND
+ 0765            MP     FX + 4           F2
+ 0766            AD     TEM1B            ADD F2(DADV1-DADVR)
+ 0767            AD     FX + 2           RTOGO
+ 0768            XCH    PREDANG          NO OVERFLOW SKIP PLEASE.
+ 0769  2         TC     INTPRET
+ 0770            SMOVE  1
+ 0771            TSRT   BDSU            THETAH - PRED ANGLE
+ 0772                   PREDANG
+ 0773                   3
+ 0774  2                THETAH
+ 0775            SMOVE  3
+ 0776            BDDV   TSLT
+ 0777            BOV    DAD
+ 0778            BOV
+ 07782                  FX              FX = DRANGE/D L/D = Y
+ 07784                  -
+ 0779                   5
+ 0780                   GOMAXL/D
+ 0781                   LOD
+ 0782                   GOMAXL/D
+ 0783  2         STORE  L/D
+ 0784            ITC    0
+ 0785  2                GLIMITER
+ 0786   GOPOSLAD DMOVE  0
+ 0787                   LAD
+ 0788  2         STORE  L/D
+ 0789            ITC    0
+ 0790  2                LIMITL/D
+ 0791   SETGPAST SWITCH 0                SHOULD BE BY TARGET IF HERE.
+ 0792  2                GONEPAST
+ 0793   GONEGLAD COMP   0
+ 0794                   LAD              L/D = - LAD
+ 0795  2         STORE  L/D
+ 0796            ITC    0
+ 0797  2                GLIMITER
+ 0798   GOMAXL/D RTB    1
+ 0799            DMP                     L/D = LAD SIG(MPAC)
+ 0800                   SIGNMPAC
+ 0801                   LAD
+ 0802  2         STORE  L/D              AND FALLS INTO LIMITL/D SECTION.
+ 0803   GLIMITER DSU    2                IF GMAX/2-D POS, GO TO LIMITL/D
+ 0804            BPL    DAD              IF GMAX-D NEG, GO TO GOPOSLAD
+ 0805            BMN    DMP
+ 0806                   GMAX/2
+ 0807                   D
+ 0808                   LIMITL/D
+ 0809                   GMAX/2
+ 0810                   GOPOSLAD
+ 0811  2                2HS              2HS(GMAX-D) INTO PD
+ 0812            DMP    1
+ 0813            DAD    DMP
+ 0814                   LEQ
+ 0815                   1/GMAX
+ 0816  2                LAD              2HS(GMAX-D) (LEQ/GMAX+LAD) INTO PD
+ 0817            DDV    2
+ 0818            DAD    SQRT             XLIM = SQRT(PD+(2HSGMAX/V)SQ)
+ 0819            DAD    BMN             IF RDOT+XLIM NEG, L/D=LAD
+ 0821                   2HSGMXSQ
+ 0822                   VSQUARE
+ 0823                   -
+ 0824                   RDOT             KGLIM2= -5 SCALED
+ 0825                   GOPOSLAD
+P0836  2COMES HERE TO COMPUTE ROLL COMMAND, CHECK LATERAL ERRORS, AND STEER
+ 0838   LIMITL/D TEST   1                NO LATERAL CONTROL IF PAST TARGET
+ 0839            DMP    DAD              Y = KLAT VSQUARE + LATBIAS
+ 0840                   GONEPAST
+ 0841                   L355
+ 0842                   VSQUARE
+ 0843                   KLAT
+ 0844                   LATBIAS
+ 0845  2         STORE  Y
+ 0846   L350     ABS    4                IF ABS(L/D)-L/DCMINR NEG, GO TO L353
+ 0847            DSU    BMN
+ 0848            LODON  SIGN             IF K2ROLL LATANG NEG, GO TO L357
+ 0849            BMN    LODON
+ 0850            TSRT                    Y = Y/2
+ 0851                   L/D
+ 0852                   L/DCMINR
+ 0853                   L353
+ 0854                   LATANG
+ 0855                   K2ROLL
+ 0856                   L357
+ 0857                   Y
+ 0858                   1
+ 0859  2         STORE  Y
+ 0860   L353     SIGN   2                IF LATANG SIGN(K2ROLL) - Y POS, SWITCH
+ 0861            DSU    BMN              IF POS, GO TO BL361 IN BASIC.
+ 0862            RTB
+ 0863                   LATANG
+ 0864                   K2ROLL
+ 0865                   Y
+ 0866                   L355
+ 0869  2                BL361
+ 0870   L355     DDV    2                ROLLC = ACOS((L/D)/LAD)
+ 0871            TSRT   ACOS
+ 0872            SIGN                    ROLLC = ROLLC SIGN(K2ROLL)
+ 0873                   L/D
+ 0874                   LAD
+ 0875                   1
+ 0876                   K2ROLL
+ 0877  8         STORE  ROLLC
+ 0878   STEER    EXIT   0
+ 0882   STEER2   CAF    BIT12           1/8 TH.
+ 0883            EXTEND
+ 0884            MP     ROLLC           SCALE ROLL OUTPUT FOR 16 SPEED.
+ 08841 2         TS     MPAC
+ 08842           CAF    BIT11           1/16 TH.
+ 08843           EXTEND
+ 08844           MP     ROLLBIAS        BIAS AOG FROM LIFT UP ORIENTATION
+ 08845           AD     MPAC            ROLL = ROLLC/8 + ROLLBIAS/16 + K1ROLL
+ 0885            AD     K1ROLL
+ 0886            TS     MPAC             AFRAID TO STORE POSS BAD NUM IN THETAD
+ 0887            TC     +4               SKIPS ON OVERFLOW
+ 0888            INDEX  A
+ 0889            CAF    LIMITS           ALLOW OVERFLOW (GO TO NEGMAX FROM POSMX
+ 0890  2         AD     MPAC
+ 08908           INHINT
+ 0891            TS     THETAD           THETAD = X CDU = ROLL
+ 08912           CS     BIT3
+ 08913           MASK   TMMARKER
+ 08914           AD     BIT3             SET BIT 3 IN TMMARKER WHEN THETAD COMP
+ 08915           TS     TMMARKER
+ 0892   OVERNOUT TC     PHASCHNG        RECYCLE GROUP 5 TO PIPUP WAIT STATE.
+ 08922 2         OCT    01405           5.12 RESTART.  (PIPUP SYNCED WITH 2 SEC)
+ 08923           TC     GRABDSP
+ 08924 2         TC     ENDENTRY
+ 08925           CAF    V06N62          DISPLAY TIME, VELOCITY, AND THETAH
+ 08926           TC     NVSUB
+ 08927 2         TC     RELDSPON
+ 08928 2         TC     FREEDSP
+ 08929 4ENDENTRY TC     ENDOFJOB
+ 0892958V06N62   OCT    00662
+ 0893   BL361    CS     K2ROLL           K2ROLL = - K2ROLL
+ 0894  2         TS     K2ROLL
+ 0895            CCS    L/D              IF L/D POS, EXIT
+ 0896            TC     RE-ENTER         SO IT WONT STORE IN PUSH LIST.
+ 0897            TC     RE-ENTER
+ 0898            TC     +2
+ 0899  2         TC     RE-ENTER
+ 0900            CCS    K2ROLL           K1ROLL = K1ROLL + K3ROLL SIGN(K2ROLL)
+ 0901            CAF    K3ROLL           K3ROLL = - .125
+ 0902            TC     +2
+ 0903            CS     K3ROLL
+ 0904            AD     K1ROLL
+ 0905            TS     K1ROLL
+ 0906  2         TC     RE-ENTER         SKIPS THIS ON OVERFLOW.
+ 0907            INDEX  A                POSMAX + 1 = NEGMAX  ETC.
+ 0908            CAF    LIMITS           NO LIMIT ON NUMBER OF ROLL REVS DURING
+ 0909            AD     K1ROLL               ENTRY.   (ROUTINE IS GENERAL.)
+ 0910            TS     K1ROLL           STILL DOESNT WORRY ABOUT 2SCOMP, THO.
+ 0911  4         TC     RE-ENTER
+ 0912   L357     SIGN   0
+ 0913                   L/DCMINR         L/D = L/DCMINR SIGN(L/D)
+ 0914                   L/D
+ 0915  2         STORE  L/D
+ 0916            ITC    0
+ 0917                   L355
+P0922  2     ROUTINE TO PREDICT AND SET PITCH ANGLE FOR 2ND ENTRY CONDITIONS.
+ 0923   UPTHETA3 CAF    PRIO14
+ 0924            TC     FINDVAC
+ 0925  2         CADR   UPTHETA1
+ 0926  2         TC     TASKOVER
+ 0927  2UPTHETA1 TC     INTPRET          STARTS OFF IN BASIC
+ 0928   UPTHETA  ITC    0                FIND DESIRED SPACECRAFT ORIENTATION.
+ 0929  2                GETUNB
+ 0930            ITC    0                GET OGC, IGC, MGC.,GIMBAL COMMANDS
+ 0931  2                CALCGTA
+ 0932            DSU    1               GET UNCORRECTED ROLLBIAS
+ 09325           EXIT
+ 0933                   OGC
+ 09335 2                ROLLCTEM
+ 0934            XCH    MPAC
+ 09345           DOUBLE
+ 0935            TS     MPAC +2
+ 09355           TC     +4              OVERFLOW CORRECT
+ 0936            INDEX  A
+ 09365           CAF    LIMITS
+ 0937  2         AD     MPAC +2
+ 09375           XCH    ROLLBIAS        STORE NEW VALUE AND FETCH OLD.
+ 0938            COM
+ 09385           TS     MPAC +2
+ 0939            AD     ROLLBIAS
+ 09392           TS     A               LIMIT CHANGE IN ROLLBIAS TO 180 DEG.
+ 09394 2         TC     +3
+ 09396           CS     MPAC +2
+ 09398 2         TS     ROLLBIAS        USE OLD VALUE IF TOO BIG.
+ 0940            CS     IGC
+ 09402           COM
+ 09404           DOUBLE
+ 09406 2         XCH    THETAD +1       COMMAND PITCH ANGLE. (NO SKIPS)
+ 09407           CS     MGC
+ 09408           COM
+ 09409           DOUBLE                 CHANGE FROM INTERPRETER SCALING TO CDU
+ 0940952         XCH    THETAD +2       YAW, MG ANGLE COMMAND
+ 0941            INHINT
+ 0942            CAF    PITCHDT          CALL UP ATTITUDE CONTROL LOOP PITCHDT
+ 0943            TC     WAITLIST         SECONDS AFTER FINISHING THIS TIME.
+ 0944  2         CADR   UPTHETA3
+ 0945  4UPNOVER  TC     ENDOFJOB
+ 094501 PITCHDT  DEC    3
+P09451 2   PIPAS ARE READ (BUT NOT CLEARED) AT A HIGHER RATE HERE.
+ 094512 INTERPIP CS     PIPAX
+ 094514          INDEX  PIPCTR
+ 094516          TS     XPIPBUF
+ 094518          CS     PIPAY
+ 09452           INDEX  PIPCTR
+ 094522          TS     YPIPBUF
+ 094524          CS     PIPAZ
+ 094526          INDEX  PIPCTR
+ 0945282         TS     ZPIPBUF
+ 09453           CCS    PIPCTR
+ 094532          TC     +4
+ 094534          CAF    TWO
+ 094536          TS     PIPCTR
+ 094538          TC     TASKOVER        WOULD GO TO PIPSETUP IF SMOOTHER WRITTEN
+ 09454 2         TS     PIPCTR
+ 094545          CAF    IPIPDT1
+ 094548          TC     WAITLIST
+ 09455 2         CADR   INTERPIP
+ 0945554         TC     TASKOVER
+ 09456  PIPSETUP CAF    PRIO15          LOWER THAN AVG G - HIGHER THAN UPTHETA.
+ 094562          TC     NOVAC
+ 094564          CADR   SMOOTHER
+ 0945664         TC     TASKOVER
+ 09457 4SMOOTHER TC     ENDOFJOB        WHEN WRITTEN, FIND A GOOD BANK FOR THIS.
+ 09458  IPIPDT1  DEC    50
+P0946  2DETERMINE TIME TO OPEN CHUTE HERE IF NEEDED
+ 09465 2         BANK   27
+ 0957   DT       DEC    200              MAIN LOOP DT.
+ 0958  2DEC15    DEC    15
+ 0959   K3ROLL   DEC    -.125
+R0961  2DEFINED BY EQUALS
+ 0963   ASP      EQUALS 0
+ 0964   Y        EQUALS 20D              TEMP
+ 0965   GAMMAL1  EQUALS 22D
+ 09655  A1       EQUALS FX
+P0966  4    TABLE USED FOR SUB-ORBITAL REFERENCE TRAJECTORY CONTROL.
+ 0967   VREFER   DEC    0                REFERENCE VELOCITY SCALED V/51552.3946
+ 0968            DEC    .006539          15 POINTS ARE STORED AS THE INDEPENDENT
+ 0969            DEC    .020958          VARIABLE AND THEN SIX 15 POINT FUNC-
+ 0970            DEC    .040809          TIONS OF V ARE STORED CONSECUTIVELY
+ 0971            DEC    .076107
+ 0972            DEC    .122156
+ 0973            DEC    .165546
+ 0974            DEC    .196012
+ 0975            DEC    .271945
+ 0976            DEC    .309533
+ 0977            DEC    .356222
+ 0978            DEC    .404192
+ 0979            DEC    .448067
+ 0980            DEC    .456023
+ 0981  2         DEC    .67918           HIGH VELOCITY FOR SAFETY
+ 0982            DEC    -.008035         DRANGE/DA   SCALED DRDA/(2700/805)
+ 0983            DEC    -.008035
+ 0984            DEC    -.010820
+ 0985            DEC    -.016550
+ 0986            DEC    -.026935
+ 0987            DEC    -.042039
+ 0988            DEC    -.058974
+ 0989            DEC    -.070721
+ 0990            DEC    -.098538
+ 0991            DEC    -.107482
+ 0992            DEC    -.147762
+ 0993            DEC    -.193289
+ 0994            DEC    -.602557
+ 0995            DEC    -.99999
+ 0996  2         DEC    -.99999
+ 0997            DEC    0                -DRANGE/DRDOT
+ 0998            DEC    0                SCALED((2VS/8 2700) DR/DRDOT)
+ 0999            DEC    -.0494520  B-3
+ 1000            DEC    -.0683663  B-3
+ 1001            DEC    -.1343468  B-3
+ 1002            DEC    -.2759846  B-3
+ 1003            DEC    -.4731437  B-3
+ 1004            DEC    -.6472087  B-3
+ 1005            DEC    -1.171693  B-3
+ 1006            DEC    -1.466382  B-3
+ 1007            DEC    -1.905171  B-3
+ 1008            DEC    -2.547990  B-3
+ 1009            DEC    -4.151220  B-3
+ 1010            DEC    -5.813617  B-3
+ 1011  2         DEC    -5.813617  B-3
+ 1012            DEC    -.00642065  B3   RDOTREF    SCALED (8 RDT/2VS)
+ 1013            DEC    -.00642065  B3
+ 1014            DEC    -.0134426   B3
+ 1015            DEC    -.013947    B3
+ 1016            DEC    -.013462    B3
+ 1017            DEC    -.011813    B3
+ 1018            DEC    -.0095631   B3
+ 1019            DEC    -.00806946  B3
+ 1020            DEC    -.006828    B3
+ 1021            DEC    -.00806946  B3
+ 1022            DEC    -.0109791   B3
+ 1023            DEC    -.0151496   B3
+ 1024            DEC    -.0179817   B3
+ 1025            DEC    -.0159061   B3
+ 1026  2         DEC    -.0159061   B3
+ 1027            DEC    0                RANGE TO GO SCALED RTOGO/2700
+ 1028            DEC    0
+ 1029            DEC    .00100                    2.7  NM
+ 1030            DEC    .0032963                  8.9
+ 1031            DEC    .0081852                  22.1
+ 1032            DEC    .017148
+ 1033            DEC    .027926
+ 1034            DEC    .037
+ 1035            DEC    .063296
+ 1036            DEC    .077889
+ 1037            DEC    .098815
+ 1038            DEC    .127519
+ 1039            DEC    .186963
+ 1040            DEC    .238148
+ 1041  2         DEC    .238148
+ 1042            DEC    -.042360         -AREF    SCALED  AREF/805
+ 1043            DEC    -.042360
+ 1044            DEC    -.052919
+ 1045            DEC    -.074534
+ 1046            DEC    -.101242
+ 1047            DEC    -.116646
+ 1048            DEC    -.122360
+ 1049            DEC    -.127081
+ 1050            DEC    -.147453
+ 1051            DEC    -.155528
+ 1052            DEC    -.149565
+ 1053            DEC    -.118509
+ 1054            DEC    -.034907
+ 1055            DEC    -.007950
+ 1056  2         DEC    -.007950
+ 1057            DEC    .000371          DRANGE/D L/D SCALED Y/2700
+ 1058            DEC    .000371
+ 1059            DEC    .004770
+ 1060            DEC    .008081
+ 1061            DEC    .016030
+ 1062            DEC    .035815
+ 1063            DEC    .069422
+ 1064            DEC    .104519
+ 1065            DEC    .122
+ 1066            DEC    .172407
+ 1067            DEC    .252852
+ 1068            DEC    .363148
+ 1069            DEC    .512963
+ 1070            DEC    .558519
+ 1071            DEC    .558519          END OF STORED REFERENCE
+P1073  2   CONTINUATION OF RE-ENTRY SECTION IN 2ND BANK.  (CONSTANTS AND M923=8
+ 1074            BANK   30
+ 1080   NEARONE  2DEC   .999999999
+ 1081   1/3RD    2DEC   .333333333             ONE THIRD
+ 1082    1/12TH  2DEC   .0833333333      ONE TWELFTH
+R1083  2                       VSAT = 25766.1973  FT/SEC.
+R1084  2                                           RE = 21,202,900  FEET
+ 1085   LEWD1    2DEC   .1
+ 1086   LEWD2    2DEC   .2
+ 1087   FOURTH   2DEC   .25
+ 1088   3ZEROS   2DEC   0
+ 1089   1BITDP   2OCT   00000 00001      DOUBLE PREC 1 BIT
+ 1090            DEC    0
+ 1091   NEAR1/4  2OCT   07777 00000      1/4 LESS 1 BIT IN UPPER PART.
+ 1092   C18      2DEC   .0097026346      500/2VS
+ 1093   KDMIN    2DEC   .00062111801     .5/805
+ 1094   C1/16    2DEC   .0625            1/16
+ 1096   Q2       2DEC   -.046388889      -1002/21600 =(643/21600-Q2(23500/2VS))
+ 1097   Q3       2DEC   .167003132       .07 2VS/21600
+ 1098   Q5       2DEC   .326388889       .3 23500/21600
+ 1099   Q6       2DEC   .034893617       820/23500
+ 1100   Q7F      2DEC   .0074534161      6/805    (VALUE OF Q7 IN FIXED MEM.)
+ 1102   VMIN     2DEC   .34929485        18000/2VS
+ 1103   C12      2DEC   .00684572901     32 28500/(21102900 2 PI)
+ 1105   KB1      2DEC   .29411765        1/3.4
+ 1106   KB2      2DEC   -.0057074322 B4 -16/(.0034 2 VS)
+ 1107   C19      2DEC   .16149068       130/805
+ 1108   VCORLIM  2DEC   .019405269       1000/2VS
+ 1109  2VQUIT    EQUALS VCORLIM          BOTH ARE 1000 FT/SEC
+ 1111   C20      2DEC   .21739130        (175 FPSS) LIFT UP IF ABOVE C20
+ 1112   25NM     2DEC   .0011574074 B-4  25/(21600 16)      (25 NAUT MILES)
+ 1113   K1D      2DEC   .0314453125     .01 805/256
+ 11135  K2D      2DEC   -.201298418     -.001 2VS/256
+ 1114   KVSCALE  2DEC   .81491944        12800/(2 VS .3048)
+ 1115   KASCALE  2DEC   .97657358        5.85 16384/(4 .3048 100 805)
+ 1116   KTETA    2DEC*  .383495203 E2 B-14*        1000 2PI/16384(163.84)
+ 1117   KT       2DEC*  .157788327 E2 B-14*       RE(2PI)/2VS(16384)163.84
+ 11175  .05G     2DEC   .002             .05/25
+ 1118   LAD      2DEC   .3
+ 1119   LAD/256  2DEC   .001171875       .3/256
+ 1120   KLAT     2DEC   .0125
+ 1121   LATBIAS  2DEC   .00003           APPRX .5 NM/ 4(21600/2 PI)
+ 1122   KWE      2DEC   .120056652
+ 1123   KACOS    2DEC   .004973592       1/32(2PI)
+ 1126   CHOOK    2DEC   1 B-5            .25/8
+ 1127   1/8TH    2DEC   .125
+ 1128   CH1      2DEC   .24              8 CH1/ 25         (CH1 = .75)
+ 1129   KC3      2DEC   -.082540747      KC3 (2VS)SQ /2PI 25 32.2 LAD R
+ 1130   LOD      2DEC   .18
+ 1131   VRCONT   2DEC   .0135836886      700/2 VSAT
+ 1132   HALVE    2DEC   .5
+ 1133  2NEG1/8   EQUALS K3ROLL           ONLY A SINGLE PRECISION NUMBER.
+ 1134   L/DCMINR 2DEC   .2895            LAD COS(15 DEG)
+ 1135   C/D0     2DEC   -.00387019231
+ 1138   GMAX/2   2DEC   .2               5/25
+ 1139   1/GMAX   2DEC   .4
+ 1140   2HS      2DEC   .0172786611      2 28500 25 32.2/(4 VS VS)
+ 1141   2HSGMXSQ 2DEC   .000047768341    ((2 28500 322/(4VS VS))SQ
+ 1142   KWIEM    2DEC   .147323336       RESULT IN METERS OVER 12800
+ 1143   COS(13)  2DEC   .9763            REAL COS OF 12.5 DEG. NOT 1/2 COSINE.
+ 1144  4-SIN(13) 2DEC   -.21644          REAL SIN OF 12.5 DEG.  NO FACTOR OF 1/2
+ 1145   2C1HS    2DEC   .0215983264     2 1.25 28500 805/(2 VS)SQ
+ 1146   2C1HSLAD 2DEC   .071994421      2 1.25 28500 805/(.3 4 VS VS)
+ 1147   POINT1   2DEC   .1
+ 1148   K44      2DEC   .00175626224    2 VS/(156 57.3 57.3 57.3)
+ 1149   VFINAL   2DEC   .48513173       25000/2 VS
+ 1150   KAT      2DEC   .08             2 G-S (2/25)
+ 11502  POINT8   2DEC   .8
+ 11504  POINT2   2DEC   .2
+ 11506  Q7MIN    2DEC   .043478261      35/805
+ 11508  PT1/16   2DEC   .00625
+R1151   ... END OF RE-ENTRY CONSTANTS ...
+P1169            CLOSED SUBROUTINE TO COMPUTE DESIRED NAV BASE ORIENTATION
+R1170  2         NEEDED DURING ENTRY PHASE.
+R1171            ENTER WITH VN, UNITR, UNITW, AND ROLLC
+R1172  4         COMPUTES UXNB, UYNB, AND UZNB.  (NAV BASE UNIT VECTORS)
+ 1173   GETUNB   RTB    3                RESET PUSH COUNTER.
+ 1174            VXV    VXSC             GET VELOCITY OF ATMOSPHERE
+ 1175            VAD    UNIT             GET UVA., RELATIVE VELOCITY
+ 1176            VXSC                    RESOLVE BY COS OF 13 DEG.
+ 1177                   FRESHPD
+ 1178                   UNITR
+ 1179                   UNITW            NEG OF REAL VEL.
+ 1180                   KWIEM            EARTH RATE CONST IN METERS X 4.
+ 1181                   VN
+ 1182  2                COS(13)          UVA COS(13) INTO PD.
+ 1183            NOLOD  1
+ 1184            VXV    UNIT             UYA = UNIT(VA*RN)
+ 1185                   UNITR
+ 1186  2         STORE  16D              UYA INTO LOC 16 OF VAC AREA.
+ 1187            DMOVE  0               SAVE ROLLC SO THAT IT CANNOT CHANGE
+ 1188                   ROLLC             DURING THIS SUBROUTINE
+ 1189  2         STORE  ROLLCTEM        INTO LOC 14 OF PUSH LIST
+ 1190            NOLOD  1               COS(ROLLC)
+ 1191            COS    VXSC            UYA COS(ROLLC).  PUSH INTO LOC 6.
+ 1192  2                16D
+ 11924           SIN    0
+ 11926 2                ROLLCTEM        SIN(ROLLC) INTO PD AT LOC 12.
+ 1193            VXV    2                UNA = UNIT(UYA*UVA)
+ 1194            UNIT   VXSC             UNB = UYA COS(ROLL) + UNA SIN(ROLL)
+ 1195            VAD    UNIT             UNIT COULD BE REPLACED BY  VSLT   1.
+ 1196                   16D                UYA STORED AT LOC 16
+ 1197                   0                UVA FIRST ITEM INTO PUSH LIST
+ 1198  2         STORE  UYNB             1 SCAL AND  1 VEC FROM PD.
+ 1199            NOLOD  2
+ 1200            VXV    UNIT             UN = UNIT (UYNB*UVA)
+ 1201            VXSC   VSU              UXNB = -UN SIN(13) - UVA COS(13)
+ 1202                   0
+ 1203                   -SIN(13)         PULLS UVA COS(13) FRON PD.
+ 1204  2         STORE  UXNB
+ 1205            NOLOD  1
+ 1206            VXV    VSLT             UZNB = UXNB*UYNB
+ 1207                   UYNB
+ 1208                   1
+ 1209  2         STORE  UZNB
+ 1210  4         ITCQ   0                AND RETURN.
+ 12105  ROLLCTEM EQUALS 14D
+P1300      SUBROUTINE TO READ PIPA COUNTERS, TRYING TO BE VERY CAREFUL SO THAT
+R1301  2IT WILL BE RESTARTABLE.
+R1302              (ARRIVE IN INTERRUPTED STATE OR INHIBITED AFTER RESTART.)
+R1303  2   (EXIT IS THRU  ISWRETRN)
+ 1304   PIPASR   CS     ZERO             PUT THESE INTO THE IMPOSSIBLE STATE
+ 1305            TS     TEMX             FOR THEIR INITIAL VALUES.
+ 1306            TS     TEMY
+ 1307            TS     TEMZ
+ 1308            CAF    ZERO
+ 1309            TS     DELVX + 1
+ 1310            TS     DELVY + 1        PIP COUNTERS MAY NOT HAVE POS ZERO IN
+ 1311            TS     DELVZ + 1
+ 1312  2         TS     PIPAGE           ZERO THIS TO INDICATE IN PIPA READING.
+ 1313   REPIP1   TC     READTIME + 1     PROBABLY NOT NEEDED SINCE NOT MUCH
+ 1314            CS     RUPTSTOR + 1     CHANCE OF TIME1 OVERFLOWING NOW.  (BUT
+ 1315            TS     PIPTIME + 1      JUST POSSIBLE IF MANY RESTARTS.
+ 1316            CS     RUPTSTOR
+ 1317  2         TS     PIPTIME
+ 1318            CS     PIPAX
+ 1319            TS     TEMXY
+ 1320            XCH    TEMX             PUT NEGZERO INTO PIPACTRS AS READ.
+ 1321            XCH    PIPAX
+ 1322   REPIP1B  TS     DELVX
+ 1323  2         TS     DELVX + 1        DOUBLE SAVE.
+ 1324   REPIP2   CS     PIPAY
+ 1325            TS     TEMXY
+ 1326            XCH    TEMY
+ 1327            XCH    PIPAY
+ 1328   REPIP2B  TS     DELVY
+ 1329  2         TS     DELVY + 1
+ 1330   REPIP3   CS     PIPAZ            REPEAT PROCESS FOR Z PIPA.
+ 1331            TS     TEMXY            SAVE NEG OF PIPA READ
+ 1332            XCH    TEMZ             SAVE HERE AS PICK UP NEGZERO
+ 1333            XCH    PIPAZ            RESETTING PIPA AS READ OUT)
+ 1334   REPIP3B  TS     DELVZ            AND STORE IN Z.
+ 1335  2         TS     DELVZ + 1        SHOWS THAT IT REALLY MADE IT.
+ 1336   REPIP4   CS     ZERO             LEAVE THESE AT NEGZERO
+ 1337            TS     DELVX + 1
+ 1338            TS     DELVY + 1
+ 1339            TS     DELVZ + 1
+ 13392           CS     BIT1
+ 13393           MASK   TMMARKER
+ 13394           AD     BIT1             SET BIT 1 IN TM MARKER.
+ 13395           TS     TMMARKER
+ 1340            TC     ISWRETRN         AND EXIT.  SHOULD HAVE COME THRU ICALL
+P1341  2         ROUTINE TO RESTART IF READING PIPA COUNTERS.
+ 1346   REPIPASR CCS    PIPAGE          WAS I READING PIPS.
+ 1347            TC     PIPASR          NO.. PIPAGE = PLUS CONST.
+ 1348            CCS    DELVZ + 1        PIPAGE = 0  (I WAS READING PIPS.)
+ 1349            TC     REPIP4           Z WAS READ OK.
+ 1350            TC     +3               Z NOT DONE, CHECK Y.
+ 1351            TC     REPIP4
+ 1352            TC     REPIP4
+ 1353            CCS    DELVY + 1        HAS IT CHANGED FROM ITS +ZERO INIT VALU
+ 1354            TC     +3               YES, Y DONE. TRY TO REDO Z.
+ 1355            TC     CHKDELVX         NO, GO LOOK AT X.
+ 1356            TC     +1               YES.
+ 1357            CCS    TEMZ             DOES TEMZ STILL = -0.
+ 1358            TC     +4               NO TRY TO RESTORE
+ 1359            TC     +3
+ 1360            TC     +2
+ 1361            TC     REPIP3           YES, GO BACK AND READ Z AGAIN.
+ 1362            CS     TEMXY            MUCH MORE LOGIC COULD BE INCORPORATED
+ 1363  2         TC     REPIP3B          TO CHECK PIPA CTR FOR SIZE.
+ 1364   CHKDELVX CCS    DELVX + 1        HAS THIS CHANGED.
+ 1365            TC      +3              YES
+ 1366            TC     CHKTEMX          NO.
+ 1367            TC     +1               YES
+ 1368            CCS    TEMY
+ 1369            TC     +4
+ 1370            TC     +3
+ 1371            TC     +2
+ 1372            TC     REPIP2
+ 1373            CS     TEMXY
+ 1374  2         TC     REPIP2B
+ 1375   CHKTEMX  CCS    TEMX             HAS THIS CHANGED.
+ 1376            TC     +4               YES
+ 1377            TC     +3               YES
+ 1378            TC     +2               YES
+ 1379            TC     REPIP1           NO
+ 1380            CS     TEMXY
+ 1381            TC     REPIP1B
+P3000    ENTRY INITIALIZATION ROUTINE.
+R3001    -----------------------------
+ 3002   STARTENT TC     PHASCHNG        KEEP UPTHETA RUNNING IN CASE OF RESTART.
+ 3004  2         OCT    03204           4.26 RESTART.
+ 3006            TC     PHASCHNG        PICK UP CURRENT STRING AT NEWMODE63.
+ 3008  2         OCT    02305           5.19 RESTART.  RESYNCING PIPUP ALSO.
+ 3010            INHINT
+ 3012            CAF    PRIO14          ESTABLISH UPTHETA FOR 1ST TIME.
+ 3015            TC     FINDVAC
+ 3020  2         CADR   UPTHETA1        START UPTHETA JOB.
+ 3025            RELINT
+ 3030   NUMODE63 TC     NEWMODE
+ 3035  2         OCT    00063           ENTRY PHASE = MODE 63
+ 3040            CAF    INITCADR
+ 3045            TS     GOTOADDR
+ 3050            CAF    EARGCADR
+ 3055            TS     CALCG
+ 3060            CAF    ZERO
+ 3065            TS     TENTRY
+ 3066            TS     ROLLBIAS
+ 3070            CAF    NUDELTAT
+ 3075            TS     DELTAT
+ 3080            CAF    NU/PIPDT
+ 3085            TS     1/PIPADT
+ 3086            CS     ENTMASK
+ 30865           INHINT                 INITIALIZE SWITCHES (BITS 6:10,15 IN
+ 3087            MASK   STATE           STATE) 6=GONEPAST,7=RELVELSW,8=EGSW
+ 3088            AD     ENTRYSW         9=HUNTSW1, 10=HIND, 15=INRLSW
+ 3089            TS     STATE           ALL BUT RELVELSW SET TO NON-BRANCH (1)
+ 30895           RELINT
+ 3125  2         TC     INTPRET
+ 3130            RTB    2               SET CDUX AGAIN JUST IN CASE.
+ 3135            VXV    DOT
+ 3140            COMP   RTB
+ 3145                   CDUXFIX
+ 3150                   VN
+ 3155                   UNITR
+ 3160                   RTINIT          THIS GIVES LATANG.
+ 3165                   SIGNMPAC        GETS SIGN OF MPAC
+ 3170  2         STORE  K2ROLL          K2ROLL = - SIGN(LATANG)
+ 3175            DOT    1
+ 3180            TSLT   ACOS
+ 3185                   UNITR
+ 3190                   RTINIT
+ 3195                   1
+ 3200  2         STORE  THETAH
+ 3205            VMOVE  0
+ 3210                   RT
+ 3215  2         STORE  RTINIT
+ 3220            COMP   0
+ 3225                   DTEAROT
+ 3230  2         STORE  DTEAROT
+ 3235            ITC    0
+ 3240                   EARROT1
+ 3245            RTB    0
+ 3250  4                OVERNOUT        EXIT SETTING RESTART BITS TO 5.12 FOR EN
+ 3255   INITCADR CADR   INITROLL
+ 3260   EARGCADR CADR   CALCGEAR
+ 3261   NUDELTAT DEC    200 B5
+ 3262   NU/PIPDT DEC    200 B6
+ 3264   ENTMASK  OCT    01741
+ 3265   ENTRYSW  OCT    01341
 *       ENDOFJOB
