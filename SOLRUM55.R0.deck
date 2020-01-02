@@ -23463,4 +23463,123 @@ P0500  4SIM FLIGHT SPECIAL
  0510  2         STORE  STBUFF +6
  0511  2         EXIT   0
  0512            TC     ENDOFJOB
+L      2VERIFICATION ASSISTANCE PROGRAMS
+R0001            WAITLIST EXERCISE PROGRAM. TIMES ARE GIVEN IN THE FORM NN + NN/
+ 0002  932 + YY, WHERE THE NS REFER TO TIME
+R0003  2SINCE THE BEGINNING OF THE TEST, AND YS ADDITIONAL MCT.
+ 0004            BANK   13
+ 0005   WLTEST   XCH    IN2
+ 0006            CCS    IN2             GET IN PHASE WITH T3 INCREMENTS.
+ 0007            TC     +2
+ 0008  2         TC     -2
+ 0009            CCS    IN2
+ 0010            TC     -1
+ 0011  2         TS     OUTCR1          TO INITIALIZE.
+R0012            THE FIRST TASK IS ENTERED INTO SLOT 1 WITH A T3 INCREMENT BETWE
+ 0013  9EN THE TWO T3 REFERENCES. CALL AT
+R0014  210 +00/32 -25. SPECIFY WAIT TO 30/32.
+ 0015            TC     OUTCR1WT
+ 0016  2         DEC    29
+ 0017            TC     OUTCR1WT        GO WAIT FOR THIS AND SPECIFY RESET TO
+ 0018  2         DEC    42              20 +8/32.
+R0019  2         AT 30/32 +16, WAIT 12 MCT BEFORE ENTERING TASK 1.
+ 0020            CAF    ZERO            TUNING CONSTANT.
+ 0021            CCS    A
+ 0022            TC     -1
+ 0023            CAF    ONE             TASK ENTRY WITH T3 INC BETWEEN TWO T3
+ 0024            TC     WAITLIST        REFERENCES.
+ 0025  2         CADR   NOPLWAIT +2     TASK IN HIGH SWITCHED BANK.
+ 0026            TC     OUTCR1WT        WAIT FOR 20 +8/32. CALL FOR RESET TO
+ 0027  2         DEC    23              20 +31/32.
+ 0028            CAF    ONE             AT 20 +8/32 + 16, ENTER TASK 2 DUE AT
+ 0029            TC     WAITLIST        30.
+ 0030            CADR   QTSK2
+P0031            WAIT FOR 20 +31/32 +16 AND AT THAT TIME WAIT FOR T3 TO OVERFLOW
+ 0032  9 BEFORE ENTERING TASK 3. REQUIRES RESET
+R0033  2TO 30 +10/32.
+ 0034            TC     OUTCR1WT
+ 0035            DEC    11
+ 0036            CCS    TIME3
+ 0037            TC     -1
+ 0038            CAF    ONE             ENTER TASK 3 AFTER T3 OVF.
+ 0039            TC     WAITLIST
+ 0040  2         CADR   QTSK3
+ 0041            TC     OUTCR1WT        TASK 3 IS DUE AT 40. WAIT FOR 30 +10/32
+ 0042  2         DEC    53              CALLING FOR RESET TO 40 +31/32.
+R0043            AT 30 +10/32 +16, ENTER TASKS 4 AND 5 DUE SAME RUPT AT 50. THEY
+ 0044  9 WILL BE INHIBITED FOR 6 MS SO THAT T3
+R0045  2WILL TICK WHILE IT IS BEING RESET IN THE DISPATCH OF 5.
+ 0046            CAF    TWO             ENTERED INTO SLOTS 2 AND 3.
+ 0047            TC     WAITLIST
+ 0048            CADR   QTSK4
+ 0049            CAF    TWO
+ 0050            TC     WAITLIST
+ 0051  2         CADR   TCTSKOVR        TASK IN FIXED-FIXED.
+ 0052            TC     OUTCR1WT        WAIT FOR 40 +31/32 +16, CALLING FOR
+ 0053  2         DEC    19              RESET TO 50 +18/32.
+ 0054            TC     OUTCR1WT +1     AT 40 +31/32 +16, INHIBIT UNTIL
+ 0055  2         DEC    24              50 +18/32 +16 AND RESET TO 60 +10/32.
+ 0056            TC     OUTCR1WT        AT 50 +18/32 +16, WAIT UNTIL 60 10/32,
+ 0057            DEC    21              RESETTING TO 60 +31/32.
+P0058            AT 60 +10/32 +16, ENTER TASKS 6 AND 7 DUE AT 70 AND 8 DUE AT 80
+ 0059  9. T3 WILL INCREMENT DURING TASK 7
+R0060  2DISPATCH, MAKING TASK 8 DUE THAT INTERRUPT.
+ 0061            CAF    ONE
+ 0062            TC     WAITLIST        ENTER TWO TASKS DUE SAME T3 RUPT AND
+ 0063            CADR   QTSK6           ANOTHER DUE THE FOLLOWING RUPT.
+ 0064            CAF    ONE
+ 0065            TC     WAITLIST
+ 0066            CADR   QTSK7
+ 0067            CAF    TWO             A T3 INC WILL OCCUR WHILE TASK 7 IS
+ 0068            TC     WAITLIST        SETTING T3 FOR THIS TASK AND CAUSE IT TO
+ 0069  2         CADR   QTSK8           BE THE THIRD TASK DUE THAT RUPT.
+ 0070            TC     OUTCR1WT        WAIT UNTIL 60 +31/32 +16, INHINTING
+ 0071            DEC    19              70 +18/32 +16.
+ 0072            TC     OUTCR1WT +1
+ 0073  2         DEC    1
+ 0074            CAF    FIVE            SYSTEMMATICALLY ENTER TASKS IN ALL 6
+ 0075  2         TS     MPAC            SLOTS.
+ 0076   QTSKLOOP RELINT
+ 0077            INHINT
+ 0078            CS     MPAC
+ 0079            AD     SEVEN
+ 0080            TC     WAITLIST
+ 0081            CADR   QTSK10
+ 0082            CCS    MPAC
+ 0083  2         TC     QTSKLOOP -1
+ 0084   QENDTEST TC
+P0085  2         THE FOLLOWING SUBROUTINE USES OUTCR1 AS A FINE TIMER DURING THE
+ 0086  9 WAITLIST TEST.
+ 0087   OUTCR1WT RELINT
+ 0088            XCH    Q
+ 0089            TS     MPAC
+ 0090            INDEX  A
+ 0091            CS     0               NUMBER OF THIRTY-SECONDS OF 10MS TO WAIT
+ 0092            AD     HALF
+ 0093            AD     HALF
+ 0094  2         TS     MPAC +1         NEW OUTCR SETTING.
+ 0095            CCS    OUTCR1
+ 0096  2         TC     -1
+ 0097   OUTCR1W2 XCH    MPAC +1
+ 0098            TS     OUTCR1
+ 0099            CAF    1WTCODE
+ 0100            TS     OUT2
+ 0101            INHINT
+ 0102            INDEX  MPAC
+ 0103  2         TC     1
+ 0104   1WTCODE  OCT    26000
+P0105  2         TASKS FOR WAITLIST TESTER.
+ 0106   QTSK2    TC     TASKOVER
+ 0107   QTSK3    TC     TASKOVER
+ 0108   QTSK4    CAF    QTSK4DEL        WAIT SO THAT T3 WILL TICK DURING DISPTCH
+ 0109            CCS    A
+ 0110            TC     -1
+ 0111  2         TC     TASKOVER
+ 0112   QTSK6    CAF    QTSK6DEL
+ 0113  2         TC     QTSK4 +1
+ 0114   QTSK7    TC     TASKOVER
+ 0115   QTSK8    TC     TASKOVER
+ 0116  2QTSK10   TC     TASKOVER
+ 0117   QTSK4DEL DEC    77              TUNING CONSTANTS.
+ 0118   QTSK6DEL DEC    78
 *       ENDOFJOB
