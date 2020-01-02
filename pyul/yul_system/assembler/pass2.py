@@ -1730,8 +1730,9 @@ class Pass2:
 
         if self._line.text[0] == 'L':
             if self._line.spacing <= 1:
-                # Change log card SP1 to SP2.
-                self._line.spacing = 2
+                # FIXME: Change log card SP1 to SP2?
+                # self._line.spacing = 2
+                pass
 
             # Erase any special flag at end of loglin.
             self._user_log.text = self._user_log.text[:116] + ' '*4

@@ -233,8 +233,8 @@ class Pass1:
         if self._real.card[7] != '9':
             # A log card is an automatic sequence break.
             if self._real.card[0] == 'L':
-                # Remove confusing info from log card.
-                self._real.card = self._real.card[0] + '      ' + self._real.card[7:]
+                # FIXME: Remove confusing info from log card?
+                # self._real.card = self._real.card[0] + '      ' + self._real.card[7:]
                 seq_break = True
 
 
