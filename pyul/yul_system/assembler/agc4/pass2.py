@@ -219,7 +219,7 @@ class Agc4Pass2(Pass2):
             # Branch unless op code is "SQUARE".
             if popo.health & Bit.BIT25:
                 # Br if extracode "SQUARE" is indexed.
-                if self._yul.switch & SwitchBit.PREVIOUS_INDEX:
+                if not self._yul.switch & SwitchBit.PREVIOUS_INDEX:
                     self.cuss_list[36].demand = True
             else:
                 # Set current index bit for "EXTEND".
