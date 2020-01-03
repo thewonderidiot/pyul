@@ -202,7 +202,8 @@ class Pass3:
 
         for line in range(0, sym_lines):
             # Each third of a line ocntains all the information about one symbol.
-            for col in range(3 if line < (sym_lines - 1) else min(sym_liner + 1, 3)):
+            max_col = 3 if line < (sym_lines - 1) else min(sym_liner + 1, 3)
+            for col in range(max_col):
                 # Point to a symbol in the table
                 sym_idx = col_starts[col] + line
                 sym = self._l_bank_5[sym_idx]
@@ -283,7 +284,7 @@ class Pass3:
                         self.eecr_test(sym)
 
             # Remove vertical divider from last col.
-            self._line.text = self._line.text[:119] + ' '
+            self._line.text = self._line.text[:max_col*40-1] + ' ' + self._line.text[max_col*40+1:]
 
             self._line.spacing = 1
             self.print_lin()
@@ -549,7 +550,18 @@ class Pass3:
         # FIXME: create BYPT
         # FIXME: put symbol table into BYPT
 
+        # Sort and merge word records
         self._wd_recs = sorted(self._wd_recs, key=lambda w: w.fwa)
+        i = 0
+        while i < (len(self._wd_recs) - 1):
+            a = self._wd_recs[i]
+            b = self._wd_recs[i+1]
+            if (a.page == b.page) and (a.lwa == b.fwa - 1):
+                a.words.extend(b.words)
+                a.lwa = b.lwa
+                self._wd_recs.pop(i+1)
+            else:
+                i += 1
 
         for page_group in range(0, len(self._wd_recs), 160):
             page_locs = self._wd_recs[page_group:page_group+160]

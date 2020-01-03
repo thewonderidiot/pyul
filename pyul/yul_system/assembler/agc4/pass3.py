@@ -195,7 +195,9 @@ class Agc4Pass3(Pass3):
 
         # Branch if alg. val. of cksm is plus.
         if checksum >= 0:
-            checksum = abs(checksum) ^ 0o77777
+            checksum ^= 0o77777
+        else:
+            checksum = abs(checksum)
 
         parity = 1
         for i in range(16):
