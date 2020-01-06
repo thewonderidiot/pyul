@@ -1171,6 +1171,10 @@ class Pass1:
         popo.health |= HealthBit.CARD_TYPE_OCTAL
         return self.inst_dec_oct(popo)
 
+    def instruct(self, popo):
+        popo.health |= HealthBit.CARD_TYPE_INSTR
+        return self.inst_dec_oct(popo)
+
     def decimal(self, popo):
         popo.health |= HealthBit.CARD_TYPE_DECML
         return self.inst_dec_oct(popo)
@@ -1564,7 +1568,9 @@ class Pass1:
         else:
             # Shift amount supplied by initialization.
             loc_value = adr_wd[0] << self.blok_shif
-            loc_value += self.bank_inc
+            # Omit increase for blank bank.
+            if self._field_cod[0] != 0:
+                loc_value += self.bank_inc
 
         # Branch if there is no modifier.
         if self._field_cod[1] != 0:
