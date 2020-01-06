@@ -186,8 +186,9 @@ class Pass2:
 
     def end_pass_2(self):
         # Finish and write last word record.
-        self._wd_buff.lwa = self._sent_loc
-        self._wd_recs.append(self._wd_buff)
+        if self._wd_buff is not None:
+            self._wd_buff.lwa = self._sent_loc
+            self._wd_recs.append(self._wd_buff)
 
         comp_pass3 = self._mon.phi_load(self._yul.comp_name + '.PASS3', self._yul, self._old_line,
                                         self._m_typ_tab, self._wd_recs)
