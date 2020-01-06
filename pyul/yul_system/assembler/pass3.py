@@ -92,7 +92,7 @@ class Pass3:
             self.read_syms(self.print_sym, self.end_pr_sym)
         else:
             # Announce lack of symbols.
-            self._line.text = 'THERE ARE NO SYMBOLS IN THIS ASSEMBLY.' + self._line.text[38:]
+            self._line[0] = 'THERE ARE NO SYMBOLS IN THIS ASSEMBLY.'
             self.print_lin()
 
         self.av_disply()
@@ -174,20 +174,20 @@ class Pass3:
         sym_liner = (self._sym_liner >> 7) & 0o3
 
         # Column headings for left third.
-        self._line.text = self._sy_col_hdg + self._line.text[40:]
+        self._line[0] = self._sy_col_hdg
         if sym_lines > 1 or sym_liner > 0:
             # Plant vertical divider and column headings for middle third.
-            self._line.text = self._line.text[:39] + '■' + self._sy_col_hdg + self._line.text[80:]
+            self._line[39] = '■' + self._sy_col_hdg
 
         if sym_lines > 1 or sym_liner > 1:
             # Plant vertical divider and column headings for right third.
-            self._line.text = self._line.text[:79] + '■' + self._sy_col_hdg
+            self._line[79] = '■' + self._sy_col_hdg
 
         self._line.spacing = 1
         self.print_lin()
 
         # Line with just dividers after col hdgs.
-        self._line.text = self._line.text[:39] + '■' + self._line.text[40:79] + '■' + self._line.text[80:]
+        self._line[39] = '■' + self._line[40:79] + '■'
         self._line.spacing = 1
         self.print_lin()
 
@@ -213,7 +213,7 @@ class Pass3:
                 # Branch if symbol, not horizontal divider.
                 if sym is None:
                     # Place horizontal divider of blots.
-                    self._line.text = self._line.text[:cc] + ('■'*36 + '   ' + '■') + self._line.text[nc:]
+                    self._line[cc] = ('■'*36 + '   ' + '■')
                 else:
                     # Branch if any of healths 0-4.
                     health = sym.health
@@ -225,7 +225,7 @@ class Pass3:
                     self._symh_vect[health].count += 1
 
                     # Plant health flag and vertical divider.
-                    self._line.text = self._line.text[:cc+37] + self._symh_vect[health].flag + self._line.text[nc:]
+                    self._line[cc+37] = self._symh_vect[health].flag
 
                     # Branch if symbol has a valid definition.
                     if self._symh_vect[health].no_valid_loc:
@@ -240,27 +240,27 @@ class Pass3:
 
                     # Branch if different from last symbol in this column; otherwise print a ditto.
                     if sym.name == compares[col]:
-                        self._line.text = self._line.text[:cc] + '     "  ' + self._line.text[cc+8:]
+                        self._line[cc] = '     "  '
                     else:
                         # Plant new symbol for next comparison.
                         compares[col] = sym.name
 
                         # Set headed symbol in print.
-                        self._line.text = self._line.text[:cc+2] + ('%-8s' % sym.name) + self._line.text[cc+10:]
+                        self._line[cc+2] = '%-8s' % sym.name
 
                     # Branch unless symbol was simply undef.
                     if sym.health < 3:
                         # Show that there's no page of definition.
-                        self._line.text = self._line.text[:cc+21] + ' - ' + self._line.text[cc+24:]
+                        self._line[cc+21] = ' - '
                     else:
                         # Convert page of def to zero-supp alpha.
-                        self._line.text = self._line.text[:cc+21] + ('%3d' % sym.def_page) + self._line.text[cc+24:]
+                        self._line[cc+21] = '%3d' % sym.def_page
 
                     # Branch if symbol was referred to.
                     refs = len(sym.ref_pages)
                     if refs == 0:
                         # Show lack of references.
-                        self._line.text = self._line.text[:cc+24] + '  -   -   - ' + self._line.text[cc+36:]
+                        self._line[cc+24] = '  -   -   - '
                     else:
                         # Convert number of references to z/s alf.
                         refs_alf = '%3d' % refs
@@ -269,43 +269,43 @@ class Pass3:
                         if refs > 999:
                             refs_alf = '>1K'
 
-                        self._line.text = self._line.text[:cc+25] + refs_alf + self._line.text[cc+28:]
+                        self._line[cc+25] = refs_alf
 
                         # Convert page of first ref to z/s alpha.
-                        self._line.text = self._line.text[:cc+28] + ('%4d' % sym.ref_pages[0]) + self._line.text[cc+32:]
+                        self._line[cc+28] = '%4d' % sym.ref_pages[0]
 
                         # When both page numbers are the same, print only the first one.
                         if sym.ref_pages[0] != sym.ref_pages[-1]:
                             # Convert page of last ref to z/s alpha.
-                            self._line.text = self._line.text[:cc+32] + ('%4d' % sym.ref_pages[-1]) + self._line.text[cc+36:]
+                            self._line[cc+32] = '%4d' % sym.ref_pages[-1]
 
                     # Branch if any definition exists.
                     if eqivlent != ONES:
                         self.eecr_test(sym)
 
             # Remove vertical divider from last col.
-            self._line.text = self._line.text[:max_col*40-1] + ' ' + self._line.text[max_col*40+1:]
+            self._line[max_col*40-1] = ' '
 
             self._line.spacing = 1
             self.print_lin()
 
         self._old_line.spacing = 2
-        self._line.text = 'KEY: SYMBOLS DEFINED BY EQUALS ARE FLAGG' + \
-                          'ED =.  OTHERS ARE NORMALLY DEFINED EXCEP' + \
-                          'T THOSE FLAGGED:                        '
+        self._line[0] = 'KEY: SYMBOLS DEFINED BY EQUALS ARE FLAGG' + \
+                        'ED =.  OTHERS ARE NORMALLY DEFINED EXCEP' + \
+                        'T THOSE FLAGGED:                        '
         self._line.spacing = 2
         self.print_lin()
 
         # Print key to health flags at end page.
-        self._line.text = 'U UNDEFINED             E FAILED LEFTOVE' + \
-                          'R ERASE   M MULTIPLY DEFINED           T' + \
-                          ' WRONG MEMORY TYPE    MM MULTIPLE ERRORS'
+        self._line[0] = 'U UNDEFINED             E FAILED LEFTOVE' + \
+                        'R ERASE   M MULTIPLY DEFINED           T' + \
+                        ' WRONG MEMORY TYPE    MM MULTIPLE ERRORS'
         self._line.spacing = 1
         self.print_lin()
 
-        self._line.text = 'N NEARLY DEFINED BY =   J FAILED LEFTOVE' + \
-                          'R WORD    D OVERSIZE- OR ILL-DEFINED   C' + \
-                          ' CONFLICT IN MEMORY   K  MISC. TROUBLE  '
+        self._line[0] = 'N NEARLY DEFINED BY =   J FAILED LEFTOVE' + \
+                        'R WORD    D OVERSIZE- OR ILL-DEFINED   C' + \
+                        ' CONFLICT IN MEMORY   K  MISC. TROUBLE  '
         self._line.spacing = Bit.BIT1
         self.print_lin()
 
@@ -319,10 +319,10 @@ class Pass3:
             self.sym_page()
 
         # Page heading for symbol table summary.
-        self._page_hed2.text = '%-120s' % 'SUMMARY OF SYMBOL TABLE LISTING'
+        self._page_hed2[0] = '%-120s' % 'SUMMARY OF SYMBOL TABLE LISTING'
 
         # Clean out print line in case of suppress.
-        self._line.text = ' '*120
+        self._line.clear()
 
         # Symbol table overflow into health vectr.
         self._symh_vect[-1].count = self._yul.sym_thr.sym_tab_xs
@@ -337,25 +337,25 @@ class Pass3:
             if health.count > 0:
                 # Convert count for this state to z/s alf.
                 self._line.spacing = 2
-                self._line.text = self._line.text[:10] + ('%4d  %-110s' % (health.count, health.description))
+                self._line[10] = ('%4d  ' % health.count)  + health.description
                 self.print_lin()
 
         # Place a line between addends and total.
         self._line.spacing = 2
-        self._line.text = self._line.text[:10] + '----' + self._line.text[14:]
+        self._line[10] = '----'
         self._old_line.spacing = 1
         self.print_lin()
 
         # Print grand total to finish summary.
-        self._line.text = (' TOTAL:   %4d' %  n_symbols) + self._line.text[14:]
+        self._line[0] = ' TOTAL:   %4d' %  n_symbols
         self._line.spacing = 7
         self.print_lin()
 
         # Upspace 7 and print character set.
         self._line.spacing = Bit.BIT1
-        self._line.text = 'H-1800 CHARACTER SEQUENCE (360 LACKS ■≠½' + \
-                          '␍⌑¢);  0123456789\'=: >&   +ABCDEFGHI:.)%' + \
-                          '■?   -JKLMNOPQR#$*"≠½   </STUVWXYZ@,(␍⌑¢'
+        self._line[0] = 'H-1800 CHARACTER SEQUENCE (360 LACKS ■≠½' + \
+                        '␍⌑¢);  0123456789\'=: >&   +ABCDEFGHI:.)%' + \
+                        '■?   -JKLMNOPQR#$*"≠½   </STUVWXYZ@,(␍⌑¢'
         self.print_lin()
 
         return self.eecr_tabl()
@@ -394,9 +394,9 @@ class Pass3:
         if len(self._eecr_list) == 0:
             return self.wc_sumary()
 
-        self._page_hed2.text = 'ERASABLE & EQUIVALENCE CROSS-REFERENCE T' + \
-                               'ABLE, SHOWING DEFINITION, PAGE OF DEFINI' + \
-                               'TION, AND SYMBOL                        '
+        self._page_hed2[0] = 'ERASABLE & EQUIVALENCE CROSS-REFERENCE T' + \
+                             'ABLE, SHOWING DEFINITION, PAGE OF DEFINI' + \
+                             'TION, AND SYMBOL                        '
 
         eecr_page = 0
         for p in range(0, len(self._eecr_list), 200):
@@ -417,15 +417,13 @@ class Pass3:
                     self.m_edit_def(sym.value, col_start=col_start)
 
                     # Shift definition to left edge of column.
-                    self._line.text = self._line.text[:col_start] + \
-                                      self._line.text[col_start+11:col_start+19] + \
-                                      self._line.text[col_start+8:]
+                    self._line[col_start] = self._line[col_start+11:col_start+19]
 
                     # Set page of definition in print.
-                    self._line.text = self._line.text[:col_start+9] + ('%4d  ' % sym.def_page) + self._line.text[col_start+15:]
+                    self._line[col_start+9] = '%4d  ' % sym.def_page
 
                     # Set symbol in print.
-                    self._line.text = self._line.text[:col_start+15] + ('%-8s' % sym.name) + self._line.text[col_start+23:]
+                    self._line[col_start+15] = '%-8s' % sym.name
 
                     # Advance to head of next column.
                     sym_idx += rows
@@ -451,7 +449,7 @@ class Pass3:
         pass
 
     def av_disply(self):
-        self._page_hed2.text = '%-120s' % 'MEMORY TYPE & AVAILABILITY DISPLAY'
+        self._page_hed2[0] = '%-120s' % 'MEMORY TYPE & AVAILABILITY DISPLAY'
 
         # Initialize address to 0.
         address = 0
@@ -513,7 +511,7 @@ class Pass3:
                         start, end, desc_idx = self._l_bank_5[cat_idx]
                         # Store description of memory type.
                         desc = self._m_type_cax[desc_idx]
-                        self._line.text = self._line.text[:cs+24] + desc + self._line.text[cs+24+len(desc):]
+                        self._line[cs+24] = desc
 
                         # Print upper limit of category.
                         self.m_edit_def(end, col_start=cs)
@@ -523,7 +521,7 @@ class Pass3:
                             self.m_edit_def(start, col_start=cs-12)
 
                             # Insert "TO" between low and high limits.
-                            self._line.text = self._line.text[:cs+9] + 'TO' + self._line.text[cs+11:]
+                            self._line[cs+9] = 'TO'
 
                         cat_idx += right_start
                         cs += 64
@@ -568,10 +566,9 @@ class Pass3:
             n_locs = len(page_locs)
 
             # Form as much subhead as needed.
-            self._page_hed2.text = ' '*120
+            self._page_hed2.clear()
             for i in range(min(4, n_locs)):
-                self._page_hed2.text = self._page_hed2.text[:i*32] + 'OCCUPIED LOCATIONS  PAGE' + \
-                                       self._page_hed2.text[i*32+24:]
+                self._page_hed2[i*32] = 'OCCUPIED LOCATIONS  PAGE'
             self._old_line.spacing = Bit.BIT1
 
             rows = n_locs // 4
@@ -588,10 +585,10 @@ class Pass3:
                     # Print LWA only if FWA = LWA.
                     if loc.fwa != loc.lwa:
                         self.m_edit_def(loc.fwa, col_start=col*32 - 12)
-                        self._line.text = self._line.text[:col*32+9] + 'TO' + self._line.text[col*32+11:]
+                        self._line[col*32+9] = 'TO'
 
                     # Set page number in print.
-                    self._line.text = self._line.text[:col*32+20] + ('%4d' % loc.page) + self._line.text[col*32+24:]
+                    self._line[col*32+20] = '%4d' % loc.page
 
                     loc_idx += rows
                     if col < excess:
@@ -627,14 +624,14 @@ class Pass3:
         self._old_line.spacing = Bit.BIT1
 
         # Page subhead for substrand summary.
-        self._page_hed2.text = 'PARAGRAPHS GENERATED FOR THIS ASSEMBLY; ' + \
-                               'ADDRESS LIMITS AND THE MANUFACTURING LOC' + \
-                               'ATION CODE ARE SHOWN FOR EACH.          '
+        self._page_hed2[0] = 'PARAGRAPHS GENERATED FOR THIS ASSEMBLY; ' + \
+                             'ADDRESS LIMITS AND THE MANUFACTURING LOC' + \
+                             'ATION CODE ARE SHOWN FOR EACH.          '
 
         # In case of barren assembly (no words).
         if len(self._paragraphs) == 0:
             # Announce lack of words, go to finalize.
-            self._line.text = '%-120s' % 'NO WORDS WERE GENERATED FOR THIS ASSEMBLY.'
+            self._line[0] = '%-120s' % 'NO WORDS WERE GENERATED FOR THIS ASSEMBLY.'
             self.print_lin()
             self._yul.switch |= SwitchBit.BAD_ASSEMBLY
             return
@@ -660,7 +657,7 @@ class Pass3:
             self.m_edit_def(address, col_start=-12)
 
             # Insert "TO" between limit addresses.
-            self._line.text = self._line.text[:9] + 'TO' + self._line.text[11:]
+            self._line[9] = 'TO'
 
             self.print_lin()
 
@@ -670,9 +667,9 @@ class Pass3:
 
     def print_oct(self):
         # In case octal suppression is revoked.
-        self._page_hed2.text = '■■■■■■■■■■■ SUPPRESSION OF OCTAL STORAGE' + \
-                               ' MAP REVOKED BECAUSE OF CUSSES (■XXX; EA' + \
-                               'CH COUNTS AS A CUSSED LINE). ■■■■■■■■■■■'
+        self._page_hed2[0] = '■■■■■■■■■■■ SUPPRESSION OF OCTAL STORAGE' + \
+                             ' MAP REVOKED BECAUSE OF CUSSES (■XXX; EA' + \
+                             'CH COUNTS AS A CUSSED LINE). ■■■■■■■■■■■'
 
         # Prepare for cusses in the octal stormap.
         n_oct_errs = 0
@@ -699,7 +696,7 @@ class Pass3:
                     image, edited_word = self.m_edit_wd(p[wno], address + w)
                     p[wno] = edited_word
 
-                    self._line.text = self._line.text[:8+w*14] + image + self._line.text[8+w*14+14:]
+                    self._line[8+w*14] = image
 
                 # Branch if not last of 4-line group.
                 if (l % 4) == 3:
@@ -723,15 +720,15 @@ class Pass3:
                 line_beg = 'E■■■■■■  # %d  ' % first_cuss
 
                 # Line begins "E■■■■■■  # NN  "
-                self._line.text = line_beg + self._line.text[len(line_beg):]
+                self._line[0] = line_beg
 
                 # Fill it out as a wham line.
-                self._line.text = self._line.text[:16] + '■'*104
+                self._line[16] = '■'*104
 
                 # Branch if this is the first cuss page.
                 if self._yul.err_pages[0] is not None:
                     # Set in print pointer to previous cuss.
-                    self._line.text = self._line.text[:80] + 'PRECEDING CUSSED LINE IS ON PAGE%4s ■■■' % self._yul.err_pages[1]
+                    self._line[80] = 'PRECEDING CUSSED LINE IS ON PAGE%4s ■■■' % self._yul.err_pages[1]
                 else:
                     # Show that first cuss is on this page.
                     self._yul.err_pages[0] = self._yul.page_head[-4:]
@@ -745,7 +742,7 @@ class Pass3:
                 if self._n_oct_errs > 1:
                     # Make it "E■■■■■■  # NN   THROUGH  # NN"
                     line_end = 'THROUGH  # %d' % self._yul.n_err_lins
-                    self._line.text = self._line.text[:16] + line_end + self._line.text[16+len(line_end):]
+                    self._line[16] = line_end
 
                 # Skip if octal map is suppressed.
                 if not self._yul.switch & SwitchBit.SUPPRESS_OCTAL:
@@ -799,17 +796,16 @@ class Pass3:
         else:
             self._mon.mon_typer(' END OF ASSEMBLY; FILED ON DISC')
 
-        self._line.text = self._last_line
+        self._line[0] = self._last_line
         
         # Branch if no errors in program.
         if self._yul.n_err_lins > 0:
             # Set error count in print.
-            self._line.text = self._line.text[:74] + \
-                              ('%8d' % self._yul.n_err_lins) + \
+            self._line[74] = ('%8d' % self._yul.n_err_lins) + \
                               ' LINES CUSSED BETWEEN PAGES' + \
                               self._yul.err_pages[0] + ' AND' +\
                               self._yul.err_pages[1] + '.'
-            self._mon.mon_typer(self._line.text[72:])
+            self._mon.mon_typer(self._line[72:])
 
         self._old_line.spacing = 4
         self._mon.mon_typer('', end='\n\n\n')
@@ -818,7 +814,7 @@ class Pass3:
         self._lin_count = 0
 
         # Print end of last ph or of subro list.
-        self._line.text = self._line.text[:72] + '.' + self._line.text[73:]
+        self._line[72] = '.'
         self.print_lin()
 
         # Print last line of assembly output.

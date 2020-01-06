@@ -514,17 +514,17 @@ class Agc4Pass2(Pass2):
             self._word ^= 0o77777
 
         # Put basic code address into print image.
-        self._line.text = self._line.text[:40] + ('%04o' % (self._word & 0o7777)) + self._line.text[44:]
+        self._line[40] = '%04o' % (self._word & 0o7777)
 
         # Branch if word is an address constant.
         dec6_flag = Bit.BIT2 | Bit.BIT3
         first_digit = (self._word >> 12) & 0o7
         if self._word >= dec6_flag:
             # Print first digit of constant.
-            self._line.text = self._line.text[:39] + ('%o' % first_digit) + self._line.text[40:]
+            self._line[39] = '%o' % first_digit
         else:
             # Print op code of instruction.
-            self._line.text = self._line.text[:38] + ('%o' % first_digit) + self._line.text[39:]
+            self._line[38] = '%o' % first_digit
             # Branch on indexed instruction.
             if not self._yul.switch & SwitchBit.PREVIOUS_INDEX:
                 # Mark as subject to bad reference code.
@@ -547,11 +547,11 @@ class Agc4Pass2(Pass2):
         return self.bc_check(popo)
 
     def bad_basic(self, popo):
-        self._line.text = self._line.text[:40] + '■■■■' + self._line.text[44:]
+        self._line[40] = '■■■■'
 
         if self._word > Bit.BIT17:
             # Blot first digit of bad constant.
-            self._line.text = self._line.text[:39] + '■' + self._line.text[40:]
+            self._line[39] = '■'
         else:
             spec_cond = (popo.health >> 19) & 0x1F
             if spec_cond == 4:
@@ -567,7 +567,7 @@ class Agc4Pass2(Pass2):
 
             # Print good op code in bad instruction.
             first_digit = (self._word >> 12) & 0o7
-            self._line.text = self._line.text[:38] + ('%o' % first_digit) + self._line.text[39:]
+            self._line[38] = '%o' % first_digit
 
         self._word = BAD_WORD
         return self.bc_check(popo)
@@ -729,17 +729,17 @@ class Agc4Pass2(Pass2):
             self._word ^= 0o77777
 
         # Print left operator.
-        self._line.text = self._line.text[:39] + ('%03o' % ((self._word >> 6) & 0o777)) + self._line.text[42:]
+        self._line[39] = '%03o' % ((self._word >> 6) & 0o777)
 
         # Branch if 2nd operator is bad.
         if self._word >= Bit.BIT1:
             # Blot out right operator, join main proc.
-            self._line.text = self._line.text[:42] + '■■' + self._line.text[44:]
+            self._line[42] = '■■'
             self._word = BAD_WORD
             return self.bc_check(popo)
 
         # Print rest of operator word.
-        self._line.text = self._line.text[:42] + ('%02o' % (self._word & 0o77)) + self._line.text[44:]
+        self._line[42] = '%02o' % (self._word & 0o77)
 
         # Plant flag of poland, join main proc.
         dec_5_flag = Bit.BIT2 | Bit.BIT4
@@ -751,25 +751,25 @@ class Agc4Pass2(Pass2):
     def m_ploc_is(self, location):
         if location >= ONES:
             # Blot out bad location and exit.
-            self._line.text = self._line.text[:42] + '■■■■' + self._line.text[46:]
+            self._line[42] = '■■■■'
             return
 
         # Branch if address is not in a bank.
         if location > 0o5777:
             # Set bank number in print.
             bank_no = location >> 10
-            self._line.text = self._line.text[:39] + ('%02o,' % bank_no) + self._line.text[42:]
+            self._line[39] = '%02o,' % bank_no
             # Put subaddress in the range 6000-7777.
             location = (location | 0o6000) & 0o7777
 
         # Set location in print and exit.
-        self._line.text = self._line.text[:42] + ('%04o' % location) + self._line.text[46:]
+        self._line[42] = '%04o' % location
 
     # Subroutine in pass 2 for AGC4 to set in print the location of an instruction or constant, with bank
     # number if any and with a notation for end of block or bank if required. Blots out location field if bad loc.
     def m_ploc_eb(self, location):
         if location >= ONES:
-            self._line.text = self._line.text[:32] + '■■■■' + self._line.text[36:]
+            self._line[32] = '■■■■'
             return
 
         orig_loc = location
@@ -778,14 +778,14 @@ class Agc4Pass2(Pass2):
         if location > 0o5777:
             # Set bank number in print.
             bank_no = location >> 10
-            self._line.text = self._line.text[:29] + ('%02o,' % bank_no) + self._line.text[32:]
+            self._line[29] = '%02o,' % bank_no
 
             # Put subaddress in the class 6000-7777.
             location = (location | 0o6000) & 0o7777
 
         if (location & 0o1777) == 0o1777:
             # Mark line "EB" for end of block or bank.
-            self._line.text = self._line.text[:24] + '  EB' + self._line.text[28:]
+            self._line[24] = '  EB'
         else:
             midx = 0
             # Branch when memory type category found.
@@ -794,16 +794,16 @@ class Agc4Pass2(Pass2):
             # Branch if not end of minor block.
             if orig_loc == self._m_typ_tab[midx][1]:
                 # Mark line "MC" for memory type change.
-                self._line.text = self._line.text[:24] + '  MC' + self._line.text[28:]
+                self._line[24] = '  MC'
 
         # Set up location in print and exit.
-        self._line.text = self._line.text[:32] + ('%04o' % location) + self._line.text[36:]
+        self._line[32] = '%04o' % location
 
     # Subroutine in pass 2 for AGC4 to set up a single-precision constant in word and in print. This subroutine
     # does not care whether the word is signed or not, but demands the output of dec/oct const in number.
     def m_proc_1p(self, popo, number):
         if number == BAD_WORD:
-            self._line.text = self._line.text[:39] + '■■■■■' + self._line.text[44:]
+            self._line[39] = '■■■■■'
             self._word = number
             return
 
@@ -814,7 +814,7 @@ class Agc4Pass2(Pass2):
             self._word ^= 0o77777
 
         # Set word in print.
-        self._line.text = self._line.text[:39] + ('%05o' % self._word) + self._line.text[44:]
+        self._line[39] = '%05o' % self._word
 
         # Apply internal constant flag and exit
         dec6_flag = Bit.BIT2 | Bit.BIT3
@@ -829,7 +829,7 @@ class Agc4Pass2(Pass2):
         if number == BAD_WORD:
             # Prepare blots for low-order part.
             sec_alf = '■■■■■'
-            self._line.text = self._line.text[:39] + '■■■■■' + self._line.text[44:]
+            self._line[39] = '■■■■■'
             self._word = number
             return BAD_WORD, sec_alf
 
@@ -859,7 +859,7 @@ class Agc4Pass2(Pass2):
         sec_half |= dec6_flag
 
         # Set word in print.
-        self._line.text = self._line.text[:39] + ('%05o' % self._word) + self._line.text[44:]
+        self._line[39] = '%05o' % self._word
 
         # Apply internal constant flag and exit
         self._word |= dec6_flag

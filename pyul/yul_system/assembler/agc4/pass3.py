@@ -46,21 +46,21 @@ class Agc4Pass3(Pass3):
     def m_edit_def(self, eqivlent, col_start=0):
         if eqivlent == ONES:
             # Print blots and exit.
-            self._line.text = self._line.text[:col_start+8] + '       ■■■■     ' + self._line.text[col_start+24:]
+            self._line[col_start+8] = '       ■■■■     '
             return
 
         # Branch if location is not in a bank.
         if eqivlent > 0o5777:
             # Set bank number in print.
             bank_no = eqivlent >> 10
-            self._line.text = self._line.text[:col_start+12] + ('%02o,' % bank_no) + self._line.text[col_start+15:]
+            self._line[col_start+12] = '%02o,' % bank_no
 
             # Put subaddress in the range 6000-7777.
             eqivlent &= ~0o76000
             eqivlent |= 0o6000
 
         # Set subaddress in print and exit.
-        self._line.text = self._line.text[:col_start+15] + ('%04o' % eqivlent) + self._line.text[col_start+19:]
+        self._line[col_start+15] = '%04o' % eqivlent
 
     def m_edit_wd(self, word, address):
         image = ' '*14
@@ -298,7 +298,7 @@ class Agc4Pass3(Pass3):
     # Subroutine in pass 3 for AGC4 to set in print the upper address limit, paragraph limit, stick number
     # and sense wire numbers for the paragraph summary.
     def m_print_pn(self, par_num, eqivlent):
-        self._line.text = self._line.text[:24] + ('PARAGRAPH # %03o         ' % par_num) + self._line.text[48:]
+        self._line[24] = 'PARAGRAPH # %03o         ' % par_num
 
         stick_no = (par_num >> 2) & 0xF
         if stick_no == 0:
@@ -308,34 +308,32 @@ class Agc4Pass3(Pass3):
                 type_str += 'SPECIAL AND CENTRAL REGISTERS & '
             type_str += 'ERASABLE MEMORY'
 
-            self._line.text = self._line.text[:48] + type_str + self._line.text[48+len(type_str):]
+            self._line[48] = type_str
             return self.m_edit_def(eqivlent)
 
         stick_no -= 1
 
         module, stick = self._stick_nos[stick_no]
-        self._line.text = self._line.text[:48] + ('  MODULE %s    ' % module) + self._line.text[64:]
-        self._line.text = self._line.text[:64] + ('STICK # %s     ' % stick) + self._line.text[80:]
+        self._line[48] = '  MODULE %s    ' % module
+        self._line[64] = 'STICK # %s     ' % stick
 
         # Set up sense line set number.
         wire_no = (par_num >> 4) & 0o4
         wire_no |= (par_num & 3)
 
-        self._line.text = self._line.text[:80] + \
-                          ('SENSE LINE SET %u (WIRES %s' % (wire_no, self._wire_nos[wire_no])) + \
-                          self._line.text[112:]
+        self._line[80] = 'SENSE LINE SET %u (WIRES %s' % (wire_no, self._wire_nos[wire_no])
 
         return self.m_edit_def(eqivlent)
 
     # Subroutine in pass 3 for AGC4 to print two explanatory lines at the head of each page of
     # an octal paragraph listing.
     def m_explain(self, par_num):
-        self._page_hed2.text = ('OCTAL LISTING OF PARAGRAPH # %03o, WITH P' + \
-                                'ARITY BIT IN BINARY AT THE RIGHT OF EACH' + \
-                                ' WORD; "@" DENOTES UNUSED FIXED MEMORY. ') % par_num
+        self._page_hed2[0] = ('OCTAL LISTING OF PARAGRAPH # %03o, WITH P' + \
+                              'ARITY BIT IN BINARY AT THE RIGHT OF EACH' + \
+                              ' WORD; "@" DENOTES UNUSED FIXED MEMORY. ') % par_num
 
         self._line.spacing = 2
-        self._line.text = 'ALL VALID WORDS ARE BASIC INSTRUCTIONS E' + \
-                          'XCEPT THOSE MARKED "I" (INTERPRETIVE OPE' + \
-                          'RATOR WORDS) OR "C" (CONSTANTS).        '
+        self._line[0] = 'ALL VALID WORDS ARE BASIC INSTRUCTIONS E' + \
+                        'XCEPT THOSE MARKED "I" (INTERPRETIVE OPE' + \
+                        'RATOR WORDS) OR "C" (CONSTANTS).        '
         self.print_lin()

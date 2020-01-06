@@ -158,6 +158,21 @@ class Line:
         self.spacing = spacing
         self.text = text
 
+    def clear(self):
+        self.text = ' '*120
+
+    def __getitem__(self, index):
+        return self.text[index]
+
+    def __setitem__(self, index, substr):
+        max_idx = index + len(substr)
+        if max_idx > 120:
+            substr = substr[:max_idx-120]
+        self.text = self.text[:index] + substr + self.text[index+len(substr):]
+
+    def __str__(self):
+        return self.text
+
 class Symbol:
     def __init__(self, name, value=0, health=0, definer=None):
         self.name = name
