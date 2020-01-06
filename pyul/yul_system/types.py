@@ -224,7 +224,10 @@ class SymbolTable:
             self._sym_map[name] = sorted(self._sym_map[name])
 
     def first(self, sym_name):
-        return self._symbols[self._sym_map[name][0]]
+        if sym_name not in self._sym_map:
+            self.add(Symbol(sym_name))
+
+        return self._symbols[self._sym_map[sym_name][0]]
 
     def all(self, sym_name):
         indices = self._sym_map[sym_name]
