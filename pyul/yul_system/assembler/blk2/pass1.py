@@ -361,7 +361,7 @@ class Blk2Pass1(Pass1):
     def blk2_2dnadr(self, popo):
         return self.blk2_dnx(popo, 1)
 
-    def blk2_dnx(self popo, num):
+    def blk2_dnx(self, popo, num):
         popo.health |= (num << 27)
         opcode = self.op_thrs['ECADR'] & ~Bit.BIT37
         return self._op_found(popo, opcode)
