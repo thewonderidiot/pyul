@@ -281,7 +281,7 @@ class Pass2:
             self._location = (popo.health >> 16) & 0xFFFF
 
         # Set first location in print.
-        self.m_ploc_eb(self._location)
+        self.m_ploc_eb(self._location, popo)
 
         return self.form_locn(popo, good_loc=(self._location != ONES))
 
@@ -687,7 +687,7 @@ class Pass2:
             self._location = popo.health & 0xFFFF
 
         # Print location value and return.
-        self.m_ploc_eb(self._location)
+        self.m_ploc_eb(self._location, popo)
 
         return loc_symbol
 
@@ -1249,7 +1249,7 @@ class Pass2:
             location = (popo.health >> 16) & 0xFFFF
 
         # Print or blot first location.
-        self.m_ploc_eb(location)
+        self.m_ploc_eb(location, popo)
 
         # Branch if there is no location value.
         if location != ONES:
@@ -1301,7 +1301,7 @@ class Pass2:
                 self._location = ONES
 
         # Print second location.
-        self.m_ploc_eb(self._location)
+        self.m_ploc_eb(self._location, popo, dp=True)
         self._line[self.con_mask[0]] = sec_alf + ' '*(self.con_mask[1]-len(sec_alf))
         self._word = sec_half
         self.proc_word(popo, loc_symbol)

@@ -767,7 +767,7 @@ class Agc4Pass2(Pass2):
 
     # Subroutine in pass 2 for AGC4 to set in print the location of an instruction or constant, with bank
     # number if any and with a notation for end of block or bank if required. Blots out location field if bad loc.
-    def m_ploc_eb(self, location):
+    def m_ploc_eb(self, location, popo, dp=False):
         if location >= ONES:
             self._line[32] = '■■■■'
             return
