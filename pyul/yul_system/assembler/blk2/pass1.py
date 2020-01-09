@@ -77,7 +77,7 @@ class Blk2Pass1(Pass1):
             'RELINT': 0o4016,
             '1DNADR': 0o4360,
             '5DNADR': self.blk2_5dnadr,
-            'RESUME': 0o6422,
+            'RESUME': 0o6442,
             'RETURN': 0o4012,
             'EDRUPT': 0o4272,
             'NDX':    0o6450,

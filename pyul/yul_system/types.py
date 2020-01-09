@@ -86,6 +86,7 @@ class SwitchBit:
     SUPPRESS_OCTAL    = Bit.BIT16
     FREEZE            = Bit.BIT17
     BEGINNING_OF_EQU2 = Bit.BIT17
+    EXTEND            = Bit.BIT17
     CONDISH_INACTIVE  = Bit.BIT18
     CONDISH_SYMBOL    = Bit.BIT19
     CONDISH_OCTAL     = Bit.BIT20

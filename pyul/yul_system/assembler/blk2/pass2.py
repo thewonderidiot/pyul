@@ -16,6 +16,8 @@ class Blk2Pass2(Pass2):
         self.misc_flag = 0o3000000000
 
         self._max_adres = 0
+        self._ebank_reg = 0o3417
+        self._sbank_reg = 0o40000000
 
         self.cuss_list = [
             # 0-2
@@ -185,7 +187,174 @@ class Blk2Pass2(Pass2):
     # obtained from the card via a general subroutine in pass 2 called PROC ADR. Implied addresses, bank errors, and
     # inappropriate addresses are checked for, and address value cussing is done.
     def m_proc_op(self, popo):
-        self._word = 0
+        if popo.health & Bit.BIT32:
+            return self.int_op_cod(popo)
+
+        # Insert basic op code into word.
+        self._word = (popo.health >> 12) & (Bit.BIT34 | Bit.BIT35 | Bit.BIT36)
+
+        # Maybe cuss illegal op code asterisk.
+        if popo.health & Bit.BIT11:
+            self.cuss_list[90].demand = True
+
+        # Branch if no implied address.
+        if popo.health & Bit.BIT31:
+            # Determine addresses implied by special op codes.
+            # Keep assembler's EBANK reg. up to date.
+            self._max_adres = 0o167777
+            self.ebk_loc_q()
+
+            if not (popo.address_1().isspace() and popo.address_2().isspace()):
+                # Mildly cuss nonblank adr fld, proceed.
+                self.cuss_list[63].demand = True
+
+            # Maybe cuss indexing of implads.
+            if self._yul.switch & SwitchBit.PREVIOUS_INDEX:
+                self.cuss_list[7].demand = True
+
+            # Branch if implad is not in health word.
+            if (popo.health & Bit.BIT27) == 0:
+                # Supply implied address.
+                self._address = (popo.health >> 18) & 0o7
+
+                # Branch if not code 1 (here, NOOP).
+                if self._word == Bit.BIT36:
+                    # Form of NOOP depends on which memory.
+                    if self._location < 0o4000:
+                        # In E memory, NOOP = CA A
+                        self._word = 0o30000
+                    else:
+                        # In F memory, NOOP = TCF +1
+                        self._address = self._location + 1
+
+            else:
+                # Place quarter-code bits in instr. word.
+                self._word |= (popo.health >> 9) & 0o6000
+
+                # Three-way branch on bits 14,13 of word.
+                b13b14 = (self._word >> 12) & 3
+                if b13b14 == 0:
+                    # Ed Smally's rupt is peripheral code 7.
+                    self._word |= Bit.BIT39
+                    self._address = 0
+                elif b13b14 == 1:
+                    # Three-way branch on quarters of code 5.
+                    qc = (self._word >> 10) & 3
+                    if qc == 0:
+                        # RESUME = INDEX 17.
+                        self._address = 0o17
+                    elif qc == 1:
+                        # Pick 1 of 2 implied addresses for DXCH.
+                        if ((popo.health >> 18) & 1) == 0:
+                            # DTCF = DXCH FBANK.
+                            self._address = 5
+                        else:
+                            # DTCB = DXCH Z.
+                            self._address = 6
+                    else:
+                        # Pick 1 of 2 implied addresses for TS.
+                        if ((popo.health >> 18) & 1) == 0:
+                            # OVSK = TS A.
+                            self._address = 0
+                        else:
+                            # TCAA =  TS Z.
+                            self._address = 5
+                else:
+                    # Two-way branch on quarters of code 2.
+                    qc = (self._word >> 10) & 1
+                    if qc == 0:
+                        # DAS A = DDOUBL (D.P. DOUBLE).
+                        self._address = 1
+                    else:
+                        # LXCH 7 = ZL (Zero L), QXCH 7 = ZQ.
+                        self._address = 7
+
+            # Isolate extracode bit of implad code.
+            m_common = (popo.health << 8) & SwitchBit.EXTEND
+
+            # Plant extracode flag for simulator.
+            self._word |= (m_common << 10) | (m_common << 11)
+
+            # Bit 29 places op-address print split.
+            popo.health &= ~0o3000000
+            popo.health |= (popo.health >> 2) & 0o3000000
+
+            # Branch if extended basic or unex. extra.
+            if (self._yul.switch & SwitchBit.EXTEND) != m_common:
+                if m_common == 0:
+                    # Error was unextended extracode.
+                    self.cuss_list[36].demand = True
+                else:
+                    # Error was an extended basic code.
+                    self.cuss_list[37].demand = True
+
+            else:
+                # Branch if this is the "EXTEND" code.
+                if popo.health & Bit.BIT26:
+                    # Set extension switch.
+                    self._yul.switch |= SwitchBit.EXTEND
+                    return self.add_adr_wd(popo)
+
+            # Clear extension switch.
+            self._yul.switch &= ~SwitchBit.EXTEND
+            return self.basic_adr(popo)
+
+    def add_adr_wd(self, popo):
+        pass
+
+    def basic_adr(self, popo):
+        pass
+
+    def ebk_loc_q(self):
+        # Tentatively accept EBANK declaration.
+        self._ebank_reg &= ~0o3400
+        self._ebank_reg |= (self._ebank_reg << 8) & 0o344
+
+        # Tentatively accept SBANK declaration.
+        self._sbank_reg &= ~0o160000
+        self._sbank_reg |= (self._sbank_reg >> 5) & 0o160000
+
+        # If in fixed, go see if in superbank.
+        if self._location < 0o4000:
+            # Exit if location is not in an Ebank.
+            if self._location <= 0o1377:
+                return
+
+            # Branch on old-Ebank-declaration bit.
+            if (self._ebank_reg & 0o77) < 8:
+                # Check on new permanent declaration.
+                if (self._ebank_reg & 0o3400) != (self._location & 0o3400):
+                    # E(S)Bank conflict with location.
+                    self.cuss_list[70].demand = True
+
+            # Force agreement and exit.
+            self._ebank_reg &= ~0o3400
+            self._ebank_reg |= self._location & 0o3400
+            return
+
+        # Exit if location not in a superbank.
+        if self._location <= 0o67777:
+            return
+
+        # Exit if location has no value.
+        if self._location >= ONES:
+            return
+
+        location = self._location - 0o10000
+
+        # Branch on old-Sbank-declaration bits
+        if (self._sbank_reg & 0o70000000) == 0:
+            # Check up on new permanent declaration.
+            if (self._sbank_reg & 0o160000) != (location & 0o160000):
+                # E(S)Bank conflict with location.
+                self.cuss_list[70].demand = True
+
+        # Force agreement and exit.
+        self._sbank_reg &= ~0o160000
+        self._sbank_reg |= location & 0o160000
+
+    def int_op_cod(self, popo):
+        pass
 
     # Subroutine in pass 2 for BLK2 to set in print a right-hand location for such as SETLOC.
     # Puts in the bank indicator, if any. Blots out an invalid location.
@@ -202,7 +371,7 @@ class Blk2Pass2(Pass2):
                 # Reduce to standard bank notation.
                 location -= 0o10000
                 bank_no = location >> 10
-                
+
                 # Set bank number in print.
                 self._line[39] = '%02o,' % bank_no
 
@@ -244,7 +413,7 @@ class Blk2Pass2(Pass2):
                 # Reduce to standard bank notation.
                 location -= 0o10000
                 bank_no = location >> 10
-                
+
                 # Set bank number in print.
                 self._line[29] = '%02o,' % bank_no
 
