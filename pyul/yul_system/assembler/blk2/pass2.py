@@ -293,17 +293,148 @@ class Blk2Pass2(Pass2):
                 if popo.health & Bit.BIT26:
                     # Set extension switch.
                     self._yul.switch |= SwitchBit.EXTEND
-                    return self.add_adr_wd(popo)
+                    return self.add_adr_wd(popo, self._address)
 
             # Clear extension switch.
             self._yul.switch &= ~SwitchBit.EXTEND
-            return self.basic_adr(popo)
+            return self.basic_adr(popo, self._address)
 
-    def add_adr_wd(self, popo):
-        pass
+    def add_adr_wd(self, popo, adr_wd):
+        self._word += adr_wd
+        return self.gud_basic(popo, adr_wd)
 
-    def basic_adr(self, popo):
-        pass
+    def basic_adr(self, popo, adr_wd):
+        if self._address > 0o3777:
+            pass
+        else:
+            if self._address <= 0o1377:
+                return self.add_adr_wd(popo, adr_wd)
+
+    # Printing procedures for basic instructions and address constants.
+    def gud_basic(self, popo, adr_wd):
+        # Branch if no minus sign in column 17.
+        if popo.card[16] == '-':
+            # Complement negative instruction.
+            self._word ^= 0o77777
+
+        # Put basic code address into print image.
+        self._line[40] = '%04o' % (self._word & 0o7777)
+
+        # Branch if word is an address constant.
+        dec6_flag = Bit.BIT2 | Bit.BIT3
+
+        if self._word >= dec6_flag:
+            # Print first digit of constant.
+            first_digit = (self._word >> 12) & 0o7
+            self._line[39] = '%o' % first_digit
+            return self.bc_check(popo)
+
+        if adr_wd < 0:
+            return self.op_digit_m1(popo, adr_wd)
+
+        # Branch if instruction refers 2 erasable.
+        address = self._address
+        if address > 0o3777:
+            # Branch if refers to fixed-fixed.
+            if address > 0o7777:
+                # Reduce bank number. Set FBANK ref. bit.
+                self._word |= Bit.BIT29 | Bit.BIT30
+                address -= 0o10000
+
+            # Align fixed bank nos. with erasable.
+            address >>= 2
+
+        # Supply bank number to pass 3 for ref ck.
+        self._word |= (address << 22) & 0o770000000000
+        # Store it twice to make parity ok.
+        self._word |= (self._word >> 6) & 0o7700000000
+
+        # Choose printing of straight op or other.
+        return self.op_digit_m1(popo, adr_wd)
+
+    def op_digit_m1(self, popo, adr_wd):
+        if popo.health & Bit.BIT29:
+            return self.op_digit(popo, adr_wd)
+        else:
+            return self.print_op(popo, adr_wd)
+
+    def op_digit(self, popo, adr_wd):
+        # Print second octal op digit.
+        sec_digit = (self._word >> 9) & 0o7
+        self._line[39] = '%o' % sec_digit
+
+        # Branch if address value is over 777.
+        if abs(adr_wd) < 0o1000:
+            self._line[40] = ' '
+        else:
+            # Insert prime if address is split.
+            self._line[40] = '\''
+
+        return self.print_op(popo, adr_wd)
+
+    def print_op(self, popo, adr_wd):
+        # Set main op digit in print.
+        first_digit = (self._word >> 12) & 0o7
+        self._line[38] = '%o' % first_digit
+
+        # Move current index bit to previous.
+        self._yul.switch &= ~SwitchBit.PREVIOUS_INDEX
+        if self._yul.switch & SwitchBit.CURRENT_INDEX:
+            self._yul.switch |= SwitchBit.PREVIOUS_INDEX
+        # Clear current index bit.
+        self._yul.switch &= ~SwitchBit.CURRENT_INDEX
+
+        # Cleverly exit to naughty or bc_check.
+        if self._line[43] == '■':
+            return self.naughty(self, popo)
+
+        return self.bc_check(popo)
+
+    def naughty(self, popo):
+        self._word = BAD_WORD
+        return self.bc_check(popo)
+
+    def bc_check(self, popo):
+        if popo.card[16] == '-':
+            # Clear extension cusses if minus.
+            self.cuss_list[36].demand = False
+            self.cuss_list[37].demand = False
+            # Clear "should-be-INDEXed" cuss if minus.
+            self.cuss_list[71].demand = False
+        # Cuss if neither blank nor minus in CC 17.
+        elif popo.card[16] != ' ':
+            self.cuss_list[61].demand = True
+
+        if popo.card[0] == 'J':
+            # Clear extension cusses if leftover.
+            self.cuss_list[36].demand = False
+            self.cuss_list[37].demand = False
+            # Clear "should-be-INDEXed" cuss if lftvr.
+            self.cuss_list[71].demand = False
+        # Cuss if neither blank nor J in column 1.
+        elif popo.card[0] != ' ':
+            self.cuss_list[60].demand = True
+
+        # Cuss if column 24 non-blank.
+        if popo.card[23] != ' ':
+            self.cuss_list[62].demand = True
+
+        # Turn off D.P. op code switch.
+        self._yul.switch &= ~SwitchBit.DP_OPCODE
+
+        # Turn off "just-did-EBANK=" switch.
+        self._ebank_reg &= ~0o77
+        self._ebank_reg |= 8
+        self._ebank_reg |= (self._ebank_reg >> 8) & 0o7
+        # Turn off "just-did-SBANK=" switch.
+        self._sbank_reg &= ~(Bit.BIT26 | Bit.BIT27)
+        self._sbank_reg |= Bit.BIT25
+        b28t30m = (Bit.BIT28 | Bit.BIT29 | Bit.BIT30)
+        self._sbank_reg &= ~b28t30m
+        self._sbank_reg |= (self._sbank_reg << 5) & b28t30m
+
+        # Return to general procedure.
+        return
 
     def ebk_loc_q(self):
         # Tentatively accept EBANK declaration.
