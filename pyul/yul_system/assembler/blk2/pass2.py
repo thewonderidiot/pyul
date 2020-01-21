@@ -199,105 +199,266 @@ class Blk2Pass2(Pass2):
 
         # Branch if no implied address.
         if popo.health & Bit.BIT31:
-            # Determine addresses implied by special op codes.
-            # Keep assembler's EBANK reg. up to date.
-            self._max_adres = 0o167777
-            self.ebk_loc_q()
+            return self.implad(popo)
 
-            if not (popo.address_1().isspace() and popo.address_2().isspace()):
-                # Mildly cuss nonblank adr fld, proceed.
-                self.cuss_list[63].demand = True
+        return self.no_implad(popo)
 
-            # Maybe cuss indexing of implads.
-            if self._yul.switch & SwitchBit.PREVIOUS_INDEX:
-                self.cuss_list[7].demand = True
+    def implad(self, popo):
+        # Determine addresses implied by special op codes.
+        # Keep assembler's EBANK reg. up to date.
+        self._max_adres = 0o167777
+        self.ebk_loc_q()
 
-            # Branch if implad is not in health word.
-            if (popo.health & Bit.BIT27) == 0:
-                # Supply implied address.
-                self._address = (popo.health >> 18) & 0o7
+        if not (popo.address_1().isspace() and popo.address_2().isspace()):
+            # Mildly cuss nonblank adr fld, proceed.
+            self.cuss_list[63].demand = True
 
-                # Branch if not code 1 (here, NOOP).
-                if self._word == Bit.BIT36:
-                    # Form of NOOP depends on which memory.
-                    if self._location < 0o4000:
-                        # In E memory, NOOP = CA A
-                        self._word = 0o30000
-                    else:
-                        # In F memory, NOOP = TCF +1
-                        self._address = self._location + 1
+        # Maybe cuss indexing of implads.
+        if self._yul.switch & SwitchBit.PREVIOUS_INDEX:
+            self.cuss_list[7].demand = True
 
-            else:
-                # Place quarter-code bits in instr. word.
-                self._word |= (popo.health >> 9) & 0o6000
+        # Branch if implad is not in health word.
+        if (popo.health & Bit.BIT27) == 0:
+            # Supply implied address.
+            self._address = (popo.health >> 18) & 0o7
 
-                # Three-way branch on bits 14,13 of word.
-                b13b14 = (self._word >> 12) & 3
-                if b13b14 == 0:
-                    # Ed Smally's rupt is peripheral code 7.
-                    self._word |= Bit.BIT39
-                    self._address = 0
-                elif b13b14 == 1:
-                    # Three-way branch on quarters of code 5.
-                    qc = (self._word >> 10) & 3
-                    if qc == 0:
-                        # RESUME = INDEX 17.
-                        self._address = 0o17
-                    elif qc == 1:
-                        # Pick 1 of 2 implied addresses for DXCH.
-                        if ((popo.health >> 18) & 1) == 0:
-                            # DTCF = DXCH FBANK.
-                            self._address = 5
-                        else:
-                            # DTCB = DXCH Z.
-                            self._address = 6
-                    else:
-                        # Pick 1 of 2 implied addresses for TS.
-                        if ((popo.health >> 18) & 1) == 0:
-                            # OVSK = TS A.
-                            self._address = 0
-                        else:
-                            # TCAA =  TS Z.
-                            self._address = 5
+            # Branch if not code 1 (here, NOOP).
+            if self._word == Bit.BIT36:
+                # Form of NOOP depends on which memory.
+                if self._location < 0o4000:
+                    # In E memory, NOOP = CA A
+                    self._word = 0o30000
                 else:
-                    # Two-way branch on quarters of code 2.
-                    qc = (self._word >> 10) & 1
-                    if qc == 0:
-                        # DAS A = DDOUBL (D.P. DOUBLE).
-                        self._address = 1
+                    # In F memory, NOOP = TCF +1
+                    self._address = self._location + 1
+
+        else:
+            # Place quarter-code bits in instr. word.
+            self._word |= (popo.health >> 9) & 0o6000
+
+            # Three-way branch on bits 14,13 of word.
+            b13b14 = (self._word >> 12) & 3
+            if b13b14 == 0:
+                # Ed Smally's rupt is peripheral code 7.
+                self._word |= Bit.BIT39
+                self._address = 0
+            elif b13b14 == 1:
+                # Three-way branch on quarters of code 5.
+                qc = (self._word >> 10) & 3
+                if qc == 0:
+                    # RESUME = INDEX 17.
+                    self._address = 0o17
+                elif qc == 1:
+                    # Pick 1 of 2 implied addresses for DXCH.
+                    if ((popo.health >> 18) & 1) == 0:
+                        # DTCF = DXCH FBANK.
+                        self._address = 5
                     else:
-                        # LXCH 7 = ZL (Zero L), QXCH 7 = ZQ.
-                        self._address = 7
-
-            # Isolate extracode bit of implad code.
-            m_common = (popo.health << 8) & SwitchBit.EXTEND
-
-            # Plant extracode flag for simulator.
-            self._word |= (m_common << 10) | (m_common << 11)
-
-            # Bit 29 places op-address print split.
-            popo.health &= ~0o3000000
-            popo.health |= (popo.health >> 2) & 0o3000000
-
-            # Branch if extended basic or unex. extra.
-            if (self._yul.switch & SwitchBit.EXTEND) != m_common:
-                if m_common == 0:
-                    # Error was unextended extracode.
-                    self.cuss_list[36].demand = True
+                        # DTCB = DXCH Z.
+                        self._address = 6
                 else:
-                    # Error was an extended basic code.
-                    self.cuss_list[37].demand = True
-
+                    # Pick 1 of 2 implied addresses for TS.
+                    if ((popo.health >> 18) & 1) == 0:
+                        # OVSK = TS A.
+                        self._address = 0
+                    else:
+                        # TCAA =  TS Z.
+                        self._address = 5
             else:
-                # Branch if this is the "EXTEND" code.
-                if popo.health & Bit.BIT26:
-                    # Set extension switch.
-                    self._yul.switch |= SwitchBit.EXTEND
-                    return self.add_adr_wd(popo, self._address)
+                # Two-way branch on quarters of code 2.
+                qc = (self._word >> 10) & 1
+                if qc == 0:
+                    # DAS A = DDOUBL (D.P. DOUBLE).
+                    self._address = 1
+                else:
+                    # LXCH 7 = ZL (Zero L), QXCH 7 = ZQ.
+                    self._address = 7
 
+        # Isolate extracode bit of implad code.
+        m_common = (popo.health << 8) & SwitchBit.EXTEND
+
+        # Plant extracode flag for simulator.
+        self._word |= (m_common << 10) | (m_common << 11)
+
+        # Bit 29 places op-address print split.
+        popo.health &= ~0o3000000
+        popo.health |= (popo.health >> 2) & 0o3000000
+
+        # Branch if extended basic or unex. extra.
+        if (self._yul.switch & SwitchBit.EXTEND) != m_common:
+            if m_common == 0:
+                # Error was unextended extracode.
+                self.cuss_list[36].demand = True
+            else:
+                # Error was an extended basic code.
+                self.cuss_list[37].demand = True
+
+        else:
+            # Branch if this is the "EXTEND" code.
+            if popo.health & Bit.BIT26:
+                # Set extension switch.
+                self._yul.switch |= SwitchBit.EXTEND
+                return self.add_adr_wd(popo, self._address)
+
+        # Clear extension switch.
+        self._yul.switch &= ~SwitchBit.EXTEND
+        return self.basic_adr(popo, self._address)
+
+    # Process explicit addresses for instructions or constants.
+    def no_implad(self, popo):
+        b25t27m = Bit.BIT25 | Bit.BIT26 | Bit.BIT27
+        if (popo.health & b25t27m) != b25t27m:
+            return self.non_const(popo)
+
+    def non_const(self, popo):
+        # Place quarter-code bits in instr. word.
+        self._word |= (popo.health >> 12) & (Bit.BIT37 | Bit.BIT38)
+        
+        # Branch if peripheral code.
+        b29t30m = Bit.BIT29 | Bit.BIT30
+        if (popo.health & b29t30m) < b29t30m:
+            # Set switch if this is an INDEX order.
+            if popo.health & Bit.BIT27:
+                self._yul.switch |= SwitchBit.CURRENT_INDEX
+            else:
+                self._yul.switch &= ~SwitchBit.CURRENT_INDEX
+
+        # Isolate extracode bit of explad code.
+        m_common = (popo.health << 11) & Bit.BIT17
+
+        # Branch if ext. basic or unex. extracode.
+        if m_common == (self._yul.switch & SwitchBit.EXTEND):
             # Clear extension switch.
             self._yul.switch &= ~SwitchBit.EXTEND
-            return self.basic_adr(popo, self._address)
+            return self.set_min_ad(popo, m_common)
+
+        # Branch if extended basic code error.
+        if m_common == Bit.BIT17:
+            # Cuss at unextended extracode.
+            self.cuss_list[36].demand = True
+            return self.set_min_ad(popo, m_common)
+
+        # Branch if not an INDEX order.
+        if popo.health & Bit.BIT27:
+            # Extended INDEX extends, can refer 2 any.
+            popo.health &= ~(Bit.BIT29 | Bit.BIT30)
+            m_common = Bit.BIT17
+            return self.set_min_ad(popo, m_common)
+
+        # Cuss any extended basic code but INDEX.
+        self.cuss_list[37].demand = True
+        self._yul.switch &= ~SwitchBit.EXTEND
+        return self.set_min_ad(popo, m_common)
+
+    def set_min_ad(self, popo, m_common):
+        # Plant extracode flag for simulator.
+        self._word |= m_common >> 10
+        self._word |= m_common >> 11
+
+        # In general, allow values down to -7777.
+        self._min_adres = -0o7777
+
+        # 4-way branch on memory type allowance.
+        types = (popo.health >> 18) & 0o3
+
+        b34t36m = (Bit.BIT34 | Bit.BIT35 | Bit.BIT36)
+        if types == 0:
+            # No restriction.
+            self._max_adres = 0o167777
+
+            # Branch if negative address is permitted.
+            if (self._word & b34t36m) == 0o40000:
+                # Negative address here would be overflow.
+                self._min_adres = 0
+
+        elif types == 1:
+            # Ditto now, fixed only later.
+            self._max_adres = 0o167777
+
+        elif types == 2:
+            # E-memory or indexed (quarter-code).
+            self._max_adres = 0o11777
+
+        else:
+            # Peripheral code. Supply last p-code bit.
+            self._word |= (popo.health >> 12) & Bit.BIT39
+            # Here allow values down to -777.
+            self._min_adres = -0o777
+            self._max_adres = 0o777
+
+        # If op code is double precision, add 1 to address value.
+        dp_check = (popo.health >> 19) & 0o2
+
+        # Add 00001 to double precision addresses.
+        if dp_check == 0:
+            # Branch if basic code and not D.P.
+            b33t38m = 0o176000
+            if (self._word & b33t38m) in (0o20000, 0o52000):
+                self._yul.switch |= SwitchBit.DP_OPCODE
+
+        else:
+            # If not DCA, check for DCS.
+            if (self._word & b34t36m) in (0o30000, 0o40000):
+                self._yul.switch |= SwitchBit.DP_OPCODE
+
+        return self.max_ad_set(popo)
+
+    def max_ad_set(self, popo, update_ebank=True):
+        # Except for EBNAK=, SBANK=, BNKSUM:
+        if update_ebank or self._location >= ONES:
+            # Keep assembler's EBANK reg. up to date.
+            self.ebk_loc_q()
+
+        # Translate address field.
+        self.proc_adr(popo)
+
+        # Restore min adr value.
+        self._min_adres = 0
+
+        # Cuss lack of "D" in decimal subfield.
+        if popo.health & Bit.BIT9:
+            self.cuss_list[1].demand = True
+
+        # Go see if current word is polish (FIXME)
+
+        # Br. if meaningless or atrocious address.
+        adr_wd = self._address
+
+        if self._address >= ONES:
+            pass # FIXME
+
+        # Increment address of D.P. code.
+        if self._yul.switch & SwitchBit.DP_OPCODE:
+            adr_wd += 1
+
+        # Branch if address size OK for this op.
+        if self._address <= self._max_adres:
+            # Go process instruction if no const flag.
+            b25t27m = Bit.BIT25 | Bit.BIT26 | Bit.BIT27
+            if (popo.health & b25t27m) != b25t27m:
+                return self.instrop(popo, adr_wd)
+
+            # FIXME...
+
+    # Specific processing for basic instructions.
+    def instrop(self, popo, adr_wd):
+        # Supply incrementing bit for D.P. codes.
+        if self._yul.switch & SwitchBit.DP_OPCODE:
+            self._word |= 0o1
+
+        # Branch if address value is positive.
+        if self._address >= 0:
+            # Branch unless memory allowance = F only.
+            if (popo.health & (Bit.BIT29 | Bit.BIT30)) != Bit.BIT30:
+                return self.basic_adr(popo, adr_wd)
+            
+            # Branch if indeed refers to fixed.
+            if self._address >= 0o4000:
+                return self.basic_adr(popo, adr_wd)
+
+            # Address in banks E4-E7 is nonsense here.
+            # FIXME
+
 
     def add_adr_wd(self, popo, adr_wd):
         self._word += adr_wd
@@ -305,10 +466,124 @@ class Blk2Pass2(Pass2):
 
     def basic_adr(self, popo, adr_wd):
         if self._address > 0o3777:
-            pass
+            if self._yul.switch & SwitchBit.PREVIOUS_INDEX:
+                return self.adres_adr(popo, adr_wd)
+
+            # Cuss unindexed 1/4-code reference to F.
+            if self._max_adres == 0o11777:
+                self.cuss_list[35].demand = True
+                self.prb_adres(self._address)
+                self.cuss_list[10].demand = True
+
+            # Put misc. flag on unindexed basic instructions that refer to fixed memory.
+            dec48_flg = Bit.BIT2 | Bit.BIT5
+            self._word |= dec48_flg
+            return self.adres_adr(popo, adr_wd)
+
+        # Branch if address is not in an EBank.
+        if self._address <= 0o1377:
+            return self.add_adr_wd(popo, adr_wd)
+
+        # Except where instruction is indexed, cuss D.P. address that straddles Ebanks.
+        if (self._yul.switch & (SwitchBit.PREVIOUS_INDEX | SwitchBit.DP_OPCODE)) == SwitchBit.DP_OPCODE:
+            if (adr_wd & 0o377) == 0o377:
+                self.cuss_list[10].demand = True
+                self.cuss_list[35].demand = True
+                self.prb_adres(self._address)
+
+                # (For D.P. address = 1377).
+                if self._address <= 0o1377:
+                    return self.add_adr_wd(popo, adr_wd)
+
+        elif self._address <= 0o1377:
+            return self.add_adr_wd(popo, adr_wd)
+
+        # Forgive all if we have pseudo Ebank. Branch on E-bank error.
+        if ((self._ebank_reg & 0o3400) <= 0o1000) or ((self._ebank_reg & 0o3400) == (self._address & 0o3400)) :
+            # Put subaddress in the range 1400-1777
+            adr_wd &= ~0o3400
+            adr_wd |= 0o1400
+            return self.add_adr_wd(popo, adr_wd)
+
+        adr_wd &= ~0o3400
+        adr_wd |= 0o1400
+        self.cuss_bank()
+
+        # Put Ebank number in bank error cuss.
+        cuss = self.cuss_list[33]
+        bank_no = address >> 8
+        cuss.msg = cuss.msg[:19] + ('E%o' % bank_no) + cuss.msg[21:]
+        return self.add_adr_wd(popo, adr_wd)
+
+    def adres_adr(self, popo, adr_wd):
+        # Exit if in fixed-fixed.
+        if adr_wd <= 0o7777:
+            return self.add_adr_wd(popo, adr_wd)
+
+        # Except where instruction is indexed, cuss D.P. address that straddles Fbanks.
+        if (self._yul.switch & (SwitchBit.PREVIOUS_INDEX | SwitchBit.DP_OPCODE)) == SwitchBit.DP_OPCODE:
+            if (adr_wd & 0o1777) == 0o1777:
+                self.cuss_list[10].demand = True
+                self.cuss_list[35].demand = True
+                self.prb_adres(self._address)
+
+                # (For D.P. address = 7777).
+                if self._address <= 0o7777:
+                    return self.add_adr_wd(popo, adr_wd)
+
+        elif self._address <= 0o7777:
+            return self.add_adr_wd(popo, adr_wd)
+
+        # Branch if location is not in an Fbank. No bank cuss on XQC ref to 2000-3777.
+        if ((not (self._location <= 0o7777 or self._max_adres <= 0o11777)) and 
+            ((self._location & 0o17600) != (self._address & 0o17600))):
+            adr_wd &= ~0o17600
+            adr_wd |= 0o2000
+            cuss = self.cuss_list[33]
+            bank_no = address >> 10
+            cuss.msg = cuss.msg[:19] + ('%02o' % bank_no) + cuss.msg[21:]
+            return self.add_adr_wd(popo, adr_wd)
+
+        # Put subaddress in range 2000-3777.
+        adr_wd &= ~0o17600
+        adr_wd |= 0o2000
+        return self.add_adr_wd(popo, adr_wd)
+
+    # Minor subroutine to cuss either type of bank error.
+    def cuss_bank(self):
+        # Set poison bit of bank cuss = -indexed.
+        self.cuss_list[33].poison = not (self._yul.switch & SwitchBit.PREVIOUS_INDEX)
+        # Call for bank error cuss.
+        self.cuss_list[33].demand = True
+
+    # When address is wrong but not atrocious, tell the man what it is.
+    def prb_adres(self, address):
+        # Set up address of adr cuss.
+        cuss = self.cuss_list[35]
+        # Branch if address is in erasable.
+        if address > 0o3777:
+            # Branch if address is in fixed-fixed.
+            if self.address < 0o7777:
+                # Put subaddress in the range 2000-3777.
+                address -= 0o10000
+                bank_no = address >> 10
+                address = (address | 0o2000) & 0o3777
+                # Put reduced bank no. into cuss, exit.
+                cuss.msg = cuss.msg[:8] + ('=%02o,%04o' % (bank_no, address))
+                return
         else:
-            if self._address <= 0o1377:
-                return self.add_adr_wd(popo, adr_wd)
+            # Branch if address is in unswitched E.
+            if address > 0o1377:
+                bank_no = address >> 8
+                # Put subaddress in the range 1400-1777.
+                address = (address | 0o1400) & 0o1777
+                # Put EBank no. into cuss, exit.
+                cuss.msg = cuss.msg[:8] + ('=E%o,%04o' % (bank_no, address))
+                return
+
+        cuss.msg = cuss.msg[:8] + '= %04o   ' % address
+
+
 
     # Printing procedures for basic instructions and address constants.
     def gud_basic(self, popo, adr_wd):
