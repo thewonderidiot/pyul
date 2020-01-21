@@ -284,6 +284,8 @@ class Blk2Pass2(Pass2):
         popo.health &= ~0o3000000
         popo.health |= (popo.health >> 2) & 0o3000000
 
+        adr_wd = [self._address, self._address]
+
         # Branch if extended basic or unex. extra.
         if (self._yul.switch & SwitchBit.EXTEND) != m_common:
             if m_common == 0:
@@ -298,11 +300,11 @@ class Blk2Pass2(Pass2):
             if popo.health & Bit.BIT26:
                 # Set extension switch.
                 self._yul.switch |= SwitchBit.EXTEND
-                return self.add_adr_wd(popo, self._address)
+                return self.add_adr_wd(popo, adr_wd)
 
         # Clear extension switch.
         self._yul.switch &= ~SwitchBit.EXTEND
-        return self.basic_adr(popo, self._address)
+        return self.basic_adr(popo, adr_wd)
 
     # Process explicit addresses for instructions or constants.
     def no_implad(self, popo):
@@ -422,17 +424,17 @@ class Blk2Pass2(Pass2):
         # Go see if current word is polish (FIXME)
 
         # Br. if meaningless or atrocious address.
-        adr_wd = self._address
+        adr_wd = [self._address, self._address]
 
         if self._address >= ONES:
             pass # FIXME
 
         # Increment address of D.P. code.
         if self._yul.switch & SwitchBit.DP_OPCODE:
-            adr_wd += 1
+            adr_wd[1] += 1
 
         # Branch if address size OK for this op.
-        if self._address <= self._max_adres:
+        if adr_wd[0] <= self._max_adres:
             # Go process instruction if no const flag.
             b25t27m = Bit.BIT25 | Bit.BIT26 | Bit.BIT27
             if (popo.health & b25t27m) != b25t27m:
@@ -447,13 +449,13 @@ class Blk2Pass2(Pass2):
             self._word |= 0o1
 
         # Branch if address value is positive.
-        if self._address >= 0:
+        if adr_wd[0] >= 0:
             # Branch unless memory allowance = F only.
             if (popo.health & (Bit.BIT29 | Bit.BIT30)) != Bit.BIT30:
                 return self.basic_adr(popo, adr_wd)
             
             # Branch if indeed refers to fixed.
-            if self._address >= 0o4000:
+            if adr_wd[0] >= 0o4000:
                 return self.basic_adr(popo, adr_wd)
 
             # Address in banks E4-E7 is nonsense here.
@@ -461,7 +463,7 @@ class Blk2Pass2(Pass2):
 
 
     def add_adr_wd(self, popo, adr_wd):
-        self._word += adr_wd
+        self._word += adr_wd[0]
         return self.gud_basic(popo, adr_wd)
 
     def basic_adr(self, popo, adr_wd):
@@ -481,12 +483,12 @@ class Blk2Pass2(Pass2):
             return self.adres_adr(popo, adr_wd)
 
         # Branch if address is not in an EBank.
-        if self._address <= 0o1377:
+        if adr_wd[1] <= 0o1377:
             return self.add_adr_wd(popo, adr_wd)
 
         # Except where instruction is indexed, cuss D.P. address that straddles Ebanks.
         if (self._yul.switch & (SwitchBit.PREVIOUS_INDEX | SwitchBit.DP_OPCODE)) == SwitchBit.DP_OPCODE:
-            if (adr_wd & 0o377) == 0o377:
+            if (adr_wd[0] & 0o377) == 0o377:
                 self.cuss_list[10].demand = True
                 self.cuss_list[35].demand = True
                 self.prb_adres(self._address)
@@ -501,28 +503,28 @@ class Blk2Pass2(Pass2):
         # Forgive all if we have pseudo Ebank. Branch on E-bank error.
         if ((self._ebank_reg & 0o3400) <= 0o1000) or ((self._ebank_reg & 0o3400) == (self._address & 0o3400)) :
             # Put subaddress in the range 1400-1777
-            adr_wd &= ~0o3400
-            adr_wd |= 0o1400
+            adr_wd[0] &= ~0o3400
+            adr_wd[0] |= 0o1400
             return self.add_adr_wd(popo, adr_wd)
 
-        adr_wd &= ~0o3400
-        adr_wd |= 0o1400
+        adr_wd[0] &= ~0o3400
+        adr_wd[0] |= 0o1400
         self.cuss_bank()
 
         # Put Ebank number in bank error cuss.
         cuss = self.cuss_list[33]
-        bank_no = address >> 8
+        bank_no = self._address >> 8
         cuss.msg = cuss.msg[:19] + ('E%o' % bank_no) + cuss.msg[21:]
         return self.add_adr_wd(popo, adr_wd)
 
     def adres_adr(self, popo, adr_wd):
         # Exit if in fixed-fixed.
-        if adr_wd <= 0o7777:
+        if adr_wd[1] <= 0o7777:
             return self.add_adr_wd(popo, adr_wd)
 
         # Except where instruction is indexed, cuss D.P. address that straddles Fbanks.
         if (self._yul.switch & (SwitchBit.PREVIOUS_INDEX | SwitchBit.DP_OPCODE)) == SwitchBit.DP_OPCODE:
-            if (adr_wd & 0o1777) == 0o1777:
+            if (adr_wd[0] & 0o1777) == 0o1777:
                 self.cuss_list[10].demand = True
                 self.cuss_list[35].demand = True
                 self.prb_adres(self._address)
@@ -537,16 +539,16 @@ class Blk2Pass2(Pass2):
         # Branch if location is not in an Fbank. No bank cuss on XQC ref to 2000-3777.
         if ((not (self._location <= 0o7777 or self._max_adres <= 0o11777)) and 
             ((self._location & 0o17600) != (self._address & 0o17600))):
-            adr_wd &= ~0o17600
-            adr_wd |= 0o2000
+            adr_wd[0] &= ~0o17600
+            adr_wd[0] |= 0o2000
             cuss = self.cuss_list[33]
-            bank_no = address >> 10
+            bank_no = self._address >> 10
             cuss.msg = cuss.msg[:19] + ('%02o' % bank_no) + cuss.msg[21:]
             return self.add_adr_wd(popo, adr_wd)
 
         # Put subaddress in range 2000-3777.
-        adr_wd &= ~0o17600
-        adr_wd |= 0o2000
+        adr_wd[0] &= ~0o17600
+        adr_wd[0] |= 0o2000
         return self.add_adr_wd(popo, adr_wd)
 
     # Minor subroutine to cuss either type of bank error.
@@ -604,7 +606,7 @@ class Blk2Pass2(Pass2):
             self._line[39] = '%o' % first_digit
             return self.bc_check(popo)
 
-        if adr_wd < 0:
+        if adr_wd[0] < 0:
             return self.op_digit_m1(popo, adr_wd)
 
         # Branch if instruction refers 2 erasable.
@@ -639,7 +641,7 @@ class Blk2Pass2(Pass2):
         self._line[39] = '%o' % sec_digit
 
         # Branch if address value is over 777.
-        if abs(adr_wd) < 0o1000:
+        if abs(adr_wd[0]) < 0o1000:
             self._line[40] = ' '
         else:
             # Insert prime if address is split.
