@@ -423,11 +423,11 @@ class Blk2Pass2(Pass2):
 
         # Go see if current word is polish (FIXME)
 
-        # Br. if meaningless or atrocious address.
         adr_wd = [self._address, self._address]
 
+        # Br. if meaningless or atrocious address.
         if self._address >= ONES:
-            pass # FIXME
+            return self.rng_error(popo, adr_wd, cuss_range=False)
 
         # Increment address of D.P. code.
         if self._yul.switch & SwitchBit.DP_OPCODE:
@@ -440,7 +440,25 @@ class Blk2Pass2(Pass2):
             if (popo.health & b25t27m) != b25t27m:
                 return self.instrop(popo, adr_wd)
 
-            # FIXME...
+        return self.rng_error(popo, adr_wd, check_size=True)
+
+    def rng_error(self, popo, adr_wd, cuss_range=True, check_size=False):
+        if cuss_range:
+            # Branch if address too big to print.
+            if (not check_size) or (adr_wd[0] < 0o170000):
+                # If not atrocious, tell him what it is.
+                self.cuss_list[35].demand = True
+                self.prb_adres(self._address)
+
+            # Cuss range error in address value.
+            self.cuss_list[10].demand = True
+
+        # Branch if instruction or address const.
+        if (popo.health & HealthBit.CARD_TYPE_MASK) <= HealthBit.CARD_TYPE_ILLOP:
+            return self.bad_basic(popo)
+
+        # Cuss rang err in EBANK=, SBANK=, BNKSUM.
+        # FIXME
 
     # Specific processing for basic instructions.
     def instrop(self, popo, adr_wd):
@@ -455,12 +473,35 @@ class Blk2Pass2(Pass2):
                 return self.basic_adr(popo, adr_wd)
             
             # Branch if indeed refers to fixed.
-            if adr_wd[0] >= 0o4000:
+            if self._address >= 0o4000:
                 return self.basic_adr(popo, adr_wd)
 
             # Address in banks E4-E7 is nonsense here.
-            # FIXME
+            if self._address >= 0o2000:
+                return self.rng_error(popo, adr_wd)
 
+            if self._yul.switch & SwitchBit.PREVIOUS_INDEX:
+                return self.add_adr_wd(popo, adr_wd)
+
+            self.cuss_list[35].demand = True
+            self.prb_adres(self._address)
+            # If not indexed, we've had it, mate.
+            self.cuss_list[10].demand = True
+            return self.add_adr_wd(popo, adr_wd)
+
+        if not self._yul.switch & SwitchBit.PREVIOUS_INDEX:
+            # Cuss no index before minus address.
+            self.cuss_list[71].demand = True
+
+        # Add negative address.
+        self._word += adr_wd[0]
+
+        # Set up prime for full code print.
+        self._line[39] = '\''
+
+        # Call for prime in quarter-code print.
+        adr_wd[0] = 0o1000
+        return self.gud_basic(popo, adr_wd)
 
     def add_adr_wd(self, popo, adr_wd):
         self._word += adr_wd[0]
@@ -663,9 +704,27 @@ class Blk2Pass2(Pass2):
 
         # Cleverly exit to naughty or bc_check.
         if self._line[43] == '■':
-            return self.naughty(self, popo)
+            return self.naughty(popo)
 
         return self.bc_check(popo)
+
+    def bad_basic(self, popo):
+        # Blot out bad address field.
+        self._line[40] = '■■■■'
+
+        dec_5_flag = Bit.BIT2 | Bit.BIT4
+        if self._word >= dec_5_flag:
+            # Blot first digit of bad constant.
+            self._line[39] = '■'
+            return self.naughty(popo)
+
+        # Branch if no minu sign in column 17.
+        if popo.card[16] == '-':
+            # Complement good op of bad neg. instr.
+            self._word ^= 0o77777
+
+        # Choose printing of straight op or other.
+        return self.print_op(popo, [0,0])
 
     def naughty(self, popo):
         self._word = BAD_WORD
