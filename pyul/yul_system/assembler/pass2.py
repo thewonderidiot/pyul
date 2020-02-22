@@ -20,6 +20,7 @@ class Pass2:
         self._yul = yul
         self._adr_limit = adr_limit
         self._m_typ_tab = m_typ_tab
+        self._dp_inst = False
         self._def_xform = 0o31111615554
         self._marker = '*'
         self._lin_count = 0

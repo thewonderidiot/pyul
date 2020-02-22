@@ -308,14 +308,74 @@ class Blk2Pass2(Pass2):
 
     # Process explicit addresses for instructions or constants.
     def no_implad(self, popo):
+        # Branch if instruction, not adr constant.
         b25t27m = Bit.BIT25 | Bit.BIT26 | Bit.BIT27
         if (popo.health & b25t27m) != b25t27m:
             return self.non_const(popo)
 
+        # Branch on level of address constant.
+        level = (popo.health >> 24) & 3
+        b28t30m = Bit.BIT28 | Bit.BIT29 | Bit.BIT30
+        adr_con_4 = 0o4000000
+        if level == 0:
+            # Level 0: basic address constants.
+            dec_6_flag = Bit.BIT2 | Bit.BIT3
+            self._word |= dec_6_flag
+
+            # Br if ECADR, BBCON, 2FCADR, or 2(B)CADR.
+            if (popo.health & b28t30m) < adr_con_4:
+                # ADRES,REMADR,GENADR,FCADR,SBANK=,BNKSUM.
+                self._max_adres = 0o167777
+                return self.max_ad_set(popo, update_ebank=False)
+            elif (popo.health & b28t30m) == adr_con_4:
+                # E-addresses only for ECADR, EBANK=.
+                self._max_adres = 0o3777
+                return self.max_ad_set(popo, update_ebank=False)
+
+            # Branch if BBCON (single precision)
+            b29t30m = Bit.BIT29 | Bit.BIT30
+            if (popo.health & b29t30m) > Bit.BIT30:
+                # Make return go to D.P. constant proc.
+                self._dp_inst = True
+                # Prepare for the worst.
+                self._sec_half = BAD_WORD
+                self._sec_alf = '■■■■■■■■■■■■■■■■'
+
+                # Branch if 2FCADR or BNKSUM (no er prob).
+                if (popo.health & b29t30m) <= Bit.BIT29:
+                    self._max_adres = 0o167777
+                    return self.max_ad_set(popo, update_ebank=False)
+
+            # Keep assembler's EBANK reg. up to date.
+            self.ebk_loc_q(accept_temp=False)
+
+            # May erase EBANK or SBANK conflict cuss.
+            self.cuss_list[70].demand = False
+
+            return self.set_ebcon(popo, check_oneshot=True)
+
+        elif level == 1:
+            # Branch for polish addr or store codes.
+            if (popo.health & b28t30m) < 0o3000000:
+                # FIXME
+                pass
+
+            # Rest of level 1: EBANK=, SBANK=, BNKSUM.
+            self._location = ONES
+
+            # Maybe cuss nonblank loc field.
+            if popo.health & Bit.BIT8:
+                self.cuss_list[43].demand = True
+
+            # Select EBANK=, SBANK=, or BNKSUM.
+            # if not (popo.health >> 17) & 0o77:
+            #     pass
+            #print('!!!!!' + popo.card + (' --> %o' % ((popo.health >> 17) & 0o7)))
+
     def non_const(self, popo):
         # Place quarter-code bits in instr. word.
         self._word |= (popo.health >> 12) & (Bit.BIT37 | Bit.BIT38)
-        
+
         # Branch if peripheral code.
         b29t30m = Bit.BIT29 | Bit.BIT30
         if (popo.health & b29t30m) < b29t30m:
@@ -434,13 +494,127 @@ class Blk2Pass2(Pass2):
             adr_wd[1] += 1
 
         # Branch if address size OK for this op.
-        if adr_wd[0] <= self._max_adres:
-            # Go process instruction if no const flag.
-            b25t27m = Bit.BIT25 | Bit.BIT26 | Bit.BIT27
-            if (popo.health & b25t27m) != b25t27m:
-                return self.instrop(popo, adr_wd)
+        if adr_wd[0] > self._max_adres:
+            return self.rng_error(popo, adr_wd, check_size=True)
 
-        return self.rng_error(popo, adr_wd, check_size=True)
+        # Go process instruction if no const flag.
+        b25t27m = Bit.BIT25 | Bit.BIT26 | Bit.BIT27
+        if (popo.health & b25t27m) != b25t27m:
+            return self.instrop(popo, adr_wd)
+
+        # Branch if not type 0 address constant.
+        if popo.health & Bit.BIT24:
+            return self.adr_con_1(popo, adr_wd)
+
+        # Select procedure for type 0 address constants.
+        # May put prefix on ECADR for downlist.
+        self._word |= (popo.health >> 16) & 0o74000
+
+        # Select procedure for 1 of 8 adr consts.
+        proc = (popo.health >> 18) & 0x7
+        if proc == 0:
+            # Adres is just like TC (except for flag).
+            if self._address <= 0o3777:
+                return self.basic_adr(popo, adr_wd)
+            else:
+                return self.adres_adr(popo, adr_wd)
+        elif proc == 1:
+            # Like ADRES, but must be different bank.
+            return self.remadr(popo, adr_wd)
+        elif proc == 2:
+            # Complete address for fixed memory.
+            return self.fcadr(popo, adr_wd)
+        elif proc == 3:
+            # Like adres, but no bank-error checks.
+            return self.genadr(popo, adr_wd)
+        elif proc == 4:
+            # Complete address for erasable memory.
+            return self.add_adr_wd(popo, adr_wd)
+        elif proc == 5:
+            # Both-bank constant, 5 bits and 3 bits.
+            return self.bbcon(popo, adr_wd)
+        elif proc == 6:
+            # FCADR (for FB) followed by GENADR.
+            self._sec_half = self._address
+            return self._2fcadr(popo, adr_wd)
+        else:
+            # GENADR followed by BBCON (for BB).
+            self._sec_half = self._address
+            return self._2bcadr(popo, adr_wd)
+
+    def remadr(self, popo, adr_wd):
+        pass
+
+    def fcadr(self, popo, adr_wd):
+        pass
+
+    def genadr(self, popo, adr_wd):
+        pass
+
+    def bbcon(self, popo, adr_wd):
+        # If not in fixed, should be bank number.
+        if self._address <= 0o3777:
+            # Address in erasable illegal here.
+            if self._address >= 0o70:
+                return self.rng_error(popo, adr_wd)
+
+            # Set FB part of BBCON from bank number.
+            self._address <<= 10
+
+        elif self._address <= 0o7777:
+            # No reduction needed if in fixed-fixed.
+            return self.bbc_adres(popo, adr_wd, supply_sbank=True)
+
+        else:
+            self._address -= 0o10000
+
+        # Branch if address isn't in a super-bank.
+        if self._address <= 0o57777:
+            return self.bbc_adres(popo, adr_wd, supply_sbank=True)
+
+        # Branch if no 1-shot SBANK=.
+        b25t27m = Bit.BIT25 | Bit.BIT26 | Bit.BIT27
+        if (self._sbank_reg & b25t27m) == 0:
+            # Shift address superbits to match temps.
+            b28t30m = Bit.BIT28 | Bit.BIT29 | Bit.BIT30
+            sec_alf = (self._address << 5) & b28t30m
+
+            # May cuss address confl w/ 1-shot decl.
+            if sec_alf != (self._sbank_reg & b28t30m):
+                self.cuss_list[66].demand = True
+
+            # Plant super-bank bits in BBCON word.
+            b41t44m = Bit.BIT41 | Bit.BIT42 | Bit.BIT43 | Bit.BIT44
+            self._word &= ~b41t44m
+            self._word |= (self._address >> 9) & b41t44m
+
+            # Reduce bank number to 3X.
+            self._address &= ~0o160000
+            self._address |= 0o60000
+            return self.bbc_adres(popo, adr_wd)
+
+        return self.bbc_adres(popo, adr_wd, supply_sbank=True)
+
+    def bbc_adres(self, popo, adr_wd, supply_sbank=False):
+        if supply_sbank:
+            # Supply declared SBANK or 0 if none.
+            b41t44m = Bit.BIT41 | Bit.BIT42 | Bit.BIT43 | Bit.BIT44
+            self._word &= ~b41t44m
+            self._word |= (self._sbank_reg >> 14) & b41t44m
+
+        # Set FB part of BBCON from address.
+        self._word &= ~0o176000
+        self._word |= self._address & 0o176000
+
+        # Insert 1-shot or established EBANK no.
+        self._word |= self._ebank_reg & 0o7
+        return self.gud_basic(popo, adr_wd)
+
+    def _2fcadr(self, popo, adr_wd):
+        pass
+
+    def _2bcadr(self, popo, adr_wd):
+        pass
 
     def rng_error(self, popo, adr_wd, cuss_range=True, check_size=False):
         if cuss_range:
@@ -460,6 +634,32 @@ class Blk2Pass2(Pass2):
         # Cuss rang err in EBANK=, SBANK=, BNKSUM.
         # FIXME
 
+    def adr_con_1(self, popo, adr_wd):
+        # FIXME
+        pass
+
+    def set_ebcon(self, popo, check_oneshot=False):
+        # Bypass update if 1-shot declaration.
+        if check_oneshot and ((self._ebank_reg & 0o77) > 7):
+            # Position current setting for BBCON fmt.
+            self._ebank_reg &= ~ 0o7
+            self._ebank_reg |= (self._ebank_reg >> 8) & 0o7
+
+        # Bypass update if 1-shot declaration.
+        b25t27m = Bit.BIT25 | Bit.BIT26 | Bit.BIT27
+        if (self._sbank_reg & b25t27m) == Bit.BIT25:
+            # Copy permanent into temporary superbits.
+            b28t30m = Bit.BIT28 | Bit.BIT29 | Bit.BIT30
+            self._sbank_reg &= ~b28t30m
+            self._sbank_reg |= (self._sbank_reg << 5) & b28t30m
+
+        # Select on * in op code (BBCON or 2CADR).
+        if not self.cuss_list[90].demand:
+            self._max_adres = 0o167777
+            return self.max_ad_set(popo, update_ebank=False)
+
+        # FIXME
+
     # Specific processing for basic instructions.
     def instrop(self, popo, adr_wd):
         # Supply incrementing bit for D.P. codes.
@@ -471,7 +671,7 @@ class Blk2Pass2(Pass2):
             # Branch unless memory allowance = F only.
             if (popo.health & (Bit.BIT29 | Bit.BIT30)) != Bit.BIT30:
                 return self.basic_adr(popo, adr_wd)
-            
+
             # Branch if indeed refers to fixed.
             if self._address >= 0o4000:
                 return self.basic_adr(popo, adr_wd)
@@ -508,6 +708,7 @@ class Blk2Pass2(Pass2):
         return self.gud_basic(popo, adr_wd)
 
     def basic_adr(self, popo, adr_wd):
+        # Branch if address is in erasable.
         if self._address > 0o3777:
             if self._yul.switch & SwitchBit.PREVIOUS_INDEX:
                 return self.adres_adr(popo, adr_wd)
@@ -578,7 +779,7 @@ class Blk2Pass2(Pass2):
             return self.add_adr_wd(popo, adr_wd)
 
         # Branch if location is not in an Fbank. No bank cuss on XQC ref to 2000-3777.
-        if ((not (self._location <= 0o7777 or self._max_adres <= 0o11777)) and 
+        if ((not (self._location <= 0o7777 or self._max_adres <= 0o11777)) and
             ((self._location & 0o17600) != (self._address & 0o17600))):
             adr_wd[0] &= ~0o17600
             adr_wd[0] |= 0o2000
@@ -625,8 +826,6 @@ class Blk2Pass2(Pass2):
                 return
 
         cuss.msg = cuss.msg[:8] + '= %04o   ' % address
-
-
 
     # Printing procedures for basic instructions and address constants.
     def gud_basic(self, popo, adr_wd):
@@ -772,10 +971,11 @@ class Blk2Pass2(Pass2):
         # Return to general procedure.
         return
 
-    def ebk_loc_q(self):
-        # Tentatively accept EBANK declaration.
-        self._ebank_reg &= ~0o3400
-        self._ebank_reg |= (self._ebank_reg << 8) & 0o344
+    def ebk_loc_q(self, accept_temp=True):
+        if accept_temp:
+            # Tentatively accept EBANK declaration.
+            self._ebank_reg &= ~0o3400
+            self._ebank_reg |= (self._ebank_reg << 8) & 0o344
 
         # Tentatively accept SBANK declaration.
         self._sbank_reg &= ~0o160000
