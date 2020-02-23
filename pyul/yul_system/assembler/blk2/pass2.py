@@ -9,6 +9,8 @@ class Blk2Pass2(Pass2):
         self.k1_maxnum = 0o77777
         self.d2_params = [268435455.0, 268435456.0, 268435455]
         self.k2_maxnum = 0o7777777777
+        self.mm_params = [99.0, 16384.0, 99]
+        self.vn_params = [9999.0, 16384.0, 9999]
         self.con_mask = [39, 44]
         self.flag_mask = 0o7400007700000000
         self.pret_flag = 0o1000000000
@@ -332,27 +334,7 @@ class Blk2Pass2(Pass2):
                 self._max_adres = 0o3777
                 return self.max_ad_set(popo, update_ebank=False)
 
-            # Branch if BBCON (single precision)
-            b29t30m = Bit.BIT29 | Bit.BIT30
-            if (popo.health & b29t30m) > Bit.BIT30:
-                # Make return go to D.P. constant proc.
-                self._dp_inst = True
-                # Prepare for the worst.
-                self._sec_half = BAD_WORD
-                self._sec_alf = '■■■■■■■■■■■■■■■■'
-
-                # Branch if 2FCADR or BNKSUM (no er prob).
-                if (popo.health & b29t30m) <= Bit.BIT29:
-                    self._max_adres = 0o167777
-                    return self.max_ad_set(popo, update_ebank=False)
-
-            # Keep assembler's EBANK reg. up to date.
-            self.ebk_loc_q(accept_temp=False)
-
-            # May erase EBANK or SBANK conflict cuss.
-            self.cuss_list[70].demand = False
-
-            return self.set_ebcon(popo, check_oneshot=True)
+            return self.dp_adr_con(popo)
 
         elif level == 1:
             # Branch for polish addr or store codes.
@@ -368,9 +350,86 @@ class Blk2Pass2(Pass2):
                 self.cuss_list[43].demand = True
 
             # Select EBANK=, SBANK=, or BNKSUM.
-            # if not (popo.health >> 17) & 0o77:
-            #     pass
-            #print('!!!!!' + popo.card + (' --> %o' % ((popo.health >> 17) & 0o7)))
+            op_type = (popo.health >> 17) & 0o7
+            if op_type == 0:
+                # E-addresses only for ECADR, EBANK=.
+                self._max_adres = 0o3777
+                return self.max_ad_set(popo, update_ebank=False)
+
+            elif op_type == 2:
+                # ADRES,REMADR,GENADR,FCADR,SBANK=,BNKSUM.
+                self._max_adres = 0o167777
+                return self.max_ad_set(popo, update_ebank=False)
+
+            else:
+                return self.dp_adr_con(popo)
+
+        else:
+            # Level 3: special decimal constants.
+            self.cuss_list[90].demand = False
+            return self.mm_vn(popo)
+
+    # Level 3 address constants: special decimal constants.
+    def mm_vn(self, popo):
+        # Set general MXR and delimiting asterisk.
+        card = self.delimit(popo)
+
+        # Cuss queer info in columns a la decimal.
+        if popo.card[0] != ' ' and popo.card[0] != 'J':
+            self.cuss_list[60].demand = True
+        if popo.card[16] != ' ':
+            self.cuss_list[61].demand = True
+        if popo.card[23] != ' ':
+            self.cuss_list[62].demand = True
+
+        code = (popo.health >> 17) & 2
+        if code == 0:
+            # MM = DEC with limit of 99.
+            number,_ = self.dec_const(card, *self.mm_params)
+            return self.m_proc_1p(popo, number)
+
+        else:
+            # First do DEC with limit of 9999.
+            number,_ = self.dec_const(card, *self.vn_params)
+            # If bad word treat VN like DEC.
+            if number == BAD_WORD:
+                return self.m_proc_1p(popo, number)
+
+            # Isolate verb in m_common.
+            m_common = [0, 0]
+            m_common[0] = int((number & ~Bit.BIT1) / 100)
+
+            # Isolate noun in m_cmmon +1.
+            m_common[1] = int(number % 100)
+
+            # Store verb and noun as 7-bit groups.
+            number = (number & Bit.BIT1) | (m_common[0] << 7) | m_common[1]
+
+            # Finish up a la dec.
+            return self.good_1p(popo, number)
+
+    def dp_adr_con(self, popo):
+        # Branch if BBCON (single precision)
+        b29t30m = Bit.BIT29 | Bit.BIT30
+        if (popo.health & b29t30m) > Bit.BIT30:
+            # Make return go to D.P. constant proc.
+            self._dp_inst = True
+            # Prepare for the worst.
+            self._sec_half = BAD_WORD
+            self._sec_alf = '■■■■■■■■■■■■■■■■'
+
+            # Branch if 2FCADR or BNKSUM (no er prob).
+            if (popo.health & b29t30m) <= Bit.BIT29:
+                self._max_adres = 0o167777
+                return self.max_ad_set(popo, update_ebank=False)
+
+        # Keep assembler's EBANK reg. up to date.
+        self.ebk_loc_q(accept_temp=False)
+
+        # May erase EBANK or SBANK conflict cuss.
+        self.cuss_list[70].demand = False
+
+        return self.set_ebcon(popo, check_oneshot=True)
 
     def non_const(self, popo):
         # Place quarter-code bits in instr. word.
@@ -632,9 +691,77 @@ class Blk2Pass2(Pass2):
             return self.bad_basic(popo)
 
         # Cuss rang err in EBANK=, SBANK=, BNKSUM.
-        # FIXME
+        code = (popo.health >> 18) & 0o3
+
+        # Disposition of EBANK=, SBANK=, and BNKSUM if address is bad.
+        if code == 0:
+            self._line[44] = 'E■'
+            self._zequaloc = True
+
+        elif code == 1:
+            self._line[44] = 'S■'
+            self._zequaloc = True
+
+        else:
+            # Bad location value flag.
+            popo.health |= Bit.BIT14
+
+            # Join end of BNKSUM procedure.
+            # FIXME
 
     def adr_con_1(self, popo, adr_wd):
+        code = popo.health & (Bit.BIT28 | Bit.BIT29 | Bit.BIT30)
+        if code <= 0:
+            # Branch to EBANK= code.
+            return self.ebank2(popo, adr_wd)
+
+        elif code <= Bit.BIT30:
+            # Branch to SBANK= code.
+            return self.sbank2(popo, adr_wd)
+
+        else:
+            # Go to other bank to process BNKSUM code.
+            return self.bnksum(popo, adr_wd)
+
+    # Action of 'SBANK=' code upon assembler's S bank reg.
+    def sbank2(self, popo, adr_wd):
+        # Address must be in a super-bank.
+        if self._address <= 0o67777:
+            return self.rng_error(popo, adr_wd)
+
+        self._address -= 0o10000
+
+        # Set up temp. superbits, call it 1-shot.
+        char5m = 0o77000000
+        self._sbank_reg &= ~char5m
+        self._sbank_reg |= (self._address << 5) & char5m
+
+        # Print declared superbank no. as "SN".
+        self._line[44] = 'S%o' % ((self._sbank_reg >> 18) & 0o77)
+
+        # Exit, bypassing word processing.
+        self._zequaloc = True
+
+    # Action of 'EBANK=' code upon assembler's E bank reg.
+    def ebank2(self, popo, adr_wd):
+        # Branch if EBANK number implied by adr.
+        if self._address < 8:
+            # Use EBANK number directly.
+            self._ebank_reg &= ~0o77
+            self._ebank_reg |= self._address
+
+        else:
+            # Plant EBANK no. in tentative position.
+            self._ebank_reg &= ~0o77
+            self._ebank_reg |= (self._address >> 8) & 0o77
+
+        # Print declared EBANK no. as "EN".
+        self._line[44] = 'E%o' % (self._ebank_reg & 0o7)
+
+        # Exit, bypassing word processing.
+        self._zequaloc = True
+
+    def bnksum(self, popo, adr_wd):
         # FIXME
         pass
 
@@ -807,13 +934,16 @@ class Blk2Pass2(Pass2):
         # Branch if address is in erasable.
         if address > 0o3777:
             # Branch if address is in fixed-fixed.
-            if self.address < 0o7777:
+            if address > 0o7777:
                 # Put subaddress in the range 2000-3777.
                 address -= 0o10000
                 bank_no = address >> 10
                 address = (address | 0o2000) & 0o3777
                 # Put reduced bank no. into cuss, exit.
                 cuss.msg = cuss.msg[:8] + ('=%02o,%04o' % (bank_no, address))
+                return
+            else:
+                cuss.msg = cuss.msg[:8] + ('=%04o   ' % address)
                 return
         else:
             # Branch if address is in unswitched E.
@@ -1140,6 +1270,9 @@ class Blk2Pass2(Pass2):
             self._word = number
             return
 
+        return self.good_1p(popo, number)
+
+    def good_1p(self, popo, number):
         # Isolate magnitude
         self._word = number & ~(Bit.BIT1)
         if not number & Bit.BIT1:

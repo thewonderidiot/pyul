@@ -21,6 +21,7 @@ class Pass2:
         self._adr_limit = adr_limit
         self._m_typ_tab = m_typ_tab
         self._dp_inst = False
+        self._zequaloc = False
         self._def_xform = 0o31111615554
         self._marker = '*'
         self._lin_count = 0
@@ -292,7 +293,13 @@ class Pass2:
             loc_symbol = self.instront(popo)
         else:
             loc_symbol = None
+
         self.m_proc_op(popo)
+
+        if self._zequaloc:
+            self._zequaloc = False
+            return self.no_loc_sym(popo, loc_symbol)
+
         self.proc_word(popo, loc_symbol)
 
     def illegop(self, popo):
