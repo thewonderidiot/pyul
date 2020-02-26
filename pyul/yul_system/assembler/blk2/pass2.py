@@ -606,8 +606,27 @@ class Blk2Pass2(Pass2):
         pass
 
     def fcadr(self, popo, adr_wd):
-        # FIXME
-        pass
+        # Address in erasable or fixfix illegal.
+        if self._address <= 0o7777:
+            return self.rng_error(popo, adr_wd)
+
+        # Put CADR in the range 00000-77777.
+        adr_wd[0] -= 0o10000
+
+        # Branch if address isn't in a super-bank.
+        if adr_wd[0] <= 0o57777:
+            return self.add_adr_wd(popo, adr_wd)
+
+        # Branch if there is no superbank setting.
+        b33t35m = Bit.BIT33 | Bit.BIT34 | Bit.BIT35
+        if (self._sbank_reg & b33t35m) > 0:
+            # Branch to cuss superbank error.
+            if (adr_wd[0] & b33t35m) != (self._sbank_reg & b33t35m):
+                self.sbank_cus(adr_wd[0])
+
+        adr_wd[0] &= ~b33t35m
+        adr_wd[0] |= 0o60000
+        return self.add_adr_wd(popo, adr_wd)
 
     def genadr(self, popo, adr_wd):
         # FIXME
@@ -698,7 +717,7 @@ class Blk2Pass2(Pass2):
 
                 # Reduce bank 4X, 5X, or 6X to 3X.
                 adr_wd[0] &= ~b33t35m
-                self._address |= 0o60000
+                adr_wd[0] |= 0o60000
 
         # Put GENADR in the range 2000-3777, exit.
         self._sec_half &= ~0o176000
@@ -706,8 +725,64 @@ class Blk2Pass2(Pass2):
         return self.print_2pa(popo, adr_wd)
 
     def _2bcadr(self, popo, adr_wd):
-        # FIXME
-        pass
+        # Isolate bank number in BBCON word.
+        self._sec_half &= ~0o1777
+
+        # Supply declared SBANK or 0 if none.
+        self._sec_half |= (self._sbank_reg >> 14) & 0o360
+
+        # Branch if refers to erasable.
+        if self._address <= 0o3777:
+            # Branch if refers to an EBANK.
+            if 0o1400 <= self._address:
+                # Here use EBANK acording to address.
+                self._sec_half |= (self._address >> 8) & 0o2007
+
+                # Branch if there is no 1-shot declaratn.
+                if (self._ebank_reg & 0o77) < 8:
+                    # Otherwise check for conflict.
+                    if (self._sec_half & 0o7) != (self._ebank_reg & 0o7):
+                        # E(S)BANK conflict with 1-shot declare.
+                        self._cuss_list[66].demand = True
+
+                # Put GENADR in the range 1400-1777, exit.
+                adr_wd[0] &= 0o3400
+                adr_wd[0] |= 0o1400
+                return self.print_2pa(popo, adr_wd)
+
+        # Branch if refers to fixed-fixed.
+        elif self._address <= 0o7777:
+            pass
+
+        else:
+            # Reduce bank number in BBCON word.
+            self._sec_half -= 0o10000
+
+            # Branch if address isn't in a super-bank.
+            if self._sec_half > 0o57777:
+                # Branch if no 1-shot SBANK=.
+                if self._sbank_reg & (Bit.BIT25 | Bit.BIT26 | Bit.BIT27) == 0:
+                    # Shift address superbits to match temps.
+                    b28t30m = Bit.BIT28 | Bit.BIT29 | Bit.BIT30
+                    sec_alf = (self._sec_half << 5) & b28t30m
+                    # Maybe cuss address confl w/ 1-shot decl.
+                    if sec_alf != (self._sbank_reg & b28t30m):
+                        # E(S)BANK conflict with 1-shot declare.
+                        self._cuss_list[66].demand = True
+
+                # Plant super-bank bits in BBCON word.
+                self._sec_half |= (self._sec_half >> 9) & 0o360
+
+                # Reduce bank 4X, 5X, or 6X to 3X.
+                self._sec_half &= ~(Bit.BIT33 | Bit.BIT34 | Bit.BIT35)
+                self._sec_half |= 0o60000
+
+            # Put GENADR in the range 2000-3777.
+            adr_wd[0] &= ~0o176000
+            adr_wd[0] |= 0o2000
+
+        self._sec_half |= self._ebank_reg & 0o7
+        return self.print_2pa(popo, adr_wd)
 
     def print_2pa(self, popo, adr_wd):
         # Branch if no minus in column 17.
@@ -1163,11 +1238,11 @@ class Blk2Pass2(Pass2):
         if accept_temp:
             # Tentatively accept EBANK declaration.
             self._ebank_reg &= ~0o3400
-            self._ebank_reg |= (self._ebank_reg << 8) & 0o344
+            self._ebank_reg |= (self._ebank_reg << 8) & 0o3400
 
-        # Tentatively accept SBANK declaration.
-        self._sbank_reg &= ~0o160000
-        self._sbank_reg |= (self._sbank_reg >> 5) & 0o160000
+            # Tentatively accept SBANK declaration.
+            self._sbank_reg &= ~0o160000
+            self._sbank_reg |= (self._sbank_reg >> 5) & 0o160000
 
         # If in fixed, go see if in superbank.
         if self._location < 0o4000:
