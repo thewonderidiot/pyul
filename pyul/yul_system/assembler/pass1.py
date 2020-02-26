@@ -1570,7 +1570,7 @@ class Pass1:
             loc_value = adr_wd[0] << self.blok_shif
             # Omit increase for blank bank.
             if self._field_cod[0] != 0:
-                loc_value += self.bank_inc
+                loc_value += (self.bank_inc << self.blok_shif)
 
         # Branch if there is no modifier.
         if self._field_cod[1] != 0:

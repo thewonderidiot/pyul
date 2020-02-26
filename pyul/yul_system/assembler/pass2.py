@@ -299,6 +299,9 @@ class Pass2:
         if self._zequaloc:
             self._zequaloc = False
             return self.no_loc_sym(popo, loc_symbol)
+        elif self._dp_inst:
+            self._dp_inst = False
+            return self.l_fini_2p(popo, loc_symbol, None, None, self._sec_half, self._sec_alf)
 
         self.proc_word(popo, loc_symbol)
 
@@ -1289,9 +1292,10 @@ class Pass2:
         number, e_number = self.dec_const(card, *self.d2_params)
         return self.l_fini_2p(popo, loc_symbol, number, e_number)
 
-    def l_fini_2p(self, popo, loc_symbol, number, e_number):
+    def l_fini_2p(self, popo, loc_symbol, number, e_number, sec_half=None, sec_alf=None):
         # Finish words according to machine.
-        sec_half, sec_alf = self.m_proc_2p(popo, number, e_number)
+        if sec_half is None:
+            sec_half, sec_alf = self.m_proc_2p(popo, number, e_number)
         # Print first line.
         self.print_lin()
         # Send word that has valid location.

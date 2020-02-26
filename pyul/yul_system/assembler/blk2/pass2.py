@@ -602,12 +602,15 @@ class Blk2Pass2(Pass2):
             return self._2bcadr(popo, adr_wd)
 
     def remadr(self, popo, adr_wd):
+        # FIXME
         pass
 
     def fcadr(self, popo, adr_wd):
+        # FIXME
         pass
 
     def genadr(self, popo, adr_wd):
+        # FIXME
         pass
 
     def bbcon(self, popo, adr_wd):
@@ -669,11 +672,66 @@ class Blk2Pass2(Pass2):
         self._word |= self._ebank_reg & 0o7
         return self.gud_basic(popo, adr_wd)
 
+    # Type 0 address constants concluded: double precision types.
+
     def _2fcadr(self, popo, adr_wd):
-        pass
+        if self._address < 0o4000:
+            # Error exit if refers to erasable.
+            self._sec_half = BAD_WORD
+            return self.rng_error(popo, adr_wd)
+
+        # All done if in fixed-fixed.
+        if self._address <= 0o7777:
+            return self.print_2pa(popo, adr_wd)
+
+        # Put CADR in the range 00000-77777.
+        adr_wd[0] -= 0o10000
+
+        # Branch if address isn't in a super-bank.
+        if (adr_wd[0] & 0o177777) > 0o57777:
+            # Branch if there is no superbank setting.
+            b33t35m = Bit.BIT33 | Bit.BIT34 | Bit.BIT35
+            if (self._sbank_reg & b33t35m) > 0:
+                # Branch to cuss superbank error.
+                if (adr_wd[0] & b33t35m) != (self._sbank_reg & b33t35m):
+                    self.sbank_cus(adr_wd[0]) # FIXME
+
+                # Reduce bank 4X, 5X, or 6X to 3X.
+                adr_wd[0] &= ~b33t35m
+                self._address |= 0o60000
+
+        # Put GENADR in the range 2000-3777, exit.
+        self._sec_half &= ~0o176000
+        self._sec_half |= 0o2000
+        return self.print_2pa(popo, adr_wd)
 
     def _2bcadr(self, popo, adr_wd):
+        # FIXME
         pass
+
+    def print_2pa(self, popo, adr_wd):
+        # Branch if no minus in column 17.
+        if popo.card[16] == '-':
+            self._sec_half ^= 0o77777
+
+        # Tweak and use part of 2DEC, 2OCT.
+        dec6_flag = Bit.BIT2 | Bit.BIT3
+
+        # Make printable version of low-order part
+        self._sec_alf = '%05o' % self._sec_half
+        self._sec_half |= dec6_flag
+
+        # Restore it and exit.
+        return self.add_adr_wd(popo, adr_wd)
+
+    def sbank_cus(self, adr_wd):
+        # Set up bank error cuss for filling in.
+        self._yul.switch &= ~SwitchBit.PREVIOUS_INDEX
+        self.cuss_bank()
+        cuss = self.cuss_list[33]
+        bank_no = adr_wd >> 13
+        # Form "ADDRESS IS IN BANK SN".
+        cuss.msg = cuss.msg[:19] + ('S%o' % bank_no) + cuss.msg[21:]
 
     def rng_error(self, popo, adr_wd, cuss_range=True, check_size=False):
         if cuss_range:
@@ -1151,6 +1209,7 @@ class Blk2Pass2(Pass2):
         self._sbank_reg |= location & 0o160000
 
     def int_op_cod(self, popo):
+        # FIXME
         pass
 
     # Subroutine in pass 2 for BLK2 to set in print a right-hand location for such as SETLOC.
