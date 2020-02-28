@@ -601,9 +601,38 @@ class Blk2Pass2(Pass2):
             self._sec_half = self._address
             return self._2bcadr(popo, adr_wd)
 
+    # Specific processing for 6 of the 8 type 0 address constants.
     def remadr(self, popo, adr_wd):
-        # FIXME
-        pass
+        # Branch if address is in erasable.
+        if self._address > 0o3777:
+            # Exit if address is in fixed-fixed.
+            if self._address <= 0o7777:
+                return self.add_adr_wd(popo, adr_wd)
+
+            # Branch happily if loc. not in an FBANK.
+            if self._location > 0o7777:
+                # OK if loc. and adr. in different banks.
+                if (self._location & 0o176000) == (self._address & 0o176000):
+                    return self.cus_f_bank(popo, adr_wd)
+
+            # Put subaddress in the range 2000-3777
+            adr_wd[0] &= ~0o176000
+            adr_wd[0] |= 0o2000
+            return self.add_adr_wd(popo, adr_wd)
+
+        # Exit if address is not in an EBANK.
+        if self._address <= 0o1377:
+            return self.add_adr_wd(popo, adr_wd)
+
+        # OK if we have a pseudo EBANK. OK if loc and adr in different EBANKs.
+        if (((self._ebank_reg & 0o3400) <= 0o1000) or
+            ((self._address & 0o3400) != (self._ebank_reg & 0o3400))):
+            # Put subaddress in the range 1400-1777
+            adr_wd[0] &= ~0o3400
+            adr_wd[0] |= 0o1400
+            return self.add_adr_wd(popo, adr_wd)
+
+        return self.cus_e_bank(popo, adr_wd)
 
     def fcadr(self, popo, adr_wd):
         # Address in erasable or fixfix illegal.
@@ -629,8 +658,24 @@ class Blk2Pass2(Pass2):
         return self.add_adr_wd(popo, adr_wd)
 
     def genadr(self, popo, adr_wd):
-        # FIXME
-        pass
+        # Branch if address is in erasable memory.
+        if self._address > 0o3777:
+            # All done if in fixed-fixed.
+            if self._address <= 0o7777:
+                return self.add_adr_wd(popo, adr_wd)
+
+            # Put subaddress in the range 2000-3777
+            adr_wd[0] &= ~0o176000
+            adr_wd[0] |= 0o2000
+            return self.add_adr_wd(popo, adr_wd)
+
+        # All done if address in unswitched eras.
+        if self._address <= 0o1377:
+            return self.add_adr_wd(popo, adr_wd)
+
+        adr_wd[0] &= ~0o3400
+        adr_wd[0] |= 0o1400
+        return self.add_adr_wd(popo, adr_wd)
 
     def bbcon(self, popo, adr_wd):
         # If not in fixed, should be bank number.
@@ -713,7 +758,7 @@ class Blk2Pass2(Pass2):
             if (self._sbank_reg & b33t35m) > 0:
                 # Branch to cuss superbank error.
                 if (adr_wd[0] & b33t35m) != (self._sbank_reg & b33t35m):
-                    self.sbank_cus(adr_wd[0]) # FIXME
+                    self.sbank_cus(adr_wd[0])
 
                 # Reduce bank 4X, 5X, or 6X to 3X.
                 adr_wd[0] &= ~b33t35m
@@ -746,7 +791,7 @@ class Blk2Pass2(Pass2):
                         self._cuss_list[66].demand = True
 
                 # Put GENADR in the range 1400-1777, exit.
-                adr_wd[0] &= 0o3400
+                adr_wd[0] &= ~0o3400
                 adr_wd[0] |= 0o1400
                 return self.print_2pa(popo, adr_wd)
 
@@ -1041,16 +1086,29 @@ class Blk2Pass2(Pass2):
         # Branch if location is not in an Fbank. No bank cuss on XQC ref to 2000-3777.
         if ((not (self._location <= 0o7777 or self._max_adres <= 0o11777)) and
             ((self._location & 0o17600) != (self._address & 0o17600))):
-            adr_wd[0] &= ~0o17600
-            adr_wd[0] |= 0o2000
-            cuss = self.cuss_list[33]
-            bank_no = self._address >> 10
-            cuss.msg = cuss.msg[:19] + ('%02o' % bank_no) + cuss.msg[21:]
-            return self.add_adr_wd(popo, adr_wd)
+            return self.cus_f_bank(popo, adr_wd)
 
         # Put subaddress in range 2000-3777.
         adr_wd[0] &= ~0o17600
         adr_wd[0] |= 0o2000
+        return self.add_adr_wd(popo, adr_wd)
+
+    def cus_e_bank(self, popo, adr_wd):
+        adr_wd[0] &= ~0o3400
+        adr_wd[0] |= 0o1000
+        cuss = self.cuss_list[33]
+        bank_no = self._address >> 10
+        # Put EBANK number into bank error cuss.
+        cuss.msg = cuss.msg[:19] + ('E%o' % bank_no) + cuss.msg[21:]
+        return self.add_adr_wd(popo, adr_wd)
+
+    def cus_f_bank(self, popo, adr_wd):
+        adr_wd[0] &= ~0o17600
+        adr_wd[0] |= 0o2000
+        cuss = self.cuss_list[33]
+        bank_no = (self._address - 0o10000) >> 10
+        # Put FBANK number into bank error cuss.
+        cuss.msg = cuss.msg[:19] + ('%02o' % bank_no) + cuss.msg[21:]
         return self.add_adr_wd(popo, adr_wd)
 
     # Minor subroutine to cuss either type of bank error.
