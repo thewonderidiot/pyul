@@ -1085,11 +1085,11 @@ class Blk2Pass2(Pass2):
 
         # Branch if location is not in an Fbank. No bank cuss on XQC ref to 2000-3777.
         if ((not (self._location <= 0o7777 or self._max_adres <= 0o11777)) and
-            ((self._location & 0o17600) != (self._address & 0o17600))):
+            ((self._location & 0o176000) != (self._address & 0o176000))):
             return self.cus_f_bank(popo, adr_wd)
 
         # Put subaddress in range 2000-3777.
-        adr_wd[0] &= ~0o17600
+        adr_wd[0] &= ~0o176000
         adr_wd[0] |= 0o2000
         return self.add_adr_wd(popo, adr_wd)
 
@@ -1103,7 +1103,7 @@ class Blk2Pass2(Pass2):
         return self.add_adr_wd(popo, adr_wd)
 
     def cus_f_bank(self, popo, adr_wd):
-        adr_wd[0] &= ~0o17600
+        adr_wd[0] &= ~0o176000
         adr_wd[0] |= 0o2000
         cuss = self.cuss_list[33]
         bank_no = (self._address - 0o10000) >> 10
