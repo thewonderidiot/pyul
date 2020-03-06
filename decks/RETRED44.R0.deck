@@ -3244,4 +3244,482 @@ R0297  2BUT RATHER A SUBROUTINE OF THE EXECUTIVE.
  0317  2         TCF    CHANJOB -1
  03175  SELFBANK CADR   ENDEDOP
  0318   ENDEXECF EQUALS
+L      2WAITLIST
+R0001  2GROUNDRULE....DELTA T SHOULD NOT EXCEED 12000 (= 2 MINUTES)
+ 0002  2         SETLOC ENDEXECF
+ 0003  2         EBANK= LST1            TASK  LISTS IN SWITCHED E BANK.
+ 0004   WAITLIST XCH    Q                SAVE DELTA T IN Q AND RETURN IN
+ 0005            TS     WAITEXIT        WAITEXIT.
+ 0006            EXTEND
+ 0007            INDEX  A
+ 0008            DCA    0               PICK UP 2CADR OF TASK.
+ 0009            TS     WAITADR         BBCON WILL REMAIN IN L.
+ 0010            CAF    WAITBB
+ 0011            XCH    BBANK
+ 0012  2         TCF    WAIT2
+R0013  2         RETURN TO CALLER AFTER TASK INSERTION:
+ 0014   LVWTLIST CA     WAITBANK
+ 0015            TS     BBANK
+ 0016            INDEX  WAITEXIT
+ 0017  2         TC     2
+ 0018  2WAITBB   BBCON  WAIT2
+R0019  2ENDTASK MUST BE ENTERED IN FIXED-FIXED SO IT IS DISTINGUISHABLE BY ITS A
+ 0020  9DRES ALONE.
+ 0021   ENDTASK -2CADR  SVCT3
+ 0022   SVCT3    TCF    TASKOVER
+P0023  2         BEGIN TASK INSERTION.
+ 0024  2         SETLOC ENDEXECS
+ 0025   WAIT2    TS     WAITBANK        BBANK OF CALLING PROGRAM.
+ 0026            CS     TIME3
+ 0027            AD     +1              CCS  A  = + 1/4
+ 0028            CCS    A               TEST  1/4 - C(TIME3).  IF POSITIVE,
+A0029   IT MEANS THAT TIME3 OVERFLOW HAS OCCURRED PRIOR TO CS  TIME3 AND THAT
+A0030   C(TIME3) = T - T1, INSTEAD OF 1.0 - (T1 - T).  THE FOLLOWING FOUR
+A0031  2ORDERS SET C(A) = TD - T1 + 1 IN EITHER CASE.
+ 0032            AD     OCT40001        OVERFLOW HAS OCCURRED.  SET C(A) =
+ 0033  2         CS     A               T - T1 + 3/4 - 1
+R0034  2NORMAL CASE (C(A) MINUS) YIELDS SAME C(A)  -(-(1.0-(T1-T))+1/4)-1
+ 0035            AD     OCT50001
+ 0036  2         AD     Q               RESULT = TD - T1 + 1.
+ 0037  2         CCS    A               TEST TD - T1 + 1
+ 0038            AD     LST1            IF TD - T1 POS, GO TO WTLST5 WITH
+ 0039  2         TCF    WTLST5          C(A) = (TD - T1) + C(LST1) = TD-T2+1
+ 0040            NOOP
+ 0041  2         CS     Q
+R0042   NOTE THAT THIS PROGRAM SECTION IS NEVER ENTERED WHEN T-T1 G/E -1,
+R0043   SINCE TD-T1+1 = (TD-T) + (T-T1+1), AND DELTA T = TD-T G/E +1 .  (G/E
+R0044   SYMBOL MEANS GREATER THAN OR EQUAL TO).  THUS THERE NEED BE NO CON-
+R0045  2CERN OVER A PREVIOUS OR IMMINENT OVERFLOW OF TIME3 HERE.
+ 0046            AD     POS1/2          WHEN TD IS NEXT, FORM QUANTITY
+ 0047            AD     POS1/2            1.0 - DELTA T = 1.0 - (TD - T)
+ 0048            XCH    TIME3
+ 0049            AD     NEGMAX
+ 0050            AD     Q               1.0 - DELTAT T NOW COMPLETE.
+ 0051            EXTEND                 ZERO INDEX Q.
+ 0052  8         QXCH   7               (ZQ)
+ 0053   WTLST4   XCH    LST1
+ 0054            XCH    LST1 +1
+ 0055            XCH    LST1 +2
+ 0056            XCH    LST1 +3
+ 0057  2         XCH    LST1 +4
+ 0058            CA     WAITADR         (MINOR PART OF TASK CADR HAS BEEN IN L.)
+ 0059            INDEX  Q
+ 0060  2         TCF    +1
+ 0061            DXCH   LST2
+ 0062            DXCH   LST2 +2
+ 0063            DXCH   LST2 +4
+ 0064            DXCH   LST2 +6
+ 0065            DXCH   LST2 +8D
+ 0066            DXCH   LST2 +10D       AT END, CHECK THAT C(LST2+10) IS STD
+ 0067            AD     ENDTASK           END ITEM, AS CHECK FOR EXCEEDING
+A0068                                     THE LENGTH OF THE LIST.
+ 0069            EXTEND                 DUMMY TASK ADRES SHOULD BE IN FIXED-
+ 0070            BZF    LVWTLIST        FIXED SO ITS ADRES ALONE DISTINGUISHES
+ 0071  8         TCF    WTABORT         IT.
+ 0072   WTLST5   CCS    A               TEST  TD - T2 + 1
+ 0073            AD     LST1 +1
+ 0074            TCF    +4
+ 0075            AD     ONE
+ 0076            TC     WTLST2
+ 0077  2         OCT    1
+ 0078   +4       CCS    A               TEST  TD - T3 + 1
+ 0079            AD     LST1 +2
+ 0080            TCF    +4
+ 0081            AD     ONE
+ 0082            TC     WTLST2
+ 0083  2         OCT    2
+ 0084   +4       CCS    A               TEST  TD - T4 + 1
+ 0085            AD     LST1 +3
+ 0086            TCF    +4
+ 0087            AD     ONE
+ 0088            TC     WTLST2
+ 0089  2         OCT    3
+ 0090   +4       CCS    A               TEST  TD - T5 + 1
+ 0091            AD     LST1 +4
+ 0092            TCF    +4
+ 0093            AD     ONE
+ 0094            TC     WTLST2
+ 0095  2         OCT    4
+ 0096   +4       CCS    A               TEST  TD - T6 + 1
+ 0097            TCF    WTABORT
+ 0098   OCT50001 OCT    50001
+ 0099            AD     ONE
+ 0100            TC     WTLST2
+ 0101  2         OCT    5
+ 0102   WTABORT  TC                     LIST OVERFLOW.
+P0103   THE ENTRY TO WTLST2 JUST PRECEDING OCT  N  IS FOR T  LE TD LE T   -1.
+R0104  2                                                   N           N+1
+R0105   (LE MEANS LESS THAN OR EQUAL TO).  AT ENTRY, C(A) = -(TD - T   + 1)
+R0106  2                                                            N+1
+R0107   THE LST1 ENTRY -(T   - T +1) IS TO BE REPLACED BY -(TD - T + 1), AND
+R0108  2                  N+1   N                                 N
+R0109   THE ENTRY -(T   - TD + 1) IS TO BE INSERTED IMMEDIATELY FOLLOWING.
+R0110  2             N+1
+ 0111   WTLST2   TS     WAITTEMP            C(A) = -(TD - T   + 1)
+ 0112            INDEX  Q
+ 0113            CAF    0
+ 0114  2         TS     Q               INDEX VALUE INTO Q.
+ 0115            CAF    ONE
+ 0116            AD     WAITTEMP
+ 0117            INDEX  Q               C(A) = -(TD - T ) + 1.
+ 0118  2         ADS    LST1 -1                        N
+ 0119            CS     WAITTEMP
+ 0120            INDEX  Q
+ 0121  2         TCF    WTLST4
+ 0122  2ENDWAITS EQUALS                 LAST SWITCHABLE LOCATION.
+R0123  2C(TIME3) = 1.0 - (T1 - T)
+R0124   C(LST1  ) = - (T2 - T1) + 1
+R0125   C(LST1+1) = - (T3 - T2) + 1
+R0126   C(LST1+2) = - (T4 - T3) + 1
+R0127   C(LST1+3) = - (T5 - T4) + 1
+R0128  2C(LST1+4) = - (T6 - T5) + 1
+R0129   C(LST2   ) = 2CADR  TASK1
+R0130   C(LST2+2 ) = 2CADR  TASK2
+R0131   C(LST2+4 ) = 2CADR  TASK3
+R0132   C(LST2+6 ) = 2CADR  TASK4
+R0133   C(LST2+8 ) = 2CADR  TASK5
+R0134   C(LST2+10) = 2CADR  TASK6
+P0135  2         ENTERS HERE ON T3 RUPT TO DISPATCH WAITLISTED TASK.
+ 0136  2         SETLOC SVCT3 +1
+ 0137   T3RUPT   TS     BANKRUPT
+ 0138            EXTEND
+ 0139  2         QXCH   QRUPT
+ 0140   T3RUPT2  CAF    NEG1/2          DISPATCH WAITLIST TASK.
+ 0141            XCH    LST1 +4         1.  MOVE UP LST1 CONTENTS, ENTERING
+ 0142            XCH    LST1 +3             A VALUE OF 1/2 +1 AT THE BOTTOM
+ 0143            XCH    LST1 +2             FOR T6-T5, CORRESPONDING TO THE
+ 0144            XCH    LST1 +1             INTERVAL 81.91 SEC FOR ENDTASK.
+ 0145            XCH    LST1
+ 0146            AD     POSMAX          2. SET T3 = 1.0 - T2 -T USING LIST 1.
+ 0147            ADS    TIME3           SO T3 WONT TICK DURING UPDATE.
+ 0148            TS     RUPTAGN
+ 0149            CS     ZERO
+ 0150  2         TS     RUPTAGN         SETS RUPTAGN TO +1 ON OVERFLOW.
+ 0151            EXTEND                 DISPATCH TASK.
+ 0152            DCS    ENDTASK
+ 0153            DXCH   LST2 +10D
+ 0154            DXCH   LST2 +8D
+ 0155            DXCH   LST2 +6
+ 0156            DXCH   LST2 +4
+ 0157            DXCH   LST2 +2
+ 0158  2         DXCH   LST2
+ 0159  4         DTCB
+R0160  2RETURN, AFTER EXECUTION OF TIME3 OVERFLOW TASK.
+ 0161   TASKOVER CCS    RUPTAGN         IF +1 RETURN TO T3RUPT, IF -0 RESUME.
+ 0162            CAF    WAITBB
+ 0163            TS     BBANK
+ 0164  2         TCF    T3RUPT2         DISPATCH NEXT TASK IF IT WAS DUE.
+ 0165   RESUME   EXTEND
+ 0166            QXCH   QRUPT
+ 0167            CA     BANKRUPT
+ 0168            TS     BBANK
+ 0169            DXCH   ARUPT
+ 0170  2         RESUME
+ 0171   ENDWAITF EQUALS                 LAST FIXED-FIXED LOCATION OF T3RUPT.
+L      2FRESH START AND RESTART
+ 0001  2         SETLOC ENDWAITS
+ 0002   SLAP1    INHINT                 FRESH START. COMES HERE FROM PINBALL.
+ 0003            CAF    ZERO             (ZERO FAILREG IN FRESH START ONLY).
+ 0004            TS     FAILREG
+ 0005            TS     UPLOCK          FREE UPLINK INTERLOCK
+ 00051           CAF    BIT15           TURNS OFF AUTO, HOLD, FREE, NO ATT,
+ 00052           TS     DSPTAB  +11D    SPARE, GIMBAL LOCK, SPARE, TRACKER,
+A00053                                  PROG ALM (BITS 1-9 OF DSPTAB+11D),
+A00054                                  IN FRESH START ONLY.
+ 00055           CS     BIT13           TURN OFF :TEST ALARM: OUTBIT (CHAN13
+ 00056           EXTEND                 BIT10).  FRESH START ONLY.
+ 00057           WAND   CHAN13
+ 000571          CS     BIT4            TURN OFF TEMP (FRESH START ONLY)
+ 000572          EXTEND
+ 000573          WAND   DSALMOUT
+ 00058           CAF    STARTEB
+ 00059           TS     EBANK           SET FOR E3
+ 0006   SLAP2    CAF    ZERO
+ 0007            TS     SMODE
+ 0008  2         TC     STARTSUB        SUBROUTINE DOES MOST OF THE WORK.
+ 0009  2         TCF    DUMMYJOB
+ 0010  4GOPROG   TC     SLAP2           COMES HERE FROM 4050  RESTART.
+ 00101           EBANK= LST1
+ 00102  STARTEB  ECADR  LST1
+ 0011   STARTSUB XCH    Q
+ 0012  2         TS     BUF             EXEC TEMPS ARE AVAILABLE TO US.
+ 0013            CAF    POSMAX          T3 AND T4 OVERFLOW AS SOON AS POSSIBLE.
+ 0014            TS     TIME3             (POSMAX IS PSEUDO INTERRUPT SIGNAL IN
+ 0015  2         TS     TIME4             CASE RUPT SIGNALLED BEFORE TS TIME3).
+ 0016            CAF    NEG1/2          INITIALIZE WAITLIST DELTA-TS.
+ 0017            TS     LST1  +4
+ 0018            TS     LST1  +3
+ 0019            TS     LST1  +2
+ 0020            TS     LST1  +1
+ 0021  2         TS     LST1
+ 0022            CS     ENDTASK
+ 0023            TS     LST2
+ 0024            TS     LST2 +2
+ 0025            TS     LST2 +4
+ 0026            TS     LST2 +6
+ 0027            TS     LST2 +8D
+ 0028            TS     LST2 +10D
+ 0029            CS     ENDTASK +1
+ 0030            TS     LST2 +1
+ 0031            TS     LST2 +3
+ 0032            TS     LST2 +5
+ 0033            TS     LST2 +7
+ 0034            TS     LST2 +9D
+ 0035  2         TS     LST2 +11D
+ 0036            CS     ZERO            MAKE ALL EXECUTIVE REGISTER SETS
+ 0037            TS     PRIORITY        AVAILABLE.
+ 0038            TS     PRIORITY +12D
+ 0039            TS     PRIORITY +24D
+ 0040            TS     PRIORITY +36D
+ 0041            TS     PRIORITY +48D
+ 0042            TS     PRIORITY +60D
+ 0043  2         TS     PRIORITY +72D
+ 00435 2         TS     NEWJOB          SHOWS NO ACTIVE JOBS.
+ 0044            CAF    VAC1ADRC        MAKE ALL VAC AREAS AVAILABLE.
+ 0045            TS     VAC1USE
+ 0046            AD     LTHVACA
+ 0047            TS     VAC2USE
+ 0048            AD     LTHVACA
+ 0049            TS     VAC3USE
+ 0050            AD     LTHVACA
+ 0051            TS     VAC4USE
+ 0052            AD     LTHVACA
+ 0053  2         TS     VAC5USE
+ 0054            CAF    ONE             GIVES 110 MS TO GET READY FOR T4.
+ 0055            TS     DSRUPTSW
+ 0056            CAF    TEN             TURN OFF ALL DISPLAY SYSTEM RELAYS.
+ 0057   DSPOFF   TS     MPAC
+ 0058            CS     BIT12
+ 0059            INDEX  MPAC
+ 0060            TS     DSPTAB
+ 0061            CCS    MPAC
+ 0062  2         TC     DSPOFF
+ 0063            TS     INLINK
+ 0064            TS     DSPCNT
+ 0066            TS     MODREG
+ 0067            TS     CADRSTOR
+ 0068            TS     REQRET
+ 0069            TS     CLPASS
+ 0070            TS     DSPLOCK
+ 0071            TS     MONSAVE         KILL MONITOR
+ 0072            TS     MONSAVE1
+ 0073            TS     GRABLOCK
+ 0074            TS     VERBREG
+ 0075            TS     NOUNREG
+ 0076            TS     DSPLIST
+ 0077            TS     DSPLIST +1
+ 0078  8         TS     DSPLIST +2
+ 0079            TS     STATE           TURN OFF INTERPRETER SWITCHES.
+ 0080            TS     STATE +1
+ 0081            TS     STATE +2
+ 0082            TS     STATE   +3
+ 0083            TS     EXTVBACT        MAKE EXTENDED VERBS AVAILABLE
+ 0084            CAF    NOUTCON
+ 0085  2         TS     NOUT
+ 00851           CS     CHAN11C         TURN OFF UPLINK ACTIVITY, KEY
+ 00852           EXTEND                 RLSE, V/N FLASH, OPERATOR ERROR
+ 00853           WAND   DSALMOUT        IN BOTH FRESH START AND RESTART.
+ 00854           CAF    LESCHK          SELF CHECK GO-TO REGISTER.
+ 00855           TS     SELFRET
+ 0086            CS     VD1
+ 0087            TS     DSPCOUNT
+ 0088  2         TC     BUF
+ 00881  CHAN11C  OCT    00164           CHAN 11 BITS 3,5,6,7.
+A00882                                  UPLINK ACTIVITY, KEY RLSE,
+A00883                                  V/N FLASH, OPERATOR ERROR.
+ 00884  LESCHK   ADRES  SMODECHK
+ 0089   VAC1ADRC ADRES  VAC1USE
+ 0090   LTHVACA  DEC    44
+L      2T4RUPT PROGRAM
+ 0001   T4RUPT   TS     BANKRUPT
+ 0002            XCH    Q
+ 0003            TS     QRUPT
+ 0004            CAF    ZERO
+ 0005            EXTEND
+ 0006            WRITE  OUT0
+ 0007            CCS    DSRUPTSW
+ 0008            TC     SPECRUPT        ZERO OUT0 10 MS AFTER REGULAR T4RUPT.
+ 0009  2         TC     T4RUPTA
+ 0010   SPECRUPT CAF    ZERO
+ 0011            TS     DSRUPTSW
+ 0012            CAF    110MRUPT        RE ESTABLISH 120 MS PERIOD
+ 0013            TS     TIME4
+ 0014            TC     RESUME
+ 00141  120MRUPT OCT    37764
+ 0015  4110MRUPT OCT    37765
+R0016   RELTAB IS A PACKED TABLE. RELAYWORD CODE IN UPPER 4 BITS, RELAY CODE
+R0017  2IN LOWER 5 BITS.
+ 0018  2         SETLOC ENDWAITF        IN F/F
+ 0019   RELTAB   OCT    04025
+ 0020            OCT    10003
+ 0021            OCT    14031
+ 0022            OCT    20033
+ 0023            OCT    24017
+ 0024            OCT    30036
+ 0025            OCT    34034
+ 0026            OCT    40023
+ 0027            OCT    44035
+ 0028            OCT    50037
+ 0029            OCT    54000
+ 0030  4RELTAB11 OCT    60000
+ 00301 4ENDT4FF  EQUALS
+ 0033  2         SETLOC 110MRUPT +1     IN BANK
+ 00331  T4RUPTA  CAF    120MRUPT
+ 00332           TS     TIME4
+ 0034   CDRVE    CCS    DSPTAB +11D
+ 0035            TC     DSPOUT
+ 0036            TC     DSPOUT
+ 0037            XCH    DSPTAB +11D
+ 0038            MASK   LOW11
+ 0039            TS     DSPTAB +11D
+ 0040            AD     RELTAB11
+ 0041            TC     DSPLAYC
+P0058  2DSPOUT PROGRAM. PUTS OUT DISPLAYS.
+ 0059   DSPOUT   CCS    NOUT            ENTERED IN INTERRUPTED STATE AT END OF
+ 0060            TC     +2                                      DSRUPT
+ 0061            TC     LVDSRUPT
+ 0062            TS     NOUT
+ 0063            CS     ZERO
+ 0064            TS     DSRUPTEM        SET TO -0 FOR 1ST PASS THRU DSPTAB
+ 0065            XCH    DSPCNT
+ 0066            AD     NEG0            TO PREVENT +0
+ 0067            TS     DSPCNT
+ 0068   DSPSCAN  INDEX  DSPCNT
+ 0069            CCS    DSPTAB
+ 0070            CCS    DSPCNT          IF DSPTAB ENTRY +, SKIP
+ 0071            TC     DSPSCAN -2      IF DSPCNT +, AGAIN
+ 0072            TC     DSPLAY          IF DSPTAB ENTRY -, DISPLAY
+ 0073   TABLNTH  OCT    12              DEC 10   LENGTH OF DSPTAB
+ 0074            CCS    DSRUPTEM        IF DSRUPTEM=+0,2ND PASS THRU DSPTAB
+ 0075            LOC    +1              (DSPCNT=0). +0 INTO NOUT, RESUME
+ 0076            TS     NOUT
+ 0077            TC     LVDSRUPT
+ 0078            TS     DSRUPTEM        IF DSRUPTEM=-0,1ST PASS THRU DSPTAB
+ 0079            CAF    TABLNTH         (DSPCNT=0). +0 INTO DSRUPTEM. PASS AGAIN
+ 0080  2         TC     DSPSCAN -1
+ 0081   DSPLAY   AD     ONE
+ 0082            INDEX  DSPCNT
+ 0083            TS     DSPTAB          REPLACE POSITIVELY
+ 0084            MASK   LOW11           REMOVE BITS 12 TO 15
+ 0085            TS     DSRUPTEM
+ 0086            CAF    HI5
+ 0087            INDEX  DSPCNT
+ 0088            MASK   RELTAB          PICK UP BITS 12 TO 15 OF RELTAB ENTRY
+ 0089            AD     DSRUPTEM
+ 0090   DSPLAYC  EXTEND
+ 0091            WRITE  OUT0
+ 0092  2         TS     DISPBUF         THIS WILL BE SENT DOWN NEXT TM CYCLE.
+ 0093            CAF    10MSRUPT        SET T4 TO INTERRUPT IN 10 MS.
+ 0094            TS     TIME4
+ 0095            CAF    ONE
+ 0096  2         TS     DSRUPTSW        SET FOR SPECRUPT
+ 0097            TC     LVDSRUPT
+ 0098   LVDSRUPT EQUALS RESUME
+ 0099   10MSRUPT =      POSMAX
+L      2KEYRUPT, UPRUPT
+ 0001   KEYRUPT1 TS     BANKRUPT
+ 0002            XCH    Q
+ 0003            TS     QRUPT
+ 0004            TC     LODSAMPT        TIME IS SNATCHED IN RUPT FOR NOUN 65.
+ 0005            CAF    LOW5
+ 0006            EXTEND
+ 0007            RAND   MNKEYIN
+ 0008   KEYCOM   AD     BIT11
+ 0009            TS     TMKEYBUF
+ 0010            CAF    CHRPRIO
+ 0011            TC     NOVAC
+ 0012            EBANK= DSPCOUNT
+ 0013            2CADR  CHARIN
+ 0014            CAF    LOW5
+ 0015            MASK   TMKEYBUF
+ 0016            INDEX  LOCCTR
+ 0017            TS     MPAC            LEAVE 5 BIT KEY CDE IN MPAC FOR CHARIN
+ 0018  4         TC     RESUME
+ 0019   KEYRUPT2 TS     BANKRUPT
+ 0020            XCH    Q
+ 0021            TS     QRUPT
+ 0022            TC     LODSAMPT        TIME IS SNATCHED IN RUPT FOR NOUN 65.
+ 0023            CAF    LOW5
+ 0024            EXTEND
+ 0025            RAND   NAVKEYIN
+ 0026            TC     KEYCOM
+P0027  2UPRUPT PROGRAM
+ 0028   UPRUPT   TS     BANKRUPT
+ 0029            XCH    Q
+ 0030            TS     QRUPT
+ 0031            TC     LODSAMPT        TIME IS SNATCHED IN RUPT FOR NOUN 65.
+ 0032            CAF    ZERO
+ 0033            XCH    INLINK
+ 0034            TS     KEYTEMP1
+ 0035            CAF    BIT3            TURN ON UPACT LIGHT
+ 0036            EXTEND                 (BIT 3 OF CHANNEL 11)
+ 0037            WOR    DSALMOUT
+ 0038   UPRPT1   CAF    LOW5            TEST FOR TRIPLE CHAR REDUNDANCY
+ 0039            MASK   KEYTEMP1        LOW5 OF WORD
+ 0040            XCH    KEYTEMP1        LOW5 INTO KEYTEMP1
+ 0041            XCH    SR              WHOLE WORD INTO SR
+ 0042            TS     KEYTEMP2        ORIGINAL SR INTO KEYTEMP2
+ 0043            TC     SRGHT5
+ 0044            MASK   LOW5            MID 5
+ 0045            AD     HI10
+ 0046            TC     UPTEST
+ 0047            TC     SRGHT5
+ 0048            MASK   LOW5            HIGH 5
+ 0049            COM
+ 0050            TC     UPTEST
+ 0051   UPOK     TC     RESTORSR        CODE IS GOOD
+ 0052            CS     ELRCODE         IF CODE = ERROR LIGHT RESET, PUT +0
+ 0053            AD     KEYTEMP1        INTO BIT1 OF UPLOCK.
+ 0054            CCS    A               IF CODE NOT= ELR, PASS CODE ONLY IF
+ 0055            TC     TSTUPLOK        BIT1 OF UPLOCK = 0.
+ 0056   ELRCODE  OCT    22
+ 0057            TC     TSTUPLOK
+ 0058            CS     BIT1            PUT 0 INTO BIT1 OF UPLOCK
+ 0059            MASK   UPLOCK
+ 0060            TS     UPLOCK
+ 0061            TC     ACCEPTUP
+ 0062   TSTUPLOK CAF    BIT1
+ 0063            MASK   UPLOCK
+ 0064            CCS    A
+ 0065            TC     RESUME          BIT1 OF UPLOCK = 1.
+ 0066   ACCEPTUP XCH    KEYTEMP1        BIT1 OF UPLOCK = 0.
+ 0067            AD     BIT6
+ 0068  2         TC     KEYCOM
+ 0069   TMFAIL2  TC     RESTORSR        CODE IS BAD
+ 0070            CS     BIT1            LOCK OUT FURTHER UPLINK ACTIVITY (BY
+ 0071            MASK   UPLOCK          PUTTING 1 INTO BIT1 OF UPLOCK) UNTIL ELR
+ 0072            AD     BIT1            IS SENT UP UPLINK.
+ 0073            TS     UPLOCK
+ 0074            CAF    BIT9            SEND DOWN INDICATION THAT UPLINK HAS
+ 0075            AD     BIT11           RECEIVED BAD CODE.
+ 0076            TS     TMKEYBUF
+ 0077   TMFAIL1  TC     TMALM
+ 0078  2         TC     RESUME
+ 0079   RESTORSR XCH    KEYTEMP2
+ 0080            DOUBLE
+ 0081            TS     SR
+ 0082  2         TC     Q
+ 0083  2TMALM    =      RESUME          FOR NOW
+ 0084   SRGHT5   CS     SR
+ 0085            CS     SR
+ 0086            CS     SR
+ 0087            CS     SR
+ 0088            CS     SR
+ 0089            CS     A
+ 0090  2         TC     Q               DELIVERS WORD UNCOMPLEMENTED
+ 0091   UPTEST   AD     KEYTEMP1
+ 0092            CCS    A
+ 0093            TC     TMFAIL2
+ 0094            LOC    +1
+ 0095            TC     TMFAIL2
+ 0096  2         TC     Q
+ 0097   HI10     OCT    77740
+ 0098  2UPBANK   EQUALS EXECBANK        IN SAME BANK AS EXEC.
+ 0099  2B12-1    OCT    3777
+R0100  8UPACT IS TURNED OFF BY VBRELDSP, ALSO BY ERROR LIGHT RESET.
+R0101   THE RECEPTION OF A BAD CODE BY UPLINK LOCKS OUT FURTHER UPLINK ACTIVITY
+R0102   BY PLACING A 1 INTO BIT1 OF UPLOCK. BIT9 (ALONG WITH BIT11) OF TMKEYBUF
+R0103   IS SET TO 1 TO SEND AN INDICATION OF THIS SITUATION DOWN THE DOWNLINK.
+R0104   THE UPLINK INTERLOCK IS ALLOWED WHEN AN ERROR LIGHT RESET CODE IS SENT
+R0105   UP THE UPLINK, OR WHEN A FRESH START IS PERFORMED.
 *       ENDOFJOB
