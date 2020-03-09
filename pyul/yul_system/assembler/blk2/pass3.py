@@ -23,6 +23,10 @@ class Blk2Pass3(Pass3):
             '81-96)  ',
             '97-112) ',
             '113-128)',
+            '129-144)',
+            '145-160)',
+            '161-176)',
+            '177-192)',
         ]
 
     # Subroutine in pass 3 for BLK2 to set in print the definition of a symbol or the upper limit of an
