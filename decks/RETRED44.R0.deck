@@ -2910,7 +2910,7 @@ R0044  2A,L.
  0056   ENDIBNKF EQUALS
 L      2EXECUTIVE
  0001  2         SETLOC ENDIBNKF
-R0002            TO ENTER A JOB REQUEST REQUIRING NO VAC AREA:
+R0002  2         TO ENTER A JOB REQUEST REQUIRING NO VAC AREA:
  0003   NOVAC    TS     NEWPRIO         SAVE PRIORITY OF NEW JOB.
  0004            EXTEND
  0005            INDEX  Q               Q WILL BE UNDISTURBED THROUGHOUT.
@@ -4348,7 +4348,7 @@ A0556  4                                END OF STANDARD LEAD INS.
  0621            TS     DSPCOUNT
  0622            CA     NOUNCADR
  0623            TC     DSPOCTWD
- 0624            TC     VERBFAN
+ 0624  2         TC     VERBFAN
  0625            AD     ONE
  0626            TC     SETNCADR        ECADR INTO NOUNCADR. SETS EB, NOUNADD.
  0627   VERBFAN  CS     LST2CON
@@ -6452,4 +6452,1573 @@ A26526                                  UPLINK ACTIVITY, TEMP, OPERATOR ERROR.
 A2666                                   TURN OFF V/N FLASH, SET LOADSTAT FOR
 A2667                                   FOR TERMINATE CONDITION, AND GO TO
 A2668                                   RECALTST. FINALLY DO TC ENDOFJOB.
+LINS    AGC BLK2 INSTRUCTION CHECK
+ 0009  2         SETLOC ABORT +1
+R0010   ADDRESSES OF ERASABLE REGISTERS
+ 0011   ADRS1    ADRES  KEEP1
+ 0012   ADRS2    ADRES  KEEP2
+ 0013   ADRS3    ADRES  KEEP3
+ 0014   ADRS4    ADRES  SELF1
+ 0015   ADRS5    ADRES  SELF2
+ 0016   ADRS6    ADRES  S+MAX
+ 0017  2ADRS7    ADRES  SELF3
+R00171  CONSTANTS USED THROUGHOUT THE INSTRUCTIONS CHECK
+ 0018   SBIT1    OCTAL  00001
+ 0019   SBIT2    OCTAL  00002
+ 0020   SBIT3    OCTAL  00004
+ 0021   SBIT4    OCTAL  00010
+ 0022   SBIT5    OCTAL  00020
+ 0023   SBIT6    OCTAL  00040
+ 0024   SBIT7    OCTAL  00100
+ 0025   SBIT8    OCTAL  00200
+ 0026   SBIT9    OCTAL  00400
+ 0027   SBIT10   OCTAL  01000
+ 0028   SBIT11   OCTAL  02000
+ 0029   SBIT12   OCTAL  04000
+ 0030   SBIT13   OCTAL  10000
+ 0031   SBIT14   OCTAL  20000
+ 0032  2SBIT15   OCTAL  40000
+ 0033   S+ZERO   OCTAL  00000
+ 0034   S+1      OCTAL  00001
+ 0035   S+2      OCTAL  00002
+ 0036   S+3      OCTAL  00003
+ 0037   S+4      OCTAL  00004
+ 0038   S+5      OCTAL  00005
+ 0039   S+6      OCTAL  00006
+ 0040   S+7      OCTAL  00007
+ 0041   S6BITS   OCTAL  00077
+ 0042   S7BITS   OCTAL  00177
+ 0043   S13BITS  OCTAL  17777
+ 0044   SODD     OCTAL  25252           SEVEN ONE BITS
+ 0045   S+MAX    OCTAL  37777
+ 0046   S-MAX    OCTAL  40000
+ 0047   ALARMCON OCTAL  40400
+ 0048   SINOUT1  OCTAL  52500
+ 0049   SEVENS   OCTAL  52525           EIGHT ONE BITS
+ 0050   SINOUT2  OCTAL  52552
+ 0051   CYRCON   OCTAL  57761
+ 0052   SINOUT3  OCTAL  77725
+ 0053   S-15     OCTAL  77760
+ 0054   S-14     OCTAL  77761
+ 0055   S-7      OCTAL  77770
+ 0056   S-6      OCTAL  77771
+ 0057   S-5      OCTAL  77772
+ 0058   S-4      OCTAL  77773
+ 0059   S-3      OCTAL  77774
+ 0060   S-2      OCTAL  77775
+ 0061   S-1      OCTAL  77776
+ 0062  2S-ZERO   OCTAL  77777
+R0063   NEXT TWO CONSTANTS ARE USED IN THE DEVIDE SUBROUTINE
+ 0064   DV1CON   OCTAL  14000
+ 0065  2DV2CON   OCTAL  37776
+R0066   NEXT TWO CONSTANTS ARE ADDRESSESS USED BY EXTRACODE INDEX INSTRUCTIONS
+ 0067   ADRS+1   ADRES  S+1
+ 0068  2ADRSDV1  ADRES  DV1CON
+ 0069            CS     A
+ 0070   -0CHK    CCS    A
+ 0071            TCF    ERRORS
+ 0072            TCF    ERRORS
+ 0073            TCF    ERRORS
+ 0074  2         TC     Q
+ 0075            CS     A
+ 0076   -1CHK    CCS    A
+ 0077            TCF    ERRORS
+ 0078            TCF    ERRORS
+ 0079            CCS    A
+ 0080            TCF    ERRORS
+ 0081  3         TC     Q
+ 0082   ERRORS   XCH    Q
+ 0083            TS     SFAIL           SAVE Q FOR FAILURE LOCATION
+ 0084            INCR   ERCOUNT         KEEP TRACK OF NUMBER OF MALFUNCTIONS
+ 0085            INHINT                 TURN ON PROGRAM ALARM LIGHT
+ 0086            CS     ALARMCON
+ 0087            MASK   DSPTAB +11D
+ 0088            AD     ALARMCON
+ 0089            TS     DSPTAB +11D
+ 0090  2         RELINT
+R0091   IF C(SMODE) IS +NON-ZERO START CHECKING AGAIN AT TCCHK
+R0092   IF C(SMODE) IS + PUT +0 IN SMODE AND IDLE
+ 0093            CA     SMODE
+ 0094            EXTEND
+ 0095            BZMF   STOPCHK
+ 0096            TC     SMODECHK
+ 0097   STOPCHK  CA     S+ZERO
+ 0098            TS     SMODE
+ 0099            TC     CHECKNJ
+ 0100   SMODECHK CCS    SMODE
+ 0101            TC     +3
+ 0102            TC     SMODECHK -1
+ 0103            TC     +1
+ 0104            TC     CHECKNJ
+ 0105            CAF    STRTCHK
+ 0106            TC     BANKJUMP        TO START OF CHECKING ROUTINES
+ 0107  2STRTCHK  CADR   TCCHK
+ 0136  2         SETLOC 26000
+ 01361           CA     S+ZERO          INITIALIZE COUNT REGISTER
+ 01362           TS     ERCOUNT
+ 01363 2         TS     SCOUNT
+R0137   NORMAL USE OF TC AND TCF
+ 0138   TCCHK    TC     +2
+ 0139            TC     CCSCHK
+ 0140            TCF    +2
+ 0141            TC     ERRORS
+ 0142            TC     Q
+ 0143  2         TC     ERRORS
+R0144   NORMAL USE OF CA, CS, AND CCS
+ 01441  CCSCHK   CA     S-3
+ 0145            TS     KEEP1
+ 0146            CCS    KEEP1
+ 0147            TC     ERRORS
+ 0148            TC     ERRORS
+ 0149            TC     +2
+ 0150            TC     ERRORS
+ 0151            CCS    A               C(A) =+2, RESULT OF CCS -NUMBER
+ 0152            TC     +4
+ 0153            TC     ERRORS
+ 0154            TC     ERRORS
+ 0155            TC     ERRORS
+ 0156            CCS    A               C(A) = +1, RESULT OF CCS + NUMBER
+ 0157            TC     +4
+ 0158            TC     ERRORS
+ 0159            TC     ERRORS
+ 0160            TC     ERRORS
+ 0161            CCS    A               C(A) = +0, RESULT OF CCS + NUMBER
+ 0162            TC     ERRORS
+ 0163            TC     +3
+ 0164            TC     ERRORS
+ 0165            TC     ERRORS
+ 0166            CS     A
+ 0167            CCS    A               C(A) = -0, RESULT OF CCS +0
+ 0168            TC     ERRORS
+ 0169            TC     ERRORS
+ 0170            TC     ERRORS
+ 0171            CCS    A               RESULT OF CCS -0
+ 0172            TC     ERRORS
+ 0173            TC     +3
+ 0174            TC     ERRORS
+ 0175  2         TC     ERRORS
+R0176   NORMAL USE OF MASK
+ 0177   MSKCHK   CS     S-ZERO
+ 0178            MASK   S-ZERO          00000, 77777
+ 0179            TC     -0CHK -1
+ 0180            CS     S+ZERO
+ 0181            MASK   S+ZERO          77777, 00000
+ 0182            TC     -0CHK -1
+ 0183            CA     S+ZERO
+ 0184            MASK   S+ZERO          00000, 00000
+ 0185            TC     -0CHK -1
+ 0186            CA     S-ZERO
+ 0187            MASK   S-ZERO          77777, 77777
+ 0188            TC     -0CHK
+R0189   NO EDIT FEATURE OF MASK IS CHECKED
+R0190   BITS 9-14 OF WRITE LINES GO TO BITS 1-7 OF EDOP
+ 0191            CA     S-ZERO          77777
+ 0192            TS     EDOP            00177
+ 0193            MASK   EDOP            00177
+ 0194            TS     KEEP1           00177
+ 0195            MASK   EDOP            00177
+ 0196            CS     A               77600
+ 0197            AD     KEEP1           77777
+ 0198            TC     -0CHK
+R01981  CHECK MASK OF AN SC REGISTER
+ 01982           CA     S+1
+ 01983           TS     L
+ 01984           CA     S-ZERO
+ 01985           MASK   L
+ 01986 2         TC     -1CHK -1
+R0199   NORMAL USE OF XCH, AD, AND TS
+ 0200            CA     S+MAX           37777
+ 0201            TS     KEEP1
+ 0202            AD     KEEP1           01 - 37776
+ 0203            TS     KEEP2           37776
+ 0204            TC     ERRORS
+ 0205            TC     -1CHK -1
+ 0206            XCH    KEEP1           SKEEP1 NOW +0
+ 0207            CS     A               40000
+ 0208            AD     A               10 - 00001
+ 0209            TS     KEEP3           40001, C(A) = -1
+ 0210            TC     ERRORS
+ 0211            AD     KEEP3           C(A) = 40000
+ 0212            AD     KEEP2           C(A) = -1
+ 0213            AD     KEEP1           C(A) = -1
+ 0214            TS     KEEP4           -1
+ 0215            CS     KEEP4           +1
+ 0216  2         TC     -1CHK -1
+R0217   NORMAL USE OF INCR
+R0218   NOT CHECKING COUNTER INTERRUPT
+ 0219            CA     S+MAX           37777
+ 0220            TS     KEEP1
+ 0221            INCR   KEEP1           +0
+ 0222            INCR   KEEP1           +1
+ 0223            INCR   KEEP1           +2
+ 0224            AD     S-MAX
+ 0225            TC     -0CHK           CHECK C(A) HAS NOT CHANGED
+ 0226            CS     KEEP1
+ 0227            TS     KEEP1           -2
+ 0228            INCR   KEEP1           -1
+ 0229            CA     KEEP1
+ 0230            TC     -1CHK
+R02301  CHECK    INCREMENT OF AN SC REGISTER
+ 02302           CA     S-2
+ 02303           TS     L
+ 02304           INCR   L
+ 02305           CA     L
+ 02306 2         TC     -1CHK
+R0231   NORMAL USE OF ADS
+ 0232            CA     SBIT13
+ 0233            TS     KEEP1           10000
+ 0234            ADS    KEEP1           20000
+ 0235            ADS    KEEP1           OV WITH +0
+ 0236            TS     KEEP2
+ 0237            TC     ERRORS
+ 0238            CS     KEEP1
+ 0239            TC     -0CHK
+R02391  CHECKS ADS OF AN SC REGISTER
+ 02392           CA     S13BITS         17777
+ 02393           TS     L
+ 02394           AD     S+1             C(A) = 20000
+ 02395           ADS    L
+ 02396           AD     S-MAX
+ 02397           TC     -0CHK
+ 02398           CS     L
+ 023981          AD     S+MAX
+ 02399 2         TC     -0CHK
+R0240   NORMAL USE OF LXCH
+ 0241            CA     S+1
+ 0242            TS     KEEP1           +1
+ 0243            LXCH   KEEP1           +1 IN L
+ 0244            CS     A
+ 0245            TS     KEEP2           -1 IN KEEP2
+ 0246            LXCH   KEEP2           L = -1, KEEP2 = +1
+ 0247            CS     KEEP2
+ 0248            TC     -1CHK
+ 0249            CA     L
+ 0250  2         TC     -1CHK
+R0251   UNDERFLOW AND OVERFLOW IS LOST IN L REGISTER
+ 0252            CA     S+MAX
+ 0253            AD     A
+ 0254            TS     L               OV WITH 37776
+ 0255            TC     ERRORS
+ 0256            CS     S+MAX
+ 0257            AD     A               UV WITH 40001
+ 0258            LXCH   A               C(A) = 37776, C(L) = 40001
+ 0259            TS     KEEP1           37776
+ 0260            TC     +2
+ 0261            TC     ERRORS
+ 0262            CA     L
+ 0263            TS     KEEP2           40001
+ 0264            TC     +2
+ 0265            TC     ERRORS
+ 0266            AD     KEEP1           -0
+ 0267  2         TC     -0CHK
+R0268   NORMAL USE OF DXCH
+ 0269            CA     S+MAX
+ 0270            TS     KEEP2           37777, K+1
+ 0271            CS     A
+ 0272            TS     L               40000
+ 0273            AD     S+1
+ 0274            TS     KEEP1           40001, K
+ 0275            CS     A               37776
+ 0276            DXCH   KEEP1
+R0277   A = 40001, L = 37777 .......  KEEP1 = 37776, KEEP2 = 40000
+ 0278            AD     L
+ 0279            TC     -1CHK -1
+ 0280            CA     KEEP1
+ 0281            AD     KEEP2
+ 0282  2         TC     -1CHK
+R0283   NORMAL USE OF DAS (6 CHECKS)
+R0284   IF ADDRESS OF K DOES NOT = ZERO, C(L) = +0 AND C(A) = NET OVERFLOW
+R0285   C(A) = +0 IF NO OVERFLOW OR UNDERFLOW
+R0286   DAD++ WITH NO OVERFLOW
+ 0287   DAS++    CAF    S13BITS
+ 0288            TS     KEEP1           17777
+ 0289            TS     KEEP2           17777
+ 0290            TS     L               17777
+ 0291            AD     S+1             20000
+ 0292            DAS    KEEP1
+R0293   C(KEEP1) = 37777, C(KEEP2) = 377776
+ 0294            TC     -0CHK -1
+ 0295            XCH    L
+ 0296            TC     -0CHK -1
+ 0297            CS     KEEP1
+ 0298            AD     KEEP2
+ 0299            TC     -1CHK
+R0300   DAS++ WITH OVERFLOW
+ 0301   DAS++OV  CA     S+MAX
+ 0302            TS     KEEP1           37777
+ 0303            TS     KEEP2           37777
+ 0304            TS     L               37777
+ 0305            CA     S+1             +1
+ 0306            DAS    KEEP1
+R0307   C(KEEP1) = +1, C(KEEP2) = 37776, C(A) = +1,
+ 0308            TC     -1CHK -1
+ 0309            XCH    L
+ 0310            TC     -0CHK -1
+ 0311            CS     KEEP1
+ 0312            TC     -1CHK
+ 0313            CA     S-MAX
+ 0314            AD     KEEP2
+ 0315            TC     -1CHK
+R0316   DAS MIXED SIGNS
+ 0317   DAS+--+  CA     S+MAX
+ 0318            TS     KEEP1           37777
+ 0319            CS     A
+ 0320            TS     KEEP2           40000
+ 0321            CS     A
+ 0322            AD     S-1
+ 0323            TS     L               37776
+ 0324            CS     A               40001
+ 0325            DAS    KEEP1
+R0326   C(KEEP1) = +1, C(KEEP2) = -1
+ 0327            TC     -0CHK -1
+ 0328            XCH    L
+ 0329            TC     -0CHK -1
+ 0330            CA     KEEP1
+ 0331            TC     -1CHK -1
+ 0332            CA     KEEP2
+ 0333            TC     -1CHK
+R0334   DAS-- WITH NO UNDERFLOW
+ 0335   DAS--    CS     S13BITS
+ 0336            TS     KEEP1           60000
+ 0337            TS     KEEP2           60000
+ 0338            TS     L               60000
+ 0339            AD     S-1             57777
+ 0340            DAS    KEEP1
+R0341   C(KEEP1) = 40000, C(KEEP2) = 40001
+ 0342            TC     -0CHK -1
+ 0343            XCH    L
+ 0344            TC     -0CHK -1
+ 0345            CS     KEEP2
+ 0346            AD     KEEP1
+ 0347            TC     -1CHK
+R0348   DAS-- WITH UNDERFLOW
+ 0349   DAS--UV  CA     S-MAX
+ 0350            TS     KEEP1           40000
+ 0351            TS     KEEP2           40000
+ 0352            TS     L               40000
+ 0353            CA     S-1             -1
+ 0354            DAS    KEEP1
+R0355   C:KEEP1) = -1, C(KEEP2) = 40001, C(A) = -1
+ 0356            TC     -1CHK
+ 0357            XCH    L
+ 0358            TC     -0CHK -1
+ 0359            CA     KEEP1
+ 0360            TC     -1CHK
+ 0361            CA     S+MAX
+ 0362            AD     KEEP2
+ 0363            TC     -1CHK -1
+R0364   DAS A.  DOUBLES THE CONTENTS OF THE A REGISTER AND THE L REGISTER.
+ 0365            CA     S-MAX
+ 0366            TS     KEEP2           40000
+ 0367            TS     L               40000
+ 0368            CS     A
+ 0369            TS     KEEP1           37777
+ 0370            DAS    A
+R0371   C(A) = OV 37775, C(L) = 40001
+ 0372            TS     KEEP3
+ 0373            TC     ERRORS
+ 0374            CA     L
+ 0375            AD     KEEP3
+ 0376  2         TC     -1CHK
+R0377   NORMAL USE OF INDEX WITHOUT EXTRACODE.
+R0378   INSTRUCTIONS CHECKED WITH INDEX UP TO FIRST SPACE SKIPPED
+R0379   ARE CA, TS, XCH, CCS, AD, TC, TCF, TS WITH OVERFLOW, AND MASK
+R0380   FIRST INITIALIZE ERASABLE REGISTERS USED FOR INDEX INSTRUCTION
+ 0381            CA     S+ZERO
+ 0382            TS     NDX+0
+ 0383            CA     ADRS6           ADDRESS OF S+MAX
+ 0384            TS     NDX+MAX
+ 0385            CA     ADRS1
+ 0386            TS     NDXKEEP1
+ 0387            CA     ADRS2
+ 0388            TS     NDXKEEP2
+ 0389            CA     ADRS3
+ 0390            TS     NDXKEEP3
+ 0391            CA     ADRS4
+ 0392            TS     NDXSELF1
+ 0393            CA     ADRS5
+ 0394            TS     NDXSELF2
+ 0395   NDXCHK   NDX    NDX+MAX         CA S+MAX
+ 0396            CA     0000            A = 37777
+ 0397            NDX    NDXKEEP1        TS KEEP1
+ 0398            TS     0000            TS WITH NO OV, UV
+ 0399            NDX    NDX+0           CS   A
+ 0400            CS     0000            A = 40000
+ 0401            NDX    NDXKEEP1        XCH KEEP1
+ 0402            XCH    0000            A = +MAX, KEEP1 = - MAX
+ 0403            NDX    NDX+0           CCS A
+ 0404            CCS    0000            A = 37776
+ 0405            TC     +4
+ 0406            TC     ERRORS
+ 0407            TC     ERRORS
+ 0408            TC     ERRORS
+ 0409            NDX    NDXKEEP1        AD KEEP1
+ 0410            AD     0000            A = -1
+ 0411   SELF1    NDX    NDXSELF1        TC +2
+ 0412            TC     0003
+ 0413            TC     ERRORS          DID NOT PERFORM A TC
+ 0414            NDX    NDXSELF1        TC +2
+ 0415            TC     0006
+ 0416            TC     CNTINU          CHECK C(Q)
+ 0417   SELF2    NDX    NDXSELF2        TCF +2
+ 0418            TCF    003
+ 0419            TC     ERRORS
+ 0420            TC     Q               SHOULD GO TO SELF1 +2
+ 0421   CNTINU   TC     -1CHK
+ 0422            CA     S+MAX
+ 0423            AD     S+1
+ 0424            NDX    NDXKEEP1        TS KEEP1 WITH OV
+ 0425            TS     0000            A = +1, KEEP1 = +0
+ 0426            TC     ERRORS
+ 0427            AD     KEEP1           A = +1
+ 0428            NDX    NDX+MAX         MASK S+MAX
+ 0429            MASK   0000            A = +1
+ 0430  2         TC     -1CHK -1
+R0431   INDEX USED WITH ADS, NDX, AND INCR
+ 0432            CA     S13BITS
+ 0433            TS     KEEP1
+ 0434            NDX    NDX+0           INDEX +0
+ 0435            NDX    NDXKEEP1        ADS KEEP1
+ 0436            ADS    0000            C(A) AND C(KEEP1) = 377776
+ 0437            NDX    NDXKEEP1        INCR KEEP1
+ 0438            INCR   0000            C(KEEP1) = 37777
+ 0439            CS     A               40001
+ 0440            AD     KEEP1           A = +1
+ 0441            TC     -1CHK -1
+R0442   INDEX USED WITH LXCH, DAS, AND DXCH
+ 0443            CA     S-MAX
+ 0444            TS     KEEP2           KEEP2 HOLDS 40000, KEEP1 HOLDS 37777
+ 0445            CA     S+1
+ 0446            TS     KEEP3           +1
+ 0447            NDX    NDXKEEP3        LXCH KEEP3
+ 0448            LXCH   0000            C(L) = +1
+ 0449            CA     S-2
+ 0450            NDX    NDXKEEP1        DAS KEEP1
+ 0451            DAS    0000
+R0452   BEFORE DAS, K = 37777   K+1 = 40000
+R0453               A = -2      L   = +1
+R0454   AFTER  DAS, K = 37775   K+1 = 40001
+R0455              A = +0    L  = +0
+ 0456            NDX    NDXKEEP1        DXCH KEEP1
+ 0457            DXCH   0000
+ 0458            AD     L
+ 0459            TC     -1CHK
+ 0460            CS     KEEP1
+ 0461            TC     -0CHK
+ 0462            CA     KEEP2
+ 0463            TC     -0CHK -1
+R0464   INDEX INSTRUCTION USED WITH OVERFLOW
+ 0465            CA     ADRS7           ADDRESS OF SELF3
+ 0466            AD     SBIT14
+ 0467            TS     KEEP7
+ 0468   SELF3    NDX    KEEP7
+ 0469            2      0002
+ 0470            TC     ERRORS
+R04701  CHECK INDEX OF AN SC REGISTER
+ 04702           CA     ADRS1           01371, ADDRESS OF KEEP1
+ 04703           NDX    A
+ 04704           TS     0000            PUT 01371 IN KEEP1
+ 04705           CS     A
+ 04706           AD     KEEP1
+ 04707           TC     -0CHK
+P0471   START CHECKING EXTRACODE INSTRUCTIONS
+R0472   NORMAL USE OF DCA, DCS, AND SU
+ 0473   STRTXTRA EXTEND
+ 0474            DCA    SBIT1
+R0475   C(A) = +1, C(L) = +2
+ 0476            TS     KEEP2           +1
+ 0477            XCH    L
+ 0478            TS     KEEP1           +2
+ 0479            EXTEND
+ 0480            SU     KEEP2           C(KEEP2) = +1
+ 0481            TC     -1CHK -1
+ 0482            EXTEND
+ 0483            DCS    KEEP1
+R0484   C(A) = -2, C(L) = -1
+ 0485            EXTEND
+ 0486            SU     L
+ 0487            TC     -1CHK
+R0488   COMPLEMENTING OF THE DOUBLE PRECISION ACCUMULATOR
+ 0489            CA     S+MAX
+ 0490            TS     L               37777
+ 0491            AD     A               OV37776
+ 0492            EXTEND
+ 0493            DCS    A
+ 0494            TS     KEEP1
+ 0495            TC     ERRORS
+ 0496            CA     KEEP1
+ 0497            EXTEND
+ 0498            SU     L
+ 0499            TC     -1CHK -1
+R04991  CHECKS DCA OF AN SC REGISTER
+ 04992           CA     S-2
+ 04993           TS     Q               -2
+ 04994           CA     S+1
+ 04995           TS     L               +1
+ 04996           CA     SBIT8
+ 04997           EXTEND
+ 04998           DCA    L
+ 049981          AD     L               -1
+ 04999 2         TC     -1CHK
+R0500   NORMAL USE OF QXCH
+ 0501            CA     QXCHCON1
+ 0502            TS     KEEP1           STORE ADDRESS OF AUGCHK IN KEEP1
+ 0503            TC     +2              Q NOW HOLDS ADDRESS OF QNMBR
+ 0504   QNMBR    TC     ERRORS
+ 0505            EXTEND
+ 0506            QXCH   KEEP1           Q NOW HOLDS ADDRESS OF AUGCHK
+ 0507            TC     Q               SHOULD GO TO QXCHCON2 +1, NOT QNMBR
+ 0508            TC     ERRORS
+ 0509   QXCHCON1 ADRES  QXCHCON2 +1
+ 0510   QXCHCON2 ADRES  QNMBR
+ 0511            CS     KEEP1           CHECK THAT KEEP1 HOLDS B(Q)
+ 0512            AD     QXCHCON2
+ 0513            TC     -0CHK
+R05131  CHECKS QXCH OF AN SC REGISTER
+ 05132           CA     S+ZERO
+ 05133           TC     +2
+ 05134           TCF    +5
+ 05135           EXTEND
+ 05136           QXCH   A
+ 051361          LXCH   Q
+ 05137           TC     A
+ 05138           CA     L
+ 05139 2         TC     -0CHK -1
+R0514   NORMAL USE OF AUG
+ 0515   AUGCHK   CA     S+ZERO
+ 0516            TS     KEEP1           +0
+ 0517            CS     A
+ 0518            TS     KEEP2           -0
+ 0519            EXTEND
+ 0520            AUG    KEEP1           +1
+ 0521            EXTEND
+ 0522            AUG    KEEP1           +2
+ 0523            TC     -0CHK           CHECK C(A) HAS NOT CHANGED
+ 0524            EXTEND
+ 0525            AUG    KEEP2           -1
+ 0526            EXTEND
+ 0527            AUG    KEEP2           -2
+ 0528            EXTEND
+ 0529            AUG    KEEP2           -3
+ 0530            TC     -0CHK -1
+ 0531            CA     KEEP2
+ 0532            AD     KEEP1
+ 0533            TC     -1CHK
+R05331  CHECKS AUG OF AN SC REGISTER
+ 05332           CA     S-ZERO
+ 05333           EXTEND
+ 05334           AUG    A
+ 05335 2         TC     -1CHK
+R0534   NORMAL USE OF DIM
+ 0535   DIMCHK   CA     S+ZERO
+ 0536            TS     KEEP1           +0
+ 0537            EXTEND
+ 0538            DIM    KEEP1
+ 0539            CA     KEEP1
+ 0540            TC     -0CHK -1
+ 0541            CS     A
+ 0542            TS     KEEP1           -0
+ 0543            EXTEND
+ 0544            DIM    KEEP1
+ 0545            CA     KEEP1
+ 0546            TC     -0CHK
+ 0547            CA     S+2
+ 0548            TS     KEEP1           +2
+ 0549            EXTEND
+ 0550            DIM    KEEP1           +1
+ 0551            AD     S-1
+ 0552            TC     -1CHK -1        CHECK C(A) HAS NOT CHANGED
+ 0553            CA     KEEP1
+ 0554            TC     -1CHK -1
+ 0555            EXTEND
+ 0556            DIM    KEEP1
+ 0557            TC     -0CHK -1
+ 0558            CA     KEEP1
+ 0559            TC     -0CHK
+ 0560            CS     S+2
+ 0561            TS     KEEP2           -2
+ 0562            EXTEND
+ 0563            DIM    KEEP2           -1
+ 0564            CA     KEEP2
+ 0565            TC     -1CHK
+ 0566            EXTEND
+ 0567            DIM    KEEP2           -0
+ 0568            TC     -0CHK -1
+ 0569            CA     KEEP2
+ 0570            TC     -0CHK
+R05701  CHECKS DIM OF AN SC REGISTER
+ 05702           CA     S-2
+ 05703           EXTEND
+ 05704           DIM    A
+ 05705 2         TC     -1CHK
+R0571   NORMAL USE OF MSU
+R0572   MSU SAME (S+MAX AND S+MAX), RESULT +0
+ 0573            CA     S+MAX
+ 0574            TS     KEEP1
+ 0575            EXTEND
+ 0576            MSU    KEEP1
+ 0577            TC     -0CHK -1
+R0578   MSU SAME (+0 AND +0), RESULT +0
+ 0579            TS     KEEP2
+ 0580            EXTEND
+ 0581            MSU    KEEP2
+ 0582            TC     -0CHK -1
+R0583   MSU SAME (-0 AND -0), RESULT +0
+ 0584            CA     S-ZERO
+ 0585            TS     KEEP3
+ 0586            EXTEND
+ 0587            MSU    KEEP3
+ 0588            TC     -0CHK -1
+R0589   MSU +0 AND 77777, RESULT = +1
+ 0590            EXTEND
+ 0591            MSU    KEEP3
+ 0592            TC     -1CHK -1
+R0593   MSU 77777 AND +0, RESULT = -1
+ 0594            CS     A
+ 0595            EXTEND
+ 0596            MSU    KEEP2
+ 0597            TC     -1CHK
+R0598   MSU +6 AND +7, RESULT = -1
+ 0599            CA     S+7
+ 0600            TS     KEEP4
+ 0601            CA     S+6
+ 0602            TS     KEEP5
+ 0603            EXTEND
+ 0604            MSU    KEEP4
+ 0605            TC     -1CHK
+R0606   MSU +7 AND +6, RESULT = +1
+ 0607            CA     S+7
+ 0608            EXTEND
+ 0609            MSU    KEEP5
+ 0610            TC     -1CHK -1
+R0611   MSU 77770 AND 77771, RESULT = -1
+ 0612            CA     S-6
+ 0613            TS     KEEP6
+ 0614            CA     S-7
+ 0615            TS     KEEP7
+ 0616            EXTEND
+ 0617            MSU    KEEP6
+ 0618            TC     -1CHK
+R0619   MSU 77771 AND 77770, RESULT = +1
+ 0620            CA     S-6
+ 0621            EXTEND
+ 0622            MSU      KEEP7
+ 0623            TC     -1CHK -1
+R06231  CHECKS MSU OF AN SC REGISTER ( -0 AND -0 = +0)
+ 06232           CA     S-ZERO
+ 06233           TS     L
+ 06234           EXTEND
+ 06235           MSU    L
+ 06236 2         TC     -0CHK -1
+R0624   NORMAL USE OF BZF
+ 0625   BZFCHK   TC     +2
+ 0626            TC     BZMFCHK         CORRECT ADDRESS IN Q
+ 0627            CAF    S+5
+ 0628            EXTEND
+ 0629            BZF    ERRORS
+ 0630            CS     A
+ 0631            EXTEND
+ 0632            BZF    ERRORS
+ 0633            CAF    S+ZERO
+ 0634            EXTEND
+ 0635            BZF    +2
+ 0636            TC     ERRORS
+ 0637            CS     A
+ 0638            EXTEND
+ 0639            BZF    +2
+ 0640            TC     ERRORS
+ 0641            TC     Q               SHOULD GO TO BZFCHK +1
+ 0642  2         TC     ERRORS
+ 0643   BZMFCHK  TC     +2
+ 0644            TC     MP1++           CORRECT ADDRESS IN Q
+ 0645            CAF    SBIT9
+ 0646            EXTEND
+ 0647            BZMF   ERRORS
+ 0648            CS     A
+ 0649            EXTEND
+ 0650            BZMF   +2
+ 0651            TC     ERRORS
+ 0652            CA     S+ZERO
+ 0653            EXTEND
+ 0654            BZMF   +2
+ 0655            TC     ERRORS
+ 0656            CS     A
+ 0657            EXTEND
+ 0658            BZMF   +2
+ 0659            TC     ERRORS
+ 0660            TC     Q               SHOULD GO TO BZMFCHK +1
+ 0661  2         TC     ERRORS
+R0662   NORMAL USE OF MP
+R0663   37777 X 2
+ 0664   MP1++    CA     S+MAX           37777
+ 0665            EXTEND
+ 0666            MP     S+2             C(A) = +1, C(L. = 37776
+ 0667            AD     L
+ 0668            TS     KEEP1           37777
+ 0669   MP1+-    EXTEND
+ 0670            MP     S-2             C(A) = -1, C(L) = 40001
+ 0671            AD     L
+ 0672            TS     KEEP2           40000
+ 0673   MP1-+    EXTEND
+ 0674            MP     S+2             C(A) = -1, C(L) = 40001
+ 0675            AD     L
+ 0676            TS     KEEP3           40000
+ 0677   MP1--    EXTEND
+ 0678            MP     S-2             C(A) = +1, C(L) = 37776
+ 0679            AD     L               37777
+ 0680            AD     KEEP3           77777
+ 0681            AD     KEEP2           40000
+ 0682            AD     KEEP1           77777
+ 0683            TC     -0CHK
+R0684   37777 X 37777
+ 0685   MP2++    CA     S+MAX           37777
+ 0686            EXTEND                 CHECKS RSC PULSE
+ 0687            MP     A               C(A) = 37776, C(L) = +1
+ 0688            AD     L
+ 0689            TS     KEEP1           37777
+ 0690   MP2+-    EXTEND
+ 0691            MP     S-MAX           C(A) = 40001, C(L) = -1
+ 0692            AD     L
+ 0693            TS     KEEP2           40000
+ 0694   MP2-+    EXTEND
+ 0695            MP     S+MAX           C(A) = 40001, C(L) = -1
+ 0696            AD     L
+ 0697            TS     KEEP3           40000
+ 0698   MP2--    EXTEND
+ 0699            MP     S-MAX           C(A) = 37776, C(L) = +1
+ 0700            AD     L               37777
+ 0701            AD     KEEP3           77777
+ 0702            AD     KEEP2           40000
+ 0703            AD     KEEP1           77777
+ 0704            TC     -0CHK
+R0705   C(A) = NON-ZERO, C(K) = ZERO
+R0706   RESULT IS ALWAYS POSITIVE ZERO
+ 0707   MP3++    CA     S+MAX           37777
+ 0708            EXTEND
+ 0709            MP     S+ZERO
+ 0710            AD     L
+ 0711            TC     -0CHK -1
+ 0712   MP3+-    CA     S+1
+ 0713            EXTEND
+ 0714            MP     S-ZERO
+ 0715            AD     L
+ 0716            TC     -0CHK -1
+ 0717   MP3-+    CA     S-1
+ 0718            EXTEND
+ 0719            MP     S+ZERO
+ 0720            AD     L
+ 0721            TC     -0CHK -1
+ 0722   MP3--    CA     S-ZERO
+ 0723            EXTEND
+ 0724            MP     S-ZERO
+ 0725            AD     L
+ 0726            TC     -0CHK -1
+R0727   C(A) = ZERO, C(K) = NON-ZERO,
+R0728   RESULT IS + ZERO FOR A POSITIVE SIGN AND NEGATIVE
+R0729   ZERO FOR Z NEGATIVE SIGN
+ 0730   MP4++    CA     S+ZERO
+ 0731            EXTEND
+ 0732            MP     S+MAX
+ 0733            AD     L
+ 0734            TC     -0CHK -1
+ 0735   MP4+-    EXTEND
+ 0736            MP     S-1
+ 0737            AD     L
+ 0738            TC     -0CHK
+ 0739   MP4-+    CS     A
+ 0740            EXTEND
+ 0741            MP     S+5
+ 0742            AD     L
+ 0743            TC     -0CHK
+ 0744   MP4--    CS     A
+ 0745            EXTEND
+ 0746            MP     S-ZERO
+ 0747            AD     L
+ 0748            TC     -0CHK -1
+R0749   MULTIPLY ZERO X ZERO
+R0750   RESULT IS ALWAYS PLUS ZERO
+ 0751   MP5++    CA     S+ZERO
+ 0752            TS     KEEP1
+ 0753            EXTEND
+ 0754            MP     KEEP1
+ 0755            AD     L
+ 0756            TC     -0CHK -1
+ 0757   MP5+-    EXTEND
+ 0758            MP     S-ZERO
+ 0759            AD     L
+ 0760            TC     -0CHK -1
+ 0761   MP5-+    CA     S-ZERO
+ 0762            EXTEND
+ 0763            MP     S+ZERO
+ 0764            AD     L
+ 0765            TC     -0CHK -1
+ 0766   MP5--    CA     S-ZERO
+ 0767            EXTEND
+ 0768            MP     S-ZERO
+ 0769  2         TC     -0CHK -1
+ 07691           CA     CONTINU
+ 07692           TC     BANKJUMP
+ 07693 2CONTINU  CADR   DV1++ -1        CONTINUE WITH INSTRUCTION CHECK
+ 07694 2         SETLOC 30000
+ 07695 2         TC     CHECKNJ         CHECK FOR NEW JOB
+R0770   NORMAL USE OF DV ... REMAINDER HAS SIGN OF DIVIDEND
+R0771   1/4 DIVIDED BY 3/8
+R0772   C(A) = 25252 WITH A + QUOTIENT AND 52525 WITH A - QUOTIENT.
+R0773   C(L) = REMAINDER = /100000/ WITH SIGN OF DIVIDEND.
+ 0774   DV1++    CA     DV1CON          14000
+ 0775            TS     KEEP7           14000, +3/8
+ 07751           TS     Q
+ 0776            CS     A
+ 0777            TS     KEEP6           63000, -3/8
+ 0778            CA     S+ZERO
+ 0779            TS     L
+ 0780            CA     SBIT13          10000
+ 0781            EXTEND
+ 0782            DV     Q               CHECKS RSC PULSE
+ 0783            TS     KEEP1           25252
+ 0784            CA     S+ZERO
+ 0785   DV1+-    LXCH   A
+ 0786            EXTEND
+ 0787            DV     KEEP6
+ 0788            AD     KEEP1
+ 0789            TC     -0CHK
+ 0790            CA     S-ZERO
+ 0791            LXCH   A
+ 0792   DV1-+    CS     A
+ 0793            EXTEND
+ 0794            DV     KEEP7
+ 0795            TS     KEEP1           52525
+ 0796            CA     S-ZERO
+ 0797   DV1--    LXCH   A
+ 0798            EXTEND
+ 0799            DV     KEEP6
+ 0800            AD     KEEP1
+ 0801            TC     -0CHK
+ 0802            CA     L
+ 0803            AD     SBIT13
+ 0804            TC     -0CHK
+R0805   1/2 TO 15TH DIVIDED BY 1/2 TO 14TH
+R0806   C(A) SHOULD BE 1/2 AND CONTENTS OF L SHOULD BE ZERO
+ 0807   DV2++    CA     S+1
+ 0808            TS     KEEP7           00001, DIVISOR
+ 0809            CS     A
+ 0810            TS     KEEP6           77776, DIVISOR
+ 0811            CA     S+ZERO
+ 0812            CA     SBIT14          20000
+ 0813            TS     L
+ 0814            CA     S+ZERO
+ 0815            EXTEND
+ 0816            DV     KEEP7           C(A) = 1/2, C(L) = +0
+ 0817            TS     KEEP1
+ 0818   DV2+-    LXCH   A
+ 0819            EXTEND
+ 0820            DV     KEEP6
+ 0821            TS     KEEP2            -1/2
+ 0822            AD     KEEP1
+ 0823            TC     -0CHK
+ 0824            CA     KEEP2
+ 0825            LXCH   A
+ 0826   DV2-+    CS     A
+ 0827            EXTEND
+ 0828            DV     KEEP7
+ 0829            TS     KEEP2
+ 0830   DV2--    LXCH   A
+ 0831            EXTEND
+ 0832            DV     KEEP6
+ 0833            TS     KEEP1
+ 0834            AD     KEEP2
+ 0835            TC     -0CHK
+ 0836            CS     KEEP1           MAKE SURE QUOTIENT IS 1/2
+ 0837            AD     SBIT14
+ 0838            TC     -0CHK
+ 0839            CA     L
+ 0840            TC     -0CHK
+R0841   SAME AS PREVIOUS DIVISION EXCEPT A AND L WILL HAVE OPPOSITE SIGNS
+R0842   BEFORE DIVISION.  SINCE A WILL ALWAYS BE ZERO, THE SIGN OF THE QUOTIENT
+R0843   WILL DEPEND ON THE SIGN OF L AND THE SIGN OF THE DIVISOR.
+ 0844   DV3++    CA     SBIT14          20000
+ 0845            TS     L
+ 0846            CA     S-ZERO
+ 0847            EXTEND
+ 0848            DV     KEEP7
+ 0849            TS     KEEP1           20000
+ 0850   DV3+-    LXCH   A
+ 0851            CS     A               A = -0
+ 0852            EXTEND
+ 0853            DV     KEEP6
+ 0854            AD     KEEP1
+ 0855            TC     -0CHK
+ 0856            CS     SBIT14          -1/2
+ 0857   DV3-+    LXCH   A
+ 0858            EXTEND
+ 0859            DV     KEEP7
+ 0860            TS     KEEP1
+ 0861   DV3--    LXCH   A
+ 0862            CS     A               A = +0
+ 0863            EXTEND
+ 0864            DV     KEEP6
+ 0865            AD     KEEP1
+ 0866            TC     -0CHK
+ 0867            CS     L
+ 0868            TC     -0CHK -1
+R0869   C(A) = 17777 AND C(L) = 37777.  THIS IS DIVIDED BY 20000.  THE RESULT
+R0870   SHOULD BE +-/37777/ AND THE REMAINDER +-/17777/
+ 0871   DV4++    CA     S+MAX
+ 0872            TS     L
+ 0873            CA     SBIT14
+ 0874            TS     KEEP7           20000
+ 0875            CS     A
+ 0876            TS     KEEP6           57777
+ 0877            CA     S13BITS         17777
+ 0878            EXTEND
+ 0879            DV     KEEP7
+ 0880            TS     KEEP1
+ 0881   DV4+-    LXCH   A
+ 0882            EXTEND
+ 0883            DV     KEEP6
+ 0884            TS     KEEP2
+ 0885            AD     KEEP1
+ 0886            TC     -0CHK
+ 0887            CA     KEEP2
+ 0888            LXCH   A
+ 0889   DV4-+    CS     A
+ 0890            EXTEND
+ 0891            DV     KEEP7
+ 0892            AD     KEEP1
+ 0893            TC     -0CHK
+ 0894            CA     KEEP2
+ 0895   DV4--    LXCH   A
+ 0896            EXTEND
+ 0897            DV     KEEP6
+ 0898            TS     KEEP3
+ 0899            AD     KEEP2
+ 0900            TC     -0CHK
+ 0901            CS     KEEP3
+ 0902            AD     S+MAX
+ 0903            TC     -0CHK
+ 0904            CA     L
+ 0905            AD     S13BITS
+ 0906            TC     -0CHK
+R0907   C(A) = +-/17777/ AND C(L) = +-/37777/ WITH OPPOSITE SIGN BEFORE DEVISION
+R0908   THE QUOTIENT SHOULD BE +-/37774/ WITH THE SIGN DEPENDING ON THE SIGN OF
+R0909   A AND THE SIGN OF THE DEVISOR. THE C(L) = +-/1/ DEPENDING ON THE SIGN
+R0910   OF A.
+ 0911   DV5++    CS     S+MAX
+ 0912            TS     L               40000
+ 0913            CA     S13BITS         17777
+ 0914            EXTEND
+ 0915            DV     KEEP7
+ 0916            TS     KEEP1           37774
+ 0917            XCH    L
+ 0918            TC     -1CHK -1
+ 0919   DV5+-    CA     S-MAX
+ 0920            TS     L               40000
+ 0921            CA     S13BITS         17777
+ 0922            EXTEND
+ 0923            DV     KEEP6           C(A) = -37774, C(L) = +1
+ 0924            AD     KEEP1
+ 0925            TC     -0CHK
+ 0926            XCH    L
+ 0927            TC     -1CHK -1
+ 0928   DV5-+    CA     S+MAX
+ 0929            TS     L               37777
+ 0930            CS     S13BITS         60000
+ 0931            EXTEND
+ 0932            DV     KEEP7           C(A) = -37774, C(L) = -1
+ 0933            TS     KEEP2
+ 0934            AD     KEEP1
+ 0935            TC     -0CHK
+ 0936            XCH    L
+ 0937            TC     -1CHK
+ 0938   DV5--    CA     S+MAX
+ 0939            TS     L               37777
+ 0940            CS     S13BITS         60000
+ 0941            EXTEND
+ 0942            DV     KEEP6           C(A) = 37774, C(L) = -1
+ 0943            AD     KEEP2
+ 0944            TC     -0CHK
+ 0945            XCH    L
+ 0946            TC     -1CHK
+ 0947            CA     KEEP2           -37774
+ 0948            AD     S-2             -37776
+ 0949            AD     S+MAX           +1
+ 0950  2         TC     -1CHK -1        CHECK THAT QUOTIENT IS +-/37774/
+R0951   DIVIDE SAME (37776).  THE RESULT SHOULD BE MAXIMUM AND THE REMAINDER
+R0952   SHOULD BE THE SAME VALUE AS THE DIVISOR WITH THE SAME SIGN AS THE
+R0953   DIVIDEND
+ 0954   DV6++    CA     S+ZERO
+ 0955            TS     L
+ 0956            CS     DV2CON          37776
+ 0957            TS     KEEP6           40001
+ 0958            CS     A
+ 0959            TS     KEEP7           37776
+ 0960            EXTEND
+ 0961            DV     KEEP7
+ 0962            CS     A
+ 0963            AD     L
+ 0964            TC     -1CHK
+ 0965            CA     S+ZERO
+ 0966   DV6+-    LXCH   A
+ 0967            EXTEND
+ 0968            DV     KEEP6
+ 0969            AD     L
+ 0970            TC     -1CHK
+ 0971            CA     S-ZERO
+ 0972   DV6-+    LXCH   A
+ 0973            CS     A
+ 0974            EXTEND
+ 0975            DV     KEEP7
+ 0976            CS     A
+ 0977            AD     L
+ 0978            TC     -1CHK -1
+ 0979            CA     S-ZERO
+ 0980   DV6--    LXCH   A
+ 0981            EXTEND
+ 0982            DV     KEEP6
+ 0983            AD     L
+ 0984            TC     -1CHK -1
+ 0985            CS     L
+ 0986            AD     KEEP6
+ 0987            TC     -0CHK
+R0988   DIVIDE SAME (ZERO).  THE RESULT SHOULD BE MAXIMUM AND THE REMAINDER
+R0989   SHOULD BE THE SAME VALUE AS THE DIVISOR WITH THE SAME SIGN AS THE
+R0990   DIVIDEND.
+ 0991   DV7++    CS     S+ZERO
+ 0992            TS     KEEP6           -0
+ 0993            CS     A
+ 0994            TS     KEEP7           +0
+ 0995            TS     L
+ 0996            EXTEND
+ 0997            DV     KEEP7
+ 0998            AD     S-MAX
+ 0999            TC     -0CHK
+ 1000   DV7+-    LXCH   A               C(A) = C(L) = +0
+ 1001            EXTEND
+ 1002            DV     KEEP6
+ 1003            AD     S+MAX
+ 1004            TC     -0CHK
+ 1005            CS     A
+ 1006   DV7-+    LXCH   A
+ 1007            CS     A               C(A) = C(L) = -0
+ 1008            EXTEND
+ 1009            DV     KEEP7
+ 1010            AD     S+MAX
+ 1011            TC     -0CHK
+ 1012            CS     A
+ 1013   DV7--    LXCH   A               C(A) = C(L) = -0
+ 1014            EXTEND
+ 1015            DV     KEEP6
+ 1016            AD     S-MAX
+ 1017            TC     -0CHK
+ 1018            CS     L
+ 1019  2         TC     -0CHK -1
+R1020   DEVIDE SAME (ZERO). THE CONTENTS OF THE A REGISTER AND L REGISTER WILL
+R1021   HAVE OPPOSITE SIGNS BEFORE DEVISION. THE SIGN OF THE QUOTIENT WILL
+R1022   DEPEND ON THE SIGN OF THE L REGISTER BEFORE DEVISION AND THE SIGN OF
+R1023   THE DEVISOR. THE SIGN OF THE REMAINDER IS THE SAME SIGN AS THE SIGN OF
+R1024   THE L REGISTER BEFORE DEVISION. C(L)  REMAINS SAME
+ 1025   DV8++    CA     S+ZERO
+ 1026            TS     KEEP7           +0
+ 1027            TS     L
+ 1028            CS     A
+ 1029            TS     KEEP6           -0
+ 1030            EXTEND                 A = -0, L = +0
+ 1031            DV     KEEP7           A = L = +0
+ 1032            TS     KEEP1
+ 1033            CA     L               C(A) = C(L) = +0
+ 1034            TC     -0CHK -1
+ 1035   DV8+-    CS     A
+ 1036            EXTEND                 A = -0, L = +0
+ 1037            DV     KEEP6           A = -0, L = +0
+ 1038            AD     KEEP1
+ 1039            TC     -0CHK
+ 1040            CS     A
+ 1041            XCH    L               PUT -0 IN L
+ 1042            TC     -0CHK -1        CHECK C(L)
+ 1043   DV8-+    EXTEND                 A = +0, L = -0
+ 1044            DV     KEEP7           A = L = -0
+ 1045            TS     KEEP2
+ 1046            AD     KEEP1
+ 1047            TC     -0CHK
+ 1048            CS     A
+ 1049            XCH    L               PUT -0 IN L
+ 1050            TC     -0CHK           CHECK C(L)
+ 1051   DV8--    EXTEND                 A = +0, L = -0
+ 1052            DV     KEEP6           A = +0, L = -0
+ 1053            AD     KEEP2
+ 1054            TC     -0CHK
+ 1055            CA     S+MAX           CHECK QUOTIENT IS CORRECT
+ 1056            AD     KEEP2
+ 1057            TC     -0CHK
+ 1058            XCH    L
+ 1059  2         TC     -0CHK           CHECK C(L)
+R1060   INPUT-OUTPUT INSTRUCTIONS
+R1061   NORMAL USE OF READ AND WRITE
+ 1062   IN-OUT1  CA     S-1
+ 1063            EXTEND
+ 1064            WRITE  L                77776
+ 1065            CS     A                00001
+ 1066            EXTEND
+ 1067            READ   L                77776
+ 1068            TC     -1CHK
+ 1069            CA     S-MAX
+ 1070            AD     S-MAX            C(A) = 10 - 00001
+ 1071            EXTEND
+ 1072            WRITE  Q
+ 1073            CS     A               01 - 37776
+ 1074            EXTEND
+ 1075            READ   Q                10 - 00001
+ 1076            TS     KEEP1
+ 1077            TC     ERRORS
+ 1078            CA     KEEP1
+ 1079            AD     S+MAX
+ 1080  2         TC     -1CHK -1
+R1081   NORMAL USE OF RAND, RAND = READ AND MASK
+ 1082   RANDCHK  CA     S+ZERO
+ 1083            TS     L
+ 1084            EXTEND
+ 1085            RAND   L               00000, 00000
+ 1086            TC     -0CHK -1
+ 1087            CA     S-ZERO
+ 1088            EXTEND
+ 1089            RAND   L                77777, 00000
+ 1090            TC     -0CHK -1
+ 1091            CS     A
+ 1092            TS     L
+ 1093            CS     A
+ 1094            EXTEND
+ 1095            RAND   L               00000, 77777
+ 1096            TC     -0CHK -1
+ 1097            CA     S-ZERO
+ 1098            EXTEND
+ 1099            RAND   L               77777, 77777
+ 1100            TC     -0CHK
+ 1101   RANDOV   CA      S+MAX
+ 1102            AD     S+2              01 - 00001
+ 1103            XCH    Q
+ 1104            CA     S-ZERO           77777
+ 1105            EXTEND
+ 1106            RAND   Q                01 - 00001
+ 1107            TS     KEEP1
+ 1108            TC     ERRORS
+ 1109            TC     -1CHK -1
+ 1110            CS     KEEP1
+ 1111  2         TC     -1CHK
+R1112   NORMAL USE OF WAND, WAND = WRITE AND MASK
+ 1113   WANDCHK  CA     S+ZERO
+ 1114            TS     L
+ 1115            EXTEND
+ 1116            WAND   L               00000, 00000
+ 1117            AD     L
+ 1118            TC     -0CHK -1
+ 1119            CA     S-ZERO
+ 1120            EXTEND
+ 1121            WAND   L               77777, 00000
+ 1122            AD     L
+ 1123            TC     -0CHK -1
+ 1124            CS     A
+ 1125            TS     L
+ 1126            CS     A
+ 1127            EXTEND
+ 1128            WAND   L               00000, 77777
+ 1129            AD     L
+ 1130            TC     -0CHK -1
+ 1131            CA     S-ZERO
+ 1132            TS     L
+ 1133            EXTEND
+ 1134            WAND   L               77777, 77777
+ 1135            AD     L
+ 1136            TC     -0CHK
+ 1137   WANDUF   CA     S+MAX
+ 1138            AD     S+2             01 - 00001
+ 1139            XCH    Q
+ 1140            CA     S-ZERO          77777
+ 1141            EXTEND
+ 1142            WAND   Q
+ 1143            TS     KEEP2
+ 1144            TC     ERRORS
+ 1145            CA     Q
+ 1146            TS     KEEP1
+ 1147            TC     ERRORS
+ 1148            CS     KEEP1
+ 1149            TC     -1CHK
+ 1150            CS     KEEP2
+ 1151  2         TC     -1CHK
+R1152   NORMAL USE OF ROR, READ AND SUPERIMPOSE
+ 1153   RORCHK   CA     S+ZERO
+ 1154            TS     L
+ 1155            EXTEND
+ 1156            ROR    L               00000, 00000
+ 1157            TC     -0CHK -1
+ 1158            CA     L
+ 1159            TC     -0CHK -1
+ 1160            CA     S-ZERO
+ 1161            EXTEND
+ 1162            ROR    L               77777, 00000
+ 1163            TC     -0CHK
+ 1164            CA     L
+ 1165            TC     -0CHK -1
+ 1166            CS     A
+ 1167            TS     L
+ 1168            CS     A
+ 1169            EXTEND
+ 1170            ROR    L               00000, 77777
+ 1171            TC     -0CHK
+ 1172            CA     L
+ 1173            TC     -0CHK
+ 1174            CA     S-ZERO
+ 1175            EXTEND
+ 1176            ROR    L               77777, 77777
+ 1177            TC     -0CHK
+ 1178   ROROV    CA     S-MAX
+ 1179            AD     S-2             10 - 37776
+ 1180            XCH    Q
+ 1181            CA     S+MAX
+ 1182            AD     S+1             01 - 00000
+ 1183            EXTEND
+ 1184            ROR    Q               11 - 37776
+ 1185            TS     KEEP1
+ 1186            TC     +2
+ 1187            TC     ERRORS
+ 1188            CA     KEEP1
+ 1189  2         TC     -1CHK
+R1190   NORMAL USE OF WOR, WOR = WRITE AND SUPERIMPOSE
+ 1191   WORCHK   CA     S+ZERO
+ 1192            TS     L
+ 1193            EXTEND
+ 1194            WOR    L               00000, 00000
+ 1195            TC     -0CHK -1
+ 1196            CA     L
+ 1197            TC     -0CHK -1
+ 1198            CA     S-ZERO
+ 1199            EXTEND
+ 1200            WOR    L               77777, 00000
+ 1201            TC     -0CHK
+ 1202            CA     L
+ 1203            TC     -0CHK
+ 1204            CS     A
+ 1205            TS     L
+ 1206            CS     A
+ 1207            EXTEND
+ 1208            WOR    L               00000, 77777
+ 1209            TC     -0CHK
+ 1210            CA     L
+ 1211            TC     -0CHK
+ 1212            CA     S-MAX
+ 1213            EXTEND
+ 1214            WOR    L               77777, 77777
+ 1215            TC     -0CHK
+ 1216            CA     L
+ 1217            TC     -0CHK
+ 1218   WOROV    CA     S-MAX
+ 1219            AD     S-2             10 - 37776
+ 1220            XCH    Q
+ 1221            CA     S+MAX
+ 1222            AD     S+1             01 - 00000
+ 1223            EXTEND
+ 1224            WOR    Q               11 - 37776
+ 1225            TS     KEEP2           SHOULD NOT SKIP
+ 1226            TCF    +2
+ 1227            TC     ERRORS
+ 1228            XCH    Q
+ 1229            TS     KEEP3
+ 1230            TC     +2
+ 1231            TC     ERRORS
+ 1232            CA     KEEP3           CHECK C(Q)
+ 1233            TC     -1CHK
+ 1234            CA     KEEP2
+ 1235  2         TC     -1CHK           CHECK C(A)
+R1236   NORMAL USE OF RXOR
+ 1237   RXORCHK  CA     S+ZERO
+ 1238            TS     L
+ 1239            EXTEND
+ 1240            RXOR   L               00000, 00000
+ 1241            TC     -0CHK -1
+ 1242            CA     S-ZERO
+ 1243            EXTEND
+ 1244            RXOR   L               77777, 00000
+ 1245            TC     -0CHK
+ 1246            CA     L
+ 1247            TC     -0CHK -1
+ 1248            CS     A
+ 1249            TS     L
+ 1250            CS     A
+ 1251            EXTEND
+ 1252            RXOR   L               00000, 77777
+ 1253            TC     -0CHK
+ 1254            CA     S-ZERO
+ 1255            EXTEND
+ 1256            RXOR   L               77777, 77777
+ 1257            TC     -0CHK -1
+ 1258            CA     L
+ 1259            TC     -0CHK
+ 1260            CS     A
+ 1261            TS     Q
+ 1262   RXORUV   CA     S+MAX
+ 1263            AD     S+2             01 - 00001
+ 1264            EXTEND
+ 1265            RXOR   Q               10 - 37776, C(Q) = -0
+ 1266            TS     KEEP1
+ 1267            TC     ERRORS
+ 1268            CA     KEEP1
+ 12681 2         TC     -1CHK
+ 1269            TC     CHECKNJ         CHECK FOR NEW JOB
+ 12691 2         TC     XTRANDX
+R1270   NEXT THREE CONSTANTS ARE ADDRESSESS USED BY EXTRACODE INSTRUCTIONS
+ 1271   ADRSBZMF ADRES  NDXBZMF
+ 1272   ADRSDCA  ADRES  NDXDCA
+ 1273  2ADRSQXCH ADRES  NDXAUG
+R1274   NORMAL USE OF INDEX WITH EXTRACODE INSTRUCTIONS
+R1275   INDEX INSTRUCTION USED WITH INDEX AND BZF
+ 1276   XTRANDX  CA     S+ZERO
+ 1277            EXTEND
+ 1278            NDX    S+ZERO
+ 1279            NDX    ADRSBZMF
+ 1280            BZF    00000           BZF +2
+ 1281            TC     ERRORS
+R1282   INDEX INSTRUCTION USED WITH BZMF
+ 1283   NDXBZMF  EXTEND
+ 1284            NDX    ADRSDCA
+ 1285            BZMF   0000            BZMF+2
+ 1286            TC     ERRORS
+R1287   INDEX INSTRUCTION USED WITH DCA
+ 1288   NDXDCA   EXTEND
+ 1289            INDEX  ADRS+1          DCA S+1
+ 1290            DCA    0000            C(A) = +1, C(L) = +2
+ 1291            CS     A
+ 1292            AD     L
+ 1293            TC     -1CHK -1
+R1294   INDEX INSTRUCTION USED WITH DCS
+ 1295            EXTEND
+ 1296            INDEX  ADRS+1          DCS S+1
+ 1297            DCS    0000            C(A) = -1, C(L) = -2
+ 1298            CS     A
+ 1299            AD     L
+ 1300            TC     -1CHK
+R1301   INDEX INSTRUCTION USED WITH MP AND SU
+ 1302            CA     S+MAX           37777
+ 1303            EXTEND
+ 1304            NDX    ADRS+1
+ 1305            MP     0001            C(A) = 1, C(L) = 37776
+ 1306            TC     -1CHK -1
+ 1307            CA     S+MAX           37777
+ 1308            EXTEND
+ 1309            NDX    S+1
+ 1310            SU     0000
+ 1311            TC     -1CHK -1
+R1312   INDEX INSTRUCTION USED WITH DV
+ 1313   NDXDV    CA     DV1CON          PUT 14000 (3/8) IN KEEP3
+ 1314            TS     KEEP3
+ 1315            CA     S+ZERO
+ 1316            TS     L
+ 1317            CA     SBIT13          10000
+ 1318            EXTEND
+ 1319            NDX    ADRS3
+ 1320            DV     0000            C(A) = 25252, C(L) = 10000
+ 1321            TS     KEEP1
+ 1322            CA     S-ZERO
+ 1323            XCH    L
+ 1324            CS     A
+ 1325            EXTEND
+ 1326            NDX    ADRS3
+ 1327            DV     0000
+ 1328            AD     KEEP1
+ 1329            TC     -0CHK
+R1330   INDEX USED WITH MSU (C(A) = +0, C(K) = -0) (RESULT = -1)
+ 1331   NDXMSU   CA     S+ZERO
+ 1332            TS     KEEP1
+ 1333            CS     A
+ 1334            EXTEND
+ 1335            NDX    ADRS1           MSU KEEP1
+ 1336            MSU    0000            C(A) = -1
+ 1337            TC     -1CHK
+R1338   INDEX USED WITH QXCH
+ 1339   NDXQXCH  CA     ADRSQXCH
+ 1340            TS     KEEP1
+ 1341            TC     +2
+ 1342            TC     ERRORS
+ 1343            EXTEND
+ 1344            NDX    ADRS1           QXCH KEEP1
+ 1345            QXCH   0000
+ 1346            TC     Q
+ 1347            TC     ERRORS
+R1348   INDEX USED WITH AUG
+ 1349   NDXAUG   CS     S+ZERO
+ 1350            TS     KEEP1           00000
+ 1351            EXTEND
+ 1352            NDX    ADRS1           AUG KEEP1
+ 1353            AUG    0000
+ 1354            CA     KEEP1
+ 1355            TC     -1CHK
+R1356   INDEX USED WITH DIM
+ 1357   NDXDIM   CA     S+2
+ 1358            TS     KEEP1
+ 1359            EXTEND
+ 1360            NDX    ADRS1           DIM KEEP1
+ 1361            DIM    0000
+ 1362            CS     KEEP1
+ 1363  2         TC     -1CHK
+R1364   NORMAL USE OF INDEX WITH IN-OUT INSTRUCTIONS
+R1365   INDEX USED WITH WRITE AND READ
+ 1366   NDXINOUT CA     S-1
+ 1367            EXTEND
+ 1368            NDX    S+1             WRITE L
+ 1369            WRITE  0000
+ 1370            CS     A
+ 1371            EXTEND
+ 1372            NDX    S+1             READ L
+ 1373            READ   0000
+ 1374            TC     -1CHK
+R1375   INDEX USED WITH RAND
+ 1376            CA     S+1             00001
+ 1377            TS     L
+ 1378            CA     S-ZERO          77777
+ 1379            EXTEND
+ 1380            NDX    S+1             RAND L
+ 1381            RAND   00000
+ 1382            TC     -1CHK -1
+R1383   INDEX USED WITH WAND
+ 1384            CA     S-MAX           40000
+ 1385            AD     S+1             40001
+ 1386            TS     L
+ 1387            CA     S+MAX           37777
+ 1388            EXTEND
+ 1389            NDX    S+1             WAND L
+ 1390            WAND   0000            C(A) = C(L) = +1
+ 1391            TC     -1CHK -1
+ 1392            CS     L
+ 1393            TC     -1CHK
+R1394   INDEX USED WITH ROR
+ 1395            CA     S+1
+ 1396            TS     Q
+ 1397            CA     S+ZERO
+ 1398            EXTEND
+ 1399            NDX    S+2             ROR Q
+ 1400            ROR    0000
+ 1401            TC     -1CHK -1
+R1402   INDEX USED WITH WOR
+ 1403            CA     S-7
+ 1404            TS     L               77770
+ 1405            CA     S+MAX
+ 1406            AD     S-1             37776
+ 1407            EXTEND
+ 1408            NDX    S+1             WOR L
+ 1409            WOR    0000            C(A) = C(L) = -1
+ 1410            TC     -1CHK
+ 1411            CA     L
+ 1412            TC     -1CHK
+R1413   INDEX USED WITH RXOR
+ 1414            CA     S-1
+ 1415            TS     L               77776
+ 1416            CA     S+MAX           37777
+ 1417            EXTEND
+ 1418            NDX    S+1             RXOR L
+ 1419            RXOR   0000            C(A) = 40001
+ 1420            AD     S+MAX
+ 1421            TC     -1CHK -1
+R14211  CHECKS EXTRACODE INDEX OF AN SC REGISTER
+ 14212           CA     S+2
+ 14213           TS     KEEP1
+ 14214           CA     ADRS1           ADDRESS OF KEEP1
+ 14215           TS     L
+ 14216           CA     S+1
+ 14217           EXTEND
+ 14218           NDX    L
+ 142181          SU     0000
+ 14219 2         TC     -1CHK
+R1422   CHECK OF SPECIAL AND CENTRAL REGISTERS
+R1423   CHANGE OF SIGN BY ADDING SAME NUMBER (ADDER)
+ 1424   ADDCHK   CA     SBIT14          20000
+ 1425            AD     A               01 -00000
+ 1426            TS     A
+ 1427            TC     ERRORS
+ 1428            AD     A               10 - 00000
+ 1429            TS     A
+ 1430            TC     ERRORS
+ 1431            AD     A               00001
+ 1432            TS     A
+ 1433            TC     +2
+ 1434            TC     ERRORS
+ 1435  2         TC     -1CHK -1
+R1436   NORMAL OPERATION OF CYCLE RIGHT REGISTER
+ 1437   CYRCHK   CA     CYRCON          57761
+ 1438            TS     KEEP5           COUNTDOWN REGISTER
+ 1439            CA     S-MAX           40000
+ 1440            TS     CYR
+ 1441   CYRLOOP  CCS    CYR
+ 1442            TC     CYRCNTDN
+ 1443            TC     ERRORS
+ 1444            TC     ENDCYR
+ 1445            TC     ERRORS
+ 1446   CYRCNTDN INCR   KEEP5
+ 1447            TC     CYRLOOP
+ 1448   ENDCYR   CA     KEEP5           57777
+ 1449            AD     CYR             C(CYR) = 20000
+ 1450            CCS    A               -0 = END OF CYCLE RIGHT CHECK
+ 1451            TC     ERRORS
+ 1452            TC     ERRORS
+ 1453  2         TC     ERRORS
+R1454   NORMAL OPERATION OF CYCLE LEFT REGISTER
+ 1455   CYLCHK   CA     S-15            77760, -15
+ 1456            TS     KEEP5           COUNT REGISTER
+ 1457            CA     S-MAX           40000
+ 1458            TS     CYL
+ 1459   CYLLOOP  CCS    CYL
+ 1460            TC     CYLCNTDN
+ 1461            TC     ERRORS
+ 1462            TC     ENDCYL
+ 1463            TC     ERRORS
+ 1464   CYLCNTDN INCR   KEEP5
+ 1465            TC     CYLLOOP
+ 1466   ENDCYL   CA     CYL             C(CYL) SHOULD = +1
+ 1467            TC     -1CHK -1
+ 1468            CA     KEEP5
+ 1469  2         TC     -1CHK
+R1470   NORMAL OPERATION OF SHIFT RIGHT REGISTER
+ 1471   SRCHK    CA     S-14            77761, -14
+ 1472            TS     KEEP5           COUNT REGISTER
+ 1473            CA     S-MAX           40000
+ 1474            TS     SR
+ 1475   SRLOOP   CCS    SR
+ 1476            TC     ERRORS
+ 1477            TC     ERRORS
+ 1478            TC     SRCNTDN
+ 1479            CA     KEEP5           HAS SHIFTED 14 TIMES
+ 1480            TC     -1CHK
+ 1481            TC     EDOPCHK         NEXT SUBROUTINE
+ 1482   SRCNTDN  INCR   KEEP5           INCREMENT COUNT REGISTER
+ 1483  2         TC     SRLOOP
+R1484   NORMAL OPERATION OF EDOP REGISTER.  BITS 8 - 14 OF G REGISTER GO TO
+R1485   BITS 1 - 7 OF EDOP.
+ 1486   EDOPCHK  CA     S-15            77760, -15
+ 1487            TS     KEEP5           COUNT REGISTER
+ 1488            CA     S7BITS          00177
+ 1489            TS     CYL
+ 1490   EDOPLOOP CA     CYL
+ 1491            TS     EDOP
+ 1492            TS     CYR             SHIFT LEFT 7 TIMES
+ 1493            CA     CYR
+ 1494            CA     CYR
+ 1495            CA     CYR
+ 1496            CA     CYR
+ 1497            CA     CYR
+ 1498            CA     CYR
+ 1499            CA     CYR
+ 1500            MASK   S7BITS
+ 1501            CS     A
+ 1502            TS     KEEP1           COMPLEMEMT OF C(EDOP)
+ 1503            CA     S-ZERO
+ 1504            MASK   EDOP
+ 1505            AD     KEEP1
+ 1506            TC     -0CHK
+ 1507            INCR   KEEP5           INCREMEMT COUNT REGISTER
+ 1508            CCS    EDOP
+ 1509            TC     EDOPLOOP
+ 1510            TC     ENDEDOP
+ 1511            TC     ERRORS
+ 1512            TC     ERRORS
+ 1513   ENDEDOP  CA     KEEP5           SHOULD HAVE PERFORMED EDOPLOOP 14 TIMES
+ 1514  2         TC     -1CHK
+ 1515  2         INCR   SCOUNT          INCREMENT UPON SUCCESSFUL COMLETION
+ 1516            TC     SMODECHK
 *       ENDOFJOB
