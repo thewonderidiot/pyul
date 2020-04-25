@@ -967,7 +967,7 @@ class Yul:
             self.typ_abort()
 
         # Load and go to manufacturing program.
-        comp_manuf = self._mon.phi_load('MANUFACTURING.' + self.comp_name, self)
+        comp_manuf = self._mon.phi_load('MANUFACTURING.' + self.comp_name, self, bypt_data)
         return comp_manuf.what_subd(sub_card, sub_sent)
 
     def manuf_obj(self, card, sentence, word):
