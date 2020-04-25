@@ -609,7 +609,7 @@ class Yul:
         self._mon.mon_typer('ILLEGAL REQUEST FOR TASK')
         self.ign_sbdir(sub_card)
 
-    def known_psr(self):
+    def known_psr(self, old_ok=False):
         # Subroutine in pass 0 to check a request for action on a known program or subroutine by
         # verifying the computer name, program or subroutine name, revision number, and author name
         # are mutually consistent.
@@ -622,8 +622,6 @@ class Yul:
         # Determine expected type and revno.
         expected_type = 'SUBROUTINE' if (self.switch & SwitchBit.SUBROUTINE) else 'PROGRAM'
         expected_rev = self.revno
-        if (self.switch & SwitchBit.REVISION) and not (self.switch & (SwitchBit.VERSION | SwitchBit.REPRINT)):
-            expected_rev -= 1
 
         # See if name exists as either a prog or sr.
         prog = self.yulprogs.find_prog(self.comp_name, self.prog_name)
@@ -636,9 +634,10 @@ class Yul:
                 self.yul_typer('PROGRAM NAME NOT RECOGNIZED.')
             self.typ_abort()
 
-        if prog['REVISION'] != expected_rev:
+        self._latest_rev = prog['REVISION']
+        if (prog['REVISION'] != expected_rev) and not (old_ok and expected_rev < prog['REVISION']):
             # Procedure to cuss a wrong revision no. Announce correct one and abort.
-            self._mon.mon_typer('WRONG REVISION NUMBER, SHOULD BE: %u' % expected_rev)
+            self._mon.mon_typer('WRONG REVISION NUMBER, SHOULD BE: %u' % prog['REVISION'])
             self.typ_abort()
 
         if prog['AUTHOR'] != self._auth_name:
@@ -911,7 +910,70 @@ class Yul:
         self.typ_asobj(card, sentence, objc_msg)
 
     def manufact(self, card, sentence):
-        pass
+        # Routine to respond to requests to manufacture an existing program. Looks on disc for the
+        # specified revision; if latest was specified and is not on disc, uses tape. Aborts if
+        # specified revision is unmanufacturable. If all is well, loads the manufacturing program
+        # for the named computer.
+        self._task_msg = 'MANUFACT'
+        word = 1
+        # Break down and reform rest of directory.
+        objc_msg = self.manuf_obj(card, sentence, word)
+        self.yul_typer(self._task_msg)
+        self.yul_typer(objc_msg)
+
+        # Seek computer name in directory.
+        comp = self.yulprogs.find_comp(self.comp_name)
+        # Cuss and exit if not there.
+        if comp is None:
+            self.yul_typer('COMPUTER NAME NOT RECOGNIZED.')
+            self.typ_abort()
+
+        # Can we manufacture for this computer...
+        if not comp['MANUFACTURING']['AVAILABLE']:
+            # Cuss and exit if not.
+            self.yul_typer('CAN\'T MANUFACTURE FOR THAT COMPUTER')
+            self.typ_abort()
+
+        # Cuss and exit if asked to manuf subro.
+        if self.switch & SwitchBit.SUBROUTINE:
+            self.yul_typer('SUBROUTINES MAY NOT BE MANUFACTURED')
+            self.typ_abort()
+
+        # Returns if the specified revision number is less than or equal to the latest.
+        self.known_psr(old_ok=True)
+
+        # Branch if latest revision was specified.
+        if self.revno < self._latest_rev:
+            self.mon_typer('OLD REVISION NO.: %u' % self.revno)
+
+        bypt_data = self.yulprogs.find_bypt(self.comp_name, self.prog_name, self.revno)
+        if bypt_data is None:
+            self.yul_typer('NOT ON THIS DISC.')
+            self.typ_abort()
+
+        # Cuss and exit if unmanufaturable.
+        if not bypt_data['MANUFACTURABLE']:
+            self.yul_typer('DESIRED REVISION IS UNMANUFACTURABLE')
+            self.typ_abort()
+
+        self.yul_typer('FOUND ON DISC')
+
+        # Go to sentence-read first subdirector.
+        sub_card, sub_sent = self.rd_subdrc()
+
+        # Cuss and abort if no subdirector.
+        if sub_card is None:
+            self.yul_typer('SUBDIRECTOR CARD MISSING')
+            self.typ_abort()
+
+        # Load and go to manufacturing program.
+        comp_manuf = self._mon.phi_load('MANUFACTURING.' + self.comp_name, self)
+        return comp_manuf.what_subd(sub_card, sub_sent)
+
+    def manuf_obj(self, card, sentence, word):
+        # Entry when task is manufacturing.
+        self._task_msg += 'URING FOR'
+        return self.task_objc(card, sentence, word)
 
     def clos_mona(self, card, sentence):
         pass

@@ -22,6 +22,12 @@ class Paragraph:
     def __setitem__(self, i, v):
         self.words[i] = v
 
+    def asdict(self):
+        return {
+            'PARAGRAPH': self.number,
+            'WORDS': self.words,
+        }
+
 class Pass3:
     def __init__(self, mon, yul, old_line, m_typ_tab, wd_recs):
         self._mon = mon
@@ -545,7 +551,6 @@ class Pass3:
         return available
 
     def ws3(self):
-        # FIXME: create BYPT
         # FIXME: put symbol table into BYPT
 
         # Sort and merge word records
@@ -752,8 +757,6 @@ class Pass3:
                 # Reset count for next page.
                 self._n_oct_errs = 0
 
-            # FIXME: Put paragraph into BYPT
-
     def subr_list(self):
         # FIXME: implement subroutines
         pass
@@ -762,7 +765,8 @@ class Pass3:
     # subroutine, YULPROGS has already been closed and rewound, and bit 11 set. Otherwise the existence of a bypt
     # record for the program is noted in the directory, unless the assembly is bad. The file tape is closed and rewound.
     def close_yul(self):
-        # FIXME: Implement YULPROGS management
+        # FIXME: Improve BYPT handling
+        self._bypt['PARAGRAPHS'] = [{'PARAGRAPH': p.number, 'WORDS': p.words} for n,p in self._paragraphs.items()]
         
         # Degree of aspersion gives the bad news.
         ecch = False
@@ -787,6 +791,7 @@ class Pass3:
                 else:
                     self._mon.mon_typer(horrid + 'ASSEMBLY; FILED ON DISC')
             else:
+                self._bypt['MANUFACTURABLE'] = True
                 if self._yul.n_err_lins == 0:
                     self._last_line = self._last_line[:16] + ' GOOD:  ' + self._last_line[24:]
                     self._mon.mon_typer(self._joyful[0] + 'ASSEMBLY; FILED ON DISC')
@@ -819,6 +824,10 @@ class Pass3:
 
         # Print last line of assembly output.
         self.print_lin()
+
+        # Write BYPT to tape
+        if not self._yul.switch & SwitchBit.REPRINT:
+            self._yul.yulprogs.create_bypt(self._yul.comp_name, self._yul.prog_name, self._yul.revno, self._bypt)
 
         # FIXME: final closeout
 
@@ -916,7 +925,11 @@ class Pass3:
             if (page_ones & Bit.BIT47) == 0:
                 self._joyful = self._alt_words
 
-        # FIXME: Create BYPT, etc.
+        self._bypt = {
+            'MANUFACTURABLE': False,
+            'PARAGRAPHS': [],
+            'SYMBOLS': [],
+        }
 
         self._yul.sym_thr.sort_multdefs()
 

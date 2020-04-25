@@ -157,3 +157,25 @@ class Yulprogs:
 
         sypt_file = open(sypt_fn, 'w')
         return sypt_file
+
+    def create_bypt(self, comp_name, prog_name, revno, bypt_data):
+        comp_dir = os.path.join(self._tape, 'BYPT', comp_name)
+        bypt_fn = os.path.join(comp_dir, '%s.R%u' % (prog_name, revno))
+
+        if not os.path.isdir(comp_dir):
+            os.mkdir(comp_dir)
+
+        with open(bypt_fn, 'w') as f:
+            json.dump(bypt_data, f, indent=4)
+
+    def find_bypt(self, comp_name, prog_name, revno):
+        comp_dir = os.path.join(self._tape, 'BYPT', comp_name)
+        bypt_fn = os.path.join(comp_dir, '%s.R%u' % (prog_name, revno))
+
+        if not os.path.isfile(bypt_fn):
+            return None
+
+        with open(bypt_fn, 'r') as f:
+            bypt_data = json.load(f)
+
+        return bypt_data
