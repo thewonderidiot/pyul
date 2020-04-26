@@ -529,9 +529,12 @@ class Pass1:
             return False
 
         # Branch if this is the only definition.
-        if symbol.name in self._yul.sym_thr:
-            symbol = copy.deepcopy(symbol)
+        if symbol.health == 0:
+            symbol.value = loc_value
+            symbol.health = new_health
+            return
 
+        symbol = copy.deepcopy(symbol)
         symbol.value = loc_value
         symbol.health = new_health
 

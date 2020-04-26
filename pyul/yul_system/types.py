@@ -253,7 +253,7 @@ class SymbolTable:
                 if len(self._sym_map) >= 8192:
                     return None
                 else:
-                    return Symbol(name)
+                    return self.first(name)
 
             latest_def = self._sym_map[name][-1 if self._get_latest else 0]
             return self._symbols[latest_def]
