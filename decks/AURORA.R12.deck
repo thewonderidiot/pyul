@@ -3551,7 +3551,8 @@ R0002  2SINGLE PRECISION SINE AND COSINE
  0008            TS     TEMK
  0009            TCF    POLLEY
  0010            XCH    TEMK
- 0011            INDEX  TEMK 0012            AD     LIMITS
+ 0011            INDEX  TEMK
+ 0012            AD     LIMITS
  0013            COM
  0014            AD     TEMK
  0015            TS     TEMK
@@ -4239,4 +4240,84 @@ P0202  2         RETURN, AFTER EXECUTION OF T3 OVERFLOW TASK:
  0212   NOQBRSM  DXCH   ARUPT
  0213  2         RESUME
  0214   ENDWAITF EQUALS                 LAST FIXED-FIXED LOCATION OF T3RUPT.
+L      2PHASE TABLE MAINTENANCE
+R0001  2         THE FOLLOWING ROUTINES ARE PROVIDED TO MAINTAIN THE PHASE TABLE
+ 0002  9. TWO ROUTINES ARE AVAILABLE:
+A0003            TC     PHASCHNG        SLOWER BUT LESS STORAGE.
+A0004            OCT    PPPGG           CHANGE RESTART GROUP GG TO PHASE PPP
+A0005  2                                (PPP IS A SIGNED 8 BIT NUMBER).
+A0006            CA     PPPPP           NEW PHASE ARRIVES IN A.
+A0007            TC     NEWPHASE
+A0008  2         OCT    000GG           UPDATES GG.
+R0009            IN ALL CASES THE OLD PHASE RETURNS IN A. IF THE OLD PHASE WAS N
+ 0010  9EGATIVE, CALL A ROUTINE USING THE
+R0011  2CORRESPONDING TERMCADR.
+ 0012  2         SETLOC ENDWAITF
+ 0013   PHASCHNG INHINT
+ 0014            INDEX  Q
+ 0015            CAF    0               GET PARAMETER WORD.
+ 0016            TS     RUPTREG4
+ 0017            MASK   LOW5            GROUP NUMBER 0 - 37.
+ 0018            DOUBLE
+ 0019            XCH    RUPTREG4
+ 0020            EXTEND
+ 0021            MP     BIT9            SIGNED NEW PHASE.
+ 0022  2         TCF    PHASCH2
+ 0023   NEWPHASE INHINT                 NEW PHASE ARRIVES IN A.
+ 0024            TS     RUPTREG4
+ 0025            INDEX  Q
+ 0026            CAF    0               GROUP NUMBER.
+ 0027            DOUBLE
+ 0028  2         XCH    RUPTREG4
+ 0029   PHASCH2  TS     L               DIRECT VERSION.
+ 0030            COM                    COMPLEMENTED VERSION IMMEDIATELY PRE-
+ 0031            INDEX  RUPTREG4        CEDES THE DIRECT ONE.
+ 0032            DXCH   -PHASE0         COPIES DISAGREE FOR MINIMUM TIME.
+ 0033            EXTEND
+ 0034  8         BZMF   PHASEXIT        IF NO DERAIL.
+ 0035            TS     RUPTREG1        IF NEGATIVE, SAVE ABSOLUTE VALUE OF
+ 0036            EXTEND                 OLD PHASE AND RETURN Q.
+ 0037            QXCH   RUPTREG2
+ 0038            CA     RUPTREG4        GET BACK GROUP NUMBER.
+ 0039            EXTEND
+ 0040            MP     HALF
+ 0041            INDEX  A               SELECT TERMCADR.
+ 0042            CAF    TERMCADR
+ 0043  2         TC     ISWCALL
+ 0044            DXCH   RUPTREG1        -OLD PHASE BITS TO A - RETURN -1 TO L.
+ 0045  2         LXCH   Q
+ 0046   PHASEXIT COM                    RETURN OLD PHASE IN A.
+ 0047            RELINT
+ 0048            INDEX  Q
+ 0049  2         TC     1
+ 0050   TERMCADR CADR   10000           FILLED IN AS NEEDED.
+ 0051            CADR   10000
+ 0052            CADR   10000
+ 0053            CADR   10000
+ 0054            CADR   10000
+ 0055            CADR   10000
+P0056  2         SUBROUTINE TO UPDATE THE PROGRAM NUMBER DISPLAY ON THE DSKY.
+ 0057   NEWMODEX INDEX  Q               UPDATE MODREG.
+ 0058            CAF    0
+ 0059            INCR   Q
+ 0060            XCH    MODREG
+ 0061            COM                    IF NO CHANGE IN MODE, RETURN IMMEDIATELY
+ 0062            AD     MODREG
+ 0063            EXTEND
+ 0064  2         BZF    TCQ
+ 0065            CAF    +2              CALL PINBALL SUBROUTINE.
+ 0066  2         TCF    SWCALL          WITH Q SET TO CALLERS RETURN.
+ 0067  2         CADR   DSPMM
+R0068  2         RETURN TO CALLER +3 IF MODE = THAT AT CALLER +1. OTHERWISE RETU
+ 0069  9RN TO CALLER +2.
+ 0070   CHECKMM  INDEX  Q
+ 0071            CS     0
+ 0072            AD     MODREG
+ 0073            EXTEND
+ 0074  2         BZF    +3
+ 0075            INDEX  Q
+ 0076  2         TC     1               NO MATCH.
+ 0077            INDEX  Q
+ 0078  2TCQ      TC     2               (ALWAYS AVAILABLE TO BZF & BZMF)
+ 0079   ENDPHMNF EQUALS
 *       ENDOFJOB
