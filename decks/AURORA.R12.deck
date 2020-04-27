@@ -4320,4 +4320,310 @@ R0068  2         RETURN TO CALLER +3 IF MODE = THAT AT CALLER +1. OTHERWISE RETU
  0077            INDEX  Q
  0078  2TCQ      TC     2               (ALWAYS AVAILABLE TO BZF & BZMF)
  0079   ENDPHMNF EQUALS
+L      2FRESH START AND RESTART
+ 0001            BANK   12
+ 0002  2         EBANK= LST1
+ 0003   SLAP1    INHINT                 FRESH START. COMES HERE FROM PINBALL.
+ 0008  2         TC     STARTSUB        SUBROUTINE DOES MOST OF THE WORK.
+ 0009            CAF    BIT15           TURN OFF ALL DSPTAB +11D LAMPS ONLY ON
+ 0010  2         TS     DSPTAB +11D     REQUESTED FRESH START.
+ 0011            CAF    ZERO            SAME STORY ON ZEROING FAILREG.
+ 0012  2         TS     FAILREG
+ 0019   DOFSTART CAF    ZERO            DO A FRESH START.
+ 0020            TS     SMODE
+ 0021            TS     MODREG
+ 0022            TS     AGSWORD         ALLOW AGS INITIALIZATION
+ 0023  2         TS     UPLOCK          FREE UPLINK INTERLOCK
+ 00231           TS     CDUX            ZERO CDUS SO MATRIX COMPUTATION IN T4
+ 00232           TS     CDUY            WONT OVERFLOW.
+ 00233 2         TS     CDUZ
+ 0024            TS     PHASE0          INITIALIZE PHASE TABLE - NO MISSION
+ 0025            TS     PHASE1          PROGRAMS RUNNING.
+ 0026            TS     PHASE2
+ 0027            TS     PHASE3
+ 0028            TS     PHASE4
+ 0029  2         TS     PHASE5
+ 0030            COM
+ 0031            TS     -PHASE0
+ 0032            TS     -PHASE1
+ 0033            TS     -PHASE2
+ 0034            TS     -PHASE3
+ 0035            TS     -PHASE4
+ 0036  2         TS     -PHASE5
+ 0037            CAF    IM30INIF        FRESH START IMU INITIALIZATION.
+ 0038  2         TS     IMODES30
+ 0039            CAF    BIT10           REMOVE IMU FAIL INHIBIT IN 5 SECS.
+ 0040            TC     WAITLIST
+ 0041            2CADR  IFAILOK
+ 0042            EXTEND                 SETTING T5RUPT FOR SETIDLER PROGRAM
+ 0043            DCA    SETADR          THE SETIDLER PROGRAM ASSURES 1 SECOND
+ 0043012         DXCH   T5ADR           DELAY BEFORE THE DAPIDLER BEGINS.
+ 004401          CAF    OCT04012        INITIALIZE DAPBOOLS
+ 0044022         TS     DAPBOOLS
+ 0045            EXTEND                 INITIALIZE SWITCHES ONLY ON FRESH START.
+ 0046            DCA    SWINIT
+ 0047            DXCH   STATE
+ 0048            EXTEND
+ 0049            DCA    SWINIT +2
+ 0050  2         DXCH   STATE +2
+ 0051   ENDRSTRT CAF    BIT6            IF GIMBAL LOCK LAMP IS STILL ON,
+ 0052            MASK   DSPTAB +11D     IMU WAS FOUND IN GIMBAL LOCK IN RESTART
+ 0053            CCS    A               AND LEFT IN COARSE ALIGN. IN THIS CASE
+ 0054            CS     BIT9            SET ISS OPERATE BIT IN IMODES30 TO
+ 0055  2         ADS    IMODES30        OPERATE SO T4 INBIT MONITOR WONT ZERO
+ 0056            RELINT                 THE CDUS AS IT DOES IN FRESH START.
+ 0057            TC     BANKCALL        DISPLAY MAJOR MODE.
+ 0058  2         CADR   DSPMM
+ 0059  2STARTSW  TCF    DUMMYJOB +2     PATCH FOR SIMULATION.
+ 0060   STARTSIM CAF    BIT14
+ 0061            TC     FINDVAC
+ 0062            OCT    77777           FATAL IF NOT PATCHED AS ABOVE.
+ 0063  2         OCT    77777
+ 0064            TCF    DUMMYJOB +2     DONT ZERO NEWJOB
+P0065  2         COMES HERE FROM LOCATION 4000, GOJAM. RESTART ANY PROGRAMS WHIC
+ 0066  9H MAY HAVE BEEN RUNNING AT THE TIME.
+ 0067  2GOPROG   INCR   REDOCTR         ADVANCE RESTART COUNTER.
+ 0068  2         TC     STARTSUB        COMMON INITIALIZATION ROUTINE.
+ 0069            CAF    9,6             LEAVE PROGRAM ALARM AND GIMBAL LOCK
+ 0070            MASK   DSPTAB +11D     LAMPS INTACT ON RESTART.
+ 0071            AD     BIT15
+ 0072            XCH    DSPTAB +11D
+ 0073            MASK   BIT6
+ 0074            CCS    A               IF GIMBAL LOCK LAMP WAS ON, LEAVE ISS IN
+ 0075            CAF    BIT4            COARSE ALIGN.
+ 0076            EXTEND
+ 0077  2         WOR    12
+ 007701          EXTEND                 SETTING T5RUPT FOR DAPIDLER PROGRAM
+ 007702          DCA    IDLEADR
+ 007703          DXCH   T5ADR
+ 0078            CAF    PRIO37          DISPLAY FAILREG AS INDICATION OF RESTART
+ 0079            TC     NOVAC           OR TO DISPLAY ABORT CODE AS ABOVE.
+ 0080            2CADR  DOALARM
+ 0081            EXTEND                 DONT TRY TO RESTART IF ERROR LIGHT RESET
+ 0082            READ   15              AND MARK REJECT BUTTONS DEPRESSED.
+ 0083            AD     -ELR
+ 0084            EXTEND
+ 0085            BZF    +2
+ 0086  2         TCF    PCLOOP -1       VERIFY PHASE TABLE.
+ 0087            CAF    BIT5
+ 0088            EXTEND
+ 0089            RAND   16
+ 0090            AD     -MKREJ
+ 0091            EXTEND
+ 0092  2         BZF    DOFSTART
+ 0093    -1      CAF    NUMGRPS         VERIFY PHASE TABLE AGREEMENT.
+ 0094   PCLOOP   TS     MPAC +5
+ 0095            DOUBLE
+ 0096            EXTEND
+ 0097            INDEX  A
+ 0098            DCA    -PHASE0         COMPLEMENT INTO A - DIRECT INTO L.
+ 0099            EXTEND
+ 0100            RXOR   L               RESULT MUST BE -0 FOR AGREEMENT.
+ 0101            CCS    A
+ 0102            TCF    PTBAD           RESTART FAILURE.
+ 0103            TCF    PTBAD
+ 0104  2         TCF    PTBAD
+ 0105            CCS    MPAC +5         PROCESS ALL RESTART GROUPS.
+ 0106  2         TCF    PCLOOP
+ 0107            TS     MPAC +6         SET TO +0.
+ 0108            CAF    NUMGRPS         SEE IF ANY GROUPS RUNNING.
+ 0109   NXTRST   TS     MPAC +5
+ 0110            DOUBLE
+ 0111            INDEX  A
+ 0112            CCS    PHASE0
+ 0113            TCF    PACTIVE         PNZ - GROUP ACTIVE.
+ 0114  2         TCF    PINACT          +0 - GROUP NOT RUNNING.
+ 0115   PTERM    TS     MPAC            NNZ - TERMINATE REQUEST.
+ 0116            INDEX  MPAC +5         PICK UP RESTART TERMINATE CADR.
+ 0117  2         CAF    RTERMCAD
+ 0118   PACT2    TS     L
+ 0119            INCR   MPAC            ABS OF PHASE.
+ 0120            CS     LOW7            SEE THAT MAG IS LESS THAN 128.
+ 0121            MASK   MPAC
+ 0122            CCS    A
+ 0123  2         TCF    PTBAD           BAD DATA.
+ 0124            INCR   MPAC +6         INDICATE GROUP DEMANDS PRESENT.
+ 0125            CA     L
+ 0126  2         TC     SWCALL          MUST RETURN TO SWRETURN.
+ 0127   PINACT   CCS    MPAC +5         PROCESS ALL RESTART GROUPS.
+ 0128  2         TCF    NXTRST
+ 0142   TSTMPAC6 CCS    MPAC +6         IF NO GROUPS ACTIVE THIS REQUEST, DO A
+ 0143            TCF    DORSTART
+ 0144  2         TCF    DOFSTART        FRESH START
+ 0145   PACTIVE  TS     MPAC
+ 0146            INDEX  MPAC +5         SELECT RESTART ACTIVE CADR.
+ 0147            CAF    RACTCADR
+ 0148  2         TCF    PACT2
+ 0149   PTBAD    CAF    OCT1107         SET ADDITIONAL FAILURE TO SHOW PHASE
+ 0150            TS     SFAIL           TABLE DISAGREEMENT (WILL BE DISPLAYED
+ 0151  2         TCF    DOFSTART        IN R2).
+ 0152  2OCT1107  OCT    1107            ADDITIONAL ALARM CODE.
+ 0153   DORSTART CAF    IFAILINH        LEAVE IMU FAILURE INHIBITS INTACT ON
+ 0154            MASK   IMODES30        RESTART, RESETTING ALL FAILURE CODES.
+ 0155            AD     IM30INIR
+ 0156  2         TS     IMODES30
+ 0157            TCF    ENDRSTRT
+P0164  2         INITIALIZATION COMMON TO BOTH FRESH START AND RESTART.
+ 0165   STARTSUB XCH    Q
+ 0166  2         TS     BUF             EXEC TEMPS ARE AVAILABLE TO US.
+ 0167            CAF    ZERO            ZERO OUTBITS WITHIN 3MS OF RESTART.
+ 0168            EXTEND
+ 0169            WRITE  12
+ 0170            EXTEND
+ 0171            WRITE  14
+ 0172            EXTEND
+ 0173            WRITE  11
+ 0174            CAF    PRIO34          ENABLE INTERRUPTS.
+ 0175            EXTEND
+ 0176  2         WRITE  13
+ 0177            CAF    POSMAX          T3 AND T4 OVERFLOW AS SOON AS POSSIBLE.
+ 0178            TS     TIME5           SO DOES T5.
+ 0179            TS     TIME3             (POSMAX IS PSEUDO INTERRUPT SIGNAL IN
+ 0180  2         TS     TIME4             CASE RUPT SIGNALLED BEFORE TS TIME3).
+ 0181            CAF    STARTEB
+ 0182  2         TS     EBANK           SET FOR E3
+ 0183            CAF    NEG1/2          INITIALIZE WAITLIST DELTA-TS.
+ 0184            TS     LST1 +7
+ 0185            TS     LST1 +6
+ 0186            TS     LST1 +5
+ 0187            TS     LST1  +4
+ 0188            TS     LST1  +3
+ 0189            TS     LST1  +2
+ 0190            TS     LST1  +1
+ 0191  2         TS     LST1
+ 0192            CS     ENDTASK
+ 0193            TS     LST2
+ 0194            TS     LST2 +2
+ 0195            TS     LST2 +4
+ 0196            TS     LST2 +6
+ 0197            TS     LST2 +8D
+ 0198            TS     LST2 +10D
+ 0199            TS     LST2 +12D
+ 0200            TS     LST2 +14D
+ 0201            TS     LST2 +16D
+ 0202            CS     ENDTASK +1
+ 0203            TS     LST2 +1
+ 0204            TS     LST2 +3
+ 0205            TS     LST2 +5
+ 0206            TS     LST2 +7
+ 0207            TS     LST2 +9D
+ 0208            TS     LST2 +11D
+ 0209            TS     LST2 +13D
+ 0210            TS     LST2 +15D
+ 0211  2         TS     LST2 +17D
+ 0212            CS     ZERO            MAKE ALL EXECUTIVE REGISTER SETS
+ 0213            TS     PRIORITY        AVAILABLE.
+ 0214            TS     PRIORITY +12D
+ 0215            TS     PRIORITY +24D
+ 0216            TS     PRIORITY +36D
+ 0217            TS     PRIORITY +48D
+ 0218            TS     PRIORITY +60D
+ 0219  2         TS     PRIORITY +72D
+ 0220  2         TS     NEWJOB          SHOWS NO ACTIVE JOBS.
+ 0221            CAF    VAC1ADRC        MAKE ALL VAC AREAS AVAILABLE.
+ 0222            TS     VAC1USE
+ 0223            AD     LTHVACA
+ 0224            TS     VAC2USE
+ 0225            AD     LTHVACA
+ 0226            TS     VAC3USE
+ 0227            AD     LTHVACA
+ 0228            TS     VAC4USE
+ 0229            AD     LTHVACA
+ 0230  2         TS     VAC5USE
+ 0231            CAF    TEN             TURN OFF ALL DISPLAY SYSTEM RELAYS.
+ 0232            TS     DIDFLG          DISPLAY INERTIAL DATA FLAG.
+ 0233   DSPOFF   TS     MPAC
+ 0234            CS     BIT12
+ 0235            INDEX  MPAC
+ 0236            TS     DSPTAB
+ 0237            CCS    MPAC
+ 0238  2         TC     DSPOFF
+ 0239            TS     INLINK
+ 0240            TS     DSPCNT
+ 0241            TS     LMPCMD
+ 0242            TS     CADRSTOR
+ 0243            TS     REQRET
+ 0244            TS     CLPASS
+ 0245            TS     DSPLOCK
+ 0246            TS     MONSAVE         KILL MONITOR
+ 0247            TS     MONSAVE1
+ 0248            TS     GRABLOCK
+ 0249            TS     VERBREG
+ 0250            TS     NOUNREG
+ 0251            TS     DSPLIST
+ 0252            TS     DSPLIST +1
+ 0253  2         TS     DSPLIST +2
+ 0254            TS     MARKSTAT
+ 0255            TS     EXTVBACT        MAKE EXTENDED VERBS AVAILABLE
+ 0256            TS     IMUCADR
+ 0257            TS     OPTCADR
+ 0258            TS     RADCADR
+ 0259            TS     LGYRO
+ 0260            TS     DSRUPTSW
+ 0261            CAF    NOUTCON
+ 0262  2         TS     NOUT
+ 0263            CS     ONE             NO RADAR DESIGNATION.
+ 0264  2         TS     SAMPLIM         NO RADAR RUPTS EXPECTED.
+ 0265            CAF    T4LINIT
+ 0266  2         TS     T4LOC
+ 0267            CAF    IM33INIT        NO PIP OR TM FAILS.
+ 0268  2         TS     IMODES33
+ 0269            CAF    BIT6            SET LR POS.
+ 0270            EXTEND
+ 0271            RAND   33
+ 0272            AD     RMODINIT
+ 0273  2         TS     RADMODES
+ 0274            CAF    LESCHK          SELF CHECK GO-TO REGISTER.
+ 0275            TS     SELFRET
+ 0276            CS     VD1
+ 0277            TS     DSPCOUNT
+ 0278  2         EBANK= DNTMGOTO
+ 0279            CAF    LDNTMGO         SET UP TM PROGRAM.
+ 0280  2         TS     EBANK
+ 0281            CAF    LDNPHAS1
+ 0282  2         TS     DNTMGOTO
+ 0283            CAF    NOMTMLST        SET UP NOMINAL DOWNLINK LIST.
+ 0284  2         TS     DNLSTADR
+ 0285  2         TC     BUF
+ 0289   IFAILINH OCT    35              ISS FAILURE INHIBIT BITS.
+ 0290   LDNPHAS1 GENADR DNPHASE1
+ 0291   LDNTMGO  ECADR  DNTMGOTO
+ 0292   NOMTMLST GENADR NOMDNLST
+ 0293   LESCHK   GENADR SELFCHK
+ 0294   T4LINIT  ADRES  DSKYRSET
+ 0295   VAC1ADRC ADRES  VAC1USE
+ 0296  2LTHVACA  DEC    44
+ 0297   STARTEB  ECADR  LST1
+ 0298  2NUMGRPS  EQUALS FIVE            SIX GROUPS CURRENTLY.
+R0299  2         WHERE TO GO ON RESTART IF GROUP ACTIVE:
+ 0300   RACTCADR CADR   10000           AVAILABLE FOR USE-NEXT ONE USED
+ 0301            CADR   OPTMSTRT         RESTARTS DURING OPTM ALIGN CALIBRATION
+ 0302            CADR   10000
+ 0303            CADR   10000
+ 0304            CADR   10000
+ 0305  2         CADR   10000
+R0306  2         WHERE TO GO ON RESTART IF TERMINATE REQUESTED.
+ 0307   RTERMCAD CADR   10000
+ 0308            CADR   10000
+ 0309            CADR   10000
+ 0310            CADR   10000
+ 0311            CADR   10000
+ 0312  2         CADR   10000
+ 0313   -ELR     OCT    -22             -ERROR LIGHT RESET KEY CODE.
+ 0314   -MKREJ   OCT    -20             - MARK REJECT.
+ 0315   IM30INIF OCT    37411           INHIBITS IMU FAIL FOR 5 SEC AND PIP ISSW
+ 0316   IM30INIR OCT    37400           LEAVE FAIL INHIBITS ALONE.
+ 0317   IM33INIT OCT    16000           NO PIP OR TM FAIL SIGNALS.
+ 0318   9,6      OCT    440             MASK FOR PROG ALARM AND GIMBAL LOCK.
+ 0319  2RMODINIT OCT    00102
+ 031911          EBANK= DT
+ 031912 IDLEADR  2CADR  DAPIDLER
+ 031913          EBANK= DT
+ 031914 SETADR   2CADR  SETIDLE
+ 0320   SWINIT   OCT    0
+ 0321            OCT    0
+ 0322            OCT    0
+ 0323  2         OCT    0
+ 0324   OCT04012 OCTAL  04012           INITIAL VALUE OF DAPBOOLS
+ 0325   ENDFRESS EQUALS
 *       ENDOFJOB
