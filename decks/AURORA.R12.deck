@@ -4017,4 +4017,226 @@ P0347  2         PRIORITY CONSTANTS (NOTE IN FIXED-FIXED).
  0377   PRIO36   OCT    36000
  0378   PRIO37   OCT    37000
  0379   ENDEXECF EQUALS
+L      2WAITLIST
+R0001  2GROUNDRULE....DELTA T SHOULD NOT EXCEED 12000 (= 2 MINUTES)
+ 0002  2         SETLOC ENDEXECF
+ 0003  2         EBANK= LST1            TASK  LISTS IN SWITCHED E BANK.
+ 0004   WAITLIST XCH    Q                SAVE DELTA T IN Q AND RETURN IN
+ 0005            TS     WAITEXIT        WAITEXIT.
+ 0006            EXTEND
+ 0007            INDEX  A
+ 0008            DCA    0               PICK UP 2CADR OF TASK.
+ 0009            TS     WAITADR         BBCON WILL REMAIN IN L.
+ 0010   DLY2     CAF    WAITBB          ENTRY FROM FIXDELAY AND VARDELAY.
+ 0011            XCH    BBANK
+ 0012  2         TCF    WAIT2
+R0013  2         RETURN TO CALLER AFTER TASK INSERTION:
+ 0014   LVWTLIST CA     WAITBANK
+ 0015            TS     BBANK
+ 0016            INDEX  WAITEXIT
+ 0017  2         TC     2
+ 0018  2WAITBB   BBCON  WAIT2
+R0019  2         RETURN TO CALLER +2 AFTER WAITING DT SPECIFIED AT CALLER +1.
+ 0020   FIXDELAY INDEX  Q               BOTH ROUTINES MUST BE CALLED UNDER
+ 0021            CAF    0               WAITLIST CONTROL AND TERMINATE THE TASK
+ 0022  2         INCR   Q               IN WHICH THEY WERE CALLED.
+R0023  2         RETURN TO CALLER +1 AFTER WAITING THE DT AS ARRIVING IN A.
+ 0024   VARDELAY XCH    Q               DT TO Q. TASK ADRES TO WAITADR.
+ 0025            TS     WAITADR
+ 0026            CA     BBANK           BBANK IS SAVED DURING DELAY.
+ 0027            TS     L
+ 0028            CAF    DELAYEX
+ 0029            TS     WAITEXIT        GO TO TASKOVER AFTER TASK ENTRY.
+ 0030  2         TCF    DLY2
+ 0031  8DELAYEX  TCF    TASKOVER -2     RETURNS TO TASKOVER
+R0032  2ENDTASK MUST BE ENTERED IN FIXED-FIXED SO IT IS DISTINGUISHABLE BY ITS A
+ 0033  9DRES ALONE.
+ 0034   ENDTASK -2CADR  SVCT3
+ 0035   SVCT3    CCS    STATE +2        DRIFT FLAG
+ 00351           TCF    TASKOVER
+ 00352           TCF    TASKOVER
+ 00353 2         TCF    +1
+ 00354           CAF    PRIO35          COMPENSATE FOR NBD COEFFICIENTS ONLY
+ 00355           TC     NOVAC               ENABLE EVERY 81.93 SECONDS
+ 00356           2CADR  NBDONLY         EBANK IS SET TO 3
+ 00357           TCF    TASKOVER
+P0036  2         BEGIN TASK INSERTION.
+ 0037  2         SETLOC ENDEXECS
+ 0038   WAIT2    TS     WAITBANK        BBANK OF CALLING PROGRAM.
+ 0039            CS     TIME3
+ 0040            AD     +1              CCS  A  = + 1/4
+ 0041            CCS    A               TEST  1/4 - C(TIME3).  IF POSITIVE,
+A0042   IT MEANS THAT TIME3 OVERFLOW HAS OCCURRED PRIOR TO CS  TIME3 AND THAT
+A0043   C(TIME3) = T - T1, INSTEAD OF 1.0 - (T1 - T).  THE FOLLOWING FOUR
+A0044  2ORDERS SET C(A) = TD - T1 + 1 IN EITHER CASE.
+ 0045            AD     OCT40001        OVERFLOW HAS OCCURRED.  SET C(A) =
+ 0046  2         CS     A               T - T1 + 3/4 - 1
+R0047  2NORMAL CASE (C(A) MINUS) YIELDS SAME C(A)  -(-(1.0-(T1-T))+1/4)-1
+ 0048            AD     OCT50001
+ 0049  2         AD     Q               RESULT = TD - T1 + 1.
+ 0050  2         CCS    A               TEST TD - T1 + 1
+ 0051            AD     LST1            IF TD - T1 POS, GO TO WTLST5 WITH
+ 0052  2         TCF    WTLST5          C(A) = (TD - T1) + C(LST1) = TD-T2+1
+ 0053            NOOP
+ 0054  2         CS     Q
+R0055   NOTE THAT THIS PROGRAM SECTION IS NEVER ENTERED WHEN T-T1 G/E -1,
+R0056   SINCE TD-T1+1 = (TD-T) + (T-T1+1), AND DELTA T = TD-T G/E +1 .  (G/E
+R0057   SYMBOL MEANS GREATER THAN OR EQUAL TO).  THUS THERE NEED BE NO CON-
+R0058  2CERN OVER A PREVIOUS OR IMMINENT OVERFLOW OF TIME3 HERE.
+ 0059            AD     POS1/2          WHEN TD IS NEXT, FORM QUANTITY
+ 0060            AD     POS1/2            1.0 - DELTA T = 1.0 - (TD - T)
+ 0061            XCH    TIME3
+ 0062            AD     NEGMAX
+ 0063            AD     Q               1.0 - DELTAT T NOW COMPLETE.
+ 0064            EXTEND                 ZERO INDEX Q.
+ 0065  8         QXCH   7               (ZQ)
+ 0066   WTLST4   XCH    LST1
+ 0067            XCH    LST1 +1
+ 0068            XCH    LST1 +2
+ 0069            XCH    LST1 +3
+ 0070            XCH    LST1 +4
+ 0071            XCH    LST1 +5
+ 0072            XCH    LST1 +6
+ 0073  2         XCH    LST1 +7
+ 0074            CA     WAITADR         (MINOR PART OF TASK CADR HAS BEEN IN L.)
+ 0075            INDEX  Q
+ 0076  2         TCF    +1
+ 0077            DXCH   LST2
+ 0078            DXCH   LST2 +2
+ 0079            DXCH   LST2 +4
+ 0080            DXCH   LST2 +6
+ 0081            DXCH   LST2 +8D
+ 0082            DXCH   LST2 +10D       AT END, CHECK THAT C(LST2+10) IS STD
+ 0083            DXCH   LST2 +12D
+ 0084            DXCH   LST2 +14D
+ 0085            DXCH   LST2 +16D
+ 0086            AD     ENDTASK           END ITEM, AS CHECK FOR EXCEEDING
+A0087                                     THE LENGTH OF THE LIST.
+ 0088            EXTEND                 DUMMY TASK ADRES SHOULD BE IN FIXED-
+ 0089            BZF    LVWTLIST        FIXED SO ITS ADRES ALONE DISTINGUISHES
+ 0090  8         TCF    WTABORT         IT.
+ 0091   WTLST5   CCS    A               TEST  TD - T2 + 1
+ 0092            AD     LST1 +1
+ 0093            TCF    +4
+ 0094            AD     ONE
+ 0095            TC     WTLST2
+ 0096  2         OCT    1
+ 0097   +4       CCS    A               TEST  TD - T3 + 1
+ 0098            AD     LST1 +2
+ 0099            TCF    +4
+ 0100            AD     ONE
+ 0101            TC     WTLST2
+ 0102  2         OCT    2
+ 0103   +4       CCS    A               TEST  TD - T4 + 1
+ 0104            AD     LST1 +3
+ 0105            TCF    +4
+ 0106            AD     ONE
+ 0107            TC     WTLST2
+ 0108  2         OCT    3
+ 0109   +4       CCS    A               TEST  TD - T5 + 1
+ 0110            AD     LST1 +4
+ 0111            TCF    +4
+ 0112            AD     ONE
+ 0113            TC     WTLST2
+ 0114  2         OCT    4
+ 0115   +4       CCS    A               TEST  TD - T6 + 1
+ 0116            AD     LST1 +5
+ 0117            TCF    +4
+ 0118            AD     ONE
+ 0119            TC     WTLST2
+ 0120  2         OCT    5
+ 0121    +4      CCS    A               TEST TD - T7 + 1
+ 0122            AD     LST1 +6
+ 0123            TCF    +4
+ 0124            AD     ONE
+ 0125            TC     WTLST2
+ 0126  8         OCT    6
+ 0127    +4      CCS    A
+ 0128            AD     LST1 +7
+ 0129            TCF    +4
+ 0130            AD     ONE
+ 0131            TC     WTLST2
+ 0132  2         OCT    7
+ 0133    +4      CCS    A
+ 0134   WTABORT  TC     ABORT           NO ROOM IN THE INN.
+ 0135  2         OCT    1203
+ 0136            AD     ONE
+ 0137            TC     WTLST2
+ 0138  2         OCT    10
+ 0139   OCT50001 OCT    50001
+P0140   THE ENTRY TO WTLST2 JUST PRECEDING OCT  N  IS FOR T  LE TD LE T   -1.
+R0141  2                                                   N           N+1
+R0142   (LE MEANS LESS THAN OR EQUAL TO).  AT ENTRY, C(A) = -(TD - T   + 1)
+R0143  2                                                            N+1
+R0144   THE LST1 ENTRY -(T   - T +1) IS TO BE REPLACED BY -(TD - T + 1), AND
+R0145  2                  N+1   N                                 N
+R0146   THE ENTRY -(T   - TD + 1) IS TO BE INSERTED IMMEDIATELY FOLLOWING.
+R0147  2             N+1
+ 0148   WTLST2   TS     WAITTEMP            C(A) = -(TD - T   + 1)
+ 0149            INDEX  Q
+ 0150            CAF    0
+ 0151  2         TS     Q               INDEX VALUE INTO Q.
+ 0152            CAF    ONE
+ 0153            AD     WAITTEMP
+ 0154            INDEX  Q               C(A) = -(TD - T ) + 1.
+ 0155  2         ADS    LST1 -1                        N
+ 0156            CS     WAITTEMP
+ 0157            INDEX  Q
+ 0158  2         TCF    WTLST4
+R0159  2C(TIME3) = 1.0 - (T1 - T)
+R0160   C(LST1  ) = - (T2 - T1) + 1
+R0161   C(LST1+1) = - (T3 - T2) + 1
+R0162   C(LST1+2) = - (T4 - T3) + 1
+R0163   C(LST1+3) = - (T5 - T4) + 1
+R0164  2C(LST1+4) = - (T6 - T5) + 1
+R0165   C(LST2   ) = 2CADR  TASK1
+R0166   C(LST2+2 ) = 2CADR  TASK2
+R0167   C(LST2+4 ) = 2CADR  TASK3
+R0168   C(LST2+6 ) = 2CADR  TASK4
+R0169   C(LST2+8 ) = 2CADR  TASK5
+R0170   C(LST2+10) = 2CADR  TASK6
+P0171  2         ENTERS HERE ON T3 RUPT TO DISPATCH WAITLISTED TASK.
+ 0172   T3RUPT   TS     BANKRUPT
+ 0173            EXTEND
+ 0174  2         QXCH   QRUPT
+ 0175   T3RUPT2  CAF    NEG1/2          DISPATCH WAITLIST TASK.
+ 0176            XCH    LST1 +7
+ 0177            XCH    LST1 +6
+ 0178            XCH    LST1 +5
+ 0179            XCH    LST1 +4         1.  MOVE UP LST1 CONTENTS, ENTERING
+ 0180            XCH    LST1 +3             A VALUE OF 1/2 +1 AT THE BOTTOM
+ 0181            XCH    LST1 +2             FOR T6-T5, CORRESPONDING TO THE
+ 0182            XCH    LST1 +1             INTERVAL 81.91 SEC FOR ENDTASK.
+ 0183            XCH    LST1
+ 0184            AD     POSMAX          2. SET T3 = 1.0 - T2 -T USING LIST 1.
+ 0185            ADS    TIME3           SO T3 WONT TICK DURING UPDATE.
+ 0186            TS     RUPTAGN
+ 0187            CS     ZERO
+ 0188  2         TS     RUPTAGN         SETS RUPTAGN TO +1 ON OVERFLOW.
+ 0189            EXTEND                 DISPATCH TASK.
+ 0190            DCS    ENDTASK
+ 0191            DXCH   LST2 +16D
+ 0192            DXCH   LST2 +14D
+ 0193            DXCH   LST2 +12D
+ 0194            DXCH   LST2 +10D
+ 0195            DXCH   LST2 +8D
+ 0196            DXCH   LST2 +6
+ 0197            DXCH   LST2 +4
+ 0198            DXCH   LST2 +2
+ 0199  2         DXCH   LST2
+ 0200  2         DTCB
+ 0201   ENDWAITS EQUALS
+P0202  2         RETURN, AFTER EXECUTION OF T3 OVERFLOW TASK:
+ 0203            BLOCK  02
+ 0204   TASKOVER CCS    RUPTAGN         IF +1 RETURN TO T3RUPT, IF -0 RESUME.
+ 0205            CAF    WAITBB
+ 0206            TS     BBANK
+ 0207  2         TCF    T3RUPT2         DISPATCH NEXT TASK IF IT WAS DUE.
+ 0208   RESUME   EXTEND
+ 0209            QXCH   QRUPT
+ 0210   NOQRSM   CA     BANKRUPT
+ 0211            TS     BBANK
+ 0212   NOQBRSM  DXCH   ARUPT
+ 0213  2         RESUME
+ 0214   ENDWAITF EQUALS                 LAST FIXED-FIXED LOCATION OF T3RUPT.
 *       ENDOFJOB
