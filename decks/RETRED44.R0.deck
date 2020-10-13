@@ -3569,7 +3569,7 @@ R0017  2IN LOWER 5 BITS.
  00332           TS     TIME4
  0034   CDRVE    CCS    DSPTAB +11D
  0035            TC     DSPOUT
- 0036            TC     DSPOUT
+ 0036  2         TC     DSPOUT
  0037            XCH    DSPTAB +11D
  0038            MASK   LOW11
  0039            TS     DSPTAB +11D
