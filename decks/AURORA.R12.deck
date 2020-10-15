@@ -5506,4 +5506,526 @@ R0854  2************************************************************************
  0877  4DBATTHLD DEC    0.00167         0.3 DEGREES SCALED AT PI RADIANS
  0878   NORRGMON EQUALS GPMATRIX
  0879   ENDDAPT4 EQUALS RESUME
+L      2IMU MODE SWITCHING ROUTINES
+ 0001            SETLOC ENDT4FF
+ 0002  2         EBANK= COMMAND
+R0003  2         FIXED-FIXED ROUTINES.
+ 0004   ZEROICDU CAF    ZERO            ZERO ICDU COUNTERS.
+ 0005            TS     CDUX
+ 0006            TS     CDUY
+ 0007            TS     CDUZ
+ 0008  2         TC     Q
+ 0009  23SECS    DEC    300
+ 0010   ENDIMODF EQUALS
+P0011  2         IMU ZEROING ROUTINE.
+ 0012  2         BANK   13
+ 0013   IMUZERO  INHINT                 ROUTINE TO ZERO ICDUS.
+ 0014            CS     IMUSEFLG        SET INDICATION THAT A MISSION OR TEST
+ 0015            MASK   STATE           PROGRAM IS USING THE IMU.
+ 0016            AD     IMUSEFLG
+ 0017  2         TS     STATE
+ 0018            TC     CAGETSTQ        IF IMU COMING UP, TURN-ON PROGRAM WILL
+ 0019  2         TCF    MODEEXIT        DO ALL THE WORK.
+ 0020            CS     BITS3&4         INHIBIT ICDUFAIL AND IMUFAIL (IN CASE WE
+ 0021            MASK   IMODES30        JUST CAME OUT OF COARSE ALIGN).
+ 0022            AD     BITS3&4
+ 0023  2         TS     IMODES30
+ 0024            CS     BITS4&6         SEND ZERO ENCODE WITH COARSE AND ERROR
+ 0025            EXTEND                 COUNTER DISABLED.
+ 0026  2         WAND   12
+ 0027            CAF    BIT5
+ 0028            EXTEND
+ 0029  2         WOR    12
+ 0030            CAF    BIT6            WAIT 320 MS TO GIVE AGS ADEQUATE TIME TO
+ 0031            TC     WAITLIST        RECEIVE ITS PULSE TRAIN.
+ 0032            2CADR  IMUZERO2
+ 0033            CS     IMODES30        SEE IF IMU OPERATING AND ALARM IF NOT.
+ 0034            MASK   BIT9
+ 0035            CCS    A
+ 0036  2         TCF    MODEEXIT
+ 0037            TC     ALARM
+ 0038  2         OCT    210
+ 0039   MODEEXIT RELINT                 GENERAL MODE-SWITCHING EXIT.
+ 0040  8         TCF    SWRETURN
+ 0041   IMUZERO2 TC     CAGETSTQ        POSSIBLY SWITCH TO TURN-ON PROGRAM.
+ 0042  2         TCF    TASKOVER
+ 0043            TC     ZEROICDU        ZERO COUNTERS.
+ 0044            CS     BIT5            REMOVE ZERO DISCRETE.
+ 0045            EXTEND
+ 0046  2         WAND   12
+ 0047            CAF    3SECSM          WAIT FOR COUNTERS TO SYNCRONIZE.
+ 0048  2         TC     VARDELAY
+ 0049   IMUZERO3 TC     CAGETSTQ
+ 0050  2         TCF    TASKOVER
+ 0051            CS     BITS3&4         REMOVE IMUFAIL AND ICDUFAIL INHIBIT.
+ 0052            MASK   IMODES30
+ 0053  2         TS     IMODES30
+ 0054            TC     IBNKCALL        SET ISS WARNING IF EITHER OF ABOVE ARE
+ 0055  2         CADR   SETISSW         PRESENT.
+ 0056            TCF    ENDIMU
+P0057  2         IMU COARSE ALIGN MODE.
+ 0058   IMUCOARS CAF    BIT4            SEND COARSE ALIGN ENABLE DISCRETE
+ 0059            INHINT
+ 0060            EXTEND
+ 0061  2         WOR    CHAN12
+ 0062            CS     BIT4            INHIBIT IMU FAIL.
+ 0063            MASK   IMODES30
+ 0064            AD     BIT4
+ 0065  2         TS     IMODES30
+ 0066            CAF    SIX
+ 0067            TC     WAITLIST
+ 0068            2CADR  COARS
+ 0069  2         TCF    MODEEXIT
+ 0070   COARS    TC     CAGETEST
+ 0071            CAF    BIT6            ENABLE ALL THREE ISS CDU ERROR COUNTERS
+ 0072            EXTEND
+ 0073  2         WOR    CHAN12
+ 0074            CAF    TWO             SET CDU INDICATOR
+ 0075  2COARS1   TS     CDUIND
+ 0076            INDEX  CDUIND          COMPUTE THETAD - THETAA IN 1:S
+ 0077            CA     THETAD            COMPLEMENT FORM
+ 0078            EXTEND
+ 0079            INDEX  CDUIND
+ 0080            MSU    CDUX
+ 0081            EXTEND
+ 0082            MP     BIT13           SHIFT RIGHT 2
+ 0083            XCH    L               ROUND
+ 0084            DOUBLE
+ 0085            TS     ITEMP1
+ 0086            TCF    +2
+ 0087  2         ADS    L
+ 0088            INDEX  CDUIND          DIFFERENCE TO BE COMPUTED
+ 0089            LXCH   COMMAND
+ 0090            CCS    CDUIND
+ 0091  2         TC     COARS1
+ 0092            CAF    TWO             MINIMUM OF 4 MS WAIT
+ 0093  8         TC     VARDELAY
+ 0094   COARS2   TC     CAGETEST        DONT CONTINUE IF CAGED.
+ 0095            TS     ITEMP1          SETS TO +0.
+ 0096            CAF    TWO             SET CDU INDICATOR
+ 0097  2 +3      TS     CDUIND
+ 0098            INDEX  CDUIND
+ 0099            CCS    COMMAND         NUMBER OF PULSES REQUIRED
+ 0100            TC     COMPOS          GREATER THAN MAX ALLOWED
+ 0101            TC     NEXTCDU +1
+ 0102            TC     COMNEG
+ 0103  2         TC     NEXTCDU +1
+ 0104   COMPOS   AD     -COMMAX         COMMAX = MAX NUMBER OF PULSES ALLOWED
+ 0105            EXTEND                   MINUS ONE
+ 0106            BZMF   COMZERO
+ 0107            INDEX  CDUIND
+ 0108            TS     COMMAND         REDUCE COMMAND BY MAX NUMBER OF PULSES
+ 0109  2         CS     -COMMAX-          ALLOWED
+ 0110   NEXTCDU  INCR   ITEMP1
+ 0111            INDEX  CDUIND
+ 0112  2         TS     CDUXCMD         SET UP COMMAND REGISTER.
+ 0113            CCS    CDUIND
+ 0114  2         TC     COARS2 +3
+ 0115            CCS    ITEMP1          SEE IF ANY PULSES TO GO OUT.
+ 0116  2         TCF    SENDPULS
+ 0117            TC     FIXDELAY        WAIT FOR GIMBALS TO SETTLE.
+ 0118  8         DEC    150
+ 0119            CAF    TWO             AT END OF COMMAND, CHECK TO SEE THAT
+ 0120   CHKCORS  TS     ITEMP1          GIMBALS ARE WITHIN 2 DEGREES OF THETAD.
+ 0121            INDEX  A
+ 0122            CA     CDUX
+ 0123            EXTEND
+ 0124            INDEX  ITEMP1
+ 0125            MSU    THETAD
+ 0126            CCS    A
+ 0127            TCF    COARSERR
+ 0128            TCF    CORSCHK2
+ 0129  2         TCF    COARSERR
+ 0130   CORSCHK2 CCS    ITEMP1
+ 0131            TCF    CHKCORS
+ 0132            TS     GCOMP           ZERO GYRO COMPENSATION REGISTERS IN
+ 0133            TS     GCOMP +1        PREPARATION FOR COMPENSATION.
+ 0134            TS     GCOMP +2
+ 0135            TS     GCOMP +3
+ 0136            TS     GCOMP +4
+ 0137  2         TS     GCOMP +5
+ 0138  2         TCF    ENDIMU          END OF COARSE ALIGNMENT.
+ 0139   COARSERR AD     COARSTOL        2 DEGREES.
+ 0140            EXTEND
+ 0141  2         BZMF   CORSCHK2
+ 0142            TC     ALARM           COARSE ALIGN ERROR.
+ 0143  2         OCT    211
+ 0144  2         TCF    IMUBAD
+ 0145  8COARSTOL DEC    -.01111         2 DEGREES SCALED AT HALF-REVOLUTIONS.
+ 0146   COMNEG   AD     -COMMAX
+ 0147            EXTEND
+ 0148            BZMF   COMZERO
+ 0149            COM
+ 0150            INDEX  CDUIND
+ 0151            TS     COMMAND
+ 0152            CA     -COMMAX-
+ 0153  2         TC     NEXTCDU
+ 0154   COMZERO  CAF    ZERO
+ 0155            INDEX  CDUIND
+ 0156            XCH    COMMAND
+ 0157  2         TC     NEXTCDU
+ 0158   SENDPULS CAF    13,14,15
+ 0159            EXTEND
+ 0160            WOR    CHAN14
+ 0161            CAF    600MS
+ 0162            TCF    COARS2 -1       AND THEN TO VARDELAY.
+P0163  2         IMU FINE ALIGN MODE SWITCH.
+ 0164   IMUFINE  INHINT
+ 0165  2         TC     CAGETSTJ        SEE IF IMU BEING CAGED.
+ 0166            CS     BITS4-6         RESET ZERO, COARSE, AND ECTR ENABLE.
+ 0167            EXTEND
+ 0168  2         WAND   12
+ 0169            CAF    BIT10           IMU FAIL WAS INHIBITED DURING THE
+ 0170            TC     WAITLIST        PRESUMABLY PRECEDING COARSE ALIGN. LEAVE
+ 0171            2CADR  IFAILOK         IT ON FOR THE FIRST 5 SECS OF FINE ALIGN
+ 0172            CAF    90SEC           GYRO RE-CENTERING TIME.
+ 0173            TC     WAITLIST
+ 0174            2CADR  IMUFINED
+ 0175  2         TCF    MODEEXIT
+ 0176   IMUFINED TC     CAGETEST        SEE THAT NO ONE HAS CAGED THE IMU.
+ 0177  2         TCF    ENDIMU
+ 0178   IFAILOK  TC     CAGETSTQ        ENABLE IMU FIAL UNLESS IMU BEING CAGED.
+ 0179  2         TCF    TASKOVER        IT IS.
+ 0180            CAF    BIT4            DONT RESET IMU FAIL INHIBIT IF SOMEONE
+ 0181            EXTEND                 HAS GONE INTO COARSE ALIGN.
+ 0182            RAND   12
+ 0183            CCS    A
+ 0184  2         TCF    TASKOVER
+ 0185            CS     BIT4
+ 0186   PFAILOK2 MASK   IMODES30
+ 0187            TS     IMODES30
+ 0188  2         TCF    TASKOVER
+ 0189   PFAILOK  TC     CAGETSTQ        ENABLE PIP FAIL PROG ALARM.
+ 0190  2         TCF    TASKOVER
+ 0191            CS     BIT5
+ 0192            TCF    PFAILOK2
+P0193  2         ROUITNES TO INITIATE AND TERMINATE PROGRAM USE OF THE PIPAS. NO
+ 0194  9 IMUSTALL REQUIRED IN EITHER CASE.
+ 0195   PIPUSE   TC     CAGETSTQ        DONT ENABLE PIPA FAIL IF IMU BEING CAGED
+ 0196  2         TCF    SWRETURN
+ 0197            INHINT
+ 0198            CAF    ZERO            ZERO COUNTERS.
+ 0199            TS     PIPAX
+ 0200            TS     PIPAY
+ 0201  2         TS     PIPAZ
+ 0202            CS     BIT1            IF PIPA FAILS FROM NOW ON (UNTIL
+ 0203            MASK   IMODES30        PIPFREE), LIGHT ISS WARNING.
+ 0204  2         TS     IMODES30
+ 0205   PIPFREE2 TC     IBNKCALL        ISS WARNING MIGHT COME ON NOW.
+ 0206  2         CADR   SETISSW         (OR GO OFF ON PIPFREE).
+ 0207  2         TCF    MODEEXIT
+ 0208   PIPFREE  INHINT                 PROGRAM DONE WITH PIPAS. DONT LIGHT
+ 0209            CS     BIT1            ISS WARNING.
+ 0210            MASK   IMODES30
+ 0211            AD     BIT1
+ 0212  2         TS     IMODES30
+ 0213            MASK   BIT10           IF PIP FAIL ON, DO PROG ALSRM AND RESET
+ 0214            CCS    A               ISS WARNING.
+ 0215  2         TCF    MODEEXIT
+ 0216            TC     ALARM
+ 0217  2         OCT    212
+ 0218  2         INHINT
+ 0219            TCF    PIPFREE2
+P0220            THE FOLLOWING ROUTINE TORQUES THE IRIGS ACCORDING TO DOUBLE PRE
+ 0221  9CISION INPUTS IN THE SIX REGISTERS
+R0222   BEGINNING AT THE ECADR ARRIVING IN A. THE MINIMUM SIZE OF ANY PULSE TRAI
+ 0223  9N IS 16 PULSES (.25 CDU COUNTS). THE
+R0224  2UNSENT PORTION OF THE COMMAND IS LEFT INTACT IN THE INPUT COMMAND REGIST
+ 0225  9ERS.
+ 0226  2         EBANK= 1400            VARIABLE, ACTUALLY.
+ 0227   IMUPULSE TS     MPAC +5         SAVE ARRIVING ECADR.
+ 0228  2         TC     CAGETSTJ        DONT PROCEED IF IMU BEING CAGED.
+ 0229            CCS    LGYRO           SEE IF GYROS BUSY.
+ 0230  2         TC     GYROBUSY        SLEEP.
+ 0231            TS     MPAC +2
+ 0232            CAF    BIT6            ENABLE THE POWER SUPPLY.
+ 0233            EXTEND
+ 0234  2         WOR    14
+ 0235            CAF    FOUR
+ 0236   GWAKE2   INHINT                 (IF A JOB WAS PUT TO SLEEP, THE POWER
+ 0237            TC     WAITLIST        SUPPLY IS LEFT ON BY THE WAKING JOB).
+ 0238            2CADR  STRTGYRO
+ 0239            CA     MPAC +5         SET UP EBANK, SAVING CALLER'S EBANK FOR
+ 0240            XCH    EBANK           RESTORATION ON RETURN.
+ 0241            XCH    MPAC +5
+ 0242            TS     LGYRO           RESERVES GYROS.
+ 0243            MASK   LOW8
+ 0244  2         TS     ITEMP1
+ 0245            CAF    TWO             FORCE SIGN AGREEMENT ON INPUTS.
+ 0246   GYROAGRE TS     MPAC +3
+ 0247            DOUBLE
+ 0248            AD     ITEMP1
+ 0249            TS     MPAC +4
+ 0250            EXTEND
+ 0251            INDEX  A
+ 0252            DCA    1400
+ 0253            DXCH   MPAC
+ 0254            TC     TPAGREE
+ 0255            DXCH   MPAC
+ 0256            INDEX  MPAC +4
+ 0257  2         DXCH   1400
+ 0258            CCS    MPAC +3
+ 0259  2         TCF    GYROAGRE
+ 0260            CA     MPAC +5         RESTORE CALLER'S EBANK.
+ 0261            TS     EBANK
+ 0262            TCF    MODEEXIT
+P0263  2         ROUTINES TO ALLOW TORQUING BY ONLY ONE JOB AT A TIME.
+ 0264   GYROBUSY EXTEND                 SAVE RETURN 2FCADR.
+ 0265            DCA    BUF2
+ 0266            DXCH   MPAC
+ 0267   REGSLEEP CAF    LGWAKE
+ 0268  2         TCF    JOBSLEEP
+ 0269   GWAKE    CCS    LGYRO           WHEN AWAKENED, SEE IF GYROS STILL BUSY.
+ 0270  2         TCF    REGSLEEP        IF SO, SLEEP SOME MORE.
+ 0271            TS     MPAC +2
+ 0272            EXTEND
+ 0273            DCA    MPAC
+ 0274            DXCH   BUF2            RESTORE SWRETURN INFO.
+ 0275            CAF    ONE
+ 0276  2         TCF    GWAKE2
+ 0277   LGWAKE   CADR   GWAKE
+P0278  2         GYRO-TORQUING WAITLIST TASKS.
+ 0279   STRTGYRO CS     GDESELCT        DE-SELECT LAST GYRO.
+ 0280            EXTEND
+ 0281  2         WAND   14
+ 0282  2         TC     CAGETEST
+ 0283   STRTGYR2 CA     LGYRO           JUMP ON PHASE COUNTER IN BITS 13-14.
+ 0284            EXTEND
+ 0285            MP     BIT4
+ 0286            INDEX  A
+ 0287            TCF    +1
+ 0288            TC     GSELECT         =0. DO Y GYRO.
+ 0289  2         OCT    00202
+ 0290            TC     GSELECT         =1. DO Z GYRO.
+ 0291  2         OCT    00302
+ 0292            TC     GSELECT -2      =2. DO X GYRO.
+ 0293  2         OCT    00100
+ 0294            CAF    ZERO            =3. DONE
+ 0295            TS     LGYRO
+ 0296            CAF    LGWAKE          WAKE A POSSIBLE SLEEPING JOB.
+ 0297  2         TC     JOBWAKE
+ 0298            CAF    BIT2            DONT RESET POWER SUPPLY IF BIT SET
+ 0299            MASK   IMODES33        (ONLY DURING GYRO TORQUE SCALE FACTOR
+ 0300            CCS    A               TEST).
+ 0301  2         TCF    NORESET
+ 0302            CCS    LOCCTR          IF A JOB WAS AWAKENED, DONT RESET GYRO
+ 0303  2         TCF    NORESET         ENABLE.
+ 0304  2         TCF    NORESET
+ 0305            CS     BIT6            IF NO JOB AWAKENED, RESET GYRO ENABLE.
+ 0306            EXTEND
+ 0307  2         WAND   14
+ 0308  8NORESET  TCF    IMUFINED
+ 0309    -2      CS     FOUR            SPECIAL ENTRY TO REGRESS LGYRO FOR X.
+ 0310  2         ADS    LGYRO
+ 0311   GSELECT  INDEX  Q               SELECT GYRO.
+ 0312            CAF    0               PACKED WORD CONTAINS GYRO SELECT BITS
+ 0313            TS     ITEMP4          AND INCREMENT TO LGYRO.
+ 0314            MASK   SEVEN
+ 0315            AD     BIT13
+ 0316            ADS    LGYRO
+ 0317            TS     EBANK
+ 0318            MASK   LOW8
+ 0319  2         TS     ITEMP1
+ 0320            CS     SEVEN
+ 0321            MASK   ITEMP4
+ 0322  2         TS     ITEMP4
+ 0323            EXTEND                 MOVE DP COMMAND TO RUPTREGS FOR TESTING.
+ 0324            INDEX  ITEMP1
+ 0325            DCA    1400
+ 0326  2         DXCH   RUPTREG1
+ 0327            CCS    RUPTREG1
+ 0328            TCF    MAJ+
+ 0329            TCF    +2
+ 0330  2         TCF    MAJ-
+ 0331            CCS    RUPTREG2
+ 0332            TCF    MIN+
+ 0333            TCF    STRTGYR2
+ 0334            TCF    MIN-
+ 0335  8         TCF    STRTGYR2
+ 0336   MIN+     AD     -GYROMIN        SMALL POSITIVE COMMAND. SEE IF AT LEAST
+ 0337            EXTEND                 16 GYRO PULSES.
+ 0338  2         BZMF   STRTGYR2
+ 0339   MAJ+     EXTEND                 DEFINITE POSITIVE OUTPUT.
+ 0340            DCA    GYROFRAC
+ 0341  2         DAS    RUPTREG1
+ 0342            CA     ITEMP4          SELECT POSITIVE TORQUING FOR THIS GYRO.
+ 0343            EXTEND
+ 0344  2         WOR    14
+ 0345            CAF    LOW7            LEAVE NUMBER OF POSSIBLE 8192 AUGMENTS
+ 0346            MASK   RUPTREG2        TO INITIAL COMMAND IN MAJOR PART OF LONG
+ 0347            XCH    RUPTREG2        TERM STORAGE AND TRUNCATED FRACTION
+ 0348   GMERGE   EXTEND                 IN MINOR PART. THE MAJOR PART WILL BE
+ 0349            MP     BIT8            COUNTED DOWN TO ZERO IN THE COURSE OF
+ 0350            TS     ITEMP2          PUTTING OUT THE ENTIRE COMMAND.
+ 0351            CA     RUPTREG1
+ 0352            EXTEND
+ 0353            MP     BIT9
+ 0354            TS     RUPTREG1
+ 0355            CA     L
+ 0356            EXTEND
+ 0357            MP     BIT14
+ 0358  2         ADS    ITEMP2          INITIAL COMMAND.
+ 0359            EXTEND                 SEE IF MORE THAN ONE PULSE TRAIN NEEDED
+ 0360            DCA    RUPTREG1        (MORE THAN 16383 PULSES).
+ 0361            AD     MINUS1
+ 0362            CCS    A
+ 0363            TCF    LONGGYRO
+ 0364  2-GYROMIN OCT    -177            MAY BE ADJUSTED TO SPECIFY MINIMUM CMD.
+ 0365  2         TCF    +4
+ 0366            CAF    BIT14
+ 0367            ADS    ITEMP2
+ 0368  2         CAF    ZERO
+ 0369    +4      INDEX  ITEMP1
+ 0370  8         DXCH   1400
+ 0371            CA     ITEMP2          ENTIRE COMMAND.
+ 0372   LASTSEG  TS     GYROCMD
+ 0373            EXTEND
+ 0374            MP     BIT10           WAITLIST DT
+ 0375            AD     THREE           TRUNCATION AND PHASE UNCERTAINTIES.
+ 0376            TC     WAITLIST
+ 0377            2CADR  STRTGYRO
+ 0378   GYROEXIT CAF    BIT10           TURN ON GYRO ACTIVITY TO START TRAIN.
+ 0379            EXTEND
+ 0380            WOR    14
+ 0381  2         TCF    TASKOVER
+ 0382   LONGGYRO INDEX  ITEMP1
+ 0383            DXCH   1400            INITIAL COMMAND OUT PLUS N AUGMENTS OF
+ 0384            CAF    BIT14           8192. INITIAL COMMAND IS AT LEAST 8192.
+ 0385            AD     ITEMP2
+ 0386  2         TS     GYROCMD
+ 0387   AUG3     EXTEND                 GET WAITLIST DT TO TIME WHEN TRAIN IS
+ 0388            MP     BIT10           ALMOST OUT.
+ 0389            AD     NEG3
+ 0390            TC     WAITLIST
+ 0391            2CADR  8192AUG
+ 0392  2         TCF    GYROEXIT
+ 0393  28192AUG  TC     CAGETEST
+ 0394            CA     LGYRO           ADD 8192 PULSES TO GYROCMD
+ 0395            TS     EBANK
+ 0396            MASK   LOW8
+ 0397  2         TS     ITEMP1
+ 0398            INDEX  ITEMP1          SEE IF THIS IS THE LAST AUG.
+ 0399            CCS    1400
+ 0400  2         TCF    AUG2            MORE TO COME.
+ 0401            CAF    BIT14
+ 0402            ADS    GYROCMD
+ 0403  2         TCF    LASTSEG +1
+ 0404   AUG2     INDEX  ITEMP1
+ 0405            TS     1400
+ 0406            CAF    BIT14
+ 0407            ADS    GYROCMD
+ 0408  8         TCF    AUG3            COMPUTE DT.
+ 0409   MIN-     AD     -GYROMIN        POSSIBLE NEGATIVE OUTPUT.
+ 0410            EXTEND
+ 0411  2         BZMF   STRTGYR2
+ 0412   MAJ-     EXTEND                 DEFINITE NEGATIVE OUTPUT.
+ 0413            DCS    GYROFRAC
+ 0414  2         DAS    RUPTREG1
+ 0415            CA     ITEMP4          SELECT NEGATIVE TORQUING FOR THIS GYRO.
+ 0416            AD     BIT9
+ 0417            EXTEND
+ 0418  2         WOR    14
+ 0419            CS     RUPTREG1        SET UP RUPTREGS TO FALL INTO GMERGE.
+ 0420            TS     RUPTREG1        ALL NUMBERS PUT INTO GYROCMD ARE
+ 0421            CS     RUPTREG2        POSITIVE - BIT9 OF CHAN 14 DETERMINES
+ 0422            MASK   LOW7            THE SIGN OF THE COMMAND.
+ 0423            COM
+ 0424            XCH    RUPTREG2
+ 0425            COM
+ 0426  2         TCF    GMERGE
+ 0427  2GDESELCT OCT    1700            TURN OFF SELECT AND ACTIVITY BITS.
+ 0428   GYROFRAC 2DEC   .215 B -21
+P0429  2         IMU MODE SWITCHING ROUTINES COME HERE WHEN ACTION COMPLETE.
+ 0430   ENDIMU   EXTEND                 MODE IS BAD IF CAGE HAS OCCURED OR IF
+ 0431            READ   11              ISS WARNING IS ON.
+ 0432            MASK   BIT1
+ 0433            CCS    A
+ 0434  2         TCF    IMUBAD
+ 0435  2IMUGOOD  TCF    GOODEND         WITH C(A) = 0.
+ 0436   IMUBAD   CAF    ZERO
+ 0437  2         TCF    BADEND
+ 0438   CAGETEST CAF    BIT6            SUBROUTINE TO TERMINATE IMU MODE
+ 0439            MASK   IMODES30        SWITCH IF IMU HAS BEEN CAGED.
+ 0440            CCS    A
+ 0441            TCF    IMUBAD          DIRECTLY.
+ 0442  2         TC     Q               WITH C(A) = +0.
+ 0443   CAGETSTQ CS     IMODES30        SKIP IF IMU NOT BEING CAGED.
+ 0444            MASK   BIT6
+ 0445            CCS    A
+ 0446            INCR   Q
+ 0447  2         TC     Q
+ 0448   CAGETSTJ CS     IMODES30        IF DURING MODE SWITCH INITIALIZATION
+ 0449            MASK   BIT6            IT IS FOUND THAT THE IMU IS BEING CAGED,
+ 0450            CCS    A               SET IMUCADR TO -0 TO INDICATE OPERATION
+ 0451  2         TC     Q               COMPLETE BUT FAILED. RETURN IMMEDIATELY
+ 0452            CS     ZERO            TO SWRETURN.
+ 0453            TS     IMUCADR
+ 0454            TCF    MODEEXIT
+P0455            GENERALIZED MODE SWITCHING TERMINATION. ENTER AT GOODEND FOR SU
+ 0456  9CCESSFUL COMPLETION OF AN I/O OPERATION
+R0457  2OR AT BADEND FOR A N UNSUCCESSFUL ONE. C(A) OR ARRIVAL =0 FOR IMU, 1 FOR
+ 0458  9 AOT, AND 2 FOR RADARS.
+ 0459   BADEND   TS     RUPTREG2        DEVICE INDEX.
+ 0460            CS     ZERO            FOR FAILURE.
+ 0461  2         TCF    GOODEND +2
+ 0462   GOODEND  TS     RUPTREG2
+ 0463  2         CS     ONE             FOR SUCCESS.
+ 0464            TS     RUPTREG3
+ 0465            INDEX  RUPTREG2        SEE IF USING PROGRAM ASLEEP.
+ 0466            CCS    MODECADR
+ 0467            TCF    +2              YES - WAKE IT UP.
+ 0468  2         TCF    ENDMODE         IF 0, PROGRAM NOT IN YET.
+ 0469            CAF    ZERO            WAKE SLEEPING PROGRAM.
+ 0470            INDEX  RUPTREG2
+ 0471            XCH    MODECADR
+ 0472  2         TC     JOBWAKE
+ 0473            CS     RUPTREG3        ADVANCE LOC IF SUCCESSFUL.
+ 0474            INDEX  LOCCTR
+ 0475  2         ADS    LOC
+ 0476  2         TCF    TASKOVER
+ 0477   ENDMODE  CA     RUPTREG3        -0 INDICATES OPERATION COMPLETE BUT
+ 0478            INDEX  RUPTREG2        UNSUCCESSFUL - -1 INDICATES COMPLETE AND
+ 0479            TS     MODECADR        SUCCESSFUL.
+ 0480            TCF    TASKOVER
+P0481  2         GENERAL STALLING ROUTINE. USING PROGRAMS COME HERE TO WAIT FOR
+ 0482  9I/O COMPLETION.
+ 0483   RADSTALL CAF    TWO             RR AND LR STALL.
+ 0484  2         TCF    STALL
+ 0485   AOTSTALL CAF    ONE             AOT.
+ 0486  2         TC     STALL
+ 0487  2OPTSTALL EQUALS AOTSTALL
+ 0488   LOTSTALL EQUALS RADSTALL
+ 0489  2IMUSTALL CAF    ZERO            IMU.
+ 0490   STALL    INHINT
+ 0491            TS     RUPTREG2        SAVE DEVICE INDEX.
+ 0492            INDEX  A               SEE IF OPERATION COMPLETE.
+ 0493            CCS    MODECADR
+ 0494            TCF    MODABORT        ALLOWABLE STATES ARE +0, -1, AND -0.
+ 0495            TCF    MODESLP         OPERATION INCOMPLETE.
+ 0496  2         TCF    MODEGOOD        COMPLETE AND GOOD IF = -1.
+ 0497   MG2      INDEX  RUPTREG2        COMPLETE AND FAILED IF -0. RESET TO +0.
+ 0498            TS     MODECADR        RETURN TO CALLER.
+ 0499  2         TCF    MODEEXIT
+ 0500   MODEGOOD CCS    A               MAKE SURE INITIAL STATE -1.
+ 0501  2         TCF    MODABORT
+ 0502            INCR   BUF2            IF SO, INCREMENT RETURN ADDRESS AND
+ 0503  2         TCF    MG2             RETURN IMMEDIATELY, SETTING CADR = +0.
+ 0504   MODESLP  TC     MAKECADR        CALL FROM SWITCHABLE FIXED ONLY.
+ 0505            INDEX  RUPTREG2
+ 0506            TS     MODECADR
+ 0507  2         TCF    JOBSLEEP
+ 0508   MODABORT TC     ABORT           TWO PROGRAMS USING SAME DEVICE.
+ 0509            OCT    1210
+P0510  2         CONSTANTS FOR MODE SWITCHING ROUTINES
+ 0511   BITS3&4  OCT    14
+ 0512   BITS4&6  OCT    00050
+ 0513   BITS4-6  OCT    00070
+ 0514   IMUSEFLG EQUALS BIT8            INTERPRETER SWITCH 7.
+ 0515  213,14,15 OCT    70000
+ 0516   -COMMAX  DEC    -191
+ 0517   -COMMAX- DEC    -192
+ 0518   600MS    DEC    60
+ 0519   3SECSM   EQUALS 3SECS
+ 0520  290SEC    DEC    9000
+ 0521   ENDIMODS EQUALS
 *       ENDOFJOB
