@@ -6028,4 +6028,357 @@ P0510  2         CONSTANTS FOR MODE SWITCHING ROUTINES
  0519   3SECSM   EQUALS 3SECS
  0520  290SEC    DEC    9000
  0521   ENDIMODS EQUALS
+L       IMU COMPENSATION PACKAGE
+ 0001            BANK   7
+ 0002  2         EBANK= NBDX
+R0003   PROGRAM DESCRIPTION- IMU COMPENSATION (LEM)
+ 0004  9DATE- 30 AUG 66
+R0005   MOD NO- 0
+ 0006  9LOG SECTION- IMU COMPENSATION PACKAGE
+R0007  2MOD BY- GILBERT
+ 0008  9ASSEMBLY- SUNBURST REVISION 13
+R0009   FUNCTIONAL DESCRIPTION
+R0010         THE IMU COMPENSATION PACKAGE IS DESIGNED TO COMPENSATE FOR PIPA BI
+ 0011  9AS AND SCALE FACTOR ERROR AND AT THE
+R0012   SAME TIME ACCUMULATE GYRO TORQUING COMMANDS NECESSARY TO COMPENSATE FOR
+ 0013  9THE ASSOCIATED BIAS AND ACCELERATION-
+R0014   CAUSED GYRO DRIFTS. 1/PIPA MUST BE CALLED AT LEAST EVERY 2.55 SECONDS DU
+ 0015  9E TO SCALING CONSIDERATIONS.
+R0016  2SPECIFICALLY, THE CORRECTION IS
+R0017         PIPA  = (1 + SCALE FACTOR ERROR)PIPA  - (BIAS)(DELTAT)
+R0018  2          C                               I
+R0019   WHERE PIPA  IS THE COMPENSATED DATA OBTAINED FROM THE SAMPLED DATA PIPA
+R0020  2          C                                                            I
+R0021   THE COMPENSATED DATA IS THEN USED TO COMPUTE THE IRIG TORQUING NECESSARY
+ 0022  9 TO CANCEL THE NBD, ADIA, AND ADSRA
+R0023   GYRO COEFFICIENTS.
+R0024  2SPECIFICALLY, THE COMPUTATIONS ARE
+R0025         XIRIG     -(ADIAX)(PIPAX ) + (ADSRAX)(PIPAY ) - (NBDX)(DELTAT)
+R0026                                 C                  C
+R0027         YIRIG     -(ADIAY)(PIPAY ) + (ADSRAY)(PIPAZ ) - (NBDY)(DELTAT)
+R0028                                 C                  C
+R0029         ZIRIG     -(ADIAZ)(PIPAZ ) - (ADSRAZ)(PIPAY ) + (NBDZ)(DELTAT)
+R0030  2                              C                  C
+R0031   THIS COMPENSATION IS SUMMED INTO THE GCOMP REGISTERS AND WHEN THE MAGNIT
+ 0032  9UDE OF ANY IRIG COMMAND EXCEEDS 2
+R0033  2PULSES, THE COMMANDS ARE SENT TO THE GYROS.
+R0034   DURING FREE-FALL PHASES OF A FLIGHT NBDX, NBDY, AND NBDZ ARE THE ONLY RE
+ 0035  9LEVANT COEFFICIENTS. THESE BIAS TERMS
+R0036   WILL BE INTEGRATED BY ROUTINE NBDONLY APPROXIMATELY EVERY 81.93 SECONDS
+ 0037  9FOLLOWING AN EXECUTIVE CALL BY THE DUMMY
+R0038   TASK OF THE WAITLIST PROGRAM. NBDONLY IS ENABLED WHEN BIT 15 OF FLAGWRD2
+ 0039  9 IS SET TO INDICATE FREE-FALL. DURING
+R0040  2THIS TIME 1/PIPA IS NOT CALLED.
+R0041   LASTBIAS IS CALLED VIA EXECUTIVE WHEN MAKING THE TRANSITION FROM FREE-FA
+ 0042  9LL TO A PIPA READING MODE. THE NBD TERMS
+R0043   ARE COMPENSATED FOR FROM THE LAST NBDONLY CALL UP TO PIPA ZEROING. PRERE
+ 0044  9AD WILL THEN ENABLE 1/PIPA AT ITS
+R0045  2REGULAR INTERVAL. THE DRIFT FLAG MUST BE DOWN JUST PRIOR TO LASTBIAS. GY
+ 00455 9ROCOMPASS NEVER CALLS LASTBIAS.
+R0046   SCALING CONSIDERATIONS
+R0047  2                           UNITS              MAX. VALUE     INTERNAL UN
+ 0048  9ITS AND SCALING
+R0049         PIPA BIAS            (CM)/(SEC)(SEC)    3.125          (PIPA PULSE
+ 0050  9S)/(CS) X 2(-5)
+R0051         PIPA SCALE FACTOR    P.P.M.             1953.125       (PPM) X 2(-
+ 0052  99)
+R0053         NBD                  MERU               128.74604      (GYRO PULSE
+ 0054  9S)/(CS) X 2(-5)
+R0055         ADIA                 (MERU)/(G)         630.36633      (GYRO PULSE
+ 0056  9S)/(PIPA PULSE) X 2(-6)
+R0057  8      ADSRA                (MERU)/(G)         630.36633      (GYRO PULSE
+ 0058  9S)/(PIPA PULSE) X 2(-6)
+R0059   CONVERSION TABLE
+R0060         1 PIPA PULSE = 1.00 (CM)/(SEC)(SEC)          1 ERU = 7.29209817 X
+ 0061  910(-5) (RAD)/(SEC)
+R0062         1 ERU = 15.04104488 (ARCSEC)/(SEC)           1 (CM)/(SEC)(SEC) = .
+ 0063  901 (PIPA PULSES)/(CS)
+R0064         1 GYRO PULSE = .61798096 ARCSEC              1 MERU = .0024272592
+ 0065  9(GYRO PULSES)/(CS)
+R0066  2      1 G = 979.24 (CM)/(SEC)(SEC)  (AMR)          1 (MERU)/(G) = .00014
+ 0067  94787174 (GYRO PULSES)/(PIPA PULSE)
+R0068   REFERENCES
+R0069  2      AGC PROGRAMMING MEMO NO. 12, I.S.S. MEMO NO. 247, I.S.S. MEMO NO.
+ 0070  9328, I.S.S. MEMO NO. 339
+R0071   CALLING SEQUENCE
+R0072         L      TC     BANKCALL
+R0073         L+1    CADR   1/PIPA
+R0074  2      L+2                       RETURNS HERE
+R0075   NORMAL EXIT MODES
+R0076  2      AT L+2 OF CALLING SEQUENCE
+R0077   ALARM OR ABORT MODES
+R0078  2      ENDOFJOB
+R0079   ERASABLE INITIALIZATION REQUIRED (CONSECUTIVE LOCATIONS)
+R0080         PBIASX    PIPAX BIAS
+R0081         PIPASCFX  PIPAX SCALE FACTOR ERROR
+R0082         PBIASY    PIPAY BIAS
+R0083         PIPASCFY  PIPAY SCALE FACTOR ERROR
+R0084         PBIASZ    PIPAZ BIAS
+R0085         PIPASCFZ  PIPAZ SCALE FACTOR ERROR
+R0086         NBDX      X IRIG BIAS DRIFT
+R0087         NBDY      Y IRIG BIAS DRIFT
+R0088         NBDZ      Z IRIG BIAS DRIFT
+R0089         ADIAX     IRIG ACCELERATION SENSITIVE DRIFT ALONG THE X INPUT AXIS
+R0090         ADIAY     IRIG ACCELERATION SENSITIVE DRIFT ALONG THE Y INPUT AXIS
+R0091         ADIAZ     IRIG ACCELERATION SENSITIVE DRIFT ALONG THE Z INPUT AXIS
+R0092         ADSRAX    IRIG ACCELERATION SENSITIVE DRIFT ALONG THE X SPIN REFER
+ 0093  9ENCE AXIS
+R0094         ADSRAY    IRIG ACCELERATION SENSITIVE DRIFT ALONG THE Y SPIN REFER
+ 0095  9ENCE AXIS
+R0096         ADSRAZ    IRIG ACCELERATION SENSITIVE DRIFT ALONG THE Z SPIN REFER
+ 0097  9ENCE AXIS
+R00975 2      GCOMP     GYRO COMPENSATION PULSES (SET = ZERO FOR 1ST PASS)
+R0098   INPUT
+R0099         1/PIPADT - DELTA TIME SCALED AT (CS) X 2(+8)
+R0100  2      DELVX, DELVY, DELVZ - PIPA READINGS IN THE MAJOR PARTS - MINOR PAR
+ 0101  9TS IRRELEVANT
+R0102   OUTPUT
+R0103         DELVX, DELVY, DELVZ - PIPA COUNTS SCALED 2(+14) COMPENSATED FOR PI
+ 0104  9PA BIAS AND SCALE FACTOR ERROR
+R0105  2      GCOMP - 3 DP LOCATIONS CONTAINING GYRO PULSES TO COMPENSATE FOR NB
+ 0106  9D, ADIA, AND ADSRA COEFFICIENTS
+R0107   DEBRIS
+R0108         CENTRALS - A,L,Q
+R0109  8      OTHER - BUF - BUF +2, VBUF - VBUF +2, GCOMPSW
+ 0110   1/PIPA   CAF    LGCOMP          SAVE EBANK OF CALLING PROGRAM
+ 0111            XCH    EBANK
+ 01112 2         TS     MODE
+ 01113           CAF    FOUR            PIPAZ, PIPAY, PIPAX
+ 01114 2         TS     BUF +2
+ 0112            INDEX  A
+ 0113            CA     DELVX           CONTAINS PREVIOUS PIPA READING
+ 0114  2         TS     VBUF            TEMPORARY - MINOR PARTS IRRELEVANT
+ 0115            INDEX  BUF +2
+ 0116            CS     PIPABIAS        (PIPA PULSES)/(CS) X 2(-5)             *
+ 0117            EXTEND
+ 0118            MP     1/PIPADT        (CS) X 2(+8)  NOW (PIPA PULSES) X 2(+3)*
+ 0119            EXTEND                                                        *
+ 0120            MP     BIT4            SCALE 2(-3)      SHIFT LEFT 3          *
+ 0121  2         LXCH   VBUF +1         (PIPA PULSES) X 2(0)   FRACTIONAL PULSE*
+ 0122            INDEX  BUF +2
+ 0123            CA     PIPASCF         (P.P.M.) X 2(-9)
+ 0124            EXTEND
+ 0125            MP     VBUF            (PIPA PULSES) X 2(+14)
+ 0126            LXCH   VBUF +2         SAVE FOR FRACTIONAL COMPUTATION
+ 0127            EXTEND
+ 0128            MP     BIT6            SCALE 2(+9)    NOW PIPA PULSES X 2(+14)
+ 0129  2         DAS    VBUF            (PIPAI) - (NBD)(DELTAT) - HI(PIPAI)(SFE)
+ 0130            CA     VBUF +2         NOW MINOR PART
+ 0131            EXTEND
+ 0132            MP     BIT6            SCALE 2(+9)    SHIFT RIGHT 9
+ 0133            TS     L
+ 0134            CAF    ZERO
+ 0135  2         DAS    VBUF            (PIPAI) - (NBD)(DELTAT) - (PIPAI)(SFE)
+ 0136            EXTEND
+ 0137            DCA    VBUF            RESTORE COMPENSATED PIPA READING
+ 0138            INDEX  BUF +2
+ 0139  2         DXCH   DELVX
+ 0140            CCS    BUF +2          PIPAZ, PIPAY, PIPAX
+ 0141            AD     NEG1
+ 0142            TCF    1/PIPA +4
+ 0143  8         NOOP                   LESS THAN ZERO IMPOSSIBLE
+ 0144   IRIGCOMP TS     GCOMPSW         INDICATE COMMANDS 2 PULSES OR LESS
+ 0145  2         TS     BUF             INDEX COUNTER - IRIGX, IRIGY, IRIGZ
+ 0146   IRIGX    EXTEND
+ 0147            DCS    DELVX           (PIPA PULSES) X 2(+14)
+ 0148            DXCH   MPAC
+ 0149            CA     ADIAX           (GYRO PULSES)/(PIPA PULSE) X 2(-6)     *
+ 0150  2         TC     GCOMPSUB        -(ADIAX)(PIPAX)   (GYRO PULSES) X 2(+14)
+ 0151            EXTEND
+ 0152            DCS    DELVY           (PIPA PULSES) X 2(+14)
+ 0153            DXCH   MPAC
+ 0154            CS     ADSRAX          (GYRO PULSES)/(PIPA PULSE) X 2(-6)     *
+ 0155  2         TC     GCOMPSUB        +(ADSRAX)(PIPAY)  (GYRO PULSES) X 2(+14)
+ 0156            CS     NBDX            (GYRO PULSES)/(CS) X 2(-5)
+ 0157  2         TC     DRIFSTUB        -(NBDX)(DELTAT)   (GYRO PULSES) X 2(+14)
+ 0158   IRIGY    EXTEND
+ 0159            DCS    DELVY           (PIPA PULSES) X 2(+14)
+ 0160            DXCH   MPAC
+ 0161            CA     ADIAY           (GYRO PULSES)/(PIPA PULSE) X 2(-6)     *
+ 0162  2         TC     GCOMPSUB        -(ADIAY)(PIPAY)   (GYRO PULSES) X 2(+14)
+ 0163            EXTEND
+ 0164            DCS    DELVZ           (PIPA PULSES) X 2(+14)
+ 0165            DXCH   MPAC
+ 0166            CS     ADSRAY          (GYRO PULSES)/(PIPA PULSE) X 2(-6)     *
+ 0167  2         TC     GCOMPSUB        +(ADSRAY)(PIPAZ)  (GYRO PULSES) X 2(+14)
+ 0168            CS     NBDY            (GYRO PULSES)/(CS) X 2(-5)
+ 0169  2         TC     DRIFSTUB        -(NBDY)(DELTAT)   (GYRO PULSES) X 2(+14)
+ 0170   IRIGZ    EXTEND
+ 0171            DCS    DELVY           (PIPA PULSES) X 2(+14)
+ 0172            DXCH   MPAC
+ 0173            CA     ADSRAZ          (GYRO PULSES)/(PIPA PULSE) X 2(-6)     *
+ 0174  2         TC     GCOMPSUB        -(ADSRAZ)(PIPAY   (GYRO PULSES) X 2(+14)
+ 0175            EXTEND
+ 0176            DCS    DELVZ           (PIPA PULSES) X 2(+14)
+ 0177            DXCH   MPAC
+ 0178            CA     ADIAZ           (GYRO PULSES)/(PIPA PULSE) X 2(-6)     *
+ 0179  2         TC     GCOMPSUB        -(ADIAZ)(PIPAZ)   (GYRO PULSES) X 2(+14)
+ 0180            CA     NBDZ            (GYRO PULSES)/(CS) X 2(-5)
+ 0181  8         TC     DRIFSTUB        +(NBDZ)(DELTAT)   (GYRO PULSES) X 2(+14)
+ 0182            CCS    GCOMPSW         ARE GYRO COMMANDS GREATER THAN 2 PULSES
+ 0183            TCF    +2              YES
+ 0184  2         TCF    IRIG1           NO
+ 0185            INHINT
+ 0186            CAF    PRIO35          SEND OUT GYRO TORQUING COMMANDS
+ 0187            TC     NOVAC
+ 0188            2CADR  1/GYRO
+ 0189            RELINT
+ 01892  IRIG1    CA     MODE            SET EBANK FOR RETURN
+ 01893           TS     EBANK
+ 01895 7         TCF    SWRETURN
+ 0190   GCOMPSUB XCH    MPAC            ADIA OR ADSRA COEFFICIENT ARRIVES IN A
+ 0191            EXTEND                 C(MPAC) = (PIPA PULSES) X 2(+14)
+ 0192            MP     MPAC            (GYRO PULSES)/(PIPA PULSE) X 2(-6)     *
+ 0193  2         DXCH   VBUF            NOW = (GYRO PULSES) X 2(+8)            *
+ 0194            CA     MPAC +1         MINOR PART PIPA PULSES
+ 0195            EXTEND
+ 0196            MP     MPAC            ADIA OR ADSRA
+ 0197            TS     L
+ 0198            CAF    ZERO
+ 0199  2         DAS    VBUF            NOW = (GYRO PULSES) X 2(+8)            *
+ 0200            CA     VBUF            PARTIAL RESULT - MAJOR
+ 0201            EXTEND
+ 0202            MP     BIT9            SCALE 2(+6)      SHIFT RIGHT 6         *
+ 0203            INDEX  BUF             RESULT = (GYRO PULSES) X 2(+14)
+ 0204  2         DAS    GCOMP           HI(ADIA)(PIPAI)  OR  HI(ADSRA)(PIPAI)
+ 0205            CA     VBUF +1         PARTIAL RESULT - MINOR
+ 0206            EXTEND
+ 0207            MP     BIT9            SCALE 2(+6)      SHIFT RIGHT 6         *
+ 0208            TS     L
+ 0209            CAF    ZERO
+ 0210            INDEX  BUF             RESULT = (GYRO PULSES) X 2(+14)
+ 0211  2         DAS    GCOMP           (ADIA)(PIPAI)  OR  (ADSRA)(PIPAI)
+ 0212  8         TC     Q
+ 0213   DRIFSTUB EXTEND
+ 0214  2         QXCH   BUF +1
+ 0215            EXTEND                 C(A) = NBD    (GYRO PULSES)/(CS) X 2(-5)
+ 0216            MP     1/PIPADT        (CS) X 2(+8)   NOW (GYRO PULSES) X 2(+3)
+ 0217            LXCH   MPAC +1         SAVE FOR FRACTIONAL COMPENSATION
+ 0218            EXTEND
+ 0219            MP     BIT4            SCALE 2(+11)     SHIFT RIGHT 11
+ 0220            INDEX  BUF
+ 0221  2         DAS    GCOMP           HI(NBD)(DELTAT)   (GYRO PULSES) X 2(+14)
+ 0222            CA     MPAC +1         NOW MINOR PART
+ 0223            EXTEND
+ 0224            MP     BIT4            SCALE 2(+11)     SHIFT RIGHT 11
+ 0225            TS     L
+ 0226            CAF    ZERO
+ 0227            INDEX  BUF             ADD IN FRACTIONAL COMPENSATION
+ 0228  2         DAS    GCOMP           (NBD)(DELTAT)     (GYRO PULSES) X 2(+14)
+ 0229   DRFTSUB2 CAF    TWO             PIPAX, PIPAY, PIPAZ
+ 0230            AD     BUF
+ 0231            XCH    BUF
+ 0232            INDEX  A
+ 0233            CCS    GCOMP           ARE GYRO COMMANDS 1 PULSE OR GREATER
+ 0234            TCF    +2              YES
+ 0235  2         TC     BUF +1          NO
+ 0236            MASK   COMPCHK         DEC -1
+ 0237            CCS    A               ARE GYRO COMMANDS GREATER THAN 2 PULSES
+ 0238            TS     GCOMPSW         YES - SET GCOMPSW POSITIVE
+ 0239  8         TC     BUF +1          NO
+ 0240   1/GYRO   CAF    FOUR            PIPAZ, PIPAY, PIPAX
+ 0241  2         TS     BUF
+ 0242            INDEX  BUF             SCALE GYRO COMMANDS FOR IMUPULSE
+ 0243            CA     GCOMP +1        FRACTIONAL PULSES
+ 0244            EXTEND
+ 0245            MP     BIT8            SHIFT RIGHT 7
+ 0246            INDEX  BUF
+ 0247  2         TS     GCOMP +1        FRACTIONAL PULSES SCALED
+ 0248            CAF    ZERO            SET GCOMP = 0 FOR DAS INSTRUCTION
+ 0249            INDEX  BUF
+ 0250            XCH    GCOMP           GYRO PULSES
+ 0251            EXTEND
+ 0252            MP     BIT8            SHIFT RIGHT 7
+ 0253            INDEX  BUF
+ 0254  2         DAS    GCOMP           ADD THESE TO FRACTIONAL PULSES ABOVE
+ 0255            CCS    BUF             PIPAZ, PIPAY, PIPAX
+ 0256            AD     NEG1
+ 0257            TCF    1/GYRO +1
+ 0258  2LGCOMP   ECADR  GCOMP           LESS THAN ZERO IMPOSSIBLE
+ 0259            CAF    LGCOMP
+ 0260            TC     BANKCALL
+ 0261            CADR   IMUPULSE        CALL GYRO TORQUING ROUTINE
+ 0262            TC     BANKCALL
+ 0263            CADR   IMUSTALL        WAIT FOR PULSES TO GET OUT
+ 0264  2         TCF    ENDOFJOB        TEMPORARY
+ 0265   GCOMP1   CAF    FOUR            PIPAZ, PIPAY, PIPAX
+ 0266  2         TS     BUF
+ 0267            INDEX  BUF             RESCALE
+ 0268            CA     GCOMP +1
+ 0269            EXTEND
+ 0270            MP     BIT8            SHIFT MINOR PART LEFT 7 - MAJOR PART = 0
+ 0271            INDEX  BUF
+ 0272  2         LXCH   GCOMP +1        BITS 8-14 OF MINOR PART WERE = 0
+ 0273            CCS    BUF             PIPAZ, PIPAY, PIPAX
+ 0274            AD     NEG1
+ 0275            TCF    GCOMP1 +1
+ 0276   COMPCHK  DEC    -1              LESS THAN ZERO IMPOSSIBLE
+ 0277  8         TCF    ENDOFJOB
+ 0278   NBDONLY  CA     TIME1           (CS) X 2(+14)
+ 0279            XCH    1/PIPADT        PREVIOUS TIME
+ 0280            COM
+ 0281            AD     1/PIPADT
+ 0282   NBD2     CCS    A               CALCULATE ELAPSED TIME
+ 0283            AD     ONE             NO TIME1 OVERFLOW
+ 0284            TCF    NBD3            RESTORE TIME DIFFERENCE AND JUMP
+ 0285            TCF    +2              TIME1 OVERFLOW
+ 0286  2         TCF    ENDOFJOB        IF ELAPSED TIME = 0  (DIFFERENCE = -0)
+ 0287            COM                    CALCULATE ABSOLUTE DIFFERENCE
+ 0288  2         AD     POSMAX
+ 0289   NBD3     EXTEND                 C(A) = DELTAT    (CS) X 2(+14)
+ 0290            MP     BIT10           SHIFT RIGHT 5
+ 0291            DXCH   VBUF
+ 0292            EXTEND
+ 0293            DCA    VBUF
+ 0294  2         DXCH   MPAC            DELTAT NOW SCALED (CS) X 2(+19)
+ 0295            CAF    ZERO
+ 0296            TS     GCOMPSW         INDICATE COMMANDS 2 PULSES OR LESS
+ 0297  2         TS     BUF             PIPAX, PIPAY, PIPAZ
+ 0298            CS     NBDX            (GYRO PULSES)/(CS) X 2(-5)
+ 0299  2         TC     FBIASSUB        -(NBDX)(DELTAT)   (GYRO PULSES) X 2(+14)
+ 0300            EXTEND
+ 0301            DCS    VBUF
+ 0302            DXCH   MPAC            DELTAT SCALED (CS) X 2(+19)
+ 0303            CA     NBDY            (GYRO PULSES)/(CS) X 2(-5)
+ 0304  2         TC     FBIASSUB        -(NBDY)(DELTAT)   (GYRO PULSES) X 2(+14)
+ 0305            EXTEND
+ 0306            DCS    VBUF
+ 0307            DXCH   MPAC            DELTAT SCALED (CS) X 2(+19)
+ 0308            CS     NBDZ            (GYRO PULSES)/(CS) X 2(-5)
+ 0309  2         TC     FBIASSUB        +(NBDZ)(DELTAT)   (GYRO PULSES) X 2(+14)
+ 0310            CCS    GCOMPSW         ARE GYRO COMMANDS GREATER THAN 2 PULSES
+ 0311            TCF    1/GYRO          YES
+ 0312  8         TCF    ENDOFJOB        NO
+ 0313   FBIASSUB XCH    Q
+ 0314  2         TS     BUF +1
+ 0315            CA     Q               NBD SCALED (GYRO PULSES)/(CS) X 2(-5)
+ 0316            EXTEND
+ 0317            MP     MPAC            DELTAT SCALED (CS) X 2(+19)
+ 03175           INDEX  BUF
+ 0318  2         DAS    GCOMP           HI(NBD)(DELTAT)   (GYRO PULSES) X 2(+14)
+ 0319            CA     Q               NOW FRACTIONAL PART
+ 0320            EXTEND
+ 0321            MP     MPAC +1
+ 0322            TS     L
+ 0323            CAF    ZERO
+ 03235           INDEX  BUF
+ 0324  2         DAS    GCOMP           (NBD)(DELTAT)     (GYRO PULSES) X 2(+14)
+ 0325  6         TCF    DRFTSUB2        CHECK MAGNITUDE OF COMPENSATION
+ 0326   LASTBIAS XCH    1/PIPADT        NEW 1/PIPADT VALUE SCALED (CS) X 2(+14)
+ 0327            COM
+ 0328            AD     MPAC            C(TIME1) AT PIPAI = 0 SCALED 2(+14)
+ 0329  6         TCF    NBD2
+ 0340   GCOMPZER CAF    LGCOMP           ROUTINE TO ZERO GCOMP BEFORE FIRST
+ 0341            XCH    EBANK            CALL TO 1/PIPA
+ 0342  2         TS     MODE
+ 0343            CAF    ZERO
+ 0344            TS     GCOMP
+ 0345            TS     GCOMP +1
+ 0346            TS     GCOMP +2
+ 0347            TS     GCOMP +3
+ 0348            TS     GCOMP +4
+ 0349  2         TS     GCOMP +5
+ 0350            CA     MODE
+ 0351            TS     EBANK
+ 0352            TCF    SWRETURN         RETURN TO CALLER
 *       ENDOFJOB
