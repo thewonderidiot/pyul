@@ -1,5 +1,6 @@
 from yul_system.types import ONES, BAD_WORD, Bit, SwitchBit, HealthBit
 from yul_system.assembler.pass2 import Pass2, Cuss
+import copy
 
 class Blk2Pass2(Pass2):
     def __init__(self, mon, yul, adr_limit, m_typ_tab):
@@ -20,6 +21,16 @@ class Blk2Pass2(Pass2):
         self._max_adres = 0
         self._ebank_reg = 0o3417
         self._sbank_reg = 0o40000000
+
+        self._stadr = 0
+        self._add_rev = 0
+        self._mode_out = 0
+        self._int_addr = [0]*5
+        self._int_addr_idx = 0
+        self._loc_hold = 0
+
+        self._interp_wd = 0
+        self._store_com = 0
 
         self.cuss_list = [
             # 0-2
@@ -183,6 +194,105 @@ class Blk2Pass2(Pass2):
             Cuss('CONFLICT WITH EARLIER HEAD SPECIFICATION', poison=True),
         ]
 
+        self.int_datab = [
+            0o14056002, # VLOAD     000
+            0o13044006, # TAD       001
+            0o22066012, # SIGN      002
+            0o15056016, # VXSC      003
+            0o26527022, # C GO TO   004
+            0o13046026, # TLOAD     005
+            0o12036032, # DLOAD     006
+            0o15056036, # V/SC      007
+            0o11436042, # SLOAD     010
+            0o26467646, # SSP       011
+            0o12036052, # PDDL      012
+            0o17460056, # MXV       013
+            0o14056062, # PDVL      014
+            0o26527066, # CCALL     015
+            0o17460072, # VXM       016
+            0o21464076, # NORM      017
+            0o12034102, # DMPR      020
+            0o12064106, # DDV       021
+            0o12064112, # BDDV      022
+            0o14060122, # VAD       023
+            0o14060126, # VSU       024
+            0o14060132, # BVSU      025
+            0o14030136, # DOT       026
+            0o14060142, # VXV       027
+            0o14060146, # VPROJ     030
+            0o12064152, # DSU       031
+            0o12064156, # BDSU      032
+            0o12064162, # DAD       033
+            0o00000000, # BLANK OP  034
+            0o12064172, # DMP       035
+            0o21466176, # SET PD    036
+            0o10664316, # SL        037
+            0o10664716, # SR        040
+            0o20635316, # SLR       041
+            0o30635716, # SRR       042
+            0o40650316, # VSL       043
+            0o50650716, # VSR       044
+            0o71466003, # AXT       045
+            0o71466013, # AXC       046
+            0o51466023, # LXA       047
+            0o51466033, # LXC       050
+            0o51466043, # SXA       051
+            0o51466053, # XCHX      052
+            0o71466063, # INCR      053
+            0o31466073, # TIX       054
+            0o51466103, # XAD       055
+            0o51466113, # XSU       056
+            0o31466123, # BZE       057
+            0o31526127, # GO TO     060
+            0o31466133, # BPL       061
+            0o31466137, # BMN       062
+            0o31526143, # CALL      063
+            0o51466147, # STQ       064
+            0o41426153, # RTB       065
+            0o31466157, # BHIZ      066
+            0o00000000, # BLANK OP  067
+            0o41466173, # BOVB      070
+            0o31466177, # BOV       071
+            0o66466763, # BONSET    072
+            0o66526763, # SETGO     073
+            0o66466763, # BOFSET    074
+            0o60466163, # SET       075
+            0o66466763, # BONINV    076
+            0o66526763, # INVGO     077
+            0o66466763, # BOFINV    100
+            0o60466163, # INVERT    101
+            0o66466763, # BONCLR    102
+            0o66526763, # CLRGO     103
+            0o66466763, # BOFCLR    104
+            0o60466163, # CLEAR     105
+            0o66466763, # BON       106
+            0o31506143, # CALRB     107
+            0o66466763, # BOFF      110
+            0o26507066, # CCLRB     111
+            0o00506001, # EXIT      112
+            0o00464011, # SQRT      113
+            0o00464021, # SIN       114
+            0o00464031, # COS       115
+            0o00464041, # ASIN      116
+            0o00464051, # ACOS      117
+            0o00464061, # DSQ       120
+            0o00434071, # ROUND     121
+            0o00464101, # DCOMP     122
+            0o00454111, # VDEF      123
+            0o00460121, # UNIT      124
+            0o00464131, # ABS       125
+            0o00430141, # VSQ       126
+            0o00566151, # STADR     127
+            0o00526161, # RVQ       130
+            0o00466171, # PUSH      131
+            0o00460101, # VCOMP     132
+            0o00430131, # ABVAL     133
+            0o00000000, # BLANK OP  134
+            0o00000000, # BLANK OP  135
+            0o00000000, # BLANK     136
+            0o00000000, # BAD       137
+        ]
+
     # Subroutine in pass 2 for AGC4 to form a word from an operation code and an addess (basic instruction
     # and address constants), or from two polish operator codes (polish operator words). The operation code(s)
     # and some associated information bits are taken from the health word of the current POPO item. The address is
@@ -338,9 +448,8 @@ class Blk2Pass2(Pass2):
 
         elif level == 1:
             # Branch for polish addr or store codes.
-            if (popo.health & b28t30m) < 0o3000000:
-                # FIXME
-                pass
+            if (popo.health & b28t30m) >= 0o3000000:
+                return self.int_op_gos(popo)
 
             # Rest of level 1: EBANK=, SBANK=, BNKSUM.
             self._location = ONES
@@ -540,7 +649,10 @@ class Blk2Pass2(Pass2):
         if popo.health & Bit.BIT9:
             self.cuss_list[1].demand = True
 
-        # Go see if current word is polish (FIXME)
+        # Go see if current word is polish.
+        # Jump if procesing polish, not basic.
+        if self._stadr & Bit.BIT24:
+            return self.int_ad_pat(popo)
 
         adr_wd = [self._address, self._address]
 
@@ -1341,10 +1453,6 @@ class Blk2Pass2(Pass2):
         self._sbank_reg &= ~0o160000
         self._sbank_reg |= location & 0o160000
 
-    def int_op_cod(self, popo):
-        # FIXME
-        pass
-
     # Subroutine in pass 2 for BLK2 to set in print a right-hand location for such as SETLOC.
     # Puts in the bank indicator, if any. Blots out an invalid location.
     def m_ploc_is(self, location):
@@ -1523,3 +1631,501 @@ class Blk2Pass2(Pass2):
         self._word |= dec6_flag
 
         return sec_half, sec_alf
+
+    def int_op_cod(self, popo):
+        # Go set various essential registers
+        self.int_op_set()
+
+        # Go do E-Bank setting check
+        self.ebk_loc_q()
+
+        # Go check previous addresses
+        self.int_ad_chk()
+
+        # Jump if store code not expected
+        if self._stadr == 0o127:
+            # Store code should precede this op pair.
+            self.cuss_list[74].demand = True
+
+        # Set up int opcode flag for memory map
+        self._word = (Bit.BIT2 | Bit.BIT4)
+
+        # Extract 1st int opcode stored by pass 1
+        self._stadr = (popo.health >> 24) & 0o177
+
+        # Make some checks on this opcode
+        self._int_addr_idx = 0
+        data_word = self.int_op_com(popo, popo.op_field().strip())
+
+        # Put in AGC word bits 7-1
+        self._address = data_word & 0o177
+
+        # Extract 2nd int opcode
+        sec_opcode = (popo.health >> 17) & 0o177
+        if sec_opcode == 0o137:
+            # Bad opcode. Blot out word
+            self.cuss_list[64].demand = True
+            return self.int_wd_bot(popo)
+
+        if sec_opcode != 0o136:
+            if data_word & Bit.BIT33:
+                # Error if RH op is not blank, if required
+                self.cuss_list[63].demand = True
+                sec_opcode = 0o136
+            else:
+                # Address field holds 2nd opcode
+                self._stadr = sec_opcode
+                data_word = self.int_op_com(popo, (popo.address_1() + popo.address_2()).strip(), second=True)
+                # Put 2nd opcode into AGC word, bits 14-8
+                self._address |= (data_word & 0o177) << 7
+
+        # Do one's complement
+        self._address ^= 0o77777
+
+        return self.int_wd_run(popo)
+
+    def int_op_com(self, popo, opcode, second=False):
+        # Get full word containing this op's data
+        data_word = self.int_datab[self._stadr]
+
+        # Go search for * or ,1 or opcode.
+        # Jump if right most not ,1
+        if opcode.endswith(',1'):
+            # Opcode to be upped four
+            data_word += Bit.BIT46
+
+        # Jump if right most not *
+        if opcode.endswith('*'):
+            # Only codes ending in 10 can take *.
+            if data_word & 0o3 == 0o2 and self._stadr != 0o36:
+                # Opcode incr by two. B24 shows indexing
+                data_word += (Bit.BIT24 | 2)
+                # Do not allow pushup now
+                data_word |= Bit.BIT31
+                return self.int_op_smo(popo, data_word, second)
+            else:
+                self.cuss_list[68 if second else 67].demand = True
+
+        # Jump if not short shift code
+        if self._stadr <= 0o137:
+            return self.int_op_smo(popo, data_word, second)
+
+        # Jump if scaler shift
+        if self._stadr > 0o157:
+            self._stadr -= 0o20
+
+            # Bring forth vector 24 bit data
+            data_word = 0o00450005
+        else:
+            # Bring forth scaler 24 bit data
+            data_word = 0o00434005
+
+        # Form complete opcode
+        data_word += (self._stadr - 0o140) << 3
+
+        return self.int_op_not(popo, data_word, second)
+
+
+    def int_op_smo(self, popo, data_word, second):
+        # Jump if opmode not vxsc or v/sc
+        b28t30m = Bit.BIT28 | Bit.BIT29 | Bit.BIT30
+        if (data_word & b28t30m) != (Bit.BIT28 | Bit.BIT30):
+            return self.int_op_not(popo, data_word, second)
+
+        # Jump if last modeout = unknowns
+        if self._mode_out <= Bit.BIT47 or self._mode_out > Bit.BIT46:
+            # Set opmode = D
+            data_word |= Bit.BIT29
+        else:
+            # Set opmode = V
+            data_word |= Bit.BIT29
+
+        return self.int_op_sap(popo, data_word, second)
+
+    def int_op_not(self, popo, data_word, second):
+        # Jump if last mode out = unknowns
+        icommon = (data_word >> 10) & 0o3
+        if self._mode_out > Bit.BIT47:
+            # Check proper mode in
+            if ((icommon == 0 and self._mode_out != (Bit.BIT46 | Bit.BIT48)) or
+                (icommon == 1 and self._mode_out != (Bit.BIT47 | Bit.BIT48)) or
+                (icommon == 2 and self._mode_out not in (Bit.BIT46, (Bit.BIT47 | Bit.BIT48)))):
+                # Flag op mode out/in mismatch.
+                self.cuss_list[77 if second else 76].demand = True
+
+        # Branch by mode in requirement
+        if icommon == 0:
+            self._mode_out = Bit.BIT46 | Bit.BIT48
+        elif icommon in (1, 2):
+            self._mode_out = Bit.BIT47 | Bit.BIT48
+        else:
+            self._mode_out = Bit.BIT48
+
+
+        return self.int_op_sap(popo, data_word, second)
+
+    def int_op_sap(self, popo, data_word, second):
+        # Jump if new mode out = no change
+        b34t36m = Bit.BIT34 | Bit.BIT35 | Bit.BIT36
+        if (data_word & b34t36m) > (Bit.BIT34 | Bit.BIT35):
+            self._mode_out = (data_word >> 12) & 0o7
+
+        # Jump if opcode expects no address
+        b25t27m = Bit.BIT25 | Bit.BIT26 | Bit.BIT27
+        if (data_word & b25t27m) <= 0:
+            return data_word
+
+        # Jump if not switch type opcode
+        if data_word & 0o177 == 0o163:
+            icommon = data_word & ~0o177
+            # Determine opcode additive
+            icommon |= self._stadr - 0o72
+        else:
+            icommon = data_word
+
+        # Save data for addr word use
+        self._int_addr[self._int_addr_idx] = icommon
+        self._int_addr_idx += 1
+
+        # Jump if only one address word expected
+        b28t30m = Bit.BIT28 | Bit.BIT29 | Bit.BIT30
+        if (data_word & b28t30m) != (Bit.BIT28 | Bit.BIT29):
+            return data_word
+
+        # Give data to second address
+        self._int_addr[self._int_addr_idx] = data_word
+        # Shift addr type to correct position
+        b25t27m = Bit.BIT25 | Bit.BIT26 | Bit.BIT27
+        self._int_addr[self._int_addr_idx] &= ~b25t27m
+        self._int_addr[self._int_addr_idx] |= (data_word << 14) & b25t27m
+        self._int_addr_idx += 1
+
+        return data_word
+
+    def int_op_set(self):
+        self._interp_wd = Bit.BIT48
+
+        # FIXME: set up CHECK UP
+
+    # Routine to handle interpretive address words
+    def int_ad_go(self, popo):
+        if popo.address_1().isspace() and popo.address_2().isspace():
+            # Cuss polish address with blank adr fld.
+            self.cuss_list[34].demand = True
+
+        # Error if no associated opcode.
+        if self._int_addr[0] <= 0:
+            return self.int_err_20(popo)
+
+        return self.int_ad_tum(popo)
+
+    def int_ad_tum(self, popo):
+        # Search addr field for ,1 or ,2
+        addr_field = (popo.address_1() + popo.address_2()).strip()
+        b25t27m = Bit.BIT25 | Bit.BIT26 | Bit.BIT27
+        if addr_field.endswith(',2'):
+            # Pointer to show X2 used
+            self._int_addr[0] |= Bit.BIT7
+
+        # Jump if non indexed addr
+        elif not addr_field.endswith(',1'):
+            int_addr = self._int_addr[0]
+            # Jump if not supposed to be indexing or opcode did not request any
+            if not ((((int_addr & b25t27m) > Bit.BIT26) and ((int_addr & Bit.BIT32) == 0)) or
+                    ((int_addr & Bit.BIT24) == 0)):
+                # Flag RIAH cuss
+                self.cuss_list[80].demand = True
+
+            return self.int_ad_got(popo)
+
+        # Jump if indexing allowed.
+        if (((self._int_addr[0] & b25t27m) > Bit.BIT26) or ((self._int_addr[0] & Bit.BIT32) == 0)):
+            # Error if not allowed.
+            self.cuss_list[7].demand = True
+
+            # Blank out indexing chars of addr
+            popo = copy.deepcopy(popo)
+            new_addr = '%-16s' % addr_field[:-2]
+            # Store field without index marks
+            popo.card = popo.card[:24] + new_addr + popo.card[40:]
+
+        else:
+            # Jump on store word; error if opcode did no req indexing
+            if self._store_com == 0 and (self._int_addr[0] & Bit.BIT24) == 0:
+                # Flag ONIC cuss
+                self.cuss_list[79].demand = True
+            # Set indexed addr flag
+            self._int_addr[0] |= Bit.BIT24
+
+        return self.int_ad_got(popo)
+
+
+    def int_ad_got(self, popo):
+        # Most negative allowable value (C type).
+        self._min_adres = -0o37777
+        # Set branch to interpretive
+        self._stadr |= Bit.BIT24
+
+        # Go to MAX AD SET
+        return self.max_ad_set(popo)
+
+    def int_ad_pat(self, popo):
+        # Cancel flag. Restore necessary registers.
+        self._stadr &= ~Bit.BIT24
+        self.int_op_set()
+
+        # Jump on bad address
+        if ONES <= self._address:
+            return self.int_wd_sum(popo)
+
+        # Branch by op mode to choose number of words that this address will take
+        op_mode = (self._int_addr[0] >> 18) & 0o7
+        if op_mode in (0, 1, 5, 6):
+            self._add_rev = 0
+        elif op_mode == 2:
+            self._add_rev = Bit.BIT48
+        elif op_mode == 3:
+            self._add_rev = Bit.BIT47
+        elif op_mode == 4:
+            self._add_rev = Bit.BIT46 | Bit.BIT48
+        elif op_mode == 7:
+            self._add_rev = Bit.BIT44 | Bit.BIT48
+
+        # Jump if addr for general shift inst
+        if self._int_addr[0] & Bit.BIT32:
+            # FIXME
+            return # INT AD SIR
+
+        # Branch by non-zero address type
+        addr_type = (self._int_addr[0] >> 21) & 0o7
+        if addr_type == 0:
+            return self.int_err_20(popo)
+        elif addr_type == 1:
+            # 14 bit address, ARC-CCS fashion
+            return self.int_ad_a14(popo, icommon=Bit.BIT46)
+        elif addr_type == 2:
+            # E address, ARC-CCS fashion
+            return self.int_ad_a14(popo, icommon=Bit.BIT47)
+        elif addr_type == 3:
+            # 15 bit address
+            return self.int_ad_a14(popo, icommon=Bit.BIT48)
+        elif addr_type == 4:
+            # Fixed 15 bit addr
+            return self.int_ad_f(popo)
+        elif addr_type == 5:
+            # E address
+            return self.int_ad_a14(popo, icommon=0)
+        elif addr_type == 6:
+            # Switch bit number.
+            return self.int_ad_sw(popo)
+
+        # FIXME
+
+    def int_ad_sw(self, popo):
+        # Error if addr less than zero or over 239
+        if self._address < 0 or self._address >= 240:
+            return self.int_err_41(popo)
+
+        # Jump if switch addr not formulated
+        while 0o17 <= (self._address & 0o377):
+            # Add OCT400. Subtract OCT17
+            self._address += 0o361
+
+        # Insert opcode additive
+        self._address &= ~ 0o360
+        self._address |= (self._int_addr[0] << 4) & 0o360
+
+        # Finish up elsewhere
+        return self.int_ad_a10(popo)
+
+    def int_ad_a14(self, popo, icommon=0):
+        if self._address < 0: # FIXME: adr_wd?
+            # Bottom limit is 0
+            return self.int_err_21(popo)
+
+        # Jump if address in buffer
+        if self._address <= 0o52:
+            # FIXME: INT AD ACE
+            pass
+
+        # Error in 53 to 77 octal range
+        if self._address <= 0o77:
+            return self.int_err_21(popo)
+
+        # Jump if in 10 to 1377 octal range
+        if self._address <= 0o1377:
+            # Add 256 to look like boundary check
+            self._add_rev += Bit.BIT40
+            return self.int_ad_oaf(popo, icommon)
+
+    def int_ad_oaf(self, popo, icommon):
+        # Hope indexing will right a wrong if any
+        if (self._int_addr[0] & Bit.BIT24) == 0:
+            # Checking crossing bank boundaries now
+            self._add_rev += self._address & 0o1777
+            if 0o2000 <= self._add_rev:
+                self.cuss_list[81].demand = True
+
+        return self.int_ad_a15(popo, icommon)
+
+    def int_ad_a15(self, popo, icommon):
+        # Jump if not using ARC-CCS form
+        if icommon > Bit.BIT48:
+            # Change to ARC-CCS form
+            self._address += Bit.BIT48
+
+        if self._store_com != 0:
+            # Return to store routine
+            return
+
+        # Jump if X2 not used
+        if self._int_addr[0] & Bit.BIT7:
+            # Complement if X2 used
+            self._address ^= 0o77777
+
+        return self.int_ad_a10(popo)
+
+    def int_ad_a10(self, popo):
+        # Advance addr data words or zeroes
+        self._int_addr = self._int_addr[1:] + [0]
+
+        return self.int_wd_pot(popo)
+
+    def int_wd_pot(self, popo):
+        if self._location != self._loc_hold:
+            self.int_err_33()
+
+        return self.int_wd_run(popo)
+
+    # Next routine checks to see if all addresses for the previous opcode pair have been received.
+    # If bit 31 of int addr(X) = 1, an expected address has not been processed.
+    def int_ad_chk(self):
+        # Jump if polish string broken
+        if self._loc_hold != self._location:
+            if (self._mode_out == Bit.BIT48) or ((Bit.BIT47 | Bit.BIT48) < self._mode_out):
+                self.cuss_list[87].demand = True
+            # Mode out = unknown
+            self._mode_out = Bit.BIT47
+            # Reset polish loc counter
+            self._loc_hold = self._location
+
+        # Jump if polish inst expected
+        elif self._mode_out == 0:
+            # Flag INXH cuss
+            self.cuss_list[72].demand = True
+            # Mode out = unknown
+            self._mode_out = Bit.BIT47
+            # Reset polish loc counter
+            self._loc_hold = self._location
+
+        # Jump if any of four addresses active and pushup no allowed
+        if any(map(lambda x: x & Bit.BIT31, self._int_addr[0:3])):
+            # Polish address(es) missing error. IMAS
+            self.cuss_list[73].demand = True
+
+        # Zero all address data holders
+        self._int_addr = [0]*5
+
+
+    # Store codes/all addr words enter here
+    def int_op_gos(self, popo):
+        self._store_com = 0
+        self.int_op_set()
+
+        # Go do E-bank setting check
+        self.ebk_loc_q()
+
+        # Set constant type flag for memory map
+        self._word = Bit.BIT2 | Bit.BIT32 | Bit.BIT3
+
+        b28t30m = Bit.BIT28 | Bit.BIT29 | Bit.BIT30
+        if (popo.health & b28t30m) <= (Bit.BIT29 | Bit.BIT30):
+            # Jump to interpretive address routine
+            return self.int_ad_go(popo)
+
+    def int_wd_run(self, popo):
+        if ONES <= self._location:
+            self.int_err_33()
+        else:
+            # Increment polish count
+            self._loc_hold += Bit.BIT48
+
+        # Proceed to place AGC word on print line
+        self.int_wd_117(popo)
+        self._line[39] = '%05o' % self._address
+
+        # 15 bit AGC word in with memory map char
+        self._word &= ~0o77777
+        self._word |= self._address
+
+        # Return at BC CHECK
+        return self.bc_check(popo)
+
+    def int_wd_sum(self, popo):
+        if self._store_com != 0:
+            return
+
+        # Advance addresses
+        self._int_addr = self._int_addr[1:] + [0]
+
+        return self.int_wd_nut(popo)
+
+    def int_wd_nut(self, popo):
+        # Error if non polish word appeared
+        if self._loc_hold != self._location:
+            self.int_err_33()
+
+        return self.int_wd_bot(popo)
+
+    def int_wd_bot(self, popo):
+        # Branch if loc ctr has bad value.
+        if ONES <= self._loc_hold:
+            self.int_err_33()
+        else:
+            # Increment polish location counter
+            self._loc_hold += Bit.BIT48
+
+        # Blot 5 characters
+        self._line[39] = '■■■■■'
+        self.int_wd_117(popo)
+
+        # Return at naughty
+        return self.naughty(popo)
+
+    def int_err_20(self, popo):
+        # No opcode for this address.
+        self.cuss_list[78].demand = True
+        return self.int_wd_sum(popo)
+
+    def int_err_21(self, popo):
+        # FIXME
+        pass
+
+    def int_err_41(self, popo):
+        # Bad range for addr. ASIZ
+        self.cuss_list[10].demand = True
+
+        # Branch if address is unprintable
+        if 0o170000 <= self._address:
+            return self.int_wd_sum(popo)
+
+        # Go tell man what addr value is
+        self.cuss_list[35].demand = True
+        self.prb_adres(self._address)
+
+        # If negative addr, just say so instead
+        if self._address < 0:
+            cuss = self.cuss_list[35]
+            cuss.msg = cuss.msg[:8] + 'NEGATIVE'
+
+        return self.int_wd_sum(popo)
+
+    def int_err_33(self):
+        # Reset int location counter
+        self._loc_hold = self._location
+        # Flag IAOS cuss
+        self.cuss_list[82].demand = True
+
+    def int_wd_117(self, popo):
+        if popo.card[0] != ' ' or popo.card[16] != ' ':
+            self.cuss_list[86].demand = True

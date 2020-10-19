@@ -395,7 +395,7 @@ class Blk2Pass1(Pass1):
             return
 
         # Branch if address field is not symbolic.
-        if self._field_cod[0] != FieldCodBit.Symbolic:
+        if self._field_cod[0] != FieldCodBit.SYMBOLIC:
             return self.pole_fail(popo)
 
         # Branch if no modifier.
@@ -417,11 +417,13 @@ class Blk2Pass1(Pass1):
         # Branch if find is not a polish operator.
         b37b48m = Bit.BIT37 | Bit.BIT48
         second_opcode = self.op_thrs[adr_wd]
+
         if (second_opcode & b37b48m) != b37b48m:
             return self.pole_fail(popo)
 
         # Send internal code for 2nd operator.
         b25t31m = 0o77400000
+        popo.health &= ~b25t31m
         popo.health |= (second_opcode << 14) & b25t31m
 
     def pole_fail(self, popo):
