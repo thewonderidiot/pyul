@@ -73,6 +73,7 @@ class Pass2:
                            .4294967296e10, .1844674407e20,
                            .3402823669e39
         ]
+        self.check_up = None
 
     def pass_2(self):
         for popo in self._yul.popos:
@@ -890,9 +891,13 @@ class Pass2:
         return self.no_loc_sym(popo, symbol, print_line)
 
     def send_word(self, popo, word):
-        # Immediate exit for bad location.
-        if self._location >= ONES:
-            return
+        if self.check_up is not None:
+            if not self.check_up():
+                return
+        else:
+            # Immediate exit for bad location.
+            if self._location >= ONES:
+                return
 
         # Choose from 256 substrand use bits.
         substrand = self._location // 256
