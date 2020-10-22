@@ -7523,4 +7523,62 @@ P0812  2         SEQUENCES TO TERMINATE RR OPERATIONS.
  0827  2         CADR   BADEND
  0828   BIN3     EQUALS THREE
  0829   ENDRMODS EQUALS
+L      2RADAR TEST PROGRAMS
+ 0001            SETLOC ENDRMODS
+ 0002  2         EBANK= RSTKLOC
+R0003  2         RADAR SAMPLING LOOP.
+ 0004   RADSAMP  CCS    RSAMPDT         TIMES NORMAL ONCE-PER-SECOND SAMPLING.
+ 0005  2         TCF    +2
+ 0006  2         TCF    TASKOVER        +0 INSERTED MANUALLY TERMINATES TEST.
+ 0007            TC     WAITLIST
+ 0008            2CADR  RADSAMP
+ 0009            CAF    PRIO25
+ 0010            TC     NOVAC
+ 0011            2CADR  DORSAMP
+ 0012            CAF    1/6             FOR CYCLIC SAMPLING, RTSTDEX =
+ 0013            EXTEND                 RTSTLOC/6 + RTSTBASE.
+ 0014            MP     RTSTLOC
+ 0015            AD     RTSTBASE        0 FOR RR, 2 FOR LR.
+ 0016  2         TS     RTSTDEX
+ 0017  2         TCF    TASKOVER
+R0018  2         DO THE ACTUAL RADAR SAMPLE.
+ 0019   DORSAMP  TC     VARADAR         SELECTS VARIABLE RADAR CHANNEL.
+ 0020            TC     BANKCALL
+ 0021            CADR   RADSTALL
+ 0022  2         INCR   RFAILCNT        ADVANCE FAIL COUNTER BUT ACCEPT BAD DATA
+ 0023   DORSAMP2 INHINT                 YES - UPDATE TM BUFFER.
+ 0024            DXCH   SAMPLSUM
+ 0025            INDEX  RSTKLOC
+ 0026  2         DXCH   RSTACK
+ 0027            DXCH   OPTYHOLD
+ 0028            INDEX  RSTKLOC
+ 0029  2         DXCH   RSTACK +2
+ 0030            DXCH   TIMEHOLD
+ 0031            INDEX  RSTKLOC
+ 0032  2         DXCH   RSTACK +4
+ 0033            CS     RTSTLOC         CYCLE RTSTLOC.
+ 0034            AD     RTSTMAX
+ 0035            EXTEND
+ 0036            BZF    +3
+ 0037            CA     RSTKLOC
+ 0038            AD     SIX
+ 0039  2         TS     RSTKLOC
+ 0040            CCS    RSAMPDT         SEE IF TIME TO RE-SAMPLE.
+ 0041  2         TCF    ENDOFJOB        NO - WAIT FOR T3 (REGULAR SAMPLING).
+ 0042            TCF    ENDOFJOB        TEST TERMINATED.
+ 0043  2         TCF    DORSAMP         JUMP RIGHT BACK AND GET ANOTHER SAMPLE.
+ 0044  21/6      DEC    .17
+R0045  2         VARIABLE RADAR DATA CALLER FOR ONE MEASUREMENT ONLY.
+ 0046   VARADAR  CAF    ONE             WILL BE SENT TO RADAR ROUTINE IN A BY
+ 0047            TS     BUF2            SWCALL.
+ 0048            INDEX  RTSTDEX
+ 0049            CAF    RDRLOCS
+ 0050  2         TCF    SWCALL          NOT TOUCHING Q.
+ 0051   RDRLOCS  CADR   RRRANGE         =0
+ 0052            CADR   RRRDOT          =1
+ 0053            CADR   LRVELX          =2
+ 0054            CADR   LRVELY          =3
+ 0055            CADR   LRVELZ          =4
+ 0056  2         CADR   LRALT           =5
+ 0057   ENDRTSTS EQUALS
 *       ENDOFJOB
