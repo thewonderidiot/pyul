@@ -1686,7 +1686,10 @@ class Blk2Pass2(Pass2):
 
     def int_op_com(self, popo, opcode, second=False):
         # Get full word containing this op's data
-        data_word = self.int_datab[self._stadr]
+        try:
+            data_word = self.int_datab[self._stadr]
+        except:
+            data_word = 0
 
         # Go search for * or ,1 or opcode.
         # Jump if right most not ,1
