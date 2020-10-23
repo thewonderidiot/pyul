@@ -7581,4 +7581,724 @@ R0045  2         VARIABLE RADAR DATA CALLER FOR ONE MEASUREMENT ONLY.
  0055            CADR   LRVELZ          =4
  0056  2         CADR   LRALT           =5
  0057   ENDRTSTS EQUALS
+L      2EXTENDED VERBS
+ 0001            BANK   11
+ 0002  2         EBANK= OGC
+R0003  2FAN-OUT
+ 0004   LST2FAN  TC     VBZERO          VB40 ZERO (USED WITH NOUN 20 OR 40 ONLY)
+ 0005            TC     VBCOARK         VB41 COARSE ALIGN (USED WITH NOUN 20 OR
+A0006                                                                   40 ONLY)
+ 0007            TC     IMUFINEK        VB42 FINE ALIGN IMU
+ 0008            TC     IMUATTCK        VB43  LOAD IMU ATTITUDE ERROR METERS.
+ 0009            TC     ALM/END         ILLEGAL VERB.
+ 0010            TCF    LRPOS2K         VB45 COMMAND LR TO POSITION 2.
+ 0011            TC     REGRSAMP        VB46 SAMPLE RADAR ONCE PER SECOND
+ 0012            TC     DOFCSTST        VB47 PERFORM LEM FCS TEST
+ 0013            TC     GOLOADLV        VB50 PLEASE PERFORM
+ 0014            TC     GOLOADLV        VB51 PLEASE MARK
+ 0015            TC     GOLOADLV        VB52 PLEASE MARK Y
+ 0016            TC     GOLOADLV        VB53 PLEASE MARK X OR Y.
+ 0017            TC     TORQGYRS        VB54 PULSE TORQUE GYROS
+ 0018            TC     ALINTIME        VB55 ALIGN TIME
+ 0019            TC     GOSHOSUM        VB56 PERFORM BANKSUM
+ 0020            TC     SYSTEST         VB57 PERFORM SYSTEM TEST
+ 0021            TC     PRESTAND        VB60 PREPARE FOR STANDBY
+ 0022            TC     POSTAND         VB61 RECOVER FROM STANDBY
+ 0023            TC     SETUPMSG        VB62 SCAM LEM INBITS
+ 0024            TCF    AGSINIT         VB63 INITIALIZE AGS
+ 0025            TCF    ALM/END
+ 0026            TCF    ALM/END
+ 0027            TCF    ALM/END
+ 0028            TCF    ALM/END
+ 0029            TCF    ALM/END
+ 0030            TCF    ALM/END
+ 0031            TCF    ALM/END
+ 0032            TCF    MINIMP          VERB 73 - RHC USED FOR MINIMUM IMPULSE.
+ 0033  2         TCF    NOMINIMP        VERB 74 - RHC NOT USED FOR MIN IMPULSE.
+ 0034            TCF    ALM/END
+ 0035            TCF    ALM/END
+ 0036  2         TC     ALM/END
+ 0037   TESTXACT CAF    BIT3
+ 0038            MASK   EXTVBACT
+ 0039            CCS    A
+ 0040  2         TC     XACTALM
+ 0041   XACT1    CS     BIT3
+ 0042            INHINT
+ 0043            MASK   EXTVBACT
+ 0044            AD     BIT3
+ 0045            TS     EXTVBACT
+ 0046            RELINT
+ 0047  2         TC     Q
+ 0048   XACTALM  TC     FALTON
+ 0049  2         TC     ENDOFJOB
+ 0050  2TERMEXTV TC     FREEDSP         IF WE GET A TERMINATE INSTEAD OF A LOAD.
+ 0051   ENDEXTVB TC     XACT0
+ 0052  2         TC     ENDOFJOB
+ 0053   XACT0    CS     BIT3
+ 0054            INHINT
+ 0055            MASK   EXTVBACT
+ 0056            TS     EXTVBACT
+ 0057            RELINT
+ 0058  4XACT0Q   TC     Q
+ 0059   ALM/END  TC     FALTON
+ 0060  4         TC     ENDEXTVB
+ 0061   VBZERO   TC     OP/INERT
+ 0062            TC     IMUZEROK        RETURN HERE IF NOUN = ICDU(20)
+ 0063  2         TC     RRZEROK         RETURN HERE IF NOUN = RCDU(40)
+ 0065   VBCOARK  TC     OP/INERT
+ 0066            TC     IMUCOARK        RETURN HERE IF NOUN = ICDU(20)
+ 0067  2         TC     RRDESNBK        RETURN HERE IF NOUN = RCDU(40)
+R0069  2         RETURNS TO L+1 IF IMU, L+2 IF RR, AND L+3 IF OT.
+ 0070   OP/INERT CS     BIT5            OCT20
+ 0071            AD     NOUNREG
+ 0072            EXTEND
+ 0073  2         BZF    XACT0Q          IF = 20.
+ 0074            INCR   Q
+ 0075            AD     RRIMUDIF        = -20 OCT.
+ 0076            EXTEND
+ 0077  2         BZF    XACT0Q
+ 0082  2         TC     ALM/END         ILLEGAL.
+ 0083   RRIMUDIF OCT    -20
+P0085  2KEYBOARD REQUEST TO ZERO IMU ENCODERS
+ 0086   IMUZEROK TC     TESTXACT        ZERO ENCODERS.
+ 0087            TC     BANKCALL
+ 0088  2         CADR   IMUZERO
+ 0089            TC     BANKCALL        STALL
+ 0090            CADR   IMUSTALL
+ 0091  2         TC     +1
+ 0092            TC     ENDEXTVB
+ 0093   RRZEROK  TC     TESTXACT
+ 0094            TC     BANKCALL        ZERO RR CDUS.
+ 0095  2         CADR   RRZERO
+ 0096   RWAITK   TC     BANKCALL
+ 0097            CADR   RADSTALL
+ 0098            TCF    +1
+ 0099  2         TCF    ENDEXTVB
+ 0100   LRPOS2K  TC     TESTXACT        COMMAND LR TO POSITION 2.
+ 0101            TC     BANKCALL
+ 0102            CADR   LRPOS2
+ 0103            TCF    RWAITK
+P0104  2KEYBOARD REQUEST TO COARSE ALIGN THE IMU
+ 0105   IMUCOARK TC     TESTXACT        COARSE ALIGN FROM KEYBOARD.
+ 0106            TC     GRABWAIT
+ 0107            CAF    VNLODCDU        CALL FOR THETAD LOAD
+ 0108            TC     NVSBWAIT
+ 0109            TC     ENDIDLE         STALL WAITING FOR THE LOAD
+ 0110            TC     TERMEXTV
+ 0111  2         TC     ICSDEL          PROCEED - ASK FOR INCREMENTAL LOAD.
+ 0112   ICORK2   CAF    IMUCOARV        RE-DISPLAY COARSE ALIGN VERB.
+ 0113            TC     NVSBWAIT
+ 0114  2         TC     FREEDSP         RELEASE THE DISPLAYS
+ 0115            TC     BANKCALL        CALL MODE SWITCHING PROG
+ 0116  2         CADR   IMUCOARS
+ 0117            TC     BANKCALL        STALL
+ 0118            CADR   IMUSTALL
+ 0119            TC     ENDEXTVB
+ 0120  2         TC     ENDEXTVB
+ 0121   VNLODCDU OCT    02522
+ 0122   IMUCOARV OCT    04100
+P0123  2         PROVISION FOR COARSE ALIGN TO INCREMENTAL ANGLES.
+ 0124   ICSDEL   CAF    DELLOAD
+ 0125            TC     NVSBWAIT        REQUEST LOAD OF DELTA ICDU ANGLES.
+ 0126            TC     ENDIDLE
+ 0127            TC     TERMEXTV
+ 0128            TC     ICORK2          PROCEED WITHOUT DATA HERE TOO.
+ 0129            TC     INCLOOP         LOOP TO INCREMENT THETAD FROM DSPTEM2.
+ 0130  2         TC     ICORK2          RE-DISPLAY COARSE ALIGN VERB.
+ 0131   INCLOOP  XCH    Q               INCREMENTS THETADS IN 2S COMPLEMENT FROM
+ 0132            TS     MPAC             THREE ANGLE INCREMENTS IN DSPTEM2S.
+ 0133            CAF    LTHD+2
+ 0134            TS     BUF             SET UP FOR CDUINC.
+ 0135  2         CAF    TWO             THREE TIMES THROUGH.
+ 0136   INCLOOP2 TS     MPAC +1
+ 0137            INDEX  A
+ 0138            XCH    DSPTEM2         INCREMENT TO TEM2 FOR CDUINC.
+ 0139            TC     BANKCALL
+ 0140            CADR   CDUINC
+ 0141            CCS    BUF
+ 0142            TS     BUF
+ 0143            CCS    MPAC +1
+ 0144  2         TC     INCLOOP2
+ 0145  2         TC     MPAC            RETURN WHEN FINISHED.
+ 0146   DELLOAD  OCT    02523
+ 0147   LTHD+2   ADRES  THETAD +2
+P0148  2KEYBOARD REQUEST TO FINE ALIGN AND GYRO TORQUE IMU
+ 0149   IMUFINEK TC     TESTXACT        FINE ALIGN WITH GYRO TORQUING.
+ 0150            TC     GRABWAIT
+ 0151            CAF    VNLODGYR        CALL FOR LOAD OF GYRO COMMANDS
+ 0152            TC     NVSBWAIT
+ 0153            TC     ENDIDLE         HOLD UP FOR THE DATA LOAD
+ 0154            TC     TERMEXTV
+ 0155  2         TC     +1              PROCEED WITHOUT A LOAD
+ 0156            CAF    IMUFINEV        RE-DISPLAY OUR OWN VERB
+ 0157            TC     NVSBWAIT
+ 0158  2         TC     FREEDSP         RELEASE DISPLAYS
+ 0159            TC     BANKCALL        CALL MODE SWITCH PROG
+ 0160  2         CADR   IMUFINE
+ 0161            TC     BANKCALL        HIBERNATION
+ 0162            CADR   IMUSTALL
+ 0163  2         TC     ENDEXTVB
+ 0164   FINEK2   CAF    LGYROBIN        PINBALL LEFT COMMANDS IN OGC REGIST5RS
+ 0165            TC     BANKCALL
+ 0166  2         CADR   IMUPULSE
+ 0167            TC     BANKCALL        WAIT FOR PULSES TO GET OUT.
+ 0168            CADR   IMUSTALL
+ 0169            TC     ENDEXTVB
+ 0170  2         TC     ENDEXTVB
+ 0171   VNLODGYR OCT    02567
+ 0172   IMUFINEV OCT    04200           FINE ALIGN VERB
+P0173  2         DESIGNATE TO DESIRED GIMBAL ANGLES.
+ 0174   RRDESNBK TC     TESTXACT
+ 0175            TC     GRABWAIT
+ 0176            CAF    VNLDRCDU        ASK FOR GIMBAL ANGLES.
+ 0177            TC     NVSBWAIT
+ 0178            TC     ENDIDLE         WAIT FOR THE LOAD
+ 0179            TC     TERMEXTV
+ 0180  2         TC     +1              PROCEED
+ 0181            TC     BANKCALL        ASK OP FOR LOCK ON REQUIREMENTS.
+ 0182  2         CADR   AURLOKON
+ 0183            CAF    OPTCOARV        RE-DISPLAY OUR OWN VERB
+ 0184            TC     NVSBWAIT
+ 0185            INHINT                 FIRE UP JOB TO DO DESIGNATE.
+ 0186            CAF    PRIO20
+ 0187            TC     FINDVAC
+ 0188            2CADR  RRDESK2
+ 0189  2         TCF    TERMEXTV        FREES DISPLAY.
+ 0190   VNLDRCDU OCT    2441
+ 0191  2OPTCOARV EQUALS IMUCOARV        DIFFERENT NOUNS.
+ 0192  2RRDESK2  TC     INTPRET
+ 0193            CALL
+ 0194  2                RRDESNB         RETURNS IN BASIC.
+ 0195  2         TC     RWAITK
+R0196   PLEASE PERFORM VERB AND PLEASE MARK VERB ----- PRESSING ENTER INDICATES
+R0197   ACTION REQUESTED HAS BEEN PERFORMED, AND DOES SAME RECALL AS A COMPLETED
+R0198   LOAD.  OPERATOR SHOULD DO VB PROCEED WITHOUT DATA IF HE WISHES NOT TO
+R0199  2PERFORM THE REQUESTED ACTION.
+ 0200   GOLOADLV TC     FLASHOFF
+ 0201            TC     XACT0
+ 0202            TC     POSTJUMP
+ 0203            CADR   LOADLV1
+P0204  4KEYBOARD REQUEST TO PULSE TORQUE IRIGA
+ 0205   TORQGYRS TC     TESTXACT        GYRO TORQUING WITH NO MODE-SWITCH.
+ 0206            TC     GRABWAIT
+ 0207            CAF    VNLODGYR
+ 0208            TC     NVSBWAIT
+ 0209            TC     ENDIDLE
+ 0210            TC     TERMEXTV
+ 0211            TC     +1
+ 0212            CAF    TORQGYRV        RE-DISPLAY OUR OWN VERB
+ 0213            TC     NVSBWAIT
+ 0214            TC     FREEDSP
+ 0215  2         TCF    FINEK2
+ 0216   LGYROBIN ECADR  DELVX
+ 0217   TORQGYRV OCT    05400
+P0218   ALIGN TIME
+ 0219   ALINTIME CAF    VNLODDT         USES NVSUBMON. DOES NOT TEST DSPLOCK.
+ 0220            TS     NVTEMP          DOES NOT KILL MONITOR.
+ 0221            TC     NVSUBMON
+ 0222            TC     ENDOFJOB        IN CASE OF ALARM IN LOAD REQUEST SET UP.
+ 0223            TC     ENDIDLE
+ 0224            TC     ENDOFJOB        TERMINATE
+ 0225            TC     ENDOFJOB        PROCEED WITHOUT DATA
+ 0226   UPDATIME INHINT                 DELTA TIME IS IN DSPTEM1, +1.
+ 0227            CAF    ZERO
+ 0228            TS     MPAC    +2      NEEDED FOR TP AGREE
+ 0229            TS     L               ZERO T1 & 2 WHILE ALIGNING.
+ 0230            DXCH   TIME2
+ 0231            DXCH   MPAC
+ 0232            DXCH   DSPTEM1         INCREMENT.
+ 0233  2         DAS    MPAC
+ 0234            TC     TPAGREE         FORCE SIGN AGREEMENT.
+ 0235            DXCH   MPAC            NEW CLOCK.
+ 0236            DAS    TIME2
+ 0237  2         TC     ENDOFJOB
+ 0238   VNLODDT  OCT    02124           V/N FOR LOAD DELTA TIME
+P0243  2         SELECT AND INITIATE DESIRED SYSTEM TEST PROGRAM.
+ 0244  2         EBANK= QPLACE
+ 0245   SYSTEST  CCS    MODREG          DEMAND MODE 00.
+ 0246  2         TCF    XACTALM
+ 0247            TC     GRABWAIT
+ 0248   REDO     CAF    LQPL            ASK FOR TEST OPTION (1 - 7).
+ 0249            TS     MPAC +2
+ 0250            CAF    TESTNV
+ 0251            TC     NVSBWAIT
+ 0252            TC     ENDIDLE
+ 0253            TC     EJFREE
+ 0254  2         TC     REDO
+ 0255            TC     NEWMODEX
+ 0256  2         OCT    07
+ 0257            INHINT
+ 0258            CAF    PRIO20
+ 0259            TC     FINDVAC
+ 0260            2CADR  TSELECT
+ 0261  2         TC     ENDOFJOB        LEAVING DISPLAY GRABBED FOR SYSTEM TEST.
+ 0262   TSELECT  CAF    LOW5
+ 0263            MASK   QPLACE          SAFETY PLAY.
+ 0264            INDEX  A
+ 0265            CAF    TESTCADR
+ 0266  2         TC     BANKJUMP
+ 0267   TESTCADR CADR   ALM/END         0  ILLEGAL
+ 0268            CADR   IMUTEST         1  GYRO DRIFT TEST
+ 0269            CADR   IMUBACK         2 REPEAT OF IMUTEST
+ 0270            CADR   AOTNBIMU        3  IMU ALIGNMENT TEST
+ 0271            CADR   OPCHK           4  IMU CHECK
+ 0272            CADR   GYRSFTST        5  GYRO TORQUING TEST
+ 0273            CADR                    AVAILABLE
+ 0274            CADR   GTSCPSS         7. OPTIMUM COMPASS
+ 0275            CADR   SAMODCHK        10 SEMI-AUTOMATIC MODING CHECK
+ 0276            CADR   SAUTOIFS        11 SEMI-AUTOMATIC INTERFACE TEST
+ 0277            CADR   AOTANGCK        12 AOT ANGLE CHECK
+ 0278            CADR   RDRINIT         13 RENDEZVOUS RADAR / ANTENNAE TRACKING
+ 0279  2         CADR   FSTRSAMP        14 HIGH SPEED RADAR SAMPLING.
+ 0280            CADR   ZEROERAS
+ 0281            CADR   DISINDT         DISPLAY INERTIAL DATA TEST.
+ 0282   TESTNV   OCT    2101
+ 0283   LQPL     ECADR  QPLACE
+ 0284   GOSHOSUM TC     POSTJUMP        START ROUTINE TO DISPLAY SUM OF EACH
+ 0285  2         CADR   SHOWSUM         BANK ON DSKY
+ 0286   DOFCSTST TC     POSTJUMP
+ 0287            CADR   FCSSTART
+P0288  2         SET UP FOR RADAR SAMPLING.
+ 0289  2         EBANK= RSTKLOC
+ 0290   FSTRSAMP CAF    RSTKLIST        HIGH SPEED SAMPLING. SWITCH TO SPECIAL
+ 0291            TS     DNLSTADR        DOWNLIST.
+ 0292            CS     ONE             WANTS TM BUFFERING.
+ 0293  2         TCF    RSAMPTST
+ 0294   REGRSAMP TC     GRABWAIT
+ 0295  2         CAF    1SEC+1          SHOWS NO TM BUFFERING.
+ 0296   RSAMPTST TS     MPAC +2
+ 0297            INHINT
+ 0298            CS     LRPOSCAL        INITIALIZE SCALE AND LR POSITION BITS.
+ 0299            MASK   RADMODES
+ 0300  2         TS     RADMODES
+ 0301            CAF    LRPOSCAL
+ 0302            EXTEND
+ 0303            RAND   33
+ 0304  2         ADS    RADMODES
+ 0305            RELINT
+ 0306            CAF    LRTSTDEX
+ 0307            TS     EBANK
+ 0308            XCH    MPAC +2
+ 0309            TS     RSAMPDT         HI SPEED NNZ - LO SPEED PNZ.
+ 0310            CAF    ZERO
+ 0311            TS     RTSTLOC
+ 0312            TS     RFAILCNT        ZERO BAD SAMPLE COUNTER.
+ 0313            CAF    HISPMAX
+ 0314  2         TS     RTSTMAX
+ 0315            CAF    RTSTNV
+ 0316            TC     NVSBWAIT
+ 0317            TC     ENDIDLE
+ 0318            TC     EJFREE          ON TERMINATE.
+ 0319            TCF    RSEMIAUT        PROCEED MEANS SEMI-AUTO SEQUENCING.
+ 0320   RDRDFREE TC     FREEDSP
+ 0321            CCS    RSAMPDT         SEE IF HI OR LO SPEED SAMPLING.
+ 0322  2         TCF    +4
+ 0323  2LRTSTDEX ECADR  RTSTDEX
+ 0324            TC     POSTJUMP        EXEC. OTHERWISE, SET UP WAITLIST TIMING.
+ 0325  2         CADR   DORSAMP
+ 0326            CAF    SIX             FIND OUT WHICH RADAR WANTED.
+ 0327            MASK   RTSTDEX
+ 0328            CCS    A
+ 0329  2         TCF    LRCYCLE         LANDING RADAR ARE SERIALS 2 - 5.
+ 0330            TS     RTSTBASE        FOR RR BASE = 0, MAX = 1.
+ 0331            CAF    SIX
+ 0332  2         TCF    +4
+ 0333   LRCYCLE  CAF    TWO             FOR LR BASE = 2, MAX = 3.
+ 0334            TS     RTSTBASE
+ 0335  2         CAF    18R
+ 0336    +4      TS     RTSTMAX
+ 0337            INHINT
+ 0338            TC     WAITLIST
+ 0339            2CADR  RADSAMP
+ 0340  2         TC     ENDOFJOB
+ 0341   18R      DEC    18
+ 0342   HISPMAX  DEC    66
+ 0343   RTSTNV   OCT    2101
+ 0344   RSTKLIST GENADR FSTRADTM
+ 0345   1SEC+1   DEC    101
+ 0346   LRPOSCAL OCT    444
+P0347  2         SEMI-AUTO RADAR TESTING.
+ 0348   RSEMIAUT INHINT
+ 0349            CAF    PRIO25          START HI SPEED SAMPLING.
+ 0350            TC     NOVAC
+ 0351            2CADR  DORSAMP
+ 0352            RELINT
+ 0353            CAF    FIVE            SEQUENCE THROUGH ALL SIX CHANNELS.
+ 0354  2 -1      TS     RTSTDEX
+ 0355   33PASTE  CAF    RV33            ON ENTER, SWITCH TO NEXT CHANNEL.
+ 0356            TC     NVSBWAIT
+ 0357            TC     FLASHON
+ 0358            TC     ENDIDLE
+ 0359            TC     ENDRTST         ON TERMINATE.
+ 0360            TCF    +2
+ 0361  2         TCF    33PASTE         DONT ACCEPT DATA.
+ 0362            CCS    RTSTDEX
+ 0363  2         TCF    33PASTE -1
+ 0364   ENDRTST  CAF    ZERO            ENDTEST.
+ 0365            TS     RSAMPDT
+ 0366            TC     NEWMODEX
+ 0367            OCT    0
+ 0368  2         TC     EJFREE
+ 0369   RV33     OCT    3300
+P0370  2         AGS INITIALIZATION PROGRAM.
+ 0371   AGSINIT  CCS    AGSWORD         ZERO IF AGS NOT NOW BEING INITIALIZED.
+ 0372  2         TC     ALM/END         DO IT LATER.
+ 0373            CA     TIME1
+ 0374            AD     12SECS
+ 0375            TS     L
+ 0376  2         TC     SENDIT
+ 0377            INHINT                 T1 WILL OVERFLOW, DELAY FOR 12 SECS
+ 0378            CA     12SECS
+ 0379            TS     AGSWORD
+ 0380            TC     WAITLIST
+ 0381            2CADR  AGSJOB
+ 0382  2         TC     ENDOFJOB
+ 0383   AGSJOB   CAF    PRIO30          ENTER AGSINIT JOB VIA EXEC
+ 0384            TC     NOVAC
+ 0385            2CADR  SENDIT
+ 0386  2         TC     TASKOVER
+ 0387   SENDIT   INHINT
+ 0388            CAF    LAGSLIST        SWITCH TO SPECIAL DOWNLIST FOR 10 SECS.
+ 0389            XCH    DNLSTADR
+ 0390  2         TS     AGSWORD         TO SHOW INITIALIZATION IN PROGRESS.
+ 0391            CAF    10SECS
+ 0392            TC     WAITLIST
+ 0393            2CADR  AGSINIT2
+ 0394  2         TCF    ENDOFJOB
+ 0395   AGSINIT2 CAF    ZERO            END OF INITIALIZATION.
+ 0396            XCH    AGSWORD
+ 0397            TS     DNLSTADR        REVERT TO ORIGINAL DOWNLIST.
+ 0398  2         TCF    TASKOVER
+ 0399   10SECS   DEC    1000
+ 0400   12SECS   DEC    1200
+ 0401   LAGSLIST GENADR AGSLIST
+P0402  2         VB 43  IMU ATTITUDE ERROR METER LOADER.
+ 0403   IMUATTCK TC     TESTXACT
+ 0404            CS     OCT50K          REMOVE COARSE AND ECTR ENABLE.
+ 0405            EXTEND
+ 0406  2         WAND   12
+ 0407            TC     GRABWAIT
+ 0408            CAF    VNLODCDU
+ 0409            TC     NVSBWAIT
+ 0410            TC     ENDIDLE
+ 0411            TC     TERMEXTV
+ 0412            TC     +1
+ 0413            CAF    V43K            REDISPLAY OUR VERB.
+ 0414            TC     NVSBWAIT
+ 0415            CAF    BIT6            ENABLE ERROR COUNTER.
+ 0416            EXTEND
+ 0417            WOR    12
+ 0418            CAF    TWO
+ 0419            INHINT
+ 0420            TC     WAITLIST        PUT OUT COMMAND IN .32 SECS.
+ 0421            2CADR  ATTCK2
+ 0422  2         TCF    TERMEXTV        FREES DISPLAY.
+ 0423   ATTCK2   CAF    TWO             PUT OUT ALL COMMANDS - CDU WILL DO LIMIT
+ 0424            TS     Q               INCASE OF EXCESS DATA.
+ 0425            INDEX  A
+ 0426            CA     THETAD
+ 0427            EXTEND
+ 0428            MP     BIT13           SHIFT RIGHT 2.
+ 0429            INDEX  Q
+ 0430            TS     CDUXCMD
+ 0431            CCS    Q
+ 0432  2         TCF    ATTCK2 +1
+ 0433            CAF    OCT70K
+ 0434            EXTEND
+ 0435            WOR    14
+ 0436  2         TCF    TASKOVER
+ 0437   OCT50K   OCT    50
+ 0438   V43K     OCT    4300
+ 0439   OCT70K   OCT    70000
+P0449  2         PROGRAM TO SCAN CHANNELS 30 - 32 FOR CHANGES IN SELECTED INBITS
+ 0450  9. CALLED BY SPECIAL VERB.
+ 0451  2         EBANK= MSGCNT
+ 0452   SETUPMSG CAF    BIT1            BEGIN SCAN.
+ 0453            INHINT
+ 0454            TC     WAITLIST
+ 0455            2CADR  MSGSCAN +2
+ 0456  2         TC     ENDOFJOB
+ 0457   MSGSCAN  TC     FIXDELAY
+ 0458  2         DEC    50
+ 0459            CAF    TWO             SCAN ALL 3 CHANNELS FOR CHANGES.
+ 0460            TS     MSGCNT
+ 0461            INDEX  A
+ 0462            CA     LAST30          OLD VALUE OF INBITS.
+ 0463            EXTEND
+ 0464            INDEX  MSGCNT
+ 0465            RXOR   30
+ 0466            INDEX  MSGCNT
+ 0467            MASK   30MSGMSK
+ 0468            EXTEND
+ 0469  2         BZF    NOMSG
+ 0470            TS     Q               SAVE DIFFERENCE.
+ 0471            INDEX  MSGCNT
+ 0472            LXCH   LAST30          UPDATE OLD VALUE.
+ 0473            EXTEND
+ 0474            RXOR   L
+ 0475            INDEX  MSGCNT
+ 0476  2         TS     LAST30
+ 0477            COM
+ 0478            XCH    Q
+ 0479            MASK   Q               SEE IF ANY OF CHANGED BITS JUST ON.
+ 0480            EXTEND
+ 0481  2         BZF    NOMSG           NO MESSAGE IF SO.
+ 0482            TS     L
+ 0483            CA     MSGCNT
+ 0484            DOUBLE
+ 0485            DOUBLE
+ 0486            MASK   BIT3
+ 0487            MASK   L
+ 0488            EXTEND
+ 0489  2         BZF    NOTRHC
+ 0490            CAF    SIX
+ 0491            TC     WAITLIST
+ 0492            EBANK= PCOM
+ 0493            2CADR  RHCNTRL
+ 0494            CAF    PRIO20          INITIATE MONITOR.
+ 0495            TC     NOVAC
+ 0496            2CADR  RHCMON
+ 0497  2         TCF    NOMSG
+ 0498   NOTRHC   CAF    OKT30
+ 0499            AD     MSGCNT
+ 0500  2         TS     RUPTREG2
+ 0501            CS     Q
+ 0502  2         TC     VMESSAGE
+ 0503   NOMSG    CCS    MSGCNT
+ 0504            TCF    MSGSCAN +3
+ 0505  2         TCF    MSGSCAN
+ 0506   30MSGMSK OCT    17
+ 0507            OCT    77777
+ 0508  2         OCT    3777
+ 0509   OKT30    OCT    30
+ 0510   DESCBITS TC     MESSAGE         DESCENT BITS COME HERE IN A.
+ 0511            OCT    16
+ 0512  2         TC     RESUME
+ 0513   RHCMON   TC     GRABWAIT        FIRE UP DSKY MONITOR.
+ 0514            CAF    RHCMONVN
+ 0515            TC     NVSBWAIT
+ 0516  2         TC     EJFREE
+ 0517   RHCMONVN OCT    1645
+P0518  2         MESSAGE DISPLAY - 3 COMPONENT OCTAL.
+ 0519   MESSAGE  TS     RUPTREG2        NEW CHANNEL CONTENTS ARRIVE IN A.
+ 0520            INDEX  Q               CHANNEL NUMBER IN OCTAL AT CALLER +1.
+ 0521            CAF    0
+ 0522            INCR   Q
+ 0523  2         XCH    RUPTREG2
+ 0524   VMESSAGE TS     RUPTREG1        FOR VARIABLE CHANNEL.
+ 0525            EXTEND
+ 0526            QXCH   RUPTREG3
+ 0527            CAF    PRIO27          FIRE UP SPECIAL JOB.
+ 0528            TC     NOVAC
+ 0529            2CADR  DOMSG
+ 0530            DXCH   RUPTREG1        NEW CONTENTS TO MPAC - CHANNEL NUMBER TO
+ 0531            INDEX  LOCCTR          MPAC +1.
+ 0532            DXCH   MPAC
+ 0533            CA     TIME1
+ 0534            INDEX  LOCCTR
+ 0535            TS     MPAC +2
+ 0536  2         TC     RUPTREG3
+ 0537   DOMSG    TC     GRABWAIT
+ 0538            EXTEND
+ 0539            DCA    MPAC
+ 0540            DXCH   DSPTEM1
+ 0541            CA     MPAC +2
+ 0542            TS     DSPTEM1 +2
+ 0543            CAF    MSGVN
+ 0544            TC     NVSUB
+ 0545            TCF    MSGBUSY
+ 0546  2         TC     EJFREE
+ 0547   MSGBUSY  CAF    +2
+ 0548            TC     NVSUBUSY
+ 0549  2         CADR   DOMSG +1
+ 0550   MSGVN    OCT    0535
+P0551  2         ROUTINE FOR AURORA ONLY TO ASK OPERATOR IF RR LOCK ON REQUESTED
+ 0552  9.
+ 0553   AURLOKON TC     MAKECADR
+ 0554            TS     DESRET
+ 0555            CAF    RV33            ASSUMES DSKY GRABBED.
+ 0556            TC     NVSBWAIT
+ 0557            TC     FLASHON
+ 0558            TC     ENDIDLE
+ 0559            TCF    +3              ON TERM.
+ 0560            CAF    LOKONFLG
+ 0561            TCF    +2
+ 0562            CAF    ZERO
+ 0563            INHINT
+ 0564            XCH    STATE
+ 0565            MASK   -LOKONFG
+ 0566  2         ADS    STATE
+ 0567            MASK   LOKONFLG        IF NO LOCK-ON CALLED FOR, SET BIT15 OF
+ 0568            CCS    A               RADMODES TO INDICATE THAT ARBITRARILY-
+ 0569  2         TCF    +3              LONG DESIGNATION IS WANTED (TO BE
+ 0570            CAF    BIT15           TERMINATED BY FRESH START).
+ 0571  2         ADS    RADMODES
+ 0572            RELINT
+ 0573            CA     DESRET
+ 0574  2         TCF    BANKJUMP
+ 0575   -LOKONFG OCT    -20
+P0576  2         PROGRAM TO RUN DISPLAY INERTIAL DATA TEST.
+ 0577   DISINDT  CAF    FLVELVN         ASK FOR FORWARD, LATERAL VELOCITY.
+ 0578            TC     NVSBWAIT
+ 0579            TC     ENDIDLE
+ 0580            TCF    ENDDISIN
+ 0581            TCF    +1
+ 0582            CAF    ALT,R,VN        ASK FOR INITIAL AND FINIAL ALTITUDES AND
+ 0583            TC     NVSBWAIT        ALTITUDE RATE.
+ 0584            TC     ENDIDLE
+ 0585            TCF    ENDDISIN
+ 0586  2         TCF    +1
+ 0587            INHINT
+ 0588            CS     ONE
+ 0589  2         TS     DIDFLG
+ 0590            EXTEND
+ 0591            DCA    ALT             SO FOLLOWING MONITOR WORKS.
+ 0592  2         DXCH   ALTSAVE
+ 0593            CAF    ONE
+ 0594            TC     WAITLIST
+ 0595            2CADR  DISINLUP +2
+ 0596  2         TCF    EJFREE
+ 0597   ENDDISIN TC     FREEDSP
+ 0598    +1      TC     NEWMODEX
+ 0599  2         OCT    0
+ 0600            TC     ENDOFJOB
+P0601  2         WATCH ALTSAVE FOR END OF PROBLEM.
+ 0602   DISINLUP TC     FIXDELAY
+ 0603  2         DEC    50
+ 0604    +2      EXTEND
+ 0605            DCA    FINALT
+ 0606            DXCH   ITEMP1
+ 0607            EXTEND
+ 0608            DCS    ALTSAVE         LATEST ALTITUDE.
+ 0609  2         DAS    ITEMP1
+ 0610            CCS    ITEMP1
+ 0611            TCF    +DIF
+ 0612            TCF    +2
+ 0613  2         TCF    -DIF
+ 0614            CCS    ITEMP2
+ 0615            TCF    +DIF
+ 0616            TCF    +2
+ 0617  2         TCF    -DIF
+ 0618   DISINDUN CAF    ZERO
+ 0619            TS     ALTRATE
+ 0620            DXCH   FINALT
+ 0621            DXCH   ALT
+ 0622            CAF    PRIO20
+ 0623            TC     NOVAC
+ 0624            2CADR  ENDDISIN +1
+ 0625  2         TCF    TASKOVER
+ 0626   +DIF     CA     ALTRATE
+ 0627            EXTEND
+ 0628            BZMF   DISINDUN
+ 0629  2         TCF    DISINLUP
+ 0630   -DIF     CS     ALTRATE
+ 0631  2         TCF    +DIF +1
+ 0632   FLVELVN  OCT    2444
+ 0633  2ALT,R,VN OCT    2564
+ 0638   MINIMP   INHINT
+ 0639            CS     BIT10           BIT 10 OF DAPBOOLS INDICATES MINIMP MODE
+ 0640            MASK   DAPBOOLS
+ 0641            AD     BIT10
+ 0642            TS     DAPBOOLS        BIT 10 OF DAPBOOLS NOW PRESENT.
+ 0643  2         TCF    ENDOFJOB
+ 0644   NOMINIMP INHINT
+ 0645            CS     BIT10
+ 0646            MASK   DAPBOOLS
+ 0647  2         TS     DAPBOOLS        A ZERO IN POSITION 10 OF DAPBOOLS NOW.
+ 0648            EXTEND
+ 0649            DCA    CDUX
+ 0650            DXCH   CDUXD
+ 0651            CA     CDUZ
+ 0652            TS     CDUZD
+ 0653            TCF    ENDOFJOB
+P0654  2VB 60 PREPARE FOR STANDBY OPERATION
+R0655   ROUTINE WRITTEN FOR TEST ROPES ONLY*** MUST BE UPDATED TO INCLUDE
+R0656  2                                FLIGHT REQUIREMENTS FOR FLIGHT OPERATION
+ 0657  2         EBANK= LST1
+ 0658   PRESTAND CAF    EBANK3          COMES HERE FROM LST2FAN
+ 0659            XCH    EBANK           SET UP EBANK FOR BANK 3
+ 0660            INHINT
+ 0661            CA     TIME1
+ 0662            TS     TIMESAV         THIS ROUTINE WILL LOOK AT TIME1 UNTIL
+ 0663            CAF    OKT30            TIME1 IS INCREMENTED, THEN IT WILL
+ 0664   LONGER   TS     TIMAR           SNATCH THE MISSION TIME REGS AND STORE
+ 0665            CS     TIMESAV         THEN IN TIMESAV FOR LATER ISE IN ARITH.
+ 0666            AD     TIME1           OPERATIONS WHICH SHOULD FIND THE
+ 0667            EXTEND                 STANDING DIFFERENCE BETWEEN THE SCALAR
+ 0668  2         BZF    CHKTIME         AND THE TIME1-TIME2S REGS.
+ 0669            EXTEND
+ 0670            DCA    TIME2           READ AND STORE THE DP TIME AND GO
+ 0671            DXCH   TIMESAV         READ THE SCALAR USING THE EXISTING PROG
+ 0672  2         TCF    CATCHFIN        FINETIME.
+ 0673   CHKTIME  CCS    TIMAR           MUST WATCH THE TIME SPENT IN INHINT OR
+ 0674            TC     LONGER          THE COPS MIGHT CATCH US.
+ 0675            RELINT
+ 0676            CCS    NEWJOB
+ 0677            TC     CHANG1
+ 0678  2         TC     LONGER -1       GO BACK AND LOOK AGAIN
+ 0679   CATCHFIN TC     FINETIME        WILL READ CHANNELS 3 AND 4 AND RETURN
+ 0680            DXCH   SCALSAV         WITH 3 IN A AND 4 IN L..
+ 0681            RELINT
+ 0682            CS     BIT4
+ 0683            MASK   IMODES30        INHIBIT THE IMU FAIL LIGHT.
+ 0684            AD     BIT4
+ 0685  2         TS     IMODES30
+ 0686            CAF    BIT4            SET ALL CHAN 12 BITS EXCEPT C/A TO ZERO.
+ 0687            EXTEND                 THIS IS NECESSARY SO THAT THE GIMBALS DO
+ 0688  2         WAND   12              NOT DRIFT INTO GIMBALLOCK IF THE SYSTEM
+ 0689            CAF    BIT4            SHOULD BE IN OPERATE AT THE TIME STBY
+ 0690            EXTEND                 WAS STARTED.  THIS SECTION WILL MAKE
+ 0691  2         WOR    12              SURE THE IMU IS IN C/A.....
+ 0692            CAF    BIT11           WHEN BIT 11 IS PRESENT IN CHANNEL 13 THE
+ 0693            EXTEND                 DSKY PB. CAN THEN ENERGIZE THE STANDBY
+ 0694            WOR    13              RELAY IN THE CGC PWR SUPPLIES....
+ 0695            TC     ENDOFJOB        GO TO DUMMY JOB UNTIL YOU DIE...
+P0696  2 VB 61 RECOVER FROM STANDBY OPERATION
+R0697   ROUTINE WRITTEN FOR TEST ROPES ONLY**** MUST BE UPDATED TO INCLUDE
+R0698  2                FLIGHT REQUIREMENTS FOR FLIGHT OPERATIONS SEQUENCES....
+ 0699   POSTAND  CAF    EBANK3          COMES HERE FROM LST2FAN
+ 0700            XCH    EBANK           SET UP EBANK FOR BANK 3
+ 0701            TC     FINETIME
+ 0702            DXCH   TIMAR           READ THE SCALAR AND SEE IF IT OVERFLOW-
+ 0703            RELINT                 ED WHILE THE CGC WAS IN STBY, IF SO
+ 0704            CAE    TIMAR           THE OVERFLOW MUST BE ADDED OR IT WILL
+ 0705            EXTEND                 SEEM THAT THE REALATIVITY THEORY WORKS
+ 0706            SU     SCALSAV         BETTER THAN IT SHOULD...
+ 0707            EXTEND
+ 0708  2         BZMF   ADDTIME         IF ITS NEG. IT MUST HAVE OV:FLWD..
+ 0709            TC     INTPRET
+ 0710            DLOAD  DSU             IF IT DID NOT OV-FLW. FIND OUT HOW LONG
+ 0711                   TIMAR           THE CGC WAS IN STBY BY SUBTRACTING THE
+ 0712                   SCALSAV         SCALAR AT THE START OF STBY FROM THE
+ 0713            SRR    RTB             SCALAR AT THE END OF STBY AND THEN ADD
+ 0714                   5               THE DIFFERENCE TO THE TIME EXISTING
+ 0715                   SGNAGREE        WHEN THE SCALAR WAS READ AT STBY ENTRY**
+ 0716            DAD
+ 0717                   TIMESAV
+ 0718            STORE  TIMAR
+ 0719  2         EXIT
+ 0720   CORCTTIM EXTEND
+ 0721            DCA    TIMAR           THIS IS THE CORRECTED TIME TO BE READ
+ 0722  2         DXCH   TIME2           INTO TIME1 AND TIME2 REGS. ADDR 24-25
+ 0723            CS     BIT11
+ 0724            EXTEND                 DISABLE THE DSKY STBY PUSHBUTTON.
+ 0725            WAND   13
+ 0726  2         TC     ENDOFJOB
+ 0727   ADDTIME  EXTEND
+ 0728            DCA    DPOSMAX         IF THE SCALAR OVERFLOWED, FIND OUT HOW
+ 0729            DXCH   TIMEDIFF        MUCH TIME REMAINED WHEN READ THE FIRST
+ 0730            TC     INTPRET         TIME AND THEN ADD THE PRESENT READING-
+ 0731            DLOAD  DSU             WHICH WILL BE THE TOTAL TIME SPENT IN
+ 0732                   TIMEDIFF        STANDBY, TO WHICH THE TIME AT STBY
+ 0733                   SCALSAV         MAY BE ADDED TO FIND THE PRESENT TIME
+ 0734            DAD    SRR             CORRECT TO 10 MSEC..
+ 0735                   TIMAR           **** THE TIME IN STANDBY MODE MUST NOT
+ 0736                   5               EXCEED 23 HOURS IF TIME IS TO BE
+ 0737            DAD                    CORRECTLY COMPUTED BY THIS ROUTINE.*****
+ 0738                   TIMESAV
+ 0739            STORE  TIMAR
+ 0740            EXIT
+ 0741  2         TC     CORCTTIM
+ 0742  2EBANK3   OCT    01400           CONST USED TO SET EBANK REG FOR BANK 3
+ 0743   ENDEXTVS EQUALS
 *       ENDOFJOB
