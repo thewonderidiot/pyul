@@ -1939,7 +1939,7 @@ class Blk2Pass2(Pass2):
                     return self.int_err_41(popo)
 
             # Insert additive portion
-            self._address -= icommon
+            self._address += icommon
 
             return self.int_ad_a15(popo, Bit.BIT14)
 
@@ -2051,7 +2051,7 @@ class Blk2Pass2(Pass2):
 
             # Change addr to 1400-1777 range
             self._address &= ~0o3400
-            self._address |= ~0o1400
+            self._address |= 0o1400
             return self.int_ad_oaf(popo, icommon)
 
         # Error if addr E type
