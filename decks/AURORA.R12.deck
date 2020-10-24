@@ -11296,4 +11296,68 @@ R0060  2         JOB WHICH CALLS NVSUB FOR ALARM DISPLAY.
  0065  2         TC     EJFREE          FREE DISPLAY AND END JOB.
  0066  2FAILDISP OCT    00531
  0067   ENDFAILS EQUALS
+L      2CONTROLLER AND METER ROUTINES
+ 0001            SETLOC ENDEXTVS
+ 0002  2         EBANK= PCOM
+ 0003   RHCNTRL  CAF    BIT15
+ 0004            EXTEND
+ 0005            RAND   31              CHECK PGNCS CONTROL OF S/C
+ 0006            EXTEND
+ 0007            BZF    +2
+ 0008            TCF    NORATE
+ 0009            CAF    BIT3
+ 0010            EXTEND
+ 0011            RAND   31              CHECK OUT-OF-DETENT BIT
+ 0012            CCS    A
+ 0013  2         TCF    NORATE
+ 0014            CAF    ZERO            ZERO COUNTERS
+ 0015            TS     RHCP
+ 0016            TS     RHCY
+ 0017            TS     RHCR
+ 0018            CAF    BIT8            ENABLE COUNTERS
+ 0019            AD     BIT9            START READING INTO COUNTERS
+ 0020            EXTEND
+ 0021            WOR    13
+ 0022            CAF    BIT5
+ 0023            TC     WAITLIST        COUNTERS FILLED
+ 0024            2CADR  ATTCONT
+ 0025  2         TC     TASKOVER
+ 0026   ATTCONT  CS     BIT8
+ 0027            EXTEND
+ 0028            WAND   13              RESET COUNTER ENABLE
+ 0029            CAF    BIT11
+ 0030            EXTEND
+ 0031            RAND   32              CHECK IF IN ATTITUDE HOLD MODE
+ 0032            EXTEND
+ 0033            BZF    +2
+ 0034            TC     XAXOVRD
+ 0035            CA     RHCP
+ 0036            EXTEND
+ 0037            MP     BIT10
+ 0038            CAF    RHCSCALE
+ 0039            EXTEND
+ 0040            MP     L
+ 0041            TS     PCOM
+ 0042            CA     RHCR
+ 0043            EXTEND
+ 0044            MP     BIT10
+ 0045            CAF    RHCSCALE
+ 0046            EXTEND
+ 0047            MP     L
+ 0048            TS     RCOM
+ 0049   XAXOVRD  CA     RHCY            YAW CHANNEL ONLY IN AUTO MODE
+ 0050            EXTEND
+ 0051            MP     BIT10
+ 0052            CAF    RHCSCALE
+ 0053            EXTEND
+ 0054            MP     L
+ 0055            TS     YCOM
+ 0056  2         TCF    RHCNTRL
+ 0057   NORATE   CAF    ZERO            SET RATE COMMANDS TO ZERO
+ 0058            TS     PCOM
+ 0059            TS     RCOM
+ 0060            TS     YCOM
+ 0061  2         TC     TASKOVER
+ 0062   RHCSCALE DEC    .44488          LEAVES INPUTS SCALED AS PI/4 RAD/SEC.
+ 0063   ENDCMS   EQUALS
 *       ENDOFJOB
