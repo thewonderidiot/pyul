@@ -8301,4 +8301,95 @@ R0698  2                FLIGHT REQUIREMENTS FOR FLIGHT OPERATIONS SEQUENCES....
  0741  2         TC     CORCTTIM
  0742  2EBANK3   OCT    01400           CONST USED TO SET EBANK REG FOR BANK 3
  0743   ENDEXTVS EQUALS
+L      2KEYRUPT, UPRRUPT
+ 0001  2         BANK   7
+ 0002   KEYRUPT1 TS     BANKRUPT
+ 0003            XCH    Q
+ 0004            TS     QRUPT
+ 0005            TC     LODSAMPT        TIME IS SNATCHED IN RUPT FOR NOUN 65.
+ 0006            CAF    LOW5
+ 0007            EXTEND
+ 0008            RAND   MNKEYIN
+ 0009   KEYCOM   TS     RUPTREG4
+ 0010            CAF    CHRPRIO
+ 0011            TC     NOVAC
+ 0012            EBANK= DSPCOUNT
+ 0013            2CADR  CHARIN
+ 0014            CA     RUPTREG4
+ 0015            INDEX  LOCCTR
+ 0016            TS     MPAC            LEAVE 5 BIT KEY CDE IN MPAC FOR CHARIN
+ 0017            TC     RESUME
+P0018  2UPRUPT PROGRAM
+ 0019   UPRUPT   TS     BANKRUPT
+ 0020            XCH    Q
+ 0021            TS     QRUPT
+ 0022            TC     LODSAMPT        TIME IS SNATCHED IN RUPT FOR NOUN 65.
+ 0023            CAF    ZERO
+ 0024            XCH    INLINK
+ 0025            TS     KEYTEMP1
+ 0026            CAF    BIT3            TURN ON UPACT LIGHT
+ 0027            EXTEND                 (BIT 3 OF CHANNEL 11)
+ 0028            WOR    DSALMOUT
+ 0029   UPRPT1   CAF    LOW5            TEST FOR TRIPLE CHAR REDUNDANCY
+ 0030            MASK   KEYTEMP1        LOW5 OF WORD
+ 0031            XCH    KEYTEMP1        LOW5 INTO KEYTEMP1
+ 0032            XCH    SR              WHOLE WORD INTO SR
+ 0033            TS     KEYTEMP2        ORIGINAL SR INTO KEYTEMP2
+ 0034            TC     SRGHT5
+ 0035            MASK   LOW5            MID 5
+ 0036            AD     HI10
+ 0037            TC     UPTEST
+ 0038            TC     SRGHT5
+ 0039            MASK   LOW5            HIGH 5
+ 0040            COM
+ 0041            TC     UPTEST
+ 0042   UPOK     TC     RESTORSR        CODE IS GOOD
+ 0043            CS     ELRCODE         IF CODE = ERROR LIGHT RESET, PUT +0
+ 0044            AD     KEYTEMP1        INTO BIT1 OF UPLOCK.
+ 0045            CCS    A               IF CODE NOT= ELR, PASS CODE ONLY IF
+ 0046            TC     TSTUPLOK        BIT1 OF UPLOCK = 0.
+ 0047   ELRCODE  OCT    22
+ 0048            TC     TSTUPLOK
+ 0049            CS     BIT1            PUT 0 INTO BIT1 OF UPLOCK
+ 0050            MASK   UPLOCK
+ 0051            TS     UPLOCK
+ 0052            TC     ACCEPTUP
+ 0053   TSTUPLOK CAF    BIT1
+ 0054            MASK   UPLOCK
+ 0055            CCS    A
+ 0056            TC     RESUME          BIT1 OF UPLOCK = 1.
+ 0057   ACCEPTUP XCH    KEYTEMP1        BIT1 OF UPLOCK = 0.
+ 0058  2         TC     KEYCOM
+ 0059   TMFAIL2  TC     RESTORSR        CODE IS BAD
+ 0060            CS     BIT1            LOCK OUT FURTHER UPLINK ACTIVITY (BY
+ 0061            MASK   UPLOCK          PUTTING 1 INTO BIT1 OF UPLOCK) UNTIL ELR
+ 0062            AD     BIT1            IS SENT UP UPLINK.
+ 0063            TS     UPLOCK
+ 0064   TMFAIL1  TC     TMALM
+ 0065  2         TC     RESUME
+ 0066   RESTORSR XCH    KEYTEMP2
+ 0067            DOUBLE
+ 0068            TS     SR
+ 0069  2         TC     Q
+ 0070  2TMALM    =      RESUME          FOR NOW
+ 0071   SRGHT5   CS     SR
+ 0072            CS     SR
+ 0073            CS     SR
+ 0074            CS     SR
+ 0075            CS     SR
+ 0076            CS     A
+ 0077  2         TC     Q               DELIVERS WORD UNCOMPLEMENTED
+ 0078   UPTEST   AD     KEYTEMP1
+ 0079            CCS    A
+ 0080            TC     TMFAIL2
+ 0081   HI10     OCT    77740
+ 0082            TC     TMFAIL2
+ 0083  2         TC     Q
+R0084  8UPACT IS TURNED OFF BY VBRELDSP, ALSO BY ERROR LIGHT RESET.
+R0085   THE RECEPTION OF A BAD CODE BY UPLINK LOCKS OUT FURTHER UPLINK ACTIVITY
+R0086   BY PLACING A 1 INTO BIT1 OF UPLOCK. BIT9 (ALONG WITH BIT11) OF TMKEYBUF
+R0087   IS SET TO 1 TO SEND AN INDICATION OF THIS SITUATION DOWN THE DOWNLINK.
+R0088   THE UPLINK INTERLOCK IS ALLOWED WHEN AN ERROR LIGHT RESET CODE IS SENT
+R0089  4UP THE UPLINK, OR WHEN A FRESH START IS PERFORMED.
+ 0090   ENDKRURS EQUALS
 *       ENDOFJOB
