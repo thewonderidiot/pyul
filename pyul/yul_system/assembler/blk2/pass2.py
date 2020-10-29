@@ -1844,16 +1844,9 @@ class Blk2Pass2(Pass2):
             return self.int_ad_got(popo)
 
         # Jump if indexing allowed.
-        if (((self._int_addr[0] & b25t27m) > Bit.BIT26) or ((self._int_addr[0] & Bit.BIT32) == 0)):
+        if (((self._int_addr[0] & b25t27m) > Bit.BIT26) and ((self._int_addr[0] & Bit.BIT32) == 0)):
             # Error if not allowed.
             self.cuss_list[7].demand = True
-
-            # Blank out indexing chars of addr
-            popo = copy.deepcopy(popo)
-            new_addr = '%-16s' % addr_field[:-2]
-            # Store field without index marks
-            popo.card = popo.card[:24] + new_addr + popo.card[40:]
-
         else:
             # Jump on store word; error if opcode did no req indexing
             if self._store_com == 0 and (self._int_addr[0] & Bit.BIT24) == 0:
@@ -1861,6 +1854,12 @@ class Blk2Pass2(Pass2):
                 self.cuss_list[79].demand = True
             # Set indexed addr flag
             self._int_addr[0] |= Bit.BIT24
+
+        # Blank out indexing chars of addr
+        popo = copy.deepcopy(popo)
+        new_addr = '%-16s' % addr_field[:-2]
+        # Store field without index marks
+        popo.card = popo.card[:24] + new_addr + popo.card[40:]
 
         return self.int_ad_got(popo)
 
