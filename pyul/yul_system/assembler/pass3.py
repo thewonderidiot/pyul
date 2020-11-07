@@ -3,6 +3,7 @@ from yul_system.types import ALPHABET, Bit, SwitchBit, Line, ONES, MemType, CONF
 
 ONE_THIRD = 0o253
 FULL_PAGE = 0o53576
+EARLY_FULL_PAGE = 0o62607
 
 class SymbolHealth:
     def __init__(self, flag, no_valid_loc, description, count=0):
@@ -43,11 +44,23 @@ class Pass3:
 
         self._paragraphs = {}
 
-        self._page_hed2 = Line('SYMBOL TABLE LISTING, INCLUDING PAGE NUM' +
-                               'BER OF DEFINITION, AND NUMBER OF REFEREN' +
-                               'CES WITH FIRST AND LAST PAGE NUMBERS    ', spacing=2)
+        if self._mon.year <= 1965:
+            self._last_line = 'THE ASSEMBLY WAS NAWSTY  BINARY RECORDS FROM IT WERE WRITTEN ON %-8s' % self._yul.tape
+            self._good = ' GOOD.  '
+            self._fair = ' FAIR.  '
+            self._bad = ' BAD. NO'
+            self._page_hed2 = Line(' SYMBOL    DEFINITION   HEALTH OF DEFINI' +
+                                'TION                                    ' +
+                                '                   PAGE                 ', spacing=2)
+        else:
+            self._last_line = 'THE ASSEMBLY WAS NAWSTY MANUFACTURABLE BINARY RECORDS STORED ON %-8s' % self._yul.tape
+            self._good = ' GOOD:  '
+            self._fair = ' FAIR:  '
+            self._bad = ' BAD: UN'
+            self._page_hed2 = Line('SYMBOL TABLE LISTING, INCLUDING PAGE NUM' +
+                                'BER OF DEFINITION, AND NUMBER OF REFEREN' +
+                                'CES WITH FIRST AND LAST PAGE NUMBERS    ', spacing=2)
 
-        self._last_line = 'THE ASSEMBLY WAS NAWSTY MANUFACTURABLE BINARY RECORDS STORED ON YULPROGS'
         self._rej_rev = '  PRECEDING REVISION REMAINS ON '
         self._rej_vers = 'THE NEW VERSION IS NOT FILED ON '
         self._subl_head = 'SUBROUTINE  REV#  CALLED  BEGINS'
@@ -91,6 +104,7 @@ class Pass3:
             SymbolHealth('MM■', True,  'MULTIPLE ERRORS'),
             SymbolHealth('X ■', True,  'IN MISCELLANEOUS TROUBLE'),
             SymbolHealth('■■■', True,  'FAILED TO FIT IN SYMBOL TABLE'),
+            SymbolHealth('=? ', False, 'DEFINED BY EQUALS BUT NEVER REFERRED TO'),
         ]
 
     def p3_masker(self):
@@ -131,6 +145,9 @@ class Pass3:
                 self._symh_vect[3].count += 1
                 return
             # If not = either, print it anyway.
+
+        if self._mon.year <= 1965:
+            return self.early_print_sym(sym)
 
         # Branch if a page is under construction.
         if 0o700 <= self._sym_liner:
@@ -174,6 +191,9 @@ class Pass3:
         return self.pl_thread(owed_sym)
 
     def sym_page(self):
+        if self._mon.year <= 1965:
+            return self.early_sym_page()
+
         # Form number of lines of symbol info.
         sym_lines = (self._sym_liner >> 9) & 0o77
         # Form key to no. of symbols in last line.
@@ -318,6 +338,55 @@ class Pass3:
         # Show that no page is under construction.
         self._sym_liner = ONE_THIRD*2
 
+    def early_sym_page(self):
+        self._line.spacing = Bit.BIT1
+
+        self.print_lin()
+        self._sym_liner = ONE_THIRD * 2
+
+    def early_print_sym(self, sym):
+        # Branch if any of healths 0-4.
+        health = sym.health
+        if (sym.health >= 6) or ((sym.health == 5) and True): # FIXME: check for failed leftover erase
+            # Increment healths 5.5 (failed j-card) up.
+            health += 1
+        if (sym.health == 3) and (len(sym.ref_pages) == 0):
+            health = 18
+
+        # Increment count of syms in this state.
+        self._symh_vect[health].count += 1
+
+        self._line[0] = sym.name
+
+        # Branch if symbol has a valid definition.
+        if self._symh_vect[health].no_valid_loc:
+            # Otherwise put it in typing list.
+            self.usy_place(sym)
+            eqivlent = ONES
+        else:
+            eqivlent = sym.value
+
+        # Set definition or blots in print.
+        self.m_edit_def(eqivlent)
+
+        self._line[24] = self._symh_vect[health].description
+        self._line[99] = '%4u' % sym.def_page
+
+        if self._old_line.spacing != Bit.BIT1:
+            if self._old_line[0] != self._line[0]:
+                self._old_line.spacing = 3
+                self._sym_liner += ONE_THIRD * 6
+            elif (ALPHABET.index(self._old_line[1]) // 16) != (ALPHABET.index(self._line[1]) // 16):
+                self._old_line.spacing = 2
+                self._sym_liner += ONE_THIRD * 3
+
+        if self._sym_liner >= EARLY_FULL_PAGE:
+            self._old_line.spacing = Bit.BIT1
+            self._sym_liner = ONE_THIRD * 2
+
+        self._sym_liner += ONE_THIRD * 3
+        self.print_lin()
+
     def end_pr_sym(self):
         # Branch if sym tab listing filled last p.
         if self._sym_liner > 0o700:
@@ -331,14 +400,15 @@ class Pass3:
         self._line.clear()
 
         # Symbol table overflow into health vectr.
-        self._symh_vect[-1].count = self._yul.sym_thr.sym_tab_xs
+        self._symh_vect[17].count = self._yul.sym_thr.sym_tab_xs
 
         # Branch if there are symbols to cuss.
         if len(self._usym_cuss) > 12:
             self._mon.mon_typer(self._usym_cuss)
 
         n_symbols = 0
-        for health in self._symh_vect:
+        symh_vect = self._symh_vect[-1:] + self._symh_vect[:-1]
+        for health in symh_vect:
             n_symbols += health.count
             if health.count > 0:
                 # Convert count for this state to z/s alf.
@@ -357,12 +427,13 @@ class Pass3:
         self._line.spacing = 7
         self.print_lin()
 
-        # Upspace 7 and print character set.
-        self._line.spacing = Bit.BIT1
-        self._line[0] = 'H-1800 CHARACTER SEQUENCE (360 LACKS ■≠½' + \
-                        '␍⌑¢);  0123456789\'=: >&   +ABCDEFGHI:.)%' + \
-                        '■?   -JKLMNOPQR#$*"≠½   </STUVWXYZ@,(␍⌑¢'
-        self.print_lin()
+        if self._mon.year > 1967:
+            # Upspace 7 and print character set.
+            self._line.spacing = Bit.BIT1
+            self._line[0] = 'H-1800 CHARACTER SEQUENCE (360 LACKS ■≠½' + \
+                            '␍⌑¢);  0123456789\'=: >&   +ABCDEFGHI:.)%' + \
+                            '■?   -JKLMNOPQR#$*"≠½   </STUVWXYZ@,(␍⌑¢'
+            self.print_lin()
 
         return self.eecr_tabl()
 
@@ -397,7 +468,7 @@ class Pass3:
         self._eecr_list.insert(lo, sym)
 
     def eecr_tabl(self):
-        if len(self._eecr_list) == 0:
+        if self._mon.year < 1967 or len(self._eecr_list) == 0:
             return self.wc_sumary()
 
         self._page_hed2[0] = 'ERASABLE & EQUIVALENCE CROSS-REFERENCE T' + \
@@ -782,10 +853,12 @@ class Pass3:
             ecch = True
 
         # Branch if subroutine, not program.
+        self._line[0] = self._last_line
+
         if not self._yul.switch & SwitchBit.SUBROUTINE:
             # Admit to BYPT if good/fair prog assy.
             if self._yul.switch & SwitchBit.BAD_ASSEMBLY:
-                self._last_line = self._last_line[:16] + ' BAD: UN' + self._last_line[24:]
+                self._line[16] = self._bad
                 if ecch:
                     self._mon.mon_typer('YUCCCHHHH')
                 else:
@@ -793,20 +866,18 @@ class Pass3:
             else:
                 self._bypt['MANUFACTURABLE'] = True
                 if self._yul.n_err_lins == 0:
-                    self._last_line = self._last_line[:16] + ' GOOD:  ' + self._last_line[24:]
+                    self._line[16] = self._good
                     self._mon.mon_typer(self._joyful[0] + 'ASSEMBLY; FILED ON DISC')
                 else:
-                    self._last_line = self._last_line[:16] + ' FAIR:  ' + self._last_line[24:]
+                    self._line[16] = self._fair
                     self._mon.mon_typer(self._joyful[1] + 'ASSEMBLY; FILED ON DISC')
         else:
             self._mon.mon_typer(' END OF ASSEMBLY; FILED ON DISC')
 
-        self._line[0] = self._last_line
-        
         # Branch if no errors in program.
         if self._yul.n_err_lins > 0:
             # Set error count in print.
-            self._line[74] = ('%8d' % self._yul.n_err_lins) + \
+            self._line[72] = ('%8d' % self._yul.n_err_lins) + \
                               ' LINES CUSSED BETWEEN PAGES' + \
                               self._yul.err_pages[0] + ' AND' +\
                               self._yul.err_pages[1] + '.'

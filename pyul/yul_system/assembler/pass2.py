@@ -808,7 +808,7 @@ class Pass2:
             self._adr_symbol.ref_pages.append(page)
 
             # Branch if this is not the first ref or doing a suppressed subroutine.
-            if len(self._adr_symbol.ref_pages) > 1 and self._yul.switch & SwitchBit.PRINT:
+            if self._mon.year > 1965 and len(self._adr_symbol.ref_pages) > 1 and self._yul.switch & SwitchBit.PRINT:
                 # Set in print page of last ref in alpha.
                 self._old_line[16] = 'LAST' + ('%4d' % self._adr_symbol.ref_pages[-2])
 
@@ -819,8 +819,9 @@ class Pass2:
             else:
                 ref_str += '%3d ' % len(self._adr_symbol.ref_pages)
 
-            # Set in print serial no. of ref in alpha.
-            self._old_line[8] = ref_str
+            if self._mon.year > 1965:
+                # Set in print serial no. of ref in alpha.
+                self._old_line[8] = ref_str
 
         # Release card for tape and go to cuss.
         self.send_sypt(popo.card)
@@ -1749,6 +1750,10 @@ class Pass2:
                 # FIXME: Change log card SP1 to SP2?
                 # self._line.spacing = 2
                 pass
+
+            # Clear 'L' for early Yul
+            if self._mon.year <= 1965:
+                self._line[0] = ' '
 
             # Erase any special flag at end of loglin.
             self._user_log[116] = ' '*4

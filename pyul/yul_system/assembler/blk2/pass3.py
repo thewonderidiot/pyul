@@ -132,13 +132,14 @@ class Blk2Pass3(Pass3):
                     if self._checksum >= Bit.BIT1:
                         return self.no_suming(image, word, address)
 
-            # Branch to apply prefix "NOSUM" to word.
-            if word != 0:
-                # Show no checksum in full bank, exit.
-                image = ' NOSUM' + image[6:]
-            else:
-                # But for empty word write "NO CHECKSUM"
-                image = '   NO CHECKSUM'
+            if self._mon.year > 1965:
+                # Branch to apply prefix "NOSUM" to word.
+                if word != 0:
+                    # Show no checksum in full bank, exit.
+                    image = ' NOSUM' + image[6:]
+                else:
+                    # But for empty word write "NO CHECKSUM"
+                    image = '   NO CHECKSUM'
             self._checksum = ONES
             return image, word
 
@@ -249,8 +250,11 @@ class Blk2Pass3(Pass3):
         if word != 0:
             return self.add_2_sum(image, word)
 
-        # '   NO CHECKSUM' for unused word that prevents formation of a checksum.
-        image = '   NO CHECKSUM'
+        if self._mon.year > 1965:
+            # '   NO CHECKSUM' for unused word that prevents formation of a checksum.
+            image = '   NO CHECKSUM'
+        else:
+            image = '         @    '
         self._checksum = ONES
 
         return image, word

@@ -10,20 +10,34 @@ from yul_system import pass0
 from yul_system.types import Bit
 
 class Monitor:
-    def __init__(self, card_deck, typewriter=sys.stderr, lineprinter=sys.stdout):
+    def __init__(self, card_deck, typewriter=sys.stderr, lineprinter=sys.stdout, year=None, date=None, job=None):
         self._yul = None
         self._card_deck = card_deck
         self._typewriter = typewriter
         self._lineprinter = lineprinter
         self._next_card = ''
+        self.year = year
         self.phi_read()
 
         # Generate a log number for this run
-        self._log_no = random.randrange(400000, 700000)
+        if job is None:
+            self._log_no = random.randrange(400000, 700000)
+        else:
+            self._log_no = job
 
         self._mon_card_processed = True
 
         self.phi_date = datetime.now()
+        if self.year is None:
+            self.year = self.phi_date.year
+
+        if date is not None:
+            # try:
+                user_date = datetime.strptime(date, '%Y-%m-%d')
+                self.phi_date = self.phi_date.replace(year=user_date.year, month=user_date.month, day=user_date.day)
+            # except:
+            #     self.mon_typer('CANNOT OVERRIDE DATE WITH INVALID ENTRY %s' % date)
+
         self.lcard = ''
         self.h1800_ab_sw = 'A'
 
@@ -150,7 +164,10 @@ class Monitor:
                 self.mon_typer('UNKNOWN MACHINE %s' % machine)
 
             # Set the A/B switch for use with the log number
-            self.h1800_ab_sw = machine[4]
+            if self.year > 1965:
+                self.h1800_ab_sw = machine[4]
+            else:
+                self.h1800_ab_sw = ' '
 
             # Read in the ID of the job
             job_id = sentence[1]
@@ -160,7 +177,7 @@ class Monitor:
             self._yul = pass0.Yul(self)
 
             # Print out job start information
-            now = datetime.now()
+            now = self.phi_date
             self.phi_print('%-95s TIME:    %02u:%02u.%u' % (card, now.hour % 12, now.minute, int((now.second / 60) * 10)), 3)
             self.phi_print('  H-1800 %02u %02u %02u %70s' % (now.month, now.day, now.year % 100, '¢¢¢¢¢¢¢¢'), 3)
 

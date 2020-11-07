@@ -1521,7 +1521,7 @@ class Blk2Pass2(Pass2):
             # Branch if not an ERASE card.
             if (popo.health & HealthBit.CARD_TYPE_MASK) == HealthBit.CARD_TYPE_ERASE:
                 # Branch if ERASE crosses Ebank boundary.
-                if (location & 0o3400) != (popo.health & 0o3400):
+                if (location & 0o3400) != (popo.health & 0o3400) and self._mon.year > 1965:
                     self.cuss_list[65].demand = True
 
             # Branch if location begins Ebank.

@@ -149,7 +149,7 @@ class Yul:
         self._mon.mon_typer('BEGIN YUL SYSTEM', end='\n\n\n')
 
         # Format the date
-        now = datetime.now()
+        now = self._mon.phi_date
         self._yul_date = '%s %u, %u' % (MONTHS[now.month-1], now.day, now.year)
 
 
