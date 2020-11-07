@@ -6,8 +6,18 @@ class POPO:
     def __init__(self, health=0, card=''):
         self.health = health
         self.card = card
-        self.marked = False
-        self.seq_break = False
+
+        vert_format = ord(self.card[7])
+        if vert_format >= 0x50:
+            vert_format -= 0x20
+            self.seq_break = True
+        else:
+            self.seq_break = False
+
+        if vert_format >= 0x40:
+            self.marked = True
+        else:
+            self.marked = False
 
     def mark(self):
         if not self.marked:
@@ -66,6 +76,7 @@ class Pass1:
         self._send_endo = False
         self._loc_state = 0
         self._renumber = 0
+        self._sypt = None
         self._head = ' '
         self._xforms = [
             0x4689A5318F,
@@ -141,6 +152,11 @@ class Pass1:
         # FIXME: check for merge errors
 
         # FIXME: play with number of copies?
+
+        # Maybe set reprint flag for passes 1.5, 3.
+        self._yul.switch &= ~SwitchBit.REPRINT_PASS1P5
+        if self._yul.switch & SwitchBit.REPRINT:
+            self._yul.switch |= SwitchBit.REPRINT_PASS1P5
 
         self._mon.mon_typer('END YUL PASS 1')
 
@@ -961,8 +977,34 @@ class Pass1:
         return common, value
 
     def get_tape(self):
-        # FIXME: Read from SYPT and SYLT
-        return None
+        if self._sypt is None:
+            self._sypt = self._yul.yulprogs.find_sypt(self._yul.comp_name, self._yul.prog_name, self._yul.revno)
+            if self._sypt is None:
+                return None
+
+        tape_card = self._sypt.readline()
+        if tape_card == '':
+            self._sypt.close()
+            return None
+
+        tape_card = tape_card[:80]
+
+        tape = POPO(health=0, card=tape_card)
+
+        if tape.seq_break:
+            # Set up post-break criterion.
+            self._tape_cdno = Bit.BIT6
+        else:
+            card_no = tape.card[1:7]
+            tape_card_no = int(card_no, 10)
+            # Branch if sequence error.
+            if tape_card_no <= (self._tape_cdno & 0xFFFFFFFFF):
+                tape.health |= Bit.BIT7
+
+            # Set up new criterion
+            self._tape_cdno = tape_card_no
+
+        return tape
 
     def head_tail(self, popo):
         if popo.health & HealthBit.ASTERISK:

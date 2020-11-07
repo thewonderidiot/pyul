@@ -158,6 +158,17 @@ class Yulprogs:
         sypt_file = open(sypt_fn, 'w')
         return sypt_file
 
+    def find_sypt(self, comp_name, prog_name, revno, sylt=False):
+        tape = 'SYLT' if sylt else 'SYPT'
+        comp_dir = os.path.join(self._tape, tape, comp_name)
+        sypt_fn = os.path.join(comp_dir, '%s.R%u' % (prog_name, revno))
+
+        if not os.path.isfile(sypt_fn):
+            return None
+
+        sypt_file = open(sypt_fn, 'r')
+        return sypt_file
+
     def create_bypt(self, comp_name, prog_name, revno, bypt_data):
         comp_dir = os.path.join(self._tape, 'BYPT', comp_name)
         bypt_fn = os.path.join(comp_dir, '%s.R%u' % (prog_name, revno))

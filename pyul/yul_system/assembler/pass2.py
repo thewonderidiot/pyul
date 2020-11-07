@@ -200,17 +200,20 @@ class Pass2:
     # Procedure in pass 2 for "END OF" cards.
     def end_of(self, popo):
         # Branch if not for new and main program
-        if popo.card[8] == 'N':
-            self._line[0] = '    END OF ' + popo.card[8:68] + ' '*49
-            # Change "NEW" to "REVISION 0 OF".
-            popo.card = popo.card[:8] + 'REVISION 0 OF' + popo.card[11:59] + popo.card[69:]
+        if self._mon.year <= 1965:
+            self._line[0] = '  END OF ' + popo.card[8:68] + ' '*51
         else:
-            self._line[0] = '  END OF ' + popo.card[8:68]
+            self._line[0] = '    END OF ' + popo.card[8:68] + ' '*49
+        if popo.card[8] == 'N':
+            # Change "NEW" to "REVISION 0 OF".
+            popo.card = popo.card[:8] + 'REVISION 0 OF' + popo.card[11:58] + popo.card[68:]
 
         # Force space 3 after preceding line.
         self._old_line.spacing = 3
 
-        # FIXME: Handle subroutines
+        # Branch if main "END OF" in reprint.
+        if self._yul.switch & SwitchBit.REPRINT_PASS1P5:
+            self._line[80] = 'LAST ASSEMBLED ON ' + popo.card[69:]
 
         # FIXME: Handle more elaborate printing cases
         self._line.spacing = Bit.BIT1
@@ -2088,6 +2091,10 @@ class Pass2:
     def assy_typ_q(self):
         if not self._yul.switch & SwitchBit.REPRINT:
             return self.real_assy()
+
+        # Branch if reprint, not bad merge.
+        if self._yul.switch & SwitchBit.REPRINT_PASS1P5:
+            return self.inish_p2()
 
         # FIXME: handle revisions and bad merges
 

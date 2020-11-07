@@ -32,11 +32,11 @@ class Monitor:
             self.year = self.phi_date.year
 
         if date is not None:
-            # try:
+            try:
                 user_date = datetime.strptime(date, '%Y-%m-%d')
                 self.phi_date = self.phi_date.replace(year=user_date.year, month=user_date.month, day=user_date.day)
-            # except:
-            #     self.mon_typer('CANNOT OVERRIDE DATE WITH INVALID ENTRY %s' % date)
+            except:
+                self.mon_typer('CANNOT OVERRIDE DATE WITH INVALID ENTRY %s' % date)
 
         self.lcard = ''
         self.h1800_ab_sw = 'A'

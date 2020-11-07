@@ -66,7 +66,7 @@ class Bit:
 
 class SwitchBit:
     RENUMBER          = Bit.BIT1
-    CUSSES_ON_PAGE    = Bit.BIT1
+    REPRINT_PASS1P5   = Bit.BIT1
     MERGE_MODE        = Bit.BIT2
     LEFTOVER          = Bit.BIT2
     TAPE_KEPT         = Bit.BIT3
@@ -95,6 +95,7 @@ class SwitchBit:
     BEGINNING_OF_EQU1 = Bit.BIT29
     BAD_ASSEMBLY      = Bit.BIT34
     PRINT             = Bit.BIT44
+    CUSSES_ON_PAGE    = Bit.BIT48
 
 class HealthBit:
     CARD_TYPE_MASK   = Bit.BIT1 | Bit.BIT2 | Bit.BIT3 | Bit.BIT4 | Bit.BIT5 | Bit.BIT6
