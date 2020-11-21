@@ -14157,4 +14157,1037 @@ R0473  2ALTHOUGH IT MAY ALSO BE USEFUL DURING VEHICAL LEVEL EMI TESTS.
  0498            2CADR  LOOKTOP
  0499            TC     TASKOVER
  0500   ENDLFCSS =
+L       IMU PERFORMANCE TESTS 1
+ 0001            BANK   14
+ 0002  4         EBANK= XSM
+ 0003   AOTNBIMU CAF    ONE             AOT-NB-IMU FINE ALIGNMENT TEST
+ 0004  2         TS     EROPTN          ... TEST CAPABILITY ...
+ 0005            TC     BANKCALL
+ 0006            CADR   IMUZERO         IMU ZERO ENCODER MODE
+ 0007            TC     INTPRET
+ 0008            CALL
+ 0009                   LATAZCHK        TO LOAD AZIMUTH (SM) AND LATITUDE
+ 0010            CALL
+ 0011                   MAKEXSMD        TO SET UP A STABLE MEMBER DESIRED MATRIX
+ 0012            SET    CALL
+ 0013                   COAROFIN        FOR COARSE OR FINE ALIGN MARKS
+ 0014                   ERTHRVSE        TO CALCULATE EARTH RATE VECTOR
+ 0015  2         EXIT
+ 0016   POSLOAD  CAF    V24N30E         R1  0000X ENTER    POSITION 1,2, OR 3
+ 0017            TC     NVSBWAIT        R2  00000 ENTER    00001 FOR LAB OPTION
+ 0018            TC     ENDIDLE
+ 0019            TCF    ENDTEST
+ 0020            TCF    -4
+ 0021            XCH    DSPTEM1         DO NOT USE POSITION 3 WITH NAV BASE AT
+ 0022  2         TS     POSITON            ZERO DEGREE TILT ANGLE. (GIMBAL LOCK)
+ 0023            CCS    DSPTEM1 +1
+ 0024  2         TCF    LEMLAB          SPECIAL LAB TEST TO BYPASS MARKS
+ 0025  2         TC     POSNJUMP        SET UP STABLE MEMBER DESIRED COORDINATES
+ 0026  2         TC     OPTDATA         TARGETS 1,2 AZIMUTH AND ELEVATION
+ 0027  2         TC     FINDNAVB        COARSE ALIGN MARKS
+ 0028            TC     BANKCALL
+ 0029            CADR   IMUSTALL        INSURE IMUZERO COMPLETION
+ 0030  2         TCF    ENDTEST
+ 0031  2         TC     PUTPOSX         TO COARSE ALIGN STABLE MEMBER
+ 0032            TC     GMLCKCHK        CHECK FOR GIMBAL LOCK BEFORE FINE ALIGN
+ 0033  2         TC     OGCZERO         FOR EARTH RATE COMPENSATION
+ 0034            TC     BANKCALL
+ 0035            CADR   IMUFINE         FINE ALIGN MODE
+ 0036            TC     BANKCALL
+ 0037            CADR   IMUSTALL
+ 0038  2         TCF    ENDTEST
+ 0039  2         TC     FINDNAVB        FINE ALIGN MARKS
+ 0040  2         TC     FREEDSP         FREE DISPLAY SYSTEM
+ 0041  2         TC     SMDCALC         TO FINE ALIGN STABLE MEMBER
+ 0042   ERFINAL  TC     BANKCALL        LAST EARTH RATE SHOT
+ 0043            CADR   EARTHR
+ 0044            CCS    EROPTN          IF DESIRED TO COMPENSATE CONTINUALLY
+ 0045            TCF    MONSTART            CHANGE BY V21 N02 E XXXXX E 00000 E
+ 0046            TCF    ERFINAL
+ 0047            TCF    ENDTEST
+ 0048            TS     EROPTN
+ 0049            INHINT
+ 0050            CAF    PRIO21          PRIORITY 1 HIGHER THAN SXTNBIMU
+ 0051            TC     FINDVAC
+ 0052            2CADR  RDR37511
+ 0053            RELINT
+ 0054  2         TC     ERFINAL
+ 0055   MONSTART TC     FINETIME        TIME AT INITIAL MISALIGNMENT
+ 0056            DXCH   MPAC
+ 0057            RELINT
+ 0058            CAF    ZERO            ZERO PIPA COUNTERS
+ 0059            TS     PIPAX
+ 0060            TS     PIPAY
+ 0061            TS     PIPAZ
+ 0062            TS     STOREPL
+ 0063            TS     NDXCTR
+ 0064  2         TC     STORRSLT        STORE T(INITIAL) AND PIPAI = 0
+ 0065            INHINT
+ 0066            CAF    60SEC           INSURE PIPAI VARIES IN ONE DIRECTION
+ 0067            TC     WAITLIST
+ 0068            2CADR  PIP1
+ 0069            CAF    PIP2ADR
+ 0070  2         TC     JOBSLEEP
+ 0071   PIP1     CAF    PIP2ADR
+ 0072            TC     JOBWAKE
+ 0073  2         TC     TASKOVER
+ 0074   PIP2     CAE    PIPNDX
+ 0075            TS     PIPINDEX        POS1 PIPAY     POS2 PIPAX     POS3 PIPAX
+ 0076            TC     BANKCALL
+ 0077  2         CADR   CHECKG          SYNC ON PIPA PULSE
+ 0078            RELINT
+ 0079  2         TC     STORRSLT        STORE TIME AND PIPAI
+ 0080            CAE    PIPNDX +1
+ 0081            TS     PIPINDEX        POS1 PIPAZ     POS2 PIPAY     POS3 PIPAZ
+ 0082            TC     BANKCALL
+ 0083  2         CADR   CHECKG          SYNC ON PIPA PULSE
+ 0084            RELINT
+ 0085  2         TC     STORRSLT        STORE TIME AND PIPAI
+ 0086            INHINT
+ 0087            CAF    30SEC           MONITOR PIPAS AT 30 SECOND INTERVALS
+ 0088            TC     WAITLIST
+ 0089            2CADR  PIP1
+ 0090            CAF    PIP2ADR
+ 0091            TC     JOBSLEEP
+ 0092  8PIP2ADR  CADR   PIP2
+ 0093   FINDNAVB EXTEND                 MARKS * CALC NB OR SM WRT EARTH REF
+ 0094  2         QXCH   QPLACE
+ 0100            TC     BANKCALL
+ 0101            CADR   MKRELEAS        RELEASE MARK SYSTEM
+ 0102            CAF    ONE
+ 0103            TS     DSPTEM1
+ 0104            CAF    V01N30E         DISPLAY 00001 IN R1
+ 0105            TC     NVSBWAIT
+ 0106            CAF    ZERO            TO INDICATE GROUND MARKS
+ 0107            TC     BANKCALL
+ 0108  2         CADR   AOTMARK         MARK ON TARGET 1
+ 0109            TC     BANKCALL
+ 0110            CADR   OPTSTALL        INSURE SUCCESSFUL MARK
+ 0111            TCF    ENDTEST
+ 0112            EXTEND
+ 0113            INDEX  MARKSTAT
+ 0114            DCA    0
+ 0115  2         DXCH   TMARK           TIME(PRES) FOR EARTH RATE COMPENSATION
+ 0116  2         TC     GIMANGS1
+ 0117            TC     INTPRET
+ 0118            LXC,1  CALL
+ 0119                   MARKSTAT        BASE ADDRESS VAC AREA FOR AOTNB
+ 0120                   AOTNB           OPTICS TO NAV BASE COORDINATE FRAME
+ 0121            BON    CALL
+ 0122                   COAROFIN        COARSE MARKS = 0    FINE MARKS = 1
+ 0123                   +2
+ 0124                   NBSM            NAV BASE DIRECT TO STABLE MEMBER
+ 0125            STORE  STARAD          TARGET 1 WRT NAV BASE OR STABLE MEMBER
+ 0126            STORE  LOS1            ...FOR K...
+ 0127  2         EXIT
+ 0128            TC     BANKCALL
+ 0129            CADR   MKRELEAS        RELEASE MARK SYSTEM
+ 0130            CAF    TWO
+ 0131            TS     DSPTEM1
+ 0132            CAF    V01N30E         DISPLAY 00002 IN R1
+ 0133            TC     NVSBWAIT
+ 0134            CAF    ZERO            TO INDICATE GROUND MARKS
+ 0135            TC     BANKCALL
+ 0136  2         CADR   AOTMARK         MARK ON TARGET 2
+ 0137            CAF    BIT10
+ 0138            MASK   STATE           BIT10 = COAROFIN
+ 0139            CCS    A
+ 0140  8         TCF    EARRTCOM +5     IF COARSE ALIGN MARKS
+ 0141   EARRTCOM TC     BANKCALL        EARTH RATE COMPENSATION BETWEEN MARKS
+ 0142            CADR   EARTHR
+ 0143            CCS    OPTCADR         +0 IF MARK BUTTON NOT DEPRESSED
+ 0144            TCF    +3
+ 0145            TCF    EARRTCOM        CONTINUE TO COMPENSATE FOR EARTH RATE
+ 0146            TCF    +1
+ 0147            TC     BANKCALL
+ 0148            CADR   OPTSTALL        INSURE SUCCESSFUL MARK
+ 0149  2         TCF    ENDTEST
+ 0150  2         TC     GIMANGS1
+ 0151            TC     INTPRET
+ 0152            LXC,1  CALL
+ 0153                   MARKSTAT        BASE ADDRESS VAC AREA FOR AOTNB
+ 0154                   AOTNB           OPTICS TO NAV BASE COORDINATE FRAME
+ 0155            BONCLR CALL            SET TO ZERO FOR FINE ALIGN MARKS
+ 0156                   COAROFIN        COARSE MARKS = 0    FINE MARKS = 1
+ 0157                   +2
+ 0158                   NBSM            NAV BASE DIRECT TO STABLE MEMBER
+ 0159            STORE  STARAD +6       TARGET 2 WRT NAV BASE OR STABLE MEMBER
+ 0160  2         STORE  LOS2            ...FOR K...
+ 0161   MATXDET  CALL
+ 0162                   TAR/EREF        TARGETS 1,2 WRT EARTH REF FRAME
+ 0163            CALL
+ 0164                   AXISGEN         NAV BASE OR SM WRT EARTH REF FRAME
+ 0165            EXIT
+ 0166  4         TC     QPLACE
+ 0167   GIMANGS1 CAF    TWO             BASE ADDRESS GIMBAL ANGLES FOR NBSM
+ 0168            AD     MARKSTAT
+ 0169            INDEX  FIXLOC
+ 0170            TS     S1
+ 0171  8         TC     Q
+ 0172   PUTPOSX  EXTEND                 COARSE ALIGNS STABLE MEMBER
+ 0173  2         QXCH   QPLACE
+ 0174            TC     INTPRET
+ 0175            CALL
+ 0176                   CALCGA          CALCULATE COARSE ALIGN GIMBAL ANGLES
+ 0177  2         EXIT
+ 0178            TC     BANKCALL
+ 0179            CADR   IMUCOARS        COARSE ALIGN MODE
+ 0180            TC     BANKCALL
+ 0181            CADR   IMUSTALL
+ 0182            TCF    ENDTEST
+ 0183  6         TC     QPLACE
+ 0184   SMDCALC  EXTEND                 FINE ALIGNS STABLE MEMBER
+ 0185  2         QXCH   QPLACE
+ 0186            TC     INTPRET
+ 0187            VLOAD  MXV
+ 0188                   XSM             XSM DESIRED WRT EARTH REF FRAME
+ 0189                   STARAD          THEN TO SM PRESENT OR NAV BASE FRAME
+ 0190            VSL1   BOFF
+ 0191                   COAROFIN        BIT10 FOR LEMLAB TEST
+ 0192                   +3
+ 0193            STCALL 32D
+ 0194                   NBSM            THEN TO SM PRESENT FRAME
+ 0195            STOVL  XDC
+ 0196  2                YSM             YSM DESIRED WRT EARTH REF FRAME
+ 0197            MXV    VSL1
+ 0198                   STARAD          THEN TO SM PRESENT OR NAV BASE FRAME
+ 0199            BOFF
+ 0200                   COAROFIN        BIT10 FOR LEMLAB TEST
+ 0201                   +3
+ 0202            STCALL 32D
+ 0203                   NBSM            THEN TO SM PRESENT FRAME
+ 0204            STOVL  YDC
+ 0205  2                XDC
+ 0206            VXV    VSL1
+ 0207                   YDC
+ 0208            STCALL ZDC             ZSM DESIRED WRT SM PRESENT FRAME
+ 0209  2                CALCGTA         CALCULATE FINE ALIGN TORQUING ANGLES
+ 0210            AXT,1  RTB
+ 0211            ECADR  OGC             X1 = BASE ADDRESS OF TORQUING ANGLES
+ 0212                   PULSEIMU        TO PUT OUT GYRO TORQUING PULSES
+ 0213  2         EXIT
+ 0214            TC     BANKCALL
+ 0215            CADR   IMUSTALL        WAIT FOR PULSES TO GET OUT
+ 0216            TCF    ENDTEST
+ 0217  8         TC     QPLACE
+ 0218  2MAKEXSMD EXIT                   XSM V   YSM SW   ZSM SE
+ 0219            CAF    17DEC           ZERO XSM, YSM, AND ZSM
+ 0220            TS     ZERONDX
+ 0221            CAF    XSMADRX
+ 0222            TC     BANKCALL
+ 0223  2         CADR   ZEROING                 VERT       SOUTH      EAST
+ 0224            CAF    HALF            XSM    * +1          0          0     *
+ 0225            TS     XSM                    *                              *
+ 0226            TC     INTPRET                *                              *
+ 0227            DLOAD  SIN             YSM    *  0      +SIN(AZ)    +COS(AZ) *
+ 0228                   AZIMUTH                *                              *
+ 0229            STORE  XSM +8D                *                              *
+ 0230            STODL  XSM +16D        ZSM    *  0      -COS(AZ)    +SIN(AZ) *
+ 0231                   AZIMUTH
+ 0232            COS
+ 0233            STORE  XSM +10D
+ 0234            DCOMP
+ 0235            STORE  XSM +14D
+ 0236  4         RVQ
+ 0237   TAR/EREF AXT,1  AXT,2                        TARGET VECTOR
+ 0238                   2               SIN(EL)  -COS(AZ)COS(EL)  SIN(AZ)COS(EL)
+ 0239                   12D
+ 0240            SSP
+ 0241                   S2
+ 0242  2                6               TARGET 1                        TARGET 2
+ 0243   TAR1     SLOAD* SR2             X1=2  X2=12  S2=6 . X1=0  X2=6  S2=6
+ 0244                   TAZEL1 +3,1
+ 0245            STORE  0               PD00           ELEVATION            PD00
+ 0246            SIN
+ 0247  2         STODL  18D,2           PD06  ***       SIN(EL)        ***  PD12
+ 0248                   0
+ 0249            COS    PUSH            PD00            COS(EL)             PD00
+ 0250            SLOAD* RTB
+ 0251                   TAZEL1 +2,1
+ 0252                   CDULOGIC
+ 0253            STORE  2               PD02            AZIMUTH             PD02
+ 0254            SIN    DMP
+ 0255                   0
+ 0256            SL1
+ 0257  2         STODL  22D,2           PD10  ***   +SIN(AZ)COS(EL)    ***  PD16
+ 0258                   2
+ 0259            COS    DMP
+ 0260            SL1    DCOMP
+ 0261  2         STORE  20D,2           PD08  ***   -COS(AZ)COS(EL)    ***  PD14
+ 0262            AXT,1  TIX,2
+ 0263                   0
+ 0264                   TAR1
+ 0265  8         RVQ
+ 0266   ERTHRVSE DLOAD  PDDL
+ 0267                   ZERODP          PD24 = (SIN  -COS  0)(OMEG/MS)
+ 0268                   LATITUDE
+ 0269            COS    DCOMP
+ 0270            PDDL   SIN
+ 0271                   LATITUDE        EARTH RATE = .1504 ARCSEC / 10 MSEC
+ 0272            VDEF   VXSC            1.618 GYRO PULSES = 1 ARCSEC
+ 0273                   OMEG/MS         OMEG/MS = .243... GYRO PULSES / 10 MSEC
+ 0274  2         STORE  ERVECTOR
+ 0275            RTB
+ 0276                   LOADTIME
+ 0277            STORE  TMARK           TIME FOR GYRO DRIFT - PIPA SCALE FACTOR
+ 0278  6         RVQ
+ 0279   EARTHR   TC     MAKECADR        CALCULATES AND COMPENSATES EARTH RATE
+ 0280  2         TS     QPLACES
+ 0281            TC     INTPRET
+ 0282            RTB
+ 0283                   LOADTIME        T(PRESENT)
+ 0284            STORE  TEMPTIME
+ 0285            DSU    SL
+ 0286                   TMARK           T(PRES) - T(PREV) = DT    SCALED 10 MSEC
+ 0287                   9D              2 TO 21ST POWER = 1 REVOLUTION
+ 0288            VXSC   MXV
+ 0289                   ERVECTOR        VT = (SIN  -COS  0)(OMEG/MS)(DT)
+ 0290                   XSM             (XSM)(VT) = EARTH RATE COMPENSATION
+ 0291            VAD
+ 0292                   ERCOMP
+ 0293            STODL  ERCOMP
+ 0294                   TEMPTIME
+ 0295  2         STORE  TMARK           T(PREVIOUS)
+ 0296            AXT,1  RTB
+ 0297            ECADR  ERCOMP
+ 0298                   PULSEIMU        TO PUT OUT GYRO TORQUING PULSES
+ 0299  2         EXIT
+ 0300            TC     BANKCALL
+ 0301            CADR   IMUSTALL        WAIT FOR PULSES TO GET OUT
+ 0302            TCF    ENDTEST
+ 0303            CAE    QPLACES
+ 0304  8         TCF    BANKJUMP
+ 0305   STORRSLT EXTEND
+ 0306  2         QXCH   QPLACE
+ 0307            TC     INTPRET         DP TIME IN MPAC SCALED .312(5) MSEC
+ 0308            LXC,1  SL
+ 0309                   NDXCTR
+ 0310                   3
+ 0311            DMP    RTB
+ 0312                   SCALFTR
+ 0313                   SGNAGREE
+ 0314            STORE  GENPL,1         STORE DP TIME
+ 0315  2         EXIT
+ 0316            XCH    STOREPL         CONTAINS C(PIPAI)
+ 0317            INDEX  NDXCTR
+ 0318            TS     GENPL +2        STORE PIPA COUNTER READING
+ 0319            CS     NDXCTR
+ 0320            AD     72DEC
+ 0321            EXTEND
+ 0322            BZMF   MISALIGN        TO CALCULATE MISALIGNMENT
+ 0323            CAF    THREE
+ 0324            ADS    NDXCTR
+ 0325  2         TC     QPLACE
+ 0326   OPTDATA  EXTEND                 CALLS FOR AZIMUTH AND ELEVATION OF
+ 0327  2         QXCH   QPLACE             TARGET 1, THEN TARGET 2
+ 0328            CAF    BIT1            AZIMUTH CLOCKWISE FROM NORTH TO TARGET
+ 0329            ZL                     ELEVATION MEASURED FROM HORIZONTAL
+ 0330            LXCH   RUN
+ 0331            TS     DSPTEM1 +2
+ 0332            CAF    V05N30E         DISPLAY TARGET NUMBER IN R3
+ 0333            TC     NVSBWAIT
+ 0334            INDEX  RUN
+ 0335            DXCH   TAZEL1
+ 0336  2         DXCH   DSPTEM1
+ 0337            TC     CHECKLD         R1  +- XXX.XX    AZIMUTH IN DEGREES
+ 0338            OCT    00661           R2  +- XX.XXX    ELEVATION IN DEGREES
+ 0339  2         TCF    ENDTEST         R3      0000X    TARGET NUMBER 1 OR 2
+ 0340            DXCH   DSPTEM1         TAZEL1       TARGET 1 AZIMUTH
+ 0341            INDEX  RUN
+ 0342            DXCH   TAZEL1          TAZEL1 +2    TARGET 2 AZIMUTH
+ 0343            CCS    RUN
+ 0344            TCF    +4
+ 0345   OPTRDRIN CAF    TWO             SPECIAL ENTRY FOR RDR37511
+ 0346            TS     L
+ 0347            TCF    OPTDATA +4      MPAC    1ST PASS = 0    2ND PASS = 2
+ 0348  8         TC     QPLACE
+ 0349   LATAZCHK DLOAD  SL2             CALLS FOR AZIMUTH (SM) AND LATITUDE
+ 0350                   LATITUDE
+ 0351            STODL  DSPTEM1 +1
+ 0352  2                AZIMUTH         ...NOT REALLY...
+ 0353            RTB    EXIT
+ 0354  2                1STO2S          FRACTION OF REVOLUTION TO 2S COMPLEMENT
+ 0355            XCH    MPAC            AZIMUTH MUST BE 135 DEGREES  R1 = +13500
+ 0356            TS     DSPTEM1            FOR SXT-NB-IMU FINE ALIGNMENT TEST
+ 0357            TC     CHECKLD         R1  +- XXX.XX    AZIMUTH IN DEGREES (SM)
+ 0358            OCT    00661           R2  +- XX.XXX    LATITUDE IN DEGREES
+ 0359  2         TCF    ENDTEST         R3               NOT USED
+ 0360            TC     INTPRET
+ 0361            SLOAD  RTB
+ 0362                   DSPTEM1
+ 0363                   CDULOGIC        BACK TO FRACTION OF REVOLUTION
+ 0364  2         STORE  AZIMUTH
+ 0365            SLOAD  SR2
+ 0366                   DSPTEM1 +1
+ 0367            STORE  LATITUDE
+ 0368  4         RVQ
+ 0369   CHECKLD  EXTEND
+ 0370  2         QXCH   QPLAC
+ 0371            INDEX  QPLAC
+ 0372            CA     A
+ 0373            TC     NVSUB
+ 0374  2         TCF    CHECKLD1
+ 0375  2         TC     FLASHON
+ 0376            TC     ENDIDLE         CHANGE R1  V21 N61 E  +- XXX.XX E
+ 0377            TCF    +3              CHANGE R2  V22 N61 E  +- XX.XXX E
+ 0378            TCF    +4              VERIFY, THEN PROCEED WITH VERB 33 ENTER
+ 0379            TCF    CHECKLD +2
+ 0380            INDEX  QPLAC
+ 0381            TC     1
+ 0382            INDEX  QPLAC
+ 0383  2         TC     2
+ 0384   CHECKLD1 CAF    CHECKLD2
+ 0385            TC     NVSUBUSY
+ 0386  8CHECKLD2 CADR   CHECKLD +2
+ 0387   POSNJUMP EXTEND                 POSITIONS FOR SXTNBIMU
+ 0388  2         QXCH   QPLACE
+ 0389            INDEX  POSITON
+ 0390            TCF    +1
+ 0391            TCF    ENDTEST
+ 0392            TCF    POS1
+ 0393            TCF    POS2
+ 0394            TCF    POS3
+ 0395            TCF    POS4
+ 0396  4         TCF    POS5
+ 0397   POS1     CAF    ONE             XSM = V     YSM = SW    ZSM = SE
+ 0398            TS     PIPNDX
+ 0399            CAF    TWO
+ 0400            TS     PIPNDX +1       MONITOR PIPAY AND PIPAZ
+ 0401  4         TC     QPLACE
+ 0402   POS2     TC     INTPRET         XSM = SE    YSM = SW    ZSM = -V
+ 0403            VLOAD  VCOMP
+ 0404                   XSM
+ 0405            PDVL
+ 0406                   ZSM
+ 0407            STOVL  XSM
+ 0408            STADR
+ 0409            STORE  ZSM
+ 0410            EXIT
+ 0411            CAF    ZERO
+ 0412            TS     PIPNDX
+ 0413            CAF    ONE
+ 0414            TS     PIPNDX +1       MONITOR PIPAX AND PIPAY
+ 0415  4         TC     QPLACE
+ 0416   POS3     TC     INTPRET         XSM = SE    YSM = V     ZSM = SW
+ 0417            VLOAD  PDVL
+ 0418                   XSM
+ 0419                   YSM
+ 0420            PDVL
+ 0421                   ZSM
+ 0422  2         STOVL  XSM
+ 0423            STADR
+ 0424  2         STOVL  ZSM
+ 0425            STADR
+ 0426            STORE  YSM
+ 0427            EXIT
+ 0428            CAF    ZERO
+ 0429            TS     PIPNDX
+ 0430            CAF    TWO
+ 0431            TS     PIPNDX +1       MONITOR PIPAX AND PIPAZ
+ 0432  4         TC     QPLACE
+ 0433   POS4     CAF    BIT5            OPTION TO ALIGN SM TO SPECIFIED ANGLES
+ 0434            AD     FIXLOC
+ 0435            INDEX  FIXLOC
+ 0436            TS     S1              BASE ADDRESS GIMBAL ANGLES
+ 0437            CAF    V25N22E         R1  +- XXX.XX   OUTER GIMBAL ANGLE
+ 0438            TC     NVSBWAIT        R2  +- XXX.XX   INNER GIMBAL ANGLE
+ 0439            TC     ENDIDLE         R3  +- XXX.XX   MIDDLE GIMBAL ANGLE
+ 0440            TCF    ENDTEST
+ 0441            TCF    -4
+ 0442            CA     THETAD          SET UP ANGLES FOR SMNB
+ 0443            INDEX  FIXLOC
+ 0444            TS     24
+ 0445            CA     THETAD +1
+ 0446            INDEX  FIXLOC
+ 0447            TS     20
+ 0448            CA     THETAD +2
+ 0449            INDEX  FIXLOC
+ 0450  2         TS     22
+ 0451            TC     INTPRET
+ 0452            RTB    CALL
+ 0453                   TRANSPSE        EARTH REF WRT NAV BASE
+ 0454                   SMD/EREF        STABLE MEMBER DESIRED WRT EARTH REF
+ 0455            RTB
+ 0456                   TRANSPSE        BACK TO NAV BASE WRT TO EARTH REF
+ 0457            EXIT
+ 0458  8         TC     QPLACE
+ 0459   POS5     CA     QPLACE          OPTION TO ALIGN SM TO ANY ORIENTATION
+ 0460  2         TS     STOREPL           WRT EARTH REFERENCE FRAME
+ 0461  2         TC     OPTDATA         LOAD YSM AND ZSM AZIMUTH AND ELEVATION
+ 0462            TC     INTPRET
+ 0463            CALL
+ 0464                   TAR/EREF        CALC YSM AND ZSM WRT EARTH REF. FRAME
+ 0465            VLOAD  PUSH
+ 0466                   6D
+ 0467            STORE  YSM
+ 0468            VXV    VSL1
+ 0469                   12D
+ 0470            STORE  XSM             XSM = (YSM) X (ZSM)
+ 0471            VXV    VSL1
+ 0472            STADR
+ 0473            STORE  ZSM             ZSM = (XSM) X (YSM)
+ 0474  2         EXIT
+ 0475  8         TC     STOREPL
+ 0476   OGCZERO  EXTEND                 ZERO EARTH RATE TORQUING ANGLES
+ 0477  2         QXCH   QPLACE
+ 0478            TC     INTPRET
+ 0479            VLOAD
+ 0480                   ZERODP          VECTOR IN THIS CASE
+ 0481            STORE  ERCOMP
+ 0482            EXIT
+ 0483  6         TC     QPLACE
+ 0484   GMLCKCHK CAF    BIT6            CHECK FOR GIMBAL LOCK  (MGA GREATER 70)
+ 0485            MASK   DSPTAB +11D
+ 0486            EXTEND
+ 0487            BZF    +2
+ 0488            TCF    ENDTEST
+ 0489  6         TC     Q
+ 0490   ENDTEST  CA     IMUSEFLG        BIT8
+ 0491            AD     RRUSEFLG        BIT7
+ 0492            CS     A
+ 0493            INHINT
+ 0494            MASK   STATE
+ 0495  2         TS     STATE
+ 0496            TC     NEWMODEX
+ 0497  2         OCT    00000
+ 0498            TC     BANKCALL
+ 0499            CADR   MKRELEAS        RELEASE MARK SYSTEM
+ 0500  8         TC     EJFREE
+ 0501   LEMLAB   TC     INTPRET
+ 0502            VLOAD  VCOMP
+ 0503  2                YUNIT
+ 0504            STORE  ZNB             XNB MATRIX USED IN CALCGA
+ 0505            STOVL  STARAD +12D     STARAD MATRIX USED IN AXISGEN * SMDCALC
+ 0506  2                XUNIT
+ 0507            STORE  XNB             *XNB*   *1    0    0* *V*
+ 0508            STOVL  STARAD          *   *   *           * * *
+ 0509                   ZUNIT           *YNB* = *0    0    1* *S*
+ 0510            STORE  YNB             *   *   *           * * *
+ 0511            STORE  STARAD +6       *ZNB*   *0   -1    0* *E*
+ 0512  2         EXIT
+ 0513            CS     POSITON
+ 0514            AD     THREE
+ 0515            EXTEND
+ 0516            BZF    +2
+ 0517  2         TCF    LEMLAB1
+ 0518            TC     INTPRET
+ 0519            VLOAD  VCOMP
+ 0520                   XNB
+ 0521            PDVL                   *XNB*   * 0   -1    0* *V*
+ 0522                   ZNB             *   *   *            * * *
+ 0523            STORE  XNB             *YNB* = * 0    0    1* *S*
+ 0524            STOVL  STARAD          *   *   *            * * *
+ 0525            STADR                  *ZNB*   *-1    0    0* * *
+ 0526            STORE  ZNB
+ 0527            STORE  STARAD +12D
+ 0528  2         EXIT
+ 0529   LEMLAB1  TC     BANKCALL
+ 0530  2         CADR   IMUSTALL        INSURE IMUZERO COMPLETION
+ 0531  2         TCF    ENDTEST
+ 0532            TC     POSNJUMP        SET UP STABLE MEMBER DESIRED COORDINATES
+ 0533            TC     FREEDSP         FREE DISPLAY SYSTEM
+ 0534  2         TC     PUTPOSX         TO COARSE ALIGN STABLE MEMBER
+ 0535  2         TC     GMLCKCHK
+ 0536            TC     BANKCALL
+ 0537            CADR   IMUFINE         FINE ALIGN MODE
+ 0538            TC     BANKCALL
+ 0539            CADR   IMUSTALL
+ 0540  2         TCF    ENDTEST
+ 0541            CA     CDUX
+ 0542            INDEX  FIXLOC
+ 0543            TS     24
+ 0544            CA     CDUY
+ 0545            INDEX  FIXLOC
+ 0546            TS     20
+ 0547            CA     CDUZ
+ 0548            INDEX  FIXLOC
+ 0549  2         TS     22
+ 0550            CAF    BIT5
+ 0551            AD     FIXLOC
+ 0552            INDEX  FIXLOC
+ 0553  2         TS     S1
+ 0554  2         TC     SMDCALC         TO FINE ALIGN STABLE MEMBER
+ 0555            TC     INTPRET         IF EARTH RATE COMPENSATION DESIRED
+ 0556            RTB
+ 0557                   LOADTIME
+ 0558            STORE  TMARK
+ 0559  2         EXIT
+ 0560            CS     EROPTN
+ 0561            AD     TWO
+ 0562            EXTEND
+ 0563  2         BZF    +2
+ 0564  2         TCF    ERFINAL +2
+ 0565            TC     BANKCALL
+ 0566  8         CADR   SAMODRTN        RETURN TO SEMI-AUTOMATIC MODING TEST
+ 0567   RDR37511 CAF    RDRRETN         RENDEZVOUS RADAR AND ANTENNA TRACKING
+ 0568  2         TS     QPLACE          TO RETURN FROM OPTDATA
+ 0569            TC     BANKCALL
+ 0570  2         CADR   RRZERO
+ 0571            TC     BANKCALL
+ 0572  2         CADR   AURLOKON        OPERATOR DECISION TO LOCK ON OR NOT
+ 0573  2RDR1     TCF    OPTRDRIN        CALL FOR AZIMUTH AND ELEVATION
+ 0574            TC     BANKCALL
+ 0575            CADR   RADSTALL
+ 0576  2         TCF    ENDOFJOB
+ 0577            TC     INTPRET
+ 0578            AXT,1  AXT,2           SET UP X1 AND X2 FOR TAR/EREF
+ 0579                   0
+ 0580                   6
+ 0581            CALL
+ 0582                   TAR/EREF +3     LINE-OF-SIGHT WRT EARTH REF FRAME
+ 0583            VLOAD  MXV
+ 0584                   12D             LINE-OF-SIGHT WRT EARTH REF FRAME
+ 0585                   XSM             TO STABLE MEMBER PRESENT FRAME
+ 0586            VSL1
+ 0587            STCALL RRTARGET
+ 0588  2                RRDESSM
+ 0589            TCF    37511ALM
+ 0590            TC     BANKCALL
+ 0591            CADR   RADSTALL
+ 0592            TCF    ENDOFJOB
+ 0593  6         TCF    ENDOFJOB
+ 0594   37511ALM TC     ALARM
+ 0595            OCT    524
+ 0596  6         TCF    ENDOFJOB
+ 0597   RDRINIT  CS     ZERO
+ 0598            TS     EROPTN
+ 0599  8         TCF    AOTNBIMU +2
+ 0600   MISALIGN TC     GRABWAIT        DISPLAY SYSTEM WAS FREED
+ 0601            CAF    ZERO
+ 0602            TS     NDXCTR
+ 0603   BBBB     INDEX  NDXCTR
+ 0604            CS     GENPL +68D
+ 0605            INDEX  NDXCTR
+ 0606            ADS    GENPL +74D
+ 0607            CAF    63DEC
+ 0608            AD     NDXCTR
+ 0609            CCS    A
+ 0610            CS     THREE
+ 0611            ADS    NDXCTR
+ 0612            TCF    BBBB
+ 0613  4         TS     NDXCTR
+ 0614   CCCC     TC     INTPRET
+ 0615            LXA,1  DLOAD*
+ 0616                   NDXCTR
+ 0617                   GENPL +72D,1
+ 0618            DSU
+ 0619                   GENPL
+ 0620            STORE  GENPL +72D,1
+ 0621            EXIT
+ 0622            CS     NDXCTR
+ 0623            AD     69DEC
+ 0624            CCS    A
+ 0625            CAF    THREE
+ 0626            ADS    NDXCTR
+ 0627            TCF    CCCC
+ 0628            TS     RUN
+ 0629            CAF    THREE
+ 0630  4         TS     NDXCTR
+ 0631   DDDD     TC     INTPRET
+ 0632            VLOAD
+ 0633                   ZERODP
+ 0634            STORE  24D
+ 0635            STORE  30D
+ 0636            SLOAD
+ 0637                   11DEC
+ 0638            STORE  32D
+ 0639  2         EXIT
+ 0640   DDDD1    TC     INTPRET
+ 0641            LXA,1  DLOAD*
+ 0642                   NDXCTR
+ 0643                   GENPL +72D,1
+ 0644            DSU*   PUSH
+ 0645                   GENPL +66D,1
+ 0646            SR1    DAD*
+ 0647                   GENPL +66D,1
+ 0648  2         STORE  GENPL +72D,1
+ 0649            SL2    DAD
+ 0650                   24D
+ 0651            STODL* 24D
+ 0652                   GENPL +72D,1
+ 0653            SL4    DSQ
+ 0654            DAD
+ 0655                   26D
+ 0656            STORE  26D
+ 0657            EXIT
+ 0658            CAE    RUN
+ 0659            AD     NDXCTR
+ 0660            COM
+ 0661            AD     63DEC
+ 0662            CCS    A
+ 0663            CAF    SIX
+ 0664            ADS    NDXCTR
+ 0665            TCF    DDDD1
+ 0666            AD     RUN
+ 0667  4         TS     NDXCTR
+ 0668   EEEE     TC     INTPRET
+ 0669            LXC,1  SLOAD*
+ 0670                   NDXCTR
+ 0671                   GENPL +11D,1
+ 0672            STORE  34D
+ 0673            DLOAD
+ 0674            PUSH   SL
+ 0675                   8D
+ 0676            BDDV   DAD
+ 0677                   34D
+ 0678                   28D
+ 0679            STODL  28D
+ 0680            SL     BDDV
+ 0681                   6
+ 0682                   34D
+ 0683            PDDL*  SL4
+ 0684                   GENPL +9D,1
+ 0685            DMP
+ 0686            DAD
+ 0687                   30D
+ 0688            STORE  30D
+ 0689            EXIT
+ 0690            CS     NDXCTR
+ 0691            AD     60DEC
+ 0692            AD     RUN
+ 0693            CCS    A
+ 0694            CAF    SIX
+ 0695            ADS    NDXCTR
+ 0696  4         TCF    EEEE
+ 0697            TC     INTPRET
+ 0698            DLOAD  DMP
+ 0699                   24D
+ 0700                   30D
+ 0701            PDDL   DMP
+ 0702                   26D
+ 0703                   28D
+ 0704            DSU
+ 0705            PDDL   DSQ
+ 0706                   24D
+ 0707            SR1    PDDL
+ 0708                   32D
+ 0709            SL     DMP
+ 0710                   11
+ 0711                   26D
+ 0712            DSU    BDDV
+ 0713            DMP    SL
+ 0714                   KKKK
+ 0715                   3
+ 0716            STORE  DSPTEM2
+ 0717  2         EXIT
+ 0718            CA     POSITON
+ 0719  2         TS     DSPTEM2 +2
+ 0720            CAF    V06N66E
+ 0721            TC     NVSBWAIT
+ 0722            TC     FLASHON
+ 0723            TC     ENDIDLE
+ 0724            TCF    ENDTEST
+ 0725            CAF    THREE
+ 0726            TS     RUN
+ 0727            CAF    ZERO
+ 0728  8         TCF    DDDD -1
+R0729   THIS REVISION REFLECTS CHANGES AS OF
+R0730    1/31/66
+R0731   ENGINE ON/OFF NOW IN CHANNEL ELEVEN.  THE BITS FOR EACH CHANNEL GET TURN
+ 0732  9ED ON ALL AT ONCE.  THEY STAY ON UNTIL
+R0733    :ENTER:IS PUSHED.  THEN THEY ALL GO OUT AND THE NEXT CHANNEL:S BITS ARE
+ 0734  9 TURNED ON.
+R0735   CHANNEL 5  BITS 1-8
+R0736   CHANNEL 6  BITS 1-8
+R0737   CHANNEL 11 BITS  13,14
+R0738   CHANNEL 12 BITS 9-14
+R0739   FOLLOWING THE CHANNEL 12 TESTS ENTER IS PRESSED.  CHANNEL 12 IS SET TO Z
+ 0740  9ERO AND THE NEXT TEST BEGUN. LOW9
+R0741   GOES IN LOCATION (COUNTER) 55.
+R0742   INCREASE THROTTLE RATE DESCENT ENGINE
+R0743   :ENTER: NOW CAUSES THE CONTENTS OF 55 TO BE MADE NEGATIVE
+R0744   DECREASE THROTTLE RATE DESCENT ENGINE
+R0745   THE NEXT :ENTER: ZEROS THE REGISTER AND SENDS A PULSE TRAIN (HERE ALTERN
+R0746   ZEROS FOR CLARITY) TO THE ALTITUDE METER.
+R0747   THE NEXT :ENTER: WILL ADVANCE THE TEST TO THE ALTITUDE RATE METER TEST.
+R0748  4THE NEXT :ENTER : WILL TERMINATE THE TEST.
+ 0749   SAUTOIFS CA     POSMAX
+ 0750            TS     NOBITS
+ 0751            CA     ZERO
+ 0752            TS     CHAN
+ 0753            TS     TEMP
+ 0754            TC     DINO
+ 0755  2BACK1    INCR   CHAN
+ 0756   DINO     INDEX  CHAN
+ 0757            CA     SAUTLOCS
+ 0758            TCF    SWCALL
+ 0759   SAUTLOCS CADR   CHAN5D
+ 0760            CADR   CHAN6D
+ 0761            CADR   CHAN11D
+ 0762            CADR   CHAN12D
+ 0763            CADR   PTITRDE
+ 0764            CADR   PTDTRDE
+ 0765            CADR   ALTMET
+ 0766            CADR   ALTRMET
+ 0767            CADR   ENDTEST
+ 0768   THROTADD CADR   PTDTRDE +5
+ 0769   METERADD CADR   ALTMET +3
+ 0770   MRATEADD CADR   ALTRMET +3
+ 0771   CHAN5D   CA     FIVE
+ 0772            TS     DSPTEM1
+ 0773   2ENTRY   CA     LOW8            CHANNEL 6 RETURNS HERE
+ 0774            TS     DSPTEM1 +1
+ 0775            EXTEND
+ 0776            INDEX  TEMP
+ 0777            WRITE  5
+ 0778   3ENTRY   CA     V04N30D         CH11,12 RETURN HERE TO USE THE DISPLAY
+ 0779            TC     NVSBWAIT
+ 0780   4ENTRY   CAF    WAITER          WAITER IS 03300
+ 0781            TC     NVSBWAIT
+ 0782            TC     ENDIDLE
+ 0783            TC     ENDTEST
+ 0784  2         TC     BACK1
+ 0785   CHAN6D   INCR   TEMP
+ 0786            INCR   DSPTEM1
+ 0787            CAF    ZERO
+ 0788            EXTEND
+ 0789            WRITE  5               GET RID OF CHANNEL 5 BITS
+ 0790            TC     2ENTRY
+ 0791   CHAN11D  CA     OCT11
+ 0792            TS     DSPTEM1
+ 0793            CA     BIT13-14
+ 0794            TS     DSPTEM1 +1
+ 0795            EXTEND
+ 0796            WOR    11              WOR IS NON EXCLUSIVE OR
+ 0797            CAF    ZERO
+ 0798            EXTEND
+ 0799            WRITE  6
+ 0800            TC     3ENTRY
+ 0801   CHAN12D  CA     OCT12
+ 0802            TS     DSPTEM1
+ 0803            CS     BIT13-14
+ 0804            EXTEND
+ 0805            WAND   11
+ 0806            CA     CH12BITS
+ 0807            TS     DSPTEM1 +1
+ 0808            EXTEND
+ 0809            WOR    12
+ 0810            TC     3ENTRY
+ 0811   PTITRDE  CS     CH12BITS
+ 0812            EXTEND
+ 0813            WAND   12
+ 0814            CA     ZERO
+ 0815            TS     DSPTEM1
+ 0816            TS     DSPTEM1 +1
+ 0817            TS     TEMP
+ 0818            CA     BIT1
+ 0819            TS     NOBITS
+ 0820   PIT      INHINT
+ 0821            TC     WAITLIST
+ 0822            2CADR  THROTASK
+ 0823            RELINT
+ 0824            CA     WAITER
+ 0825            TC     NVSBWAIT
+ 0826            TC     ENDIDLE
+ 0827            TC     ENDTEST
+ 0828            CA     ZERO
+ 0829            TS     NOBITS
+ 0830  2         TC     BACK1
+ 0831   PTDTRDE  CA     ZERO
+ 0832            TS     THRUST
+ 0833            CA     THROTADD
+ 0834            TS     TEMPADD
+ 0835            TC     JOBSLEEP        THIS INHIBITS THE NEXT TASK UNTIL
+R0836                                            CURRENT TASK HAS BEEN COMPLETED
+ 0837            CA     POSMAX
+ 0838            TS     TEMP
+ 0839            CA     BIT7
+ 0840            TC     PIT
+ 0841   THROTASK CCS    NOBITS          IS THIS TASK STILL REQ
+ 0842            TC     +5              YES
+ 0843            CA     TEMPADD         NO
+ 0844            TS     NOBITS
+ 0845            TC     JOBWAKE
+ 0846            TC     TASKOVER
+ 0847            CCS    TEMP
+ 0848            TC     SOMETIME
+ 0849            CA     LOW11
+ 0850   ALWAYS   TS     THRUST
+ 0851            CA     BIT4
+ 0852            EXTEND                 A SMERZH FIX.
+ 0853            WOR    14
+ 0854            CA     BIT6            320 MS.DELAY
+ 0855            TC     WAITLIST
+ 0856            2CADR  THROTASK
+ 0857            TC     TASKOVER
+ 0858   SOMETIME CS     LOW11
+ 0859            TC     ALWAYS
+ 0860   ALTASK   CCS    NOBITS          IS TASK STILL REQ
+ 0861            TC     +5
+ 0862            CA     TEMPADD         NO
+ 0863            TS     NOBITS          ENABLES NEXT TASK
+ 0864            TC     JOBWAKE
+ 0865            TC     TASKOVER
+ 0866            CA     ALBITS          ACTUAL TASK STARTS HERE
+ 0867            TS     ALTM
+ 0868            CA     BIT3
+ 0869            EXTEND
+ 0870            WOR    14
+ 0871            CA     BIT6            320 MS. DELAY
+ 0872            TC     WAITLIST
+ 0873            2CADR  ALTASK
+ 0874            TC     TASKOVER
+ 0875   ALTMET   CA     METERADD
+ 0876            TS     TEMPADD
+ 0877            TC     JOBSLEEP
+ 0878            CA     ZERO
+ 0879            TS     TEMP
+ 0880            CS     BIT4
+ 0881            EXTEND
+ 0882            WAND   14
+ 0883            INHINT
+ 0884            CA     ONE
+ 0885            TC     WAITLIST
+ 0886            2CADR  ALTASK
+ 0887            RELINT
+ 0888            CA     WAITER
+ 0889            TC     NVSBWAIT
+ 0890            TC     ENDIDLE
+ 0891            TC     ENDTEST
+ 0892            CA     ZERO
+ 0893            TS     NOBITS
+ 0894  2         TC     BACK1
+ 0895   ALTRMET  CA     MRATEADD
+ 0896            TS     TEMPADD
+ 0897            TC     JOBSLEEP
+ 0898            CA     ONE
+ 0899            TS     TEMP            TEMP WILL BE INDEXED TO ACQUIRE BIT2 INS
+ 0900  9TEAD OF BIT3
+ 0901            CA     BIT2
+ 0902            EXTEND
+ 0903            WOR    14
+ 0904            TC     ALTMET +8D
+P0905        THE AOT ANGLE CHECKING PROGRAM PROVIDES A SIMPLE VERIFICATION OF TH
+ 0906  9E ACCURACY OF THE AOT.  THE IDEA IS TO
+R0907   COMPUTE THE ANGLE BETWEEN TWO LINES OF SIGHT AS INDICATED BY THE AOT, WH
+ 0908  9ICH IS WHAT THIS PROGRAM DOES.
+R0909   INDEPENDENT KNOWLEDGE OF THE INCLUDED ANGLE PROVIDES A COMPARISON AND TH
+ 0910  9US A MEASURE OF THE AOT ACCURACY.
+R0911  4      THE ISS NEED NOT BE ON TO RUN THIS PROGRAM.
+ 0912   AOTANGCK TC     INTPRET
+ 0913            SET    EXIT             IN CASE THE ISS IS OFF.
+ 0914                   COAROFIN
+ 0915            TC     FINDNAVB         FOR LOS1 AND LOS2.
+ 0916            TC     INTPRET
+ 0917            VLOAD  VXV
+ 0918                   LOS1
+ 0919                   LOS2
+ 0920            ABVAL
+ 0921            STOVL  SINTH            SINTH = ABVAL (VXV ).
+ 0922                   LOS1
+ 0923            DOT
+ 0924                   LOS2
+ 0925            STCALL COSTH            COSTH = V.V
+ 0926                   ARCTRIG
+ 0927            RTB
+ 0928                   1STO2S           DP 1S COMP TO SP 2S COMP.
+ 0929            STORE  THETA
+ 0930            EXIT
+ 0931            CAF    THETAADR
+ 0932            AD     FIXLOC
+ 0933            TS     MPAC +2
+ 0934            CAF    V06N03E          XXX.XX DEGREES IN R1.
+ 0935            TC     NVSBWAIT
+ 0936  8         TCF    ENDTEST
+ 0937            EBANK= 1400
+ 0938   ZEROERAS INHINT                 PROGRAN BY MUNTZ TO ZERO ERASEABLE
+ 09381           CAF    ZERO
+ 09382           TS     TIME3
+ 0939            CAF    OCT27
+ 0940            TS     EBANK
+ 0941   ZEROLP   ZL
+ 0942            INDEX  A
+ 0943            LXCH   1401
+ 0944            AD     TWO
+ 0945            ADS    EBANK
+ 0946            MASK   LOW8
+ 0947            CCS    A
+ 0948            TCF    ZEROLP
+ 0949            CCS    EBANK
+ 0950            TCF    ZEROLP1
+ 0951            TC     POSTJUMP
+ 0952            CADR   SLAP1
+ 0953   ZEROLP1  RELINT
+ 09531           CAF    ZERO            KEEP T4RUPT GOING, BUT NOT CYCLING.
+ 09532           TS     DSRUPTSW
+ 0954            INHINT
+ 0955            CS     ONE
+ 0956            TCF    ZEROLP
+ 09565 8OCT27    OCT    27
+ 0958            EBANK= OGC
+ 0960   V04N30D  OCT    00430
+ 0961   ALBITS   OCT    52525
+ 0962   THRSBITS OCT    70707
+ 0963   OCT12    =      TEN
+ 0964   OCT11    =      NINE
+ 0965   CH12BITS OCT    37400
+ 0966   V01N30D  OCT    00130
+ 0967  6WAITER   OCT    03300
+ 0968   V01N30E  OCT    00130           FOR FINDNAVB
+ 0969   V05N30E  OCT    00530           FOR OPTDATA
+ 0970   V06N03E  OCT    00603
+ 0971   V06N66E  OCT    00666
+ 0972   V24N30E  OCT    02430           FOR POSITION LOAD
+ 0973  2V25N22E  OCT    02522           FOR POS4
+ 0974   11DEC    DEC    11
+ 0975   17DEC    DEC    17
+ 0976   60DEC    DEC    60
+ 0977   63DEC    DEC    63
+ 0978   69DEC    DEC    69              FOR MISALIGN
+ 0979  272DEC    DEC    72              FOR STORRSLT
+ 0980   30SEC    DEC    3000            3000 X 10 MSEC
+ 0981  260SEC    DEC    6000            6000 X 10 MSEC
+ 0982   OGCADR   ADRES  OGC             FOR ZEROING
+ 0983   GENPLAD1 ADRES  GENPL
+ 0984   GENPLADR ECADR  GENPL           FOR POS4
+ 0985   KKKK     2DEC   210.39 B-14     1230 B-14 FOR CSM
+ 0986   RDRRETN  ADRES  RDR1 +1         FOR RDR37511
+ 0987   THETAADR ECADR  THETA
+ 0988  2XSMADRX  ADRES  XSM             FOR MAKEXSMD
+ 0989   SCALFTR  2DEC   .64             FOR STORRSLT
+ 0990   OMEG/MS  2DEC   .24339048       GYRO PULSES / 10 MSEC
+P0991            THE FOLLOWING ROUTINE READS THE CLOCK AND SCALAR (CHANNELS 3 AN
+ 0992  9D 4) INTO A AND L, INSURING THAT THE
+R0993  2DATA WAS NOT IN TRANSITION WHEN IT WAS READ.
+ 0994            SETLOC ENDFAILF
+ 0995   FINETIME INHINT                 RETURNS WITH INTERRUPT INHIBITED.
+ 0996            EXTEND
+ 0997            READ   LOSCALAR
+ 0998  2         TS     L
+ 0999            EXTEND                 SEE IF 2 READINGS AGREE. IF NOT, READ
+ 1000            RXOR   LOSCALAR        LOSCALAR AGAIN.
+ 1001            EXTEND
+ 1002  2         BZF    +4
+ 1003            EXTEND                 IF CLOCK RIPPLED BEFORE, IT WONT NOW.
+ 1004            READ   LOSCALAR
+ 1005  2         TS     L
+ 1006    +4      CS     POSMAX          IF LOW PART CONTAINS SOMETHING LESS THAN
+ 1007            AD     L               POSMAX, THE HIGH PART CAN BE READ SAFELY
+ 1008            EXTEND
+ 1009  2         BZF    FINETIME +1     TRY AGAIN - CONDITION WILL DISAPPEAR.
+ 1010            EXTEND
+ 1011            READ   HISCALAR
+ 1012  2         TC     Q
+ 1013  8ENDIMUF  =
+ 1014            SETLOC OMEG/MS +2
+ 1015   REDYTORK TC     BANKCALL
+ 1016            CADR   IMUSTALL
+ 1017  2         TCF    ENDTEST
+ 1018  2         TC     OGCZERO
+ 1019            TC     INTPRET
+ 1020            CALL
+ 1021                   ERTHRVSE        SETS UP EARTHRATE ANGLES AND TIME
+ 1022            EXIT
+ 1023            CA     OPTNREG         INITIALIZE CDUNDX FOR PULSE CATCHING
+ 1024            AD     NEG2            C(K) WAS 4 2 1 NOW C(A) IS 2 0 -1
+ 1025            TS     GYTOBETQ        C(K) = 2,0,-1 FOR  X,Y,Z.
+ 1026            EXTEND
+ 1027            BZF    +3
+ 1028            CAF    TWO
+ 1029            TC     +2
+ 1030            CAF    ONE
+ 1031            TS     CDUNDX          C(K) = 1 FOR Y, 2 FOR Z CDU SELECT
+ 1032            TC     BANKCALL
+ 1033            CADR   ENABLE
+ 1034   ENDIMUS1 EQUALS
 *       ENDOFJOB
