@@ -438,11 +438,11 @@ class Blk2Pass2(Pass2):
             if (popo.health & b28t30m) < adr_con_4:
                 # ADRES,REMADR,GENADR,FCADR,SBANK=,BNKSUM.
                 self._max_adres = 0o167777
-                return self.max_ad_set(popo, update_ebank=False)
+                return self.max_ad_set(popo, check_loc=True)
             elif (popo.health & b28t30m) == adr_con_4:
                 # E-addresses only for ECADR, EBANK=.
                 self._max_adres = 0o3777
-                return self.max_ad_set(popo, update_ebank=False)
+                return self.max_ad_set(popo, check_loc=True)
 
             return self.dp_adr_con(popo)
 
@@ -463,12 +463,12 @@ class Blk2Pass2(Pass2):
             if op_type == 0:
                 # E-addresses only for ECADR, EBANK=.
                 self._max_adres = 0o3777
-                return self.max_ad_set(popo, update_ebank=False)
+                return self.max_ad_set(popo, check_loc=True)
 
             elif op_type == 2:
                 # ADRES,REMADR,GENADR,FCADR,SBANK=,BNKSUM.
                 self._max_adres = 0o167777
-                return self.max_ad_set(popo, update_ebank=False)
+                return self.max_ad_set(popo, check_loc=True)
 
             else:
                 return self.dp_adr_con(popo)
@@ -530,7 +530,7 @@ class Blk2Pass2(Pass2):
             # Branch if 2FCADR or BNKSUM (no er prob).
             if (popo.health & b29t30m) <= Bit.BIT29:
                 self._max_adres = 0o167777
-                return self.max_ad_set(popo, update_ebank=False)
+                return self.max_ad_set(popo, check_loc=True)
 
         # Keep assembler's EBANK reg. up to date.
         self.ebk_loc_q(accept_temp=False)
@@ -633,9 +633,9 @@ class Blk2Pass2(Pass2):
 
         return self.max_ad_set(popo)
 
-    def max_ad_set(self, popo, update_ebank=True):
+    def max_ad_set(self, popo, check_loc=False):
         # Except for EBANK=, SBANK=, BNKSUM:
-        if update_ebank or self._location < ONES:
+        if (not check_loc) or (self._location < ONES):
             # Keep assembler's EBANK reg. up to date.
             self.ebk_loc_q()
 
@@ -1073,7 +1073,7 @@ class Blk2Pass2(Pass2):
         # Select on * in op code (BBCON or 2CADR).
         if not self.cuss_list[90].demand:
             self._max_adres = 0o167777
-            return self.max_ad_set(popo, update_ebank=False)
+            return self.max_ad_set(popo, check_loc=True)
 
         # FIXME
 
