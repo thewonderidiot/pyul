@@ -634,8 +634,8 @@ class Blk2Pass2(Pass2):
         return self.max_ad_set(popo)
 
     def max_ad_set(self, popo, update_ebank=True):
-        # Except for EBNAK=, SBANK=, BNKSUM:
-        if update_ebank or self._location >= ONES:
+        # Except for EBANK=, SBANK=, BNKSUM:
+        if update_ebank or self._location < ONES:
             # Keep assembler's EBANK reg. up to date.
             self.ebk_loc_q()
 
@@ -684,7 +684,7 @@ class Blk2Pass2(Pass2):
         # Select procedure for 1 of 8 adr consts.
         proc = (popo.health >> 18) & 0x7
         if proc == 0:
-            # Adres is just like TC (except for flag).
+            # ADRES is just like TC (except for flag).
             if self._address <= 0o3777:
                 return self.basic_adr(popo, adr_wd)
             else:
