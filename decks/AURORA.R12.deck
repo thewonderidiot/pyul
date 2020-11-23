@@ -16173,4 +16173,422 @@ R0870   ENTER NOUN 01 ENTER LOCATION OF DRIFTT ENTER + (OR -) XXXXX ENTER
  1026            2DEC   0
  1027            2DEC   -.5
  1028   ENDIMUS2 =
+L       IMU PERFORMANCE TESTS 3
+ 0001            SETLOC ENDPINS3
+ 0002  4         EBANK= XSM
+ 0500   SILVER   EXTEND
+ 0501  2         QXCH   QPLACE           SHOULD BE ADDRESS OF STRTWACH
+ 0502            CCS    CALCDIR         2F COMMAND IS POSITIVE THE MINUS TORQ
+ 0503            CAF    BIT9             WINDING IS TO BE ENERGIZED
+ 0504            TC     +2
+ 0505            TC     TORK             COMMAND IS NEG SO USE PLUS WINDING
+ 0506            EXTEND
+ 0507  2         WOR    14C              SELECTS THE MINUS WINDING
+ 0508   TORK     CAF    POSMAX
+ 0509  2         TS     GYROCTR         16383 PULSES =2.8125 DEG LESS ONE PULSE
+ 0510            CCS    GYTOBETQ        C(K)= 1 FOR X, -0 FOR Y, -1FOR Z.
+ 0511            TC     SELECTX
+ 0512            TC     CCSHOLE
+ 0513            TC     SELECTZ
+ 0514            TC     SELECTY
+ 0515   SELECTX  CAF    TORKX           BBITS 7AND 10 IN CHANNEL 14 WILL
+ 0516            EXTEND                  SELECT X GYRO AND TURN ON BCSW 1/3200
+ 0517            WOR    14C             SSEC LATER BY CHANNEL OUTPUT DESIGN.....
+ 0518  2         TC     QPLACE
+ 0519   SELECTY  CAF    TORKY           BBITS 8 AND 10 TO TORQ Y GYRO
+ 0520            EXTEND
+ 0521            WOR    14C
+ 0522  2         TC     QPLACE
+ 0523   SELECTZ  CAF    TORKZ           BBITS 7,8AND 10 TO TORQ Z GYRO
+ 0524            EXTEND
+ 0525            WOR    14C
+ 0526            TC     QPLACE
+ 0527   TORKX    OCT    01100
+ 0528   TORKY    OCT    01200
+ 0529  8TORKZ    OCT    01300
+ 0530   SAMODCHK CAF    ZERO
+ 0531            TS     TESTNO
+ 0532  2         TS     RUN
+ 0533            TC     ZEROMODE
+ 0534  2         TC     OPRTRDLY
+ 0535  2         TC     COARZERO
+ 0536            TC     ZEROMAIN
+ 0537  2         TC     OPRTRDLY
+ 0538  2         TC     ZEROMODE
+ 0539            CAF    ZERO
+ 0540  2         TC     THETADLD
+ 0541            CAF    45ANG
+ 0542  2         TC     THETADLD
+ 0543  2         TC     FNZEROFN
+ 0544            CAF    90ANG
+ 0545  2         TC     THETADLD
+ 0546            CAF    135ANG
+ 0547  2         TC     THETADLD
+ 0548            CAF    45ANG
+ 0549  2         TC     THETADLD +2
+ 0550  2         TC     FNZEROFN
+ 0551            CAF    180ANG
+ 0552            TS     THETAD
+ 0553            TS     THETAD +1
+ 0554            CAF    71ANG
+ 0555  2         TC     THETADLD +2
+ 0556            CAF    225ANG
+ 0557  2         TC     THETADLD
+ 0558            CAF    ZERO
+ 0559  2         TC     THETADLD
+ 0560            CAF    TWO
+ 0561  2CHK2     TS     CDUNDX
+ 0562            CAF    170ANG
+ 0563            INDEX  CDUNDX
+ 0564  2         TS     THETAD
+ 0565            TC     BANKCALL
+ 0566  2         CADR   IMUCOARS
+ 0567            CAF    10ANG
+ 0568  2         TC     CDURATE
+ 0569            CAF    160ANG
+ 0570  2         TC     CDURATE
+ 0571  2         TC     CALCRATE
+ 0572            TC     BANKCALL
+ 0573            CADR   IMUSTALL
+ 0574  2         TCF    ENDTST03
+ 0575  2         TC     COARZERO
+ 0576            CCS    CDUNDX
+ 0577  2         TCF    CHK2
+ 0578            CS     45ANG
+ 0579  2         TC     THETADLD
+ 0580  2         TC     FNZEROFN
+ 0581            CS     135ANG
+ 0582            TS     THETAD
+ 0583            TS     THETAD +1
+ 0584            CS     71ANG
+ 0585  2         TC     THETADLD +2
+ 0586  2         TC     FNZEROFN
+ 0587  2         TC     COARZERO
+ 0588            TC     FINEZERO
+ 0589  2         TC     FINEZERO
+ 0590   CHK5     CS     4+6BITS
+ 0591            EXTEND
+ 0592  2         WAND   12
+ 0593            CAF    FOUR
+ 0594            TC     WAITLIST
+ 0595            2CADR  ECE1
+ 0596            CAF    ECE2CADR
+ 0597  2         TC     JOBSLEEP
+ 0598   ECE1     CAF    ECE2CADR
+ 0599            TC     JOBWAKE
+ 0600  2         TC     TASKOVER
+ 0601   ECE2     CS     SIX
+ 0602            AD     TESTNO
+ 0603            EXTEND
+ 0604            BZMF   +2
+ 0605  2         TCF    CHKX
+ 0606            INDEX  TESTNO
+ 0607            CAF    ERCTRANG
+ 0608            TS     THETAD
+ 0609            TS     THETAD +1
+ 0610  2         TS     THETAD +2
+ 0611            CAF    BIT6
+ 0612            EXTEND
+ 0613  2         WOR    12
+ 0614            INHINT
+ 0615            CAF    TWO
+ 0616            TC     WAITLIST
+ 0617            2CADR  ATTCK2
+ 0618  2         RELINT
+ 0619  2         TC     OPRTRDLY
+ 0620  2         INCR   TESTNO
+ 0621  2         TCF    CHK5
+ 0622  2CHKX     TC     COARZERO
+ 0623            CAF    ZERO
+ 0624  2         TS     TESTNO
+ 0625            TC     BANKCALL
+ 0626            CADR   RRZERO
+ 0627            TC     BANKCALL
+ 0628            CADR   RADSTALL
+ 0629  2         TCF    ENDTST03
+ 0630   CHK6     INDEX  TESTNO
+ 0631            CAF    RADECNTR
+ 0632            TS     TANG +1
+ 0633  2         TS     TANG
+ 0634            TC     INTPRET
+ 0635            CALL
+ 0636  2                RRDESNB
+ 0637            TC     BANKCALL
+ 0638            CADR   RADSTALL
+ 0639  2         TCF    ENDTST03
+ 0640  2         TC     RROPRDLY
+ 0641  2         INCR   TESTNO
+ 0642            CS     FOUR
+ 0643            AD     TESTNO
+ 0644            EXTEND
+ 0645  2         BZMF   CHK6
+ 0646            CAF    ZERO
+ 0647            TS     TESTNO
+ 0648            TS     ALTRATE
+ 0649            TS     ALT
+ 0650  2         TS     ALT +1
+ 0651            CS     ONE
+ 0652  2         TS     DIDFLG
+ 0653   CHK7     INDEX  TESTNO
+ 0654            CAF    RRRATFPS
+ 0655            TS     FORVEL
+ 0656  2         TS     LATVEL
+ 0657  2         TC     RROPRDLY
+ 0658  2         INCR   TESTNO
+ 0659            CS     BIT5
+ 0660            AD     TWO
+ 0661            AD     TESTNO
+ 0662            EXTEND
+ 0663  2         BZMF   CHK7
+ 0664   ENDTST03 TC     BANKCALL
+ 0665  6         CADR   ENDTEST
+ 0666   ERCTRANG OCT    03013
+ 0667            OCT    02660
+ 0668            OCT    01042
+ 0669            OCT    00000
+ 0670            OCT    76736
+ 0671            OCT    75120
+ 0672  6         OCT    74765
+ 0673   RADECNTR OCT    01463
+ 0674            OCT    01042
+ 0675            OCT    00000
+ 0676            OCT    76736
+ 0677  6         OCT    76315
+ 0678   RRRATFPS OCT    00000
+ 0679            OCT    00001
+ 0680            OCT    00002
+ 0681            OCT    00004
+ 0682            OCT    00010
+ 0683            OCT    00020
+ 0684            OCT    00040
+ 0685            OCT    00100
+ 0686            OCT    00200
+ 0687            OCT    00237
+ 0688            OCT    00400
+ 0689            OCT    00545
+ 0690            OCT    00544
+ 0691            OCT    77540
+ 0692  8         OCT    77232
+ 0693   CDURATE  EXTEND
+ 0694  2         QXCH   QPLACE
+ 0695  2         TS     CDULIMIT
+ 0696            CCS    NEWJOB
+ 0697  2         TC     CHANG1
+ 0698            CS     CDULIMIT
+ 0699            INDEX  CDUNDX
+ 0700            AD     CDUX            CATCH FIRST PULSE
+ 0701            EXTEND
+ 0702  2         BZMF   CDURATE +3      LOOK AGAIN
+ 0703            INDEX  CDUNDX
+ 0704            CAE    CDUX
+ 0705            XCH    CDUREADF        CDU FINAL READING
+ 0706  2         XCH    CDUREADI        CDU INITIAL READING
+ 0707            TC     FINETIME
+ 0708            DXCH   CDUTIMEF        DP FINAL TIME
+ 0709  2         DXCH   CDUTIMEI        DP INITIAL READING
+ 0710            RELINT
+ 0711  6         TC     QPLACE
+ 0712   CALCRATE EXTEND
+ 0713  2         QXCH   QPLACE
+ 0714            DXCH   CDUREADF
+ 0715            EXTEND
+ 0716            MSU    L
+ 0717  2         TS     CDUANG
+ 0718            TC     INTPRET
+ 0719            DLOAD  DSU
+ 0720                   CDUTIMEF
+ 0721                   CDUTIMEI
+ 0722            PUSH   SLOAD
+ 0723                   CDUANG
+ 0724            SR     DDV
+ 0725                   14D
+ 0726            DMP    RTB
+ 0727                   DEG/SEC
+ 0728                   SGNAGREE
+ 0729            STORE  DSPTEM2
+ 0730  2         EXIT
+ 0731   RATEDSP  CAF    V06N66X
+ 0732            TC     NVSBWAIT
+ 0733            TC     FLASHON
+ 0734            TC     ENDIDLE
+ 0735            TCF    ENDTST03
+ 0736            TCF    +2
+ 0737  2         TCF    RATEDSP
+ 0738            INCR   RUN
+ 0739  8         TC     QPLACE
+ 0740   THETADLD TS     THETAD
+ 0741            TS     THETAD +1
+ 0742  2         TS     THETAD +2
+ 0743            EXTEND
+ 0744  2         QXCH   QPLACE
+ 0745            CAF    SEVEN
+ 0746  2THLD1    TS     STOREPL
+ 0747            TC     BANKCALL
+ 0748            CADR   IMUCOARS
+ 0749            TC     BANKCALL
+ 0750            CADR   IMUSTALL
+ 0751  2         TCF    ENDTST03
+ 0752            CCS    STOREPL
+ 0753  2         TC     THLD1
+ 0754  2         TC     OPRTRDLY
+ 0755  6         TC     QPLACE
+ 0756   FINEALGN EXTEND
+ 0757  2         QXCH   QPLACE
+ 0758            TC     BANKCALL
+ 0759            CADR   IMUFINE
+ 0760            TC     BANKCALL
+ 0761            CADR   IMUSTALL
+ 0762  2         TCF    ENDTST03
+ 0763  8         TC     QPLACE
+ 0764   CH30DSPY EXTEND
+ 0765  2         QXCH   QPLACE
+ 0766            CAF    OCT30
+ 0767            TS     MPAC +2
+ 0768            CAF    V01N10X
+ 0769            TC     NVSBWAIT
+ 0770            TC     FLASHON
+ 0771            TC     ENDIDLE
+ 0772            TCF    ENDTST03
+ 0773            TCF    +2
+ 0774  2         TCF    CH30DSPY +2
+ 0775            TC     FLASHOFF
+ 0776            INCR   RUN
+ 0777  6         TC     QPLACE
+ 0778   ZEROMODE EXTEND
+ 0779  2         QXCH   QPLACE
+ 0780            TC     BANKCALL
+ 0781            CADR   IMUZERO
+ 0782            TC     BANKCALL
+ 0783            CADR   IMUSTALL
+ 0784  2         TCF    ENDTST03
+ 0785  6         TC     QPLACE
+ 0786   ZEROMAIN CS     4+6BITS
+ 0787            EXTEND
+ 0788  2         WAND   12
+ 0789            CAF    BIT5
+ 0790            EXTEND
+ 0791  2         WOR    12
+ 0792  6         TC     Q
+ 0793   RROPRDLY EXTEND
+ 0794  2         QXCH   QPLAC
+ 0795  2         INCR   RUN
+ 0796            CAF    V06N40X
+ 0797  6         TCF    OPRTRDLY +4
+ 0798   OPRTRDLY EXTEND
+ 0799  2         QXCH   QPLAC
+ 0800            INCR   RUN
+ 0801            CAF    V06N20X
+ 0802            TC     NVSBWAIT
+ 0803            CAF    V33N00X
+ 0804            TC     NVSBWAIT
+ 0805            CA     RUN
+ 0806            MASK   6LOW
+ 0807            TC     NVSBWAIT
+ 0808            TC     FLASHON
+ 0809            TC     ENDIDLE
+ 0810            TCF    ENDTST03
+ 0811            TCF    +2
+ 0812  2         TCF    OPRTRDLY +3
+ 0813            TC     FLASHOFF
+ 0814  2         TC     QPLAC
+ 0815   FINEZERO EXTEND
+ 0816  2         QXCH   QPLAC
+ 0817            TC     BANKCALL
+ 0818  2         CADR   IMUZERO
+ 0819            CAF    TWO
+ 0820            TS     EROPTN
+ 0821            CAF    FOUR
+ 0822  2         TS     POSITON
+ 0823            INHINT
+ 0824            CS     BIT10
+ 0825            MASK   STATE
+ 0826            AD     BIT10
+ 0827            TS     STATE
+ 0828  2         RELINT
+ 0829            TC     BANKCALL
+ 0830  2         CADR   LEMLAB
+ 0831  2SAMODRTN TC     GRABWAIT
+ 0832            CAF    V06N20X
+ 0833  2         TC     NVSBWAIT
+ 0834  2         TC     ZEROMAIN
+ 0835            TC     CH30DSPY
+ 0836  2         TC     ZEROMODE
+ 0837  4         TC     QPLAC
+ 0838   COARZERO CAF    ZERO
+ 0839            TS     THETAD
+ 0840            TS     THETAD +1
+ 0841  2         TS     THETAD +2
+ 0842            EXTEND
+ 0843  2         QXCH   QPLACE
+ 0844            TC     BANKCALL
+ 0845            CADR   IMUCOARS
+ 0846            TC     BANKCALL
+ 0847            CADR   IMUSTALL
+ 0848  2         TCF    ENDTST03
+ 0849  8         TC     QPLACE
+ 0850   FNZEROFN EXTEND
+ 0851  2         QXCH   QPLAC
+ 0852  2         TC     FINEALGN
+ 0853            CAE    CDUX
+ 0854            TS     CDUREADF
+ 0855            CAE    CDUY
+ 0856            TS     CDUREADI
+ 0857            CAE    CDUZ
+ 0858  2         TS     CDULIMIT
+ 0859  2         TC     ZEROMODE
+ 0860            CAF    3SEC
+ 0861            TC     WAITLIST
+ 0862            2CADR  FZF1
+ 0863            CAF    FZF2CADR
+ 0864  2         TC     JOBSLEEP
+ 0865   FZF1     CAF    FZF2CADR
+ 0866            TC     JOBWAKE
+ 0867  2         TC     TASKOVER
+ 0868   FZF2     CAE    CDUREADF
+ 0869            EXTEND
+ 0870            MSU    CDUX
+ 0871  2         TS     DSPTEM1
+ 0872            CAE    CDUREADI
+ 0873            EXTEND
+ 0874            MSU    CDUY
+ 0875  2         TS     DSPTEM1 +1
+ 0876            CAE    CDULIMIT
+ 0877            EXTEND
+ 0878            MSU    CDUZ
+ 0879  2         TS     DSPTEM1 +2
+ 0880   FZFDSP   CAF    V05N30X
+ 0881            TC     NVSBWAIT
+ 0882            TC     FLASHON
+ 0883            TC     ENDIDLE
+ 0884            TCF    ENDTST03
+ 0885            TCF    +2
+ 0886  2         TCF    FZFDSP
+ 0887            INCR   RUN
+ 0888  8         TC     QPLAC
+ 0889   1ANG     OCT    00133
+ 0890   33.75ANG OCT    06000
+ 0891   45ANG    OCT    10000
+ 0892   71ANG    OCT    14477
+ 0893   90ANG    OCT    20000
+ 0894   135ANG   OCT    30000
+ 0895   10ANG    OCT    01616
+ 0896   160ANG   OCT    34344
+ 0897   180ANG   OCT    40000
+ 0898   225ANG   OCT    50000
+ 0899  2170ANG   OCT    36162
+ 0900   6LOW     OCT    77
+ 0901   OCT30    OCT    30
+ 0902   3SEC     DEC    300
+ 0903  24+6BITS  OCT    00050
+ 0904   V01N10X  OCT    00110
+ 0905   V05N30X  OCT    00530
+ 0906   V06N20X  OCT    00620
+ 0907   V06N40X  OCT    00640
+ 0908   V06N66X  OCT    00666
+ 0909  2V33N00X  OCT    03300
+ 0910   ECE2CADR CADR   ECE2
+ 0911   FZF2CADR CADR   FZF2
+ 0912  2OGCECADR ECADR  OGC
+ 0913  6DEG/SEC  2DEC   576000 B-28
+ 0914   ENDIMUS3 EQUALS
 *       ENDOFJOB
