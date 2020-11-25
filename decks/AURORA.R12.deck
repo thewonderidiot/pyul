@@ -16591,4 +16591,722 @@ L       IMU PERFORMANCE TESTS 3
  0912  2OGCECADR ECADR  OGC
  0913  6DEG/SEC  2DEC   576000 B-28
  0914   ENDIMUS3 EQUALS
+L       OPTIMUM PRELAUNCH ALIGNMENT CALIBRATION
+R000001 THIS PROGRAM USES A VERTICAL,SOUTH,EAST COORDINATE SYSTEM FOR PIPAS
+ 0001            BANK   21
+ 0003  4         EBANK= XSM
+R0004   G SCHMIDT SIMPLIFIED ESTIMATION PROGRAM FOR ALIGNMENT CALIBRATION. THE
+R0005   PROGRAM IS COMPLETELY RESTART PROFED. DATA STORED IN BANK4.
+ 0010   ESTIMS   TC     PHASCHNG
+ 0011            OCT    00101
+ 0012   RSTGTS1  INHINT                  COMES HERE PHASE1 RESTART
+ 0015            CA     TIME1
+ 0016            TS     GTSWTLST
+ 0017            CAF    ZERO            ZERO THE PIPAS
+ 0018            TS     PIPAX
+ 0019            TS     PIPAY
+ 0020            TS     PIPAZ
+ 00201           TS     DELVX +1
+ 00202           TS     DELVY +1
+ 00203           TS     DELVZ +1
+ 0021            RELINT
+ 0022            TC     SETUPER
+ 0023            CA     77DECML
+ 0024            TS     ZERONDX
+ 0025            CA     ALXXXZ
+ 0026            TC     BANKCALL
+ 0027            CADR   ZEROING
+ 0028            TC     INTPRET
+ 0029            VLOAD
+ 0030                   INTVAL +2
+ 0031            STORE  ALX1S
+ 0032  2         EXIT
+ 0033            CCS    GEOCOMPS        GEOCOMPS IN NON ZERO IF COMPASS
+ 0034            TC     +2
+ 0035            TC     SLEEPIE +1
+ 0036            CA     LENGTHOT          TIMES FIVE IS THE NUM OF SEC ERECTING
+ 0037  2         TS     ERECTIME
+ 0038            TC     NEWMODEX
+ 0039            OCT    05
+ 003910          TC     BANKCALL
+ 003911          CADR   GCOMPZER          ZERO COMPENSATION PROGRAM REGISTERS
+ 0040  8         TC     ANNNNNN
+ 0086   ALLOOP   INHINT                  TASK EVERY .5 OR 1 SEC (COMPASS-DRIFT)
+ 0087            CA     TIME1
+ 0088            TS     GTSWTLST        STORE TIME TO SET UP NEXT WAITLIST
+ 0089   ALLOOP3  CA     ALTIM
+ 0090            TS     GEOSAVED
+ 0091            TC     PHASCHNG
+ 0092            OCT    00201
+ 0093  2         TC     +2
+ 0094   ALLOOP1  INHINT                 RESTARTS COME IN HERE
+ 0095            CA     GEOSAVED
+ 0096            TS     ALTIM
+ 0097            CCS    A
+ 0098            CA     A               SHOULD NEVER HIT THIS LOCATION
+ 0099            TS     ALTIMS
+ 0100            CS     A
+ 0101            TS     ALTIM
+ 01011           CA     PIPAX
+ 01012           TS     DELVX
+ 01013           CA     PIPAY
+ 01014           TS     DELVY
+ 01015           CA     PIPAZ
+ 01016           TS     DELVZ
+ 010161          CAF    ZERO
+ 010162          TS     PIPAX
+ 010163          TS     PIPAY
+ 010164          TS     PIPAZ
+ 01017           TC     PHASCHNG
+ 01018           OCT    00701
+ 010181          RELINT
+ 0113   SPECSTS  CAF    PRIO20
+ 0116            TC     FINDVAC
+ 0117            2CADR  ALFLT            START THE JOB
+ 0118  8         TC     TASKOVER
+ 0119   ALFLT    TC     STOREDTA         STORE DATA IN CASE OF RESTART IN JOB
+ 0120            TC     PHASCHNG        THIS IS THE JOB DONE EVERY ITERATION
+ 0121            OCT    00601
+ 01211           CCS    GEOCOMPS
+ 01212           TC     +2
+ 01213           TC     NORMLOP
+ 01214           TC     BANKCALL         COMPENSATION IF IN COMPASS
+ 01215           CADR   1/PIPA
+ 0122  4         TC     NORMLOP
+ 0123  2ALFLT1   TC     LOADSTDT         COMES HERE ON RESTART
+ 0124   NORMLOP  TC     INTPRET
+ 0125            DLOAD
+ 0126                   INTVAL
+ 0127            STORE  S1               STEP REGISTERS MAY HAVE BEEN WIPED OUT
+ 0128            SLOAD  BZE
+ 0129                   GEOCOMPS
+ 0130                   ALCGKK
+ 01301           GOTO
+ 01302                   ALFLT2
+ 0131   ALCGKK   SLOAD  BMN
+ 0132                   ALTIMS
+ 0133                   ALFLT2
+ 0134   ALKCG    AXT,2  LXA,1            LOADS SLOPES AND TIME CONSTANTS AT RQST
+ 0135                   12D
+ 0136                   ALX1S
+ 0137   ALKCG2   DLOAD* INCR,1
+ 0138                   ALFDK +144D,1
+ 0139            DEC    -2
+ 0140            STORE  ALDK +10D,2
+ 0141            TIX,2  SXA,1
+ 0142                   ALKCG2
+ 0143  2                ALX1S
+ 0144   ALFLT2   VLOAD  VXM
+ 0145                   DELVX
+ 0146                   GEOMTRX
+ 0147            VSL1
+ 0149            DLOAD  DCOMP
+ 0150                   MPAC +3
+ 0151            STODL  DPIPAY
+ 0152                   MPAC +5
+ 0153  2         STORE  DPIPAZ
+ 0154            SETPD  AXT,1           MEASUREMENT INCORPORATION ROUTINES.
+ 0155                   0
+ 0156                   8D
+ 0157            SLOAD  BZE
+ 0158                   GEOCOMPS
+ 01581                  DELMLP
+ 01582           GOTO
+ 0159                   ALWAYSG         DO A QUICK COMPASS
+ 0160   DELMLP   DLOAD* DMP
+ 0161                   DPIPAY +8D,1
+ 0162                   PIPASC
+ 0163            SLR    DAD*
+ 0164                   9D
+ 0165                   DELM +8D,1
+ 0166            DSU*   PDDL*
+ 0167                   INTY +8D,1
+ 0168                   VLAUN +8D,1
+ 0169            DSU*   DMP
+ 0170                   VLAUNS +8D,1
+ 0171                   VELSC
+ 0172            SL2R
+ 0173            DAD    STADR
+ 0174            STORE  DELM +8D,1
+ 0175            STODL* DELM +10D,1
+ 0176                   VLAUN +8D,1
+ 0177            STODL  VLAUNS +8D,1
+ 0178                   INTVAL -2
+ 0179            STORE  INTY +8D,1
+ 0180            TIX,1  AXT,2
+ 0181                   DELMLP
+ 0182                   4
+ 0183   ALILP    DLOAD* DMPR*
+ 0184                   ALK +4,2
+ 0185                   ALDK +4,2
+ 0186            STORE  ALK +4,2
+ 0187            TIX,2  AXT,2
+ 0188                   ALILP
+ 0189                   8D
+ 0190   ALKLP    LXC,1  SXA,1
+ 0191                   CMPX1
+ 0192                   CMPX1
+ 0193            DLOAD* DMPR*
+ 0194                   ALK +1,1
+ 0195                   DELM +8D,2
+ 0196            DAD*
+ 0197                   INTY +8D,2
+ 0198            STODL* INTY +8D,2
+ 0199                   ALK +12D,2
+ 0200            DAD*
+ 0201                   ALDK +12D,2
+ 0202            STORE  ALK  +12D,2
+ 0203            DMPR*  DAD*
+ 0204                   DELM +8D,2
+ 0205                   INTY +16D,2
+ 0206            STODL* INTY +16D,2
+ 0207                   ALSK +1,1
+ 0208            DMP*   SL1R
+ 0209                   DELM +8D,2
+ 0210            DAD*
+ 0211                   VLAUN +8D,2
+ 0212            STORE  VLAUN +8D,2
+ 0213            TIX,2  AXT,1
+ 0214                   ALKLP
+ 0215  4                8D
+ 0216   LOOSE    DLOAD* PDDL*
+ 0217                   ACCWD +8D,1
+ 0218                   VLAUN +8D,1
+ 0219            PDDL*  VDEF
+ 0220                   POSNV +8D,1
+ 0221            MXV    VSL1
+ 0222                   TRANSM1
+ 0223            DLOAD
+ 0224                   MPAC
+ 0225            STODL  POSNV +8D,1
+ 0226                   MPAC +3
+ 0227            STODL  VLAUN +8D,1
+ 0228                   MPAC +5
+ 0229            STORE  ACCWD +8D,1
+ 0230            TIX,1
+ 0231  4                LOOSE
+ 0232            AXT,2  AXT,1            EVALUATE SINES AND COSINES
+ 0233                   6
+ 0234                   2
+ 0235   BOOP     DLOAD* DMPR
+ 0236                   ANGX +2,1
+ 0237                   GEORGEJ
+ 0238            SR2R
+ 0239            PUSH   SIN
+ 0240            SL1R   XAD,1
+ 0241                   X1
+ 0242            STODL  16D,2
+ 0243            COS
+ 0244            STORE  22D,2            COSINES
+ 0245            TIX,2  DLOAD
+ 0246  4                BOOP
+ 0247                   14D
+ 0248            SL2    DAD
+ 0249                   INTY
+ 0250            STODL  INTY
+ 0251                   12D
+ 0252            DMP    SL3R
+ 0253                   20D
+ 0254            DAD
+ 0255                   INTZ
+ 0256            STODL  INTZ
+ 0257                   16D
+ 0258            DMPR   DMPR
+ 0259                   18D
+ 0260                   14D
+ 0261            SL2
+ 0262            PDDL   DMPR
+ 0263                   10D
+ 0264                   12D
+ 0265            DAD
+ 0266            DMPR
+ 0267                   WANGI
+ 0268            PDDL   DMPR
+ 0269                   18D
+ 0270                   20D
+ 0271            DMP    SL2R
+ 0272                   WANGO
+ 0273            BDSU
+ 0274                   DRIFTO
+ 0275            DSU    STADR
+ 0276            STODL  WPLATO
+ 0277                   16D
+ 0278            DMPR   DMP
+ 0279                   20D
+ 0280                   WANGI
+ 0281            SL2R
+ 0282            PDDL   DMPR
+ 0283                   WANGO
+ 0284                   14D
+ 0285            DAD
+ 0286                   DRIFTI
+ 0287            DSU
+ 0288            PDDL   DMPR
+ 0289                   WANGT
+ 0290                   WANGI
+ 0291            DAD    STADR
+ 0292            STODL  WPLATI
+ 0293                   18D
+ 0294            DMP    SL1R
+ 0295                   10D
+ 0296            PDDL   DMPR
+ 0297                   12D
+ 0298                   16D
+ 0299            DMP    SL1R
+ 0300                   14D
+ 0301            BDSU
+ 0302            DMPR
+ 0303                   WANGI
+ 0304            PDDL   DMPR
+ 0305                   12D
+ 0306                   20D
+ 0307            DMP    SL1R
+ 0308                   WANGO
+ 0309            BDSU
+ 0310                   DRIFTT
+ 0311            DAD                     WPLATT NOW IN MPAC
+ 0312            PUSH                   PUSH IT DOWN-X IT BY SANG +2
+ 0313            DMPR   SR1R
+ 0314                   12D
+ 0315            PDDL   DMPR
+ 0316                   WPLATO
+ 0317                   18D
+ 0318            DAD
+ 0319            DDV
+ 0320                   20D
+ 0321            PUSH   DMPR
+ 0322                   GEORGEK
+ 0323            SRR    DAD
+ 0324                   13D
+ 0325                   ANGX
+ 0326            STODL  ANGX
+ 0327            DMPR   DAD
+ 0328                   14D
+ 0329                   WPLATI
+ 0330            DMPR   SRR
+ 0331                   GEORGEK
+ 0332                   13D
+ 0333            DAD
+ 0334                   ANGY
+ 0335            STODL  ANGY
+ 0336                   18D
+ 0337            DMP    SL1R            MULTIPLY X WPLATT -SL1- PUSH AND RELOAD
+ 0338            PDDL   DMPR
+ 0339                   12D
+ 0340                   WPLATO
+ 0341            BDSU
+ 0342            DMPR   SRR
+ 0343                   GEORGEK
+ 0344                   13D
+ 0345            DAD
+ 0346                   ANGZ
+ 0347            STORE  ANGZ
+ 0348            BOVB   EXIT
+ 0349                   SOMEERRR
+ 0350            CCS    LENGTHOT
+ 03501           TC     SLEEPIE
+ 03502 4         TC     SETUPER1
+ 0351   ALWAYSG  DLOAD* DSU*            COMPASS AND ERECT
+ 0352                   DPIPAY +8D,1
+ 0353                   FILDELV +8D,1
+ 0354            DMPR   DAD*
+ 0355                   GEOCONS1
+ 0356                   FILDELV +8D,1
+ 0357            STORE  FILDELV +8D,1
+ 0358            DAD*
+ 0359                   INTVEC +8D,1
+ 0360            STORE  INTVEC +8D,1
+ 0361            DMPR   DAD*
+ 0362                   GEOCONS2
+ 0363                   FILDELV +8D,1
+ 0364            DMPR   PUSH
+ 0365                   GEOCONS1
+ 0366            TIX,1  SLOAD
+ 0367                   ALWAYSG
+ 0368                   ERECTIME
+ 0369            BZE    DLOAD
+ 0370                   COMPGS          COMPASS
+ 0371                   THETAN +2
+ 0372            DSU    STADR
+ 0373            STODL  THETAN +2
+ 0374            BDSU
+ 0375                   THETAN +4
+ 0376            STORE  THETAN +4
+ 0377            GOTO
+ 0378                   ADDINDRF
+ 0379   COMPGS   DLOAD  DAD             COMPASS
+ 0380                   THETAN
+ 0381                   FILDELV
+ 0382            STODL  THETAN
+ 0383                   FILDELV
+ 0384            DMPR   BDSU
+ 0385                   GEOCONS3
+ 0386                   THETAN +4
+ 0387            STODL  THETAN +4
+ 0388                   FILDELV +4
+ 0389            DMPR   BDSU
+ 0390                   GEOCONS3
+ 0391                   THETAN +2
+ 0392            PDDL   DMP
+ 0393                   INTVEC +4
+ 0394                   GEOCONS4
+ 0395            BDSU   STADR
+ 0396            STORE  THETAN +2
+ 0397   ADDINDRF VLOAD  MXV
+ 0398                   THETAN
+ 0399                   GEOMTRX
+ 0400            VSL1   VAD
+ 0401                   THETAX
+ 0402            STORE  THETAX
+ 0403  4         EXIT
+ 0404   ENDGTSAL CCS    LENGTHOT         IS 5 SEC OVER-THE TIME TO TORQ PLATFORM
+ 0405            TC     SLEEPIE          NO-SET UP NEXT WAITLIST CALL FOR .5 SEC
+ 0406            CCS    LGYRO            YES BUT ARE GYROS BUSY
+ 0407  4         TCF    ANNNNNN +2       BUSY-GET THEM .5 SECONDS FROM NOW
+ 0410            TC     PHASCHNG
+ 0411            OCT    00401
+ 0415            TC     INTPRET          ADD COMPASS COMMANDS INTO ERATE
+ 0416            VLOAD  VAD
+ 0417                   THETAX
+ 0418                   ERCOMP
+ 0419            STORE  ERCOMP
+ 0420            EXIT
+ 0421            TC     BANKCALL
+ 0422  4         CADR   EARTHR           TORQUE IT ALL IN
+ 0423   RESTEST1 INHINT                  CHECK ON ORIENTATION CHANGE
+ 0424            CA     PREMTRXC
+ 0430            EXTEND
+ 0431            BZMF   NOCHORLD         +1 -CHANGE, 0 OR -1 NO LOAD OR LOADING
+ 0432            TC     LOADXSM          IF THERE WAS A CHANGE LOAD IT INTO XSM
+ 04321           TC     PHASCHNG
+ 04322           OCT    01001
+ 04323  RESTEST3 CA     ZERO             RESET CHANGE INDEX TO ZERO
+ 0434            TS     PREMTRXC
+ 0435  8         RELINT
+ 0436            TC     INTPRET          HERE TO CHANGE ORIENTATOON
+ 0437            AXT,1                   DESIRED IN XSM,PRESENT IN GEOMTRX
+ 0438                   18D
+ 0439            SSP
+ 0440                   S1
+ 0441                   6
+ 0442   LOADM    VLOAD* DOT
+ 0443                   XSM +18D,1
+ 0444                   GEOMTRX +12D
+ 0445            PDVL*  DOT
+ 0446                   XSM +18D,1
+ 0447                   GEOMTRX +6D
+ 0448            PDVL*  DOT
+ 0449                   XSM +18D,1
+ 0450                   GEOMTRX
+ 0451            VDEF   UNIT
+ 0452            STORE  XDC +18D,1
+ 0453            TIX,1  CALL
+ 0454                   LOADM
+ 0455                   CALCGTA
+ 0456            EXIT
+ 0457  4         TC     TORQINCH         NECESSARY TORQUE NOW IN OGC
+ 0458   SETUPER1 TC     INTPRET
+ 0459            DLOAD  PDDL             ANGLES FROM DRIFT TEST ONLY
+ 0460                   ANGZ
+ 0461                   ANGY
+ 0462            PDDL   VDEF
+ 0463                   ANGX
+ 0464            VCOMP  VXSC
+ 0465                   GEORGEJ
+ 0466            MXV    VSR1
+ 0467                   GEOMTRX
+ 0468            STORE  OGC
+ 0469  4         EXIT
+ 0470   TORQINCH TC     PHASCHNG
+ 0471            OCT    00501
+ 0472            CA     AINGYRO
+ 0473            TC     BANKCALL
+ 0474            CADR   IMUPULSE
+ 0475            TC     BANKCALL
+ 0476            CADR   IMUSTALL
+ 0477  4         TC     SOMERR2          BAD GYRO TORQUE-END OF TEST
+ 0478   GEOSTRT4 CCS    TORQNDX          ONLY POSITIVE IF IN VERTICAL DRIFT TEST
+ 0479            TC     GEOBAVR         VERT DRIFT TEST OVER
+ 0480            TC     SETUPER          SET UP ERATE FOR PIPTEST OR COMPASS
+ 0481            CCS    GEOCOMPS
+ 0482            TC     TQORESTM
+ 0483            TC     BANKCALL        GO TO IMU2 FOR A PIPA TEST AND DISPLAY
+ 0484  2         CADR   TORQUE
+ 0485   GEOBAVR  TC     BANKCALL
+ 0486  8         CADR   VALMIS           DISPLAY VERTICAL DRIFT
+R04861  SET UP WAITLIST SECTION
+ 0487   SLEEPIE  TS     LENGTHOT        TEST NOT OVER-DECREMENT LENGTHOT
+ 0488            TC     PHASCHNG         CHANGE PHASE
+ 0489            OCT    00301
+ 0490            CCS    TORQNDX         ARE WE DOING VERTDRIFT
+ 0491            TC     EARTTPRQ        YES,DO HOR ERATE TORQ THEN SLEEP
+ 0492            TC     WTLISTNT        GO TO SET UP NEXT WAITLIST
+ 0493   EARTTPRQ TC     BANKCALL        IN VERTDRIFT,ADD HOR ERATE AND SLEEP
+ 0494            CADR   EARTHR
+ 0495   WTLISTNT INHINT
+ 0496            CS     TIME1
+ 0497            AD     GTSWTLST
+ 0498            EXTEND
+ 0499            BZMF   +2
+ 0500            AD     NEGMAX
+ 0501            AD     1SECXT          1 SEC FOR CALIBRATION,.5 SEC IN COMPASS
+ 0502            EXTEND
+ 0503            BZMF   RIGHTGTS
+ 0504   WTGTSMPL TC     WAITLIST
+ 0505            2CADR  ALLOOP
+ 0506            RELINT
+ 0507            TC     ENDOFJOB
+ 0508   RIGHTGTS CAF    TWO
+ 0509  4         TC     WTGTSMPL
+ 0510   SOMEERRR TC     ALARM
+ 0511            OCT    1600
+ 0512            TC     +3
+ 0513   SOMERR2  TC     ALARM
+ 0514            OCT    1601
+ 0515            TC     BANKCALL
+ 0516  8         CADR   ENDTEST
+ 0517   TQORESTM TC     BANKCALL
+ 0518  2         CADR   LOADGTSM         LOAD NEW XSM MATRIX INTO GEOMTRX
+ 0520   NOCHORLD RELINT                  AFTER CHANGEIN ORIEN OR NO CHANGE
+ 0521            TC     INTPRET
+ 0522            VLOAD
+ 0523                   SCHZEROS
+ 0524            STORE  THETAX
+ 0525            STORE  THETAN
+ 0526            EXIT
+ 0527            CCS    ERECTIME
+ 0528  2         TS     ERECTIME                COUNTS DOWN FOR ERECTION
+ 0529   ANNNNNN  CAF    NINE
+ 0530            TS     LENGTHOT
+ 0531            CCS    ERECTIME
+ 0532            TC     SLEEPIE +1
+ 05321           TC     CHECKMM          IN COMPASS CHECK FOR VERIFICATION
+ 05322           OCT    03
+ 05323           TC     +2               NOT VERIFYING
+ 05324           TC     SLEEPIE +1       YES
+ 0533            TC     NEWMODEX
+ 0534            OCT    02
+ 0535            TC     SLEEPIE +1       COMPASS IS 02  -ERECTION 05
+ 0536   SETUPER  EXTEND                  SUBROUTINE CALLED IN 3 PLACES
+ 0537            QXCH   QPLACES
+ 0538            TC     INTPRET
+ 0539            CALL
+ 0540                   ERTHRVSE
+ 0541            EXIT
+ 0542            TC     BANKCALL
+ 0543            CADR   OGCZERO
+ 0544  8         TC     QPLACES
+ 0546   OPTMSTRT INDEX  PHASE1
+ 0547            TC     +0
+ 0548            TC     GTSGTS1
+ 0549            TC     GTSGTS2
+ 0550            TC     GTSGTS3
+ 0551            TC     GTSGTS4
+ 0552            TC     GTSGTS5
+ 0553            TC     GTSGTS6
+ 055310          TC     GTSGTS7
+ 0553114         TC     GTSGTS10
+ 0554   GTSGTS1  CAF    PRIO20
+ 0555            TC     FINDVAC
+ 0556            2CADR  RSTGTS1
+ 0557            TC     SWRETURN
+ 0558   GTSGTS2  CAF    ONE
+ 0559            TC     WAITLIST
+ 0560            2CADR  ALLOOP1
+ 0561            TC     SWRETURN
+ 0562   GTSGTS3  CAF    PRIO20
+ 0563            TC     FINDVAC
+ 0564            2CADR  WTLISTNT
+ 0565            TC     SWRETURN
+ 0566   GTSGTS4  CAF    PRIO20
+ 0567            TC     FINDVAC
+ 0568            2CADR  RESTEST1
+ 0569            TC     SWRETURN
+ 0570   GTSGTS5  CAF    PRIO20
+ 0571            TC     FINDVAC
+ 0572            2CADR  GEOSTRT4
+ 0573            TC     SWRETURN
+ 0574   GTSGTS6  CAF    PRIO20
+ 0575            TC     FINDVAC
+ 0576            2CADR  ALFLT1
+ 0577  2         TC     SWRETURN
+ 05771  GTSGTS7  CAF    ONE
+ 05772           TC     WAITLIST
+ 05773           2CADR  SPECSTS
+ 05775  GTSGTS10 CAF    PRIO20
+ 05776           TC     FINDVAC
+ 05777           2CADR  RESTEST3
+ 05778 8         TC     SWRETURN
+ 0578   GEOBND   OCT    02000             BANK 4  -THIS IS THE STORE DTA SECTION
+ 0579  4GEOBND1  OCT    02400            BANK NUMBER 5
+ 0581   STOREDTA CAF    GEOBND
+ 0582            TS     L
+ 0583            CAF    77DECML
+ 0584            TS     MPAC
+ 0585            INDEX  MPAC
+ 0586            CA     ALX1S
+ 0587            LXCH   EBANK
+ 0588            EBANK= JETSTEP
+ 0589            INDEX  MPAC
+ 0590            TS     JETSTEP
+ 0591            LXCH   EBANK
+ 0592            EBANK= XSM
+ 0593            CCS    MPAC
+ 0594            TCF    +2
+ 0595            TC     Q
+ 0596            TS     MPAC
+ 0597            CAF    GEOBND
+ 0598            TS     L
+ 0599  4         TCF    STOREDTA +4
+ 0600   LOADSTDT CAF    77DECML
+ 0601            TS     MPAC
+ 0602            CA     GEOBND
+ 0603            XCH    EBANK
+ 0604            TS     L
+ 0605            EBANK= JETSTEP
+ 0606            INDEX  MPAC
+ 0607            CA     JETSTEP
+ 0608            LXCH   EBANK
+ 0609            EBANK= XSM
+ 0610            INDEX  MPAC
+ 0611            TS     ALX1S
+ 0612            CCS    MPAC
+ 0613            TCF    +2
+ 0614            TC     Q
+ 0615            TS     MPAC
+ 0616  8         TCF    LOADSTDT +2
+ 0617   LOADXSM  EXTEND
+ 0618            QXCH   QPLACES
+ 0619            CAF    17DECML
+ 0620            TS     MPAC
+ 0621            INDEX  A
+ 0622            CA     PRELMTRX
+ 0623            INDEX  MPAC
+ 0624            TS     XSM
+ 0625            CCS    MPAC
+ 0626            TCF    LOADXSM +3
+ 0627            TC     QPLACES
+ 0628   ALFDK    DEC    -28             SLOPES AND TIME CONSTANTS FOR FIRST 30SC
+ 0629            DEC    -1
+ 0630            2DEC   .91230833       TIME CONSTANTS-PIPA OUTPUTS
+ 0631            2DEC   .81193187       TIME CONSTANT-ERECTION ANGLES
+ 0632            2DEC   -.00035882      SLOPE-AZIMUTH ANGLE
+ 0633            2DEC   -.00000029      SLOPE-VERTICAL DRIFT
+ 0634  4         2DEC   .00013262       SLOPE-NORTH SOUTH DRIFT
+ 0635            DEC    -58             31-90 SEC
+ 0636            DEC    -1
+ 0637            2DEC   .99122133
+ 0638            2DEC   .98940595
+ 0639            2DEC   -.00079010
+ 0640            2DEC   -.00000265
+ 0641  4         2DEC   .00043154
+ 0642            DEC    -8              91-100 SEC
+ 0643            DEC    -1
+ 0644            2DEC   .99971021
+ 0645            2DEC   .99852047
+ 0646            2DEC   .00042697
+ 0647            2DEC   -.00000213
+ 0648  4         2DEC   .00011864
+ 0649            DEC    -98             101-200 SEC
+ 0650            DEC    -1
+ 0651            2DEC   .99550063
+ 0652            2DEC   .98992124
+ 0653            2DEC   .00043452
+ 0654            2DEC   -.00000401
+ 0655  4         2DEC   -.00021980
+ 0656            DEC    -248            201-450 SEC
+ 0657            DEC    -1
+ 0658            2DEC   .99673264
+ 0659            2DEC   .99365467
+ 0660            2DEC   .00003767
+ 0661            2DEC   -.00002317
+ 0662  4         2DEC   -.00003305
+ 0663            DEC    -338            451-790 SEC
+ 0664            DEC    -1
+ 0665            2DEC   .99924362
+ 0666            2DEC   .99888274
+ 0667            2DEC   .00000064
+ 0668            2DEC   -.00004012
+ 0669  4         2DEC   -.00000195
+ 0670            DEC    -408            791-1200 SEC
+ 0671            DEC    -1
+ 0672            2DEC   .99963845
+ 0673            2DEC   .99913162
+ 0674            2DEC   .00000090
+ 0675            2DEC   .00002927
+ 0676  4         2DEC   -.00000026
+ 0677            DEC    -498            1201-1700 SEC
+ 0678            DEC    -1
+ 0679            2DEC   .99934865
+ 0680            2DEC   .99868793
+ 0681            2DEC   .00000055
+ 0682            2DEC   .00001183
+ 0683  4         2DEC   -.00000005
+ 0684            DEC    -398            1701-2100 SEC
+ 0685            DEC    -1
+ 0686            2DEC   .99947099
+ 0687            2DEC   .99894799
+ 0688            2DEC   .00000018
+ 0689            2DEC   .00000300
+ 0690  4         2DEC   -.00000001
+ 0691            DEC    -598            2101-2700 SEC
+ 0692            DEC    -1
+ 0693            2DEC   .99957801
+ 0694            2DEC   .99916095
+ 0695            2DEC   .00000007
+ 0696            2DEC   .00000096
+ 0697  4         2DEC   .00000000
+ 0698            DEC    -698            2700-3400 SEC
+ 0699            DEC    -1
+ 0700            2DEC   .99966814
+ 0701            2DEC   .99933952
+ 0702            2DEC   .00000002
+ 0703            2DEC   .00000028
+ 0704  4         2DEC   .00000000
+ 0705            DEC    -598            3401-4000 SEC
+ 0706            DEC    -1
+ 0707            2DEC   .99972716
+ 0708            2DEC   .99945654
+ 0709            2DEC   .00000001
+ 0710            2DEC   .00000010
+ 0711  4         2DEC   .00000000
+ 0712   SCHZEROS 2DEC   .00000000
+ 0713            2DEC   .00000000
+ 0714            2DEC   .00000000
+ 0715   INTVAL   OCT    4
+ 0716            OCT    2
+ 0717            DEC    144
+ 0718            DEC    -1
+ 0719   SOUPLY   2DEC   .93505870        INITIAL GAINS FOR PIP OUTPUTS
+ 0720  4         2DEC   .26266423        INITIAL GAINS/4 FOR ERECTION ANGLES
+ 0721   77DECML  DEC    77
+ 0722   ALXXXZ   GENADR ALX1S -1
+ 0723   AINGYRO  ECADR  OGC
+ 0724   PIPASC   2DEC   .13055869
+ 0726   VELSC    2DEC   -.52223476       512/980.402
+ 0727   ALSK     2DEC   .17329931       SSWAY VEL GAIN X 980.402/4096
+ 0728  4         2DEC   -.00835370      SSWAY ACCEL GAIN X 980.402/4096
+ 0731   GEORGEJ  2DEC   .63661977
+ 0732   GEORGEK  2DEC   .59737013
+ 0733   GEOCONS1 2DEC   .1
+ 0734   GEOCONS2 2DEC   .005
+ 0735   GEOCONS3 2DEC   .025
+ 0736   GEOCONS4 2DEC   .00003
+ 07362  1/PIPAGT OCT    06200
+ 0737   17DECML  DEC    17
+ 0738   19DECML  DEC    19
+ 0739  41/2SECX  DEC    50
+ 0740   GTSCPSS  CA     ONE
+ 0741            TS     GEOCOMPS          THIS IS THE LEAD IN FOR COMPASS
+ 0743            TC     NEWMODEX
+ 074417          OCT    01
+ 074518          CA     1/PIPAGT
+ 074619          TS     1/PIPADT
+ 074720          CA     ZERO
+ 074821          TS     PREMTRXC
+ 074922          CAF    1/2SECX
+ 075023          TS     1SECXT
+ 0781            TC     BANKCALL
+ 0782  4         CADR   GEOIMUTT                   TO IMU PERF TESTS 2
+ 0783   ENDPREL1 EQUALS
 *       ENDOFJOB
