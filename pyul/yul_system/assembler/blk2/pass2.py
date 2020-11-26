@@ -633,11 +633,12 @@ class Blk2Pass2(Pass2):
 
         return self.max_ad_set(popo)
 
-    def max_ad_set(self, popo, check_loc=False):
-        # Except for EBANK=, SBANK=, BNKSUM:
-        if (not check_loc) or (self._location < ONES):
-            # Keep assembler's EBANK reg. up to date.
-            self.ebk_loc_q()
+    def max_ad_set(self, popo, check_loc=False, skip_ebank=False):
+        if not skip_ebank:
+            # Except for EBANK=, SBANK=, BNKSUM:
+            if (not check_loc) or (self._location < ONES):
+                # Keep assembler's EBANK reg. up to date.
+                self.ebk_loc_q()
 
         # Translate address field.
         self.proc_adr(popo)
@@ -1057,7 +1058,7 @@ class Blk2Pass2(Pass2):
 
     def set_ebcon(self, popo, check_oneshot=False):
         # Bypass update if 1-shot declaration.
-        if check_oneshot and ((self._ebank_reg & 0o77) > 7):
+        if (not check_oneshot) or ((self._ebank_reg & 0o77) > 7):
             # Position current setting for BBCON fmt.
             self._ebank_reg &= ~ 0o7
             self._ebank_reg |= (self._ebank_reg >> 8) & 0o7
@@ -1073,7 +1074,7 @@ class Blk2Pass2(Pass2):
         # Select on * in op code (BBCON or 2CADR).
         if not self.cuss_list[90].demand:
             self._max_adres = 0o167777
-            return self.max_ad_set(popo, check_loc=True)
+            return self.max_ad_set(popo, skip_ebank=True)
 
         # FIXME
 
