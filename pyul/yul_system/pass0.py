@@ -23,6 +23,7 @@ class Yul:
         self._mon = mon
         self._no_typist = False
         self._no_revise = False
+        self._incr_revno = False
         self._non_wise = 0
         self._invisible_director = False
         self.substrab = [False]*256
@@ -393,7 +394,7 @@ class Yul:
                 self.typ_abort()
 
         if self._task_msg.split()[0] != 'ASSEMBLY':
-            # Branch if doing reprent, not assembly.
+            # Branch if doing reprint, not assembly.
             sub_card, sub_sent = self.rd_subdrc()
             if sub_card is None or sub_sent[0] != 'FOR':
                 # Require subdirector "FOR CUSTOMERNAME".
@@ -405,7 +406,7 @@ class Yul:
 
             # Request reprint, check prg/sub name etc.
             self.switch |= SwitchBit.REPRINT | SwitchBit.MERGE_MODE
-            self.known_psr()
+            self.known_psr(old_ok = True)
 
             # FIXME: Test obsolescence bit.
 
@@ -431,15 +432,26 @@ class Yul:
             self.new_prsub()
 
         else:
-            # Here alone the revision number is begin changed.
+            # Modify "KNOWN PROGRAM/SUBROUTINE" search because
+            # here alone the revision number is begin changed.
+            self._incr_revno = True
+
             if self._no_revise:
                 # Forbid revisions on a frozen tape.
                 self._mon.mon_typer('CAN\'T REVISE A PROGRAM ON A FROZEN TAPE')
                 self.typ_abort()
 
             # Request merging, check program name etc.
-            switch |= SwitchBit.MERGE_MODE
-            self.known_psr()
+            self.switch |= SwitchBit.MERGE_MODE
+            prog = self.known_psr()
+
+            # New revno.
+            prog['REVISION'] += 1
+            prog['MODIFIED'] = self._yul_date
+            self.yulprogs.update_prog(self.comp_name, self.prog_name, prog)
+
+            # Place program or subroutine name at head of author's list.
+            self.yulprogs.incr_auth(self._auth_name, self.comp_name, self.prog_name)
 
         self.init_assy()
 
@@ -635,9 +647,17 @@ class Yul:
             self.typ_abort()
 
         self._latest_rev = prog['REVISION']
-        if (prog['REVISION'] != expected_rev) and not (old_ok and expected_rev < prog['REVISION']):
+
+        common = prog['REVISION']
+
+        if self._incr_revno:
+            # Increment old renv, ask for match.
+            self._incr_revno = False
+            common += 1
+
+        if (common != expected_rev) and not (old_ok and expected_rev < common):
             # Procedure to cuss a wrong revision no. Announce correct one and abort.
-            self._mon.mon_typer('WRONG REVISION NUMBER, SHOULD BE: %u' % prog['REVISION'])
+            self._mon.mon_typer('WRONG REVISION NUMBER, SHOULD BE: %u' % common)
             self.typ_abort()
 
         if prog['AUTHOR'] != self._auth_name:
@@ -649,6 +669,8 @@ class Yul:
             # Cuss attempt to revise controlled subro.
             self._mon.mon_typer('CONTROLLED SUBROUTINE CANNOT BE DIDDLED.')
             self.typ_abort()
+
+        return prog
 
     def new_prsub(self):
         # Seek program/subro name in directory.

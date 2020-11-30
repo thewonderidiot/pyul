@@ -74,6 +74,7 @@ class SwitchBit:
     ANOTHER_TASK      = Bit.BIT4
     KNOW_SUBS         = Bit.BIT5
     DP_OPCODE         = Bit.BIT6
+    CORRECT           = Bit.BIT6
     SEGMENT           = Bit.BIT7
     PREVIOUS_INDEX    = Bit.BIT7
     BEFORE            = Bit.BIT8

@@ -22,6 +22,8 @@ class Pass2:
         self._m_typ_tab = m_typ_tab
         self._dp_inst = False
         self._zequaloc = False
+        self._qu_col_ssl = True
+        self._rejected = False
         self._def_xform = 0o31111615554
         self._marker = '*'
         self._lin_count = 0
@@ -177,13 +179,14 @@ class Pass2:
 
         # Use ternary key to check whether columns 1, 17, and 24 contain
         # queer information.
-        if ternary_key == 3 or (ternary_key == 0 and popo.card[0] != 'J'):
-            if popo.card[0] != ' ':
-                self.cuss_list[60].demand = True
-            if popo.card[16] != ' ':
-                self.cuss_list[61].demand = True
-            if popo.card[23] != ' ':
-                self.cuss_list[62].demand = True
+        if self._qu_col_ssl:
+            if ternary_key == 3 or (ternary_key == 0 and popo.card[0] != 'J'):
+                if popo.card[0] != ' ':
+                    self.cuss_list[60].demand = True
+                if popo.card[16] != ' ':
+                    self.cuss_list[61].demand = True
+                if popo.card[23] != ' ':
+                    self.cuss_list[62].demand = True
 
         own_proc(popo)
 
@@ -227,20 +230,68 @@ class Pass2:
         # Leave log-card mode
         self._user_page = 0
 
-    def modify(self, popo):
-        pass
-
     def end_error(self, popo):
-        pass
+        # Branch unless announcement of rejects.
+        if popo.card[0] == 'E':
+            # End error message must be last log line.
+            popo.card = 'L' + popo.card[1:]
 
-    def card_no(self, popo):
-        pass
+            # Inhibit check on colums 1, 17, and 24.
+            self._qu_col_ssl = False
+            self._yul.switch &= ~SwitchBit.LAST_REM
+
+        if not self._rejected:
+            # "REJECT PAGE NNN"
+            self._mon.mon_typer(self._yul.page_head[104:])
+
+            # Shut off printing of rest of program.
+            self._yul.switch |= SwitchBit.PRINT
+
+            # Type that just once
+            self._rejected = True
+
+
+        # Print error message about that.
+        self._yul.switch |= SwitchBit.BAD_ASSEMBLY
+        return self.modify(popo)
 
     def accept(self, popo):
-        pass
+        # Branch on sinful acceptor card.
+        if popo.health & ~HealthBit.CARD_TYPE_MASK:
+            return self.card_no(popo, only_cardno=True)
+
+        # Noramlly change marker, get next card.
+        self._marker = '@'
 
     def delete(self, popo):
-        pass
+        # Maybe cuss too-small second card numer.
+        if popo.health & Bit.BIT12:
+            self.cuss_list[59].demand = True
+        # Maye cuss no match on 2nd card number.
+        if popo.health & Bit.BIT11:
+            self.cuss_list[69].demand = True
+        return self.card_no(popo)
+
+    def card_no(self, popo, only_cardno=False):
+        if not only_cardno:
+            # Maybe cuss bad location field format.
+            if popo.health & Bit.BIT8:
+                self.cuss_list[55].demand = True
+            # Maybe cuss meaningless address field.
+            if popo.health & Bit.BIT9:
+                self.cuss_list[8].demand = True
+        # Maybe cuss no match on card number.
+        if popo.health & Bit.BIT10:
+            self.cuss_list[58].demand = True
+
+        return self.modify(popo)
+
+    def modify(self, popo):
+        # Print merge control lines at left.
+        self._line[8] = self._line[48:] + ' '*40
+        #  Print but do not keep such cards.
+        self.print_lin()
+        return self.cusser()
 
     # Procedure in pass 2 for remarks cards. Postpones cussing to check for a right print card.
     def remarks(self, popo):
@@ -2093,10 +2144,20 @@ class Pass2:
             return self.real_assy()
 
         # Branch if reprint, not bad merge.
-        if self._yul.switch & SwitchBit.REPRINT_PASS1P5:
+        if SwitchBit.REPRINT_PASS1P5 <= self._yul.switch:
             return self.inish_p2()
 
-        # FIXME: handle revisions and bad merges
+        # Say "REJECT" on every page.
+        self._yul.page_head = self._yul.page_head[:104] + '■REJECT ' + self._yul.page_head[112:]
+        
+        # FIXME: Branch unless version or transferred.
+
+        # A revision is rejected. Subtract one from the revision number.
+        prog = self._yul.yulprogs.find_prog(self._yul.comp_name, self._yul.prog_name)
+        prog['REVISION'] -= 1
+        self._yul.yulprogs.update_prog(self._yul.comp_name, self._yul.prog_name, prog)
+
+        return self.inish_p2()
 
     # Assembly of a new program or subroutine, or a well-merged revision or version. Clean out the
     # delete list and refurbish the lists of threads to subsidiary subroutines.

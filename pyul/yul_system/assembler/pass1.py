@@ -64,11 +64,15 @@ class IllegalOp(Exception):
 class Disaster(Exception):
     pass
 
+class BadMerge(Exception):
+    pass
+
 class Pass1:
     def __init__(self, mon, yul):
         self._mon = mon
         self._yul = yul
         self._real_cdno = 0
+        self._last_cdno = 0
         self._field_cod = [None, None]
         self._end_of = POPO(health=0, card='⌑999999Q' + '%-72s' % yul.old_line)
         self._early = True
@@ -78,6 +82,7 @@ class Pass1:
         self._renumber = 0
         self._sypt = None
         self._head = ' '
+        self._end_yul = 'END YUL PASS 1'
         self._xforms = [
             0x4689A5318F,
             0x47BCDF42E2,
@@ -109,23 +114,25 @@ class Pass1:
     def get_real(self):
         # Get real is normally the chief node of pass 1. Occasionally merge control procedures take
         # over, accepting or rejecting tape cards.
-        while True:
+        try:
+            while True:
+                # Get a card and branch on no end of file.
+                card = self.get_card()
+                if card is None:
+                    self._real = self._end_of
+                    return self.tp_runout()
 
-            # Get a card and branch on no end of file.
-            card = self.get_card()
-            if card is None:
-                self._real = self._end_of
-                return self.tp_runout()
+                if self._yul.switch & SwitchBit.MERGE_MODE:
+                    if not self._yul.switch & SwitchBit.TAPE_KEPT:
+                        self._tape = self.get_tape()
 
-            if self._yul.switch & SwitchBit.MERGE_MODE:
-                if not self._yul.switch & SwitchBit.TAPE_KEPT:
-                    self._tape = self.get_tape()
+                        if self._tape is None:
+                            # FIXME: Clean up and exit pass 1
+                            return
 
-                    if self._tape is None:
-                        # FIXME: Clean up and exit pass 1
-                        return
-
-            self.modif_chk()
+                self.modif_chk()
+        except BadMerge:
+            return self.bad_merge()
 
     def tp_runout(self):
         if not self._yul.switch & SwitchBit.MERGE_MODE:
@@ -149,16 +156,23 @@ class Pass1:
         if self._yul.switch & SwitchBit.FREEZE:
             self.send_popo(self._end_of)
 
-        # FIXME: check for merge errors
-
         # FIXME: play with number of copies?
+
+        bad1_bits = (SwitchBit.REPRINT |
+                     SwitchBit.SUPPRESS_INACTIVE | SwitchBit.SUPPRESS_SYMBOL | SwitchBit.SUPPRESS_OCTAL | 
+                     SwitchBit.CONDISH_INACTIVE  | SwitchBit.CONDISH_SYMBOL  | SwitchBit.CONDISH_OCTAL)
 
         # Maybe set reprint flag for passes 1.5, 3.
         self._yul.switch &= ~SwitchBit.REPRINT_PASS1P5
         if self._yul.switch & SwitchBit.REPRINT:
             self._yul.switch |= SwitchBit.REPRINT_PASS1P5
 
-        self._mon.mon_typer('END YUL PASS 1')
+        # Branch on no merge error.
+        if self._end_yul.endswith('≠'):
+            # Bar YULPROGS writes, bar some printing.
+            self._yul.switch |= bad1_bits
+
+        self._mon.mon_typer(self._end_yul)
 
         # Clear out substrand (paragraph) table
         self._yul.substrab = [False]*256
@@ -253,9 +267,8 @@ class Pass1:
                 # self._real.card = self._real.card[0] + '      ' + self._real.card[7:]
                 seq_break = True
 
-
             # Branch if not TINS (Tuck In New Section)... which is an incipient log card.
-            if self._real.card[0] == 'L':
+            if self._real.card[0] == 'T':
                 seq_break = True
 
             # Op code "MODIFY" is automatic seq. brk.
@@ -348,12 +361,292 @@ class Pass1:
         return self.comp_cdns()
 
     def comp_cdns(self):
+        # COMP CDNS is the heart of the merging process. If the tape card is chosen,
+        # it cannot be an "END OF" card.
+        while True:
+            if self._real_cdno <= self._tape_cdno:
+                break
+
+            # Since the last card of a tape file is numered 999999, we guarantee no EOF.
+            self.proc_tape()
+            self._tape = self.get_tape()
+
+        return self.keep_tape()
+
+    def keep_tape(self):
+        # Indicate that a tape card is waiting.
+        self._yul.switch |= SwitchBit.TAPE_KEPT
+
+        # Right print can't be merge control card.
+        if (ord(self._real.card[7]) & 0xF) == 9:
+            return self.not_mccd()
+
+        # Branch if not an acceptor card.
+        if self._real.card[0] != '=':
+            return self.not_acept()
+
+        # Reject if disordered card number.
+        self._real.health |= HealthBit.CARD_TYPE_ACCEPT
+        if (self._real.health >> 36) & 0o77:
+            raise BadMerge()
+
+        # Analyze card number field.
+        common, value = self.anal_subf(self._real.cardno_wd()[1:7], self._real)
+        common = common.strip()
+
+        # Disable complaint about "D" error.
+        self._real.health &= ~Bit.BIT9
+
+        # Branch if not accepting a log card.
+        merj_rtrn = False
+        if common == "LOG":
+            # Branch if dashes should be put in date.
+            if self._real.card[67:69] != '  ' or self._real.card[70:72] != '  ':
+                self._real.card = self._real.card[:69] + '-' + self._real.card[70:72] + '-' + self._real.card[73:]
+            merj_rtrn = True
+
+        while True:
+            # Illegal to accept an "END OF" card thus.
+            if self._tape.cardno_wd() == self._end_of.cardno_wd():
+                raise BadMerge()
+
+            if ((self._tape_cdno != self._real_cdno) or         # Demand equality of formal card number.
+                (merj_rtrn and self._tape.card[0] != 'L') or    # Branch if tape card should be log.
+                (self._tape.card[8:] != self._real.card[8:]) or # Branch if difference in cols. 9-80.
+                (self._tape.card[0] == 'L' and not merj_rtrn)): # Branch if log but should not be.
+                # Accept a card and get another.
+                self.proc_tape()
+                self._tape = self.get_tape()
+                continue
+
+            break
+
+        # Mark card as accepted.
+        self._tape.mark()
+
+        # Send acceptor card.
+        self.send_popo(self._real)
+
+        # Process accepted card, get another real.
+        self.proc_tape()
+
+    # Procedure to detect and process requests for changing or correcting card numbers, using the "CARDNO" code. The
+    # "CARDNS" code is similar, but starts renumering from that value until the next log card. "PRESERVE CDNS"
+    # turns off renumbering. If "RENUMBER" subdirector was used, it resumes after the reign of any "CARDNS" code.
+    def not_acept(self):
+        # Branch if cannot be merge control card.
+        if self._real.card[0] != ' ':
+            return self.not_mccd()
+
+        # Branch if not a "CARDNS" code.
+        if self._real.card[17:23] != 'CARDNS':
+            return self.cardno_cq()
+
+        # FIXME
         pass
+
+    def cardno_cq(self):
+        # Branch if not a "CARDNO" code.
+        if self._real.card[17:23] != 'CARDNO':
+            return self.delete_cq()
+
+        # FIXME
+        pass
+
+    def send_ccno(self):
+        # Send "CARDNO", "CARDNS", or "DELETE".
+        self.send_popo(self._real)
+
+        # FIXME: renumbering
+
+    # Proceudre to detect and process "DELETE" cards.
+    def delete_cq(self):
+        # Branch if not a "CARDNO" code.
+        if self._real.card[17:23] != 'DELETE':
+            return self.insert_cq()
+
+        # Branch if location field not "OUTOFSEQ".
+        if self._real.loc_field() == 'OUTOFSEQ':
+            # Set up search for bad card number.
+            self._yul.switch |= SwitchBit.CORRECT
+
+            # Never cuss this card number.
+            self._real.health = 0
+        else:
+            # Cuss bad location field.
+            if not self._real.loc_field().isspace():
+                self._real.health |= Bit.BIT8
+
+            # Set up search for OK card number.
+            self._yul.switch &= ~SwitchBit.CORRECT
+
+        # Analyze address field.
+        self._real.health |= HealthBit.CARD_TYPE_DELETE
+        cn_limit = self.mccd_adrf()
+
+        # Branch if address field not blank.
+        if self._field_cod[0] == 0:
+            # Reject singleton delete for bad card no.
+            if self._real.health & ~HealthBit.CARD_TYPE_MASK:
+                self._real_cdno = self._last_cdno
+                raise BadMerge()
+
+            # Go find single card to be deleted.
+            self.find_cdno()
+        else:
+            if self._field_cod[0] != Bit.BIT1:
+                # Cuss bad address field.
+                self._real.health |= Bit.BIT9
+                self._real_cdno = self._last_cdno
+                raise BadMerge()
+
+            # Branch if first cardno is not seq break.
+            if self._real_cdno != Bit.BIT6:
+                # Cuss if 1st cardn not less than 2nd.
+                if self._real_cdno >= cn_limit:
+                    self._real.health |= Bit.BIT12
+                    self._real_cdno = self._last_cdno
+                    raise BadMerge()
+            else:
+                # Branch if 2nd cardno is not seq break.
+                if cn_limit == Bit.BIT6:
+                    self._real.health |= Bit.BIT12
+                    self._real_cdno = self._last_cdno
+                    raise BadMerge()
+
+            # Reject "DELETE" card for any sin.
+            if self._real.health & ~HealthBit.CARD_TYPE_MASK:
+                self._real_cdno = self._last_cdno
+                raise BadMerge()
+
+            # Set up card to be deleted.
+            self.find_cdno()
+
+            # Fetch next card to look at number.
+            while True:
+                self._tape = self.get_tape()
+                if cn_limit <= self._tape_cdno:
+                    break
+
+            # Second number must match existing one.
+            if cn_limit != self._tape_cdno:
+                self._real.health |= Bit.BIT11
+                self._real_cdno = self._last_cdno
+                raise BadMerge()
+
+        # Send "DELETE" card.
+        self._real_cdno = self._last_cdno
+        self.send_ccno()
+
+        # Allow deletion of any but "END OF" card.
+        if self._tape.cardno_wd() == self._end_of.cardno_wd():
+            # Keep it and maybe insert before it.
+            self._yul.switch |= SwitchBit.TAPE_KEPT
+        else:
+            # End of deletion process.
+            self._yul.switch &= ~SwitchBit.TAPE_KEPT
+
+    # Procedure to detect and process "INSERT" cards.
+    def insert_cq(self):
+        if self._real.card[17:23] != 'INSERT':
+            return self.not_mccd()
+
+        # FIXME
+        pass
+
+    # Common procedure when merging is given up for lost for any reason.
+    def bad_merge(self):
+        # Send bad merge control card.
+        self.send_popo(self._real)
+
+        # Type most guilty card.
+        self._real.card = self._real.card[:7] + ' ' + self._real.card[8:]
+        self._mon.mon_typer(self._real.card)
+
+        # Announce rejection of task.
+        self._real = POPO(health=HealthBit.CARD_TYPE_ENDERR,
+                          card='E■■■■■■ATHIS TASK IS REJECTED. RESUBMIT CORRECTED DECK WITH SAME DIRECTOR CARD. ')
+        self.send_popo(self._real)
+
+        # Loop to accept remaining tape cards.
+        while self._tape is not None:
+            self.proc_tape()
+            self._tape = self.get_tape()
+
+        # See whether to throw out remaining real cards, eing careful not to announce
+        # same if there are none.
+        self.get_card()
+        if self._real is not None:
+            # FIXME: HEAVE HO
+            pass
+
+        self._end_yul += ' ≠'
+        return self.end_pass_1()
+
+    # Subroutine in pass 1 to find the tape card to which a merge control card refers.
+    # Exits to BAD MERGE if no exact card number match is found before a sequence break.
+    def find_cdno(self):
+        while True:
+            # Branch if tape card not sequence break.
+            if self._tape_cdno == Bit.BIT6:
+                # Always illegal to find an "END OF" card. Branch if real card not sequence break.
+                if self._tape.cardno_wd() == self._end_of.cardno_wd() or self._tape_cdno != self._real_cdno:
+                    # Cuss failure to find match.
+                    self._real.health |= Bit.BIT10
+                    raise BadMerge()
+
+                # Branch if not seeking bad card number.
+                if not self._yul.switch & SwitchBit.CORRECT:
+                    return
+
+                # Cuss illegal location field.
+                self._real.health |= Bit.BIT8
+                raise BadMerge()
+
+            # Branch if no match yet.
+            if self._tape_cdno == self._real_cdno:
+                # Branch if looking for bad card number and desired bad card no. found.
+                if self._yul.switch & SwitchBit.CORRECT and self._tape.health != 0:
+                    return
+
+                # Bad card number implies no match.
+                if self._tape.health == 0:
+                    return
+
+            # Process a tape card and look again
+            self.proc_tape()
+            self._tape = self.get_tape()
+
+    # We get to NOT MCCD for every real card that is not a merge control card.
+    def not_mccd(self):
+        if self._real.health > 0:
+            # Card no. error in revision cards is bad.
+            self._real.health |= HealthBit.CARD_TYPE_ENDERR
+            raise BadMerge()
+
+        # Branch if real card precedes tape card.
+        if self._real_cdno != self._tape_cdno:
+            return self.proc_real()
+
+        # Force same if real card is "TUCK-IN".
+        if self._real.card[0] == 'T':
+            self._real.card = 'L' + self._real.card[1:]
+            return self.proc_real()
+
+        # Force same if tape card is "END OF".
+        if self._tape.cardno_wd() == self._end_of.cardno_wd():
+            return self.proc_real()
+
+        # Otherwise replace tape card with real.
+        self._yul.switch &= ~SwitchBit.TAPE_KEPT
+        return self.proc_real()
 
     def proc_real(self):
         return self.process(self._real, self._real_cdno)
 
     def proc_tape(self):
+        # Unkeep and process tape card.
+        self._yul.switch &= ~SwitchBit.TAPE_KEPT
         return self.process(self._tape, self._tape_cdno)
 
     def process(self, popo, cdno):
@@ -611,6 +904,103 @@ class Pass1:
             return False
         self._loc_ctr += 1
         return True
+
+    # Subroutine in pass 1 to break down the address field of a merge control card. That is, with an op
+    # code of "CARDNO" or "DELETE". Uses the sentence reader. Sets up FIELDCOD and CNLIMIT as follows:
+    # FIELD ALL BLANK        FIELDCOD=0
+    # "THROUGH" WITH NUMBER  FIELDCOD=B1, CNLIMIT=NUMBER
+    # "THRU"    WITH NUMBER  FIELDCOD=B1, CNLIMIT=NUMBER
+    # "TO"      WITH NUMBER  FIELDCOD=B2, CNLIMIT=NUMBER
+    # "WITH"    WITH NUMBER  FIELDCOD=B3, CNLIMIT=NUMBER
+    # The n number in the address field may be "SEQBREAK" or "SEQBRK" causing CNLIMIT to become ALF 10000000, or up ot 6
+    # decimal digits with an optional decimal point. If the number is present, there may be up to four digits to its
+    # left and up to two digits to its right. If the point is absent and there are four digits or less, the point is
+    # assumed to be at their immediate right. If the point is absent and there are five or six digits, the point is
+    # assumed to follow the fourth digit. At least one blank or other terminator must separate the two subfields, but
+    # no imbedded blanks are allowed in either subfield.  If any of these rules are violated or there is a third
+    # subfield, FIELDCOD is set to all ones and the card is ignored and cussed at for a meaningless address field.
+    # The number set up in CNLIMIT is a standardized to six digits thus: ALF 0NNNNNN0, with a point assumed after char5.
+    def mccd_adrf(self):
+        # Set up and call sentence reader.
+        sentence = self._mon.phi_sentr(self._real.card[16:])
+        if sentence[0] == '':
+            # FIXME: Cuss if contains terminator only
+            self._field_cod[0] = 0
+            return None
+
+        # FIXME: Cuss unwanted terminators.
+        if sentence[0] in ('THRU', 'THROUGH'):
+            # Signify THROUGH and go to find number.
+            self._field_cod[0] = Bit.BIT1
+        elif sentence[0] == 'WITH':
+            # Signify WITH.
+            self._field_cod[0] = Bit.BIT3
+        elif sentence[0] == 'TO':
+            # Signify TO.
+            self._field_cod[0] = Bit.BIT2
+        else:
+            self._field_cod[0] = None
+            return None
+
+        if sentence[1] in ('SEQBREAK', 'SEQBRK'):
+            # Exit when number is sequence break.
+            return Bit.BIT6
+
+        if sentence[1].isspace():
+            # Bad exit when number is missing.
+            self._field_cod[0] = None
+            return None
+
+        s3 = -5
+        cn_limit = '000000'
+
+        cardno = sentence[1] + ' '
+
+        while True:
+            # Branch if not a digit.
+            if not cardno[0].isnumeric():
+                break
+
+            # Branch if this is the fifth digit.
+            s3 += 1
+            if s3 == 0:
+                break
+
+            # Move up previous digits. Plant a before-digit point.
+            cn_limit = cn_limit[1:4] + cardno[0] + cn_limit[4:]
+
+            # Move next character into position.
+            cardno = cardno[1:]
+
+        # If the fifth or earlier card is not a digit, it must be a decimal point or a blank.
+        skip_digits = False
+        if s3 != 0:
+            if cardno[0] == '.':
+                cardno = cardno[1:]
+            elif cardno[0] != ' ':
+                skip_digits = True
+
+        if not skip_digits:
+            # Plant first digit after point.
+            if cardno[0].isnumeric():
+                cn_limit = cn_limit[:4] + cardno[0] + cn_limit[5]
+                cardno = cardno[1:]
+
+            # Plant second digit after point.
+            if cardno[0].isnumeric():
+                cn_limit = cn_limit[:4] + cardno[0] + cn_limit[5]
+                cardno = cardno[1:]
+
+        # Bad exit if queer character. Bad exit if third subfield.
+        if cardno[0] != ' ' or sentence[2] != '':
+            self._field_cod[0] = None
+            return None
+
+        # Check for 999999 sequence break.
+        if cn_limit == '999999':
+            cn_limit = Bit.BIT6
+
+        return int(cn_limit)
 
     def anal_symb(self, sym_name):
         if len(sym_name) < 8:
@@ -978,7 +1368,10 @@ class Pass1:
 
     def get_tape(self):
         if self._sypt is None:
-            self._sypt = self._yul.yulprogs.find_sypt(self._yul.comp_name, self._yul.prog_name, self._yul.revno)
+            revno = self._yul.revno
+            if not self._yul.switch & SwitchBit.REPRINT:
+                revno -= 1
+            self._sypt = self._yul.yulprogs.find_sypt(self._yul.comp_name, self._yul.prog_name, revno)
             if self._sypt is None:
                 return None
 

@@ -98,7 +98,6 @@ class Yulprogs:
         return prog_data
 
     def add_prog(self, comp_name, prog_type, prog_name, auth_name, date):
-        prog_fn = os.path.join(self._tape, 'DIR', 'PROG', comp_name, prog_name)
         prog_data = {
             'NAME': prog_name,
             'TYPE': prog_type,
@@ -109,6 +108,10 @@ class Yulprogs:
             'CONTROLLED': False,
         }
 
+        self.update_prog(comp_name, prog_name, prog_data)
+
+    def update_prog(self, comp_name, prog_name, prog_data):
+        prog_fn = os.path.join(self._tape, 'DIR', 'PROG', comp_name, prog_name)
         with open(prog_fn, 'w') as f:
             json.dump(prog_data, f, indent=4)
 
@@ -142,9 +145,10 @@ class Yulprogs:
     def incr_auth(self, auth_name, comp_name, prog_name):
         prog_entry = comp_name + ' ' + prog_name
         auth_data = self.find_auth(auth_name)
-        if prog_entry not in auth_data['PROGRAMS']:
-            auth_data['PROGRAMS'].append(prog_entry)
+        if prog_entry in auth_data['PROGRAMS']:
+            auth_data['PROGRAMS'].remove(prog_entry)
 
+        auth_data['PROGRAMS'].insert(0, prog_entry)
         self.update_auth(auth_name, auth_data)
 
     def create_sypt(self, comp_name, prog_name, revno, sylt=False):
