@@ -25,6 +25,12 @@ class POPO:
             self.card = self.card[:7] + chr(vert_format + 0x10) + self.card[8:]
             self.marked = True
 
+    def unmark(self):
+        if self.marked:
+            vert_format = ord(self.card[7])
+            self.card = self.card[:7] + chr(vert_format - 0x10) + self.card[8:]
+            self.marked = False
+
     def set_seq_break(self):
         if not self.seq_break:
             vert_format = ord(self.card[7])
@@ -78,6 +84,9 @@ class Pass1:
         self._early = True
         self._op_found = None
         self._send_endo = False
+        self._renum_disabled = False
+        self._restart_log = False
+        self._log_renum = False
         self._loc_state = 0
         self._renumber = 0
         self._sypt = None
@@ -153,7 +162,7 @@ class Pass1:
             print(self._yul.popos[-1].card)
             raise Disaster()
 
-        if self._yul.switch & SwitchBit.FREEZE:
+        if self._yul.switch & SwitchBit.FREEZE_P1:
             self.send_popo(self._end_of)
 
         # FIXME: play with number of copies?
@@ -296,32 +305,61 @@ class Pass1:
         return self._real.card
 
     def send_popo(self, popo):
-        if self._yul.switch & SwitchBit.RENUMBER:
-            card_type = popo.health & HealthBit.CARD_TYPE_MASK
-            if card_type >= HealthBit.CARD_TYPE_REMARK:
-                if (card_type >= HealthBit.CARD_TYPE_REMARK) and (popo.card[0] == 'L'):
-                    self._renumber = 0
-                    return self.move_popo(popo)
+        if self._renum_disabled:
+            # Restore renumbering test to normal.
+            self._renum_disabled = False
+            return self.move_popo(popo)
 
-                # Wipe out obsolete sequence error bit.
-                popo.health &= ~Bit.BIT7
+        # Branch if renumbering is on.
+        if not (self._yul.switch & SwitchBit.RENUMBER):
+            return self.move_popo(popo)
 
-                if self._renumber > 999898:
-                    popo.set_seq_break()
-                    popo.card = popo.card[0] + 'SEQBRK' + popo.card[7:]
-                    self._renumber = 0
-                    return self.move_popo(popo)
+        # Go to renumber most card types.
+        card_type = popo.health & HealthBit.CARD_TYPE_MASK
+        if card_type >= HealthBit.CARD_TYPE_RIGHTP:
+            return self.rnum_card(popo)
 
-                self._renumber += 100
-
-                # Erase old sequence break flag.
-                popo.clear_seq_break()
-
-                popo.card = popo.card[0] + ('%06d' % self._renumber) + popo.card[7:]
-
-            elif card_type > HealthBit.CARD_TYPE_CARDNO:
+        # Br if merge control or merge error card.
+        if card_type != HealthBit.CARD_TYPE_REMARK:
+            # Branch if merge control card.
+            if HealthBit.CARD_TYPE_CARDNO > card_type:
                 # Shut off renumbering on bad merge.
                 self._yul.switch &= ~SwitchBit.RENUMBER
+
+            return self.move_popo(popo)
+
+        # Branch to renumber non-log remarks.
+        if popo.card[0] != 'L':
+            return self.rnum_card(popo)
+
+        # Restart number sequence after log etc.
+        self._field_cod[1] = 0
+        self._renumber = 0
+        if self._restart_log:
+            self._yul.switch &= ~SwitchBit.RENUMBER
+
+        return self.move_popo(popo)
+
+    def rnum_card(self, popo):
+        # Wipe out obsolete sequence error bit.
+        popo.health &= ~Bit.BIT7
+
+        if self._renumber > 999898:
+            # Generate seqbreak after card 9998.98.
+            popo.set_seq_break()
+            popo.card = popo.card[0] + 'SEQBRK' + popo.card[7:]
+            self._renumber = 0
+            self._field_cod[1] = 0
+            return self.move_popo(popo)
+
+        self._renumber += 100
+
+        # Erase old sequence break flag.
+        popo.clear_seq_break()
+
+        # Plant it and go to move card.
+        self._field_cod[1] = self._renumber
+        popo.card = popo.card[0] + ('%06d' % self._renumber) + popo.card[7:]
 
         return self.move_popo(popo)
 
@@ -431,7 +469,7 @@ class Pass1:
         self.proc_tape()
 
     # Procedure to detect and process requests for changing or correcting card numbers, using the "CARDNO" code. The
-    # "CARDNS" code is similar, but starts renumering from that value until the next log card. "PRESERVE CDNS"
+    # "CARDNS" code is similar, but starts renumbering from that value until the next log card. "PRESERVE CDNS"
     # turns off renumbering. If "RENUMBER" subdirector was used, it resumes after the reign of any "CARDNS" code.
     def not_acept(self):
         # Branch if cannot be merge control card.
@@ -442,22 +480,135 @@ class Pass1:
         if self._real.card[17:23] != 'CARDNS':
             return self.cardno_cq()
 
-        # FIXME
-        pass
+        if self._real.loc_field() != 'PRESERVE':
+            return self.cardno_cq(cardns=True)
 
-    def cardno_cq(self):
+        self._real.health |= HealthBit.CARD_TYPE_CARDNO
+        if (not self._real.address_1().isspace()) or (not self._real.address_1().isspace()):
+            # Cuss bad address field.
+            self._real.health |= Bit.BIT9
+            raise BadMerge()
+
+        # Reject "PRESERVE CARDNS" for any defect.
+        if self._real.health & ~HealthBit.CARD_TYPE_MASK:
+            raise BadMerge()
+
+        self.find_cdno()
+
+        # Exit quietly if renumbering already off.
+        if self._yul.switch <= Bit.BIT1:
+            self.send_popo(self._real)
+            return self.proc_tape()
+
+        # Branch if preservation causes disorder.
+        if self._real_cdno <= self._field_cod[1]:
+            self._real.health |= Bit.BIT7
+            raise BadMerge()
+
+        self._yul.switch &= ~SwitchBit.RENUMBER
+
+        # Exit if renumbering was in log sec only.
+        if not self._restart_log:
+            # Modify log card routine to start renum.
+            self._log_renum = True
+
+        self.send_popo(self._real)
+        return self.proc_tape()
+
+    def cardno_cq(self, cardns=False):
         # Branch if not a "CARDNO" code.
-        if self._real.card[17:23] != 'CARDNO':
+        if (not cardns) and (self._real.card[17:23] != 'CARDNO'):
             return self.delete_cq()
 
-        # FIXME
-        pass
+        # Analyze location field.
+        common, value = self.anal_subf(self._real.loc_field(), self._real)
+        common = common.strip()
+        if common == 'CORRECT':
+            # Set up search for bad card number if "CORRECT" but never cuss this card no.
+            self._yul.switch |= SwitchBit.CORRECT
+            self._real.health = 0
+        elif common == 'CHANGE':
+            # Seek OK card number if "CHANGE".
+            self._yul.switch &= ~SwitchBit.CORRECT
+        else:
+            # Cuss bad location field.
+            self._real.health |= Bit.BIT8
+
+        # Note type, analyze address field.
+        self._real.health |= HealthBit.CARD_TYPE_CARDNO
+        cn_limit = self.mccd_adrf()
+
+        if self._field_cod[0] != Bit.BIT2:
+            # Cuss bad address field.
+            self._real.health |= Bit.BIT9
+            raise BadMerge()
+
+        # Reject "CARDNO" for any sin.
+        if self._real.health & ~HealthBit.CARD_TYPE_MASK:
+            raise BadMerge()
+
+        # Set up card whose number is to be chgd.
+        self.find_cdno()
+
+        # Change external card number.
+        self._tape.card = self._tape.card[0] + ('%06d' % cn_limit) + self._tape.card[7:]
+        self._tape.mark()
+
+        # On log card, change is superficial only.
+        if self._tape.card[0] == 'L':
+            if self._tape.card[1:7] != '000000':
+                return self.send_ccno()
+            # ..though SQB setting is blanked.
+            self._tape.card = self._tape.card[0] + '      ' + self._tape.card[7:]
+            return self.send_ccno()
+
+        # Clear possible sequence break bit.
+        self._tape.clear_seq_break()
+
+        # Change internal card number.
+        self._tape_cdno = cn_limit
+
+        # If seq. br., set external card number to SEQBRK and set bit 43.
+        if self._tape_cdno == Bit.BIT6:
+            self._tape.card = self._tape.card[0] + 'SEQBRK' + self._tape.card[7:]
+            self._tape.set_seq_brk()
+
+        return self.send_ccno()
 
     def send_ccno(self):
         # Send "CARDNO", "CARDNS", or "DELETE".
         self.send_popo(self._real)
 
-        # FIXME: renumbering
+        # Branch if a section was renumbered.
+        if self._real.card[17:23] == 'CARDNO':
+            # New number is criterion for next real.
+            self._real_cdno = self._tape_cdno
+            # Process accepted card, get another real.
+            return self.proc_tape()
+
+        # If renumber is now under way, compare new number with last card's renumber.
+        if self._yul.switch & SwitchBit.RENUMBER:
+            self._last_cdno = self._field_cod[1]
+
+        # Process card with renumbering disabled.
+        self._renum_disabled = True
+        self.proc_tape()
+
+        self._renumber = self._last_cdno
+
+        # For CARDNS, keep old sequence criterion.
+        self._last_cdno = self._real_cdno
+
+        # Exit if renumbering is now under way.
+        if self._yul.switch & SwitchBit.RENUMBER:
+            return
+
+        # Call for partial renumbering.
+        self._yul.switch |= SwitchBit.RENUMBER
+
+        # Make it stop after first log card.
+        self._restart_log = True
+        return
 
     # Proceudre to detect and process "DELETE" cards.
     def delete_cq(self):
@@ -536,7 +687,7 @@ class Pass1:
 
         # Send "DELETE" card.
         self._real_cdno = self._last_cdno
-        self.send_ccno()
+        self.send_popo(self._real)
 
         # Allow deletion of any but "END OF" card.
         if self._tape.cardno_wd() == self._end_of.cardno_wd():
@@ -606,11 +757,12 @@ class Pass1:
             # Branch if no match yet.
             if self._tape_cdno == self._real_cdno:
                 # Branch if looking for bad card number and desired bad card no. found.
-                if self._yul.switch & SwitchBit.CORRECT and self._tape.health != 0:
-                    return
+                if self._yul.switch & SwitchBit.CORRECT:
+                    if self._tape.health != 0:
+                        return
 
                 # Bad card number implies no match.
-                if self._tape.health == 0:
+                elif self._tape.health == 0:
                     return
 
             # Process a tape card and look again
@@ -650,6 +802,16 @@ class Pass1:
         return self.process(self._tape, self._tape_cdno)
 
     def process(self, popo, cdno):
+        # Final sequence checking before processing.
+        if (cdno <= self._last_cdno) and (cdno != Bit.BIT6):
+            # Indicate card number out of sequence.
+            popo.health |= Bit.BIT7
+        else:
+            # Clear possible error bit, tab to exit.
+            popo.health &= ~Bit.BIT7
+
+        self._last_cdno = cdno & ~Bit.BIT6
+
         if (ord(popo.card[7]) & 0xF) == 9:
             popo.health |= HealthBit.CARD_TYPE_RIGHTP
             return self.send_popo(popo)
@@ -667,6 +829,10 @@ class Pass1:
             return self.send_popo(popo)
 
         if popo.card[0] == 'L':
+            if self._log_renum:
+                self._log_renum = False
+                self._yul.switch |= SwitchBit.RENUMBER
+
             # Branch if dashes should be put in date.
             if popo.card[67:69] != '  ' or popo.card[70:72] != '  ':
                 popo.card = popo.card[:69] + '-' + popo.card[70:72] + '-' + popo.card[73:]
@@ -1384,6 +1550,12 @@ class Pass1:
 
         tape = POPO(health=0, card=tape_card)
 
+        # Clear asterisk if fetching main input, freezing subroutines, or not revising.
+        cacn = SwitchBit.KNOW_SUBS | SwitchBit.FREEZE_P1 | SwitchBit.REVISION
+        if (self._yul.switch & cacn) != (SwitchBit.KNOW_SUBS | SwitchBit.REVISION):
+            tape.unmark()
+
+        # Branch if no sequence break
         if tape.seq_break:
             # Set up post-break criterion.
             self._tape_cdno = Bit.BIT6
@@ -2082,6 +2254,11 @@ class Pass1:
         return self.send_popo(popo)
 
 def inish_p1(mon, yul):
+    # Move freeze indicator to bit 8, B17=0
+    if yul.switch & SwitchBit.FREEZE:
+        yul.switch &= ~SwitchBit.FREEZE
+        yul.switch |= SwitchBit.FREEZE_P1
+
     comp_pass1 = mon.phi_load(yul.comp_name + '.PASS1', yul)
     if comp_pass1 is None:
         yul.typ_abort()

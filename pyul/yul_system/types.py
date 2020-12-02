@@ -79,6 +79,7 @@ class SwitchBit:
     PREVIOUS_INDEX    = Bit.BIT7
     BEFORE            = Bit.BIT8
     LAST_REM          = Bit.BIT8
+    FREEZE_P1         = Bit.BIT8
     SUBROUTINE        = Bit.BIT9
     REVISION          = Bit.BIT10
     REPRINT           = Bit.BIT11
