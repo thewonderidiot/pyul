@@ -32,6 +32,9 @@ class Blk2Pass2(Pass2):
         self._interp_wd = 0
         self._store_com = 0
 
+        # FIXME: Does the real Yul do this?
+        yul.switch &= ~SwitchBit.DP_OPCODE
+
         self.cuss_list = [
             # 0-2
             Cuss('CARD NUMBER OUT OF SEQUENCE     '),

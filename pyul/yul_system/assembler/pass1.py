@@ -1553,7 +1553,8 @@ class Pass1:
         # Clear asterisk if fetching main input, freezing subroutines, or not revising.
         cacn = SwitchBit.KNOW_SUBS | SwitchBit.FREEZE_P1 | SwitchBit.REVISION
         if (self._yul.switch & cacn) != (SwitchBit.KNOW_SUBS | SwitchBit.REVISION):
-            tape.unmark()
+            if not self._yul.switch & SwitchBit.REPRINT: # FIXME
+                tape.unmark()
 
         # Branch if no sequence break
         if tape.seq_break:
