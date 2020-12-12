@@ -17546,4 +17546,660 @@ R0228  2DAP IS ASSEMBLED INTO SUNBURST
  0230   DELCDUX  ERASE
  0231   DELCDUY  ERASE                  DELCDUS ARE SCALED AT PI, LIKE THE CDUS
  0232   DELCDUZ  ERASE
+L      2P-AXIS REACTION CONTROL SYSTEM AUTOPILOT
+ 0001            BANK   23
+ 0002  2         EBANK= DT
+R0003  2THE FOLLOWING SECTION DRIVES THE ATTITUDE ERROR NEEDLES IN THE "EIGHT-BA
+ 0004  9LL" DISPLAY:
+ 0005   EIGHTBAL LXCH   DAPBOOLS        ATTITUDE ERRORS DISPLAYED EVERY
+ 0006            CAF    BIT7            OTHER DAP CYCLE (.2 SECS)
+ 0007            EXTEND                 CHANGE STATE OF FLAG
+ 0008            RXOR   L
+ 0009            TS     DAPBOOLS        FLAG WORD RESTORE
+ 0010            MASK   BIT7
+ 0011            EXTEND                 ZERO AS NEW STATE MEANS
+ 0012  2         BZF    PAXFILT         NO DISPLAY THIS CYCLE
+ 0013   ATERDSPY CAF    TWO             INIT. INDEX WORD
+ 0014            TS     ITEMP1
+ 0015            INDEX  A
+ 0016            CCS    PERROR          LOOK AT CURRENT ATT ERROR
+ 0017            TCF    ERLIMCHK        HAVE E VALUE GET MAGNITUDE
+ 0018            TCF    ZERR            ZERO VALUE
+ 0019            TCF    ERLIMCHK        GET MAGNITUDE
+ 0020   ZERR     INDEX  ITEMP1
+ 0021            CS     PERROR
+ 0022            INDEX  ITEMP1
+ 0023            XCH    LASTPER         SAVE CURRENT E, LOAD LAST E (NEG)
+ 0024            INDEX  ITEMP1
+ 0025            AD     PERROR          GET DIFF E(N-2) - E(N)
+ 0026            EXTEND
+ 0027            MP     BIT13           SHIFT RIGHT 2
+ 0028            INDEX  ITEMP1
+ 0029            TS     CDUXCMD         STORE CMD E VALUE
+ 0030            CCS    ITEMP1
+ 0031  2         TCF    ATERDSPY +1     GET NEXT E
+ 0032            CA     OCT70000        ICDU DRIVE BITS 13,14,15
+ 0033            EXTEND
+ 0034            WOR    14              DRIVE AWAY
+ 0035  2         TCF    PAXFILT         ATT ERROR DISPLAY DONE FOR THIS CYCLE
+ 0036   ERLIMCHK AD     BIT1            HAVE MAG OF E, SEE IF GREATER THAN
+ 0037            COM                      5 DEGREES
+ 0038            AD     5DEGS
+ 0039            EXTEND
+ 0040            BZMF   BIGATER         ERROR GREATER THAN 5 DEGS, DSPY 5 DEGS
+ 0041  2         TCF    ZERR            E LESS THAN 5 DEGS, NORMAL PROCED
+ 0042   BIGATER  INDEX  ITEMP1
+ 0043            CCS    PERROR          GET SIGN OF BIG ERROR
+ 0044            CA     5DEGS
+ 0045            TCF    +2              CANT BE ZERO HERE
+ 0046            CS     5DEGS
+ 0047            INDEX  ITEMP1
+ 0048            TS     PERROR          SET BIG ERROR TO 5DEGS
+ 0049  2         TCF    ZERR
+R0050  4END OF ATTITUDE ERROR NEEDLE DRIVER.  (SHOULD GO IN-LINE SOMETIME.)
+R0051   THE FOLLOWING T5RUPT ENTRY BEGINS THE PROGRAM WHICH CONTROLS THE P-AXIS
+ 0052  9ACTION OF THE LEM USING THE RCS JETS.
+R0053  2THE NOMINAL TIME BETWEEN THE P-AXIS RUPTS IS 100 MS IN ALL NON-IDLING MO
+ 0054  9DES OF THE DAP.
+ 0055   PAXIS    CAF    MS30P           RESET TIMER IMMEDIATELY: DT = 30 MS
+ 0056  2         TS     TIME5
+ 0057            LXCH   BANKRUPT        INTERRUPT LEAD IN (CONTINUED)
+ 0058            EXTEND
+ 0059  2         QXCH   QRUPT
+R0060  2CHECK TO SEE IF DAP IS STILL IN USE:
+ 0061            EXTEND                 IF BOTH BITS 13 AND 14 OF CHANNEL 31 ARE
+ 0062            READ   31              EQUAL TO 1, THEN THE SCS MODE SWITCH IS
+ 0063            COM                    IN THE OFF POSITION.  ACTUALLY, THE TEST
+ 0064            MASK   BIT13-14        IS MADE ON BOTH THE ATTITUDE HOLD AND
+ 0065            EXTEND                 AUTOMATIC MODE BITS.
+ 0066  2         BZF    GOIDLE
+R0067  2WHILE DAP IS ON, SET UP EITHER A KALMAN FILTER RUPT OR A DUMMY FILTER RU
+ 0068  9PT BY SETTING UP T5ADR FROM ERASABLE.
+ 0069            EXTEND                 T5ADR IS SET TO EITHER FILTER OR
+ 0070            DCA    PFILTADR        DUMMYFIL IN A BLIND MANNER SINCE
+ 0071  2         DXCH   T5ADR           PFILTADR IS SET UP ELSEWHERE
+R0072   DO P AXIS RATE DERIVATION AND CONTROL LAW.
+R0073  2DERIVE DELTA P.
+ 0074   FILT/PAX CAE    CDUX
+ 0075            TS     L
+ 0076            EXTEND
+ 0077            MSU    OLDXFORP        SCALED AT PI
+ 0078            LXCH   OLDXFORP
+ 0079            EXTEND
+ 0080            MP     BIT7
+ 0081            LXCH   DELTAP          SCALE AT PI/2(6)
+ 0082            CA     CDUY
+ 0083            TS     L
+ 0084            EXTEND
+ 0085            MSU    OLDYFORP        SCALED AT PI
+ 0086            LXCH   OLDYFORP
+ 0087            EXTEND
+ 0088            MP     BIT7            INTO L SCALED AT PI/2(6)
+ 0089            CA     M11             M11 SCALED AT 1
+ 0090            EXTEND
+ 0091            MP     L               INTO A SCALED AT PI/2(6).
+ 0092            AD     DELTAP
+ 0093            EXTEND
+ 0094            MP     WFORP           SCALED AT 2(4)=16, RESULT IN A AT PI/4.
+ 0095            XCH    OMEGAP          W*DELTAP IN OMEGAP LOC. OLD OMEGAP IN A.
+ 0096            EXTEND
+ 0097            MP     ONE-K           SCALED AT 1.
+ 0098            AD     JETRATE         RATE DUE TO JETS TORQUING.
+ 0099            ADS    OMEGAP          PRATE= WFORP*DELTAP+ALPHA*LAST-PRATE+TPF
+ 0100  2         TC     T6JOBCHK        T6JOBCHK IS IN FIXED-FIXED
+R0100022***** KALCMANU-DAP AND "RATE-HOLD"-DAP INTERFACE *****
+R010004 THE FOLLOWING SECTION IS EXECUTED EVERY 100 MS (10 TIMES A SECOND) WITHI
+ 0100069N THE P-AXIS REACTION CONTROL SYSTEM
+R0100082AUTOPILOT (WHENEVER THE DAP IS IN OPERATION).
+ 010010          CAF    TWO             SET UP LOOP TO DO Z,Y,X CDU AXES:
+ 0100122KALCLOOP TS     QRCNTR
+ 010014          INDEX  QRCNTR          KALCMANU AND RATE-HOLD USE THIS SECTION
+ 010016          CAE    CDUXD           TO PERFORM THEIR INDEPENDENT FUNCTIONS:
+ 010018          EXTEND                 BOTH PROCEDURES SET UP THE DELCUD'S
+ 010020          INDEX  QRCNTR          TO HAVE THE NEGATIVE VALUE OF THE
+ 010022          MSU    DELCDUX         DESIRED CDU CHANGE FOR EACH 100 MS CSP
+ 010024          CCS    A               DURING THE MANEUVER (OR MODE).  EACH IS
+ 010026          AD     ONE             STORED AT PI RADIANS IN 2'S COMPLEMENT.
+ 010028          TCF     +2             SINCE THE MODULAR SUBTRACT YIELDS THE
+ 010030          COM                    NEW CDUD VALUE IN 1'S COMPLEMENT, THE
+ 010032          INDEX  QRCNTR          CCS SECTION IS NEEDED FOR 1'S TO 2'S
+ 0100342         TS     CDUXD           CONVERSION OF DESIRED CDU ANGLES.
+ 010036          CCS    QRCNTR          (THIS MAKES THE LOOP DO ALL THREE AXES
+ 0100384         TCF    KALCLOOP        IN THE ORDER Z, Y, X.)
+ 0101  2         TCF    EIGHTBAL
+ 010102 PAXFILT  TC     PJUMPADR
+ 010106 SKIPPAXS CA     VISFZADR
+ 010108          TS     PJUMPADR
+ 010109          CA     ZERO
+ 010110          TS     JETRATE
+ 010111          CA     TP
+ 010112          AD     NEGCSP1
+ 010114          CCS    A
+ 010116          TC     PTORQUE
+ 010118          TCF    RESUME
+ 010120          TC     PTORQUE
+ 010122          CS     JETRATE
+ 010123          ADS    OMEGAP
+ 010124          CA     ZERO
+ 010125          TS     JETRATE
+ 010126          TCF    RESUME
+ 010128 (1-K)/8P OCTAL  20000
+ 010130 PTORQUE  AD     ONE
+ 010132          EXTEND
+ 010134          MP     BIT5
+ 010136          CA     L
+ 010138          EXTEND
+ 010140          MP     16/25
+ 010142          TS     TP
+ 010144          CA     WFORP
+ 010146          AD     (1-K)/8P
+ 010148          EXTEND
+ 010150          MP     TP
+ 010152          EXTEND
+ 010154          MP     BIT4
+ 010156          CA     1JACC
+ 010158          EXTEND
+ 010160          MP     L
+ 010162          EXTEND
+ 010164          MP     NO.PJETS
+ 010166          LXCH   JETRATE
+ 010168          TC     Q
+ 0102   CHKVISFZ CAF    BIT9            VISIBILITY PHASE BIT
+ 0103            MASK   DAPBOOLS
+ 0104            EXTEND
+ 0105            BZF    +2
+ 0106  2         TCF    PURGENCY        ATTITUDE STEER DURING VISIBILITY PHASE
+ 0107            CAF    BIT10           BIT10=1 FOR RHC MINIMUM IMPULSE MODE
+ 0108            MASK   DAPBOOLS
+ 0109            EXTEND
+ 0110  2         BZF    DETENTCK        BRANCH FOR RATE COMMAND
+ 0111            CAE    DELAYCTR        SET BY RUPT10 TO TWO
+ 0112            EXTEND
+ 0113  2         BZF    BITSGONE        CHECK FOR ALL SWITCHES OPEN
+ 0114            CS     -TJMINT6
+ 0115  2         TS     TOFJTCHG
+ 0116            TS     TP              FOR RATE DERIVATION
+ 0117            CA     BIT3
+ 0118            EXTEND
+ 0119            RAND   31
+ 0120            EXTEND
+ 0121  2         BZF    +MINIMP
+ 0122            CA     BIT4
+ 0123            EXTEND
+ 0124            RAND   31
+ 0125            EXTEND
+ 0126  2         BZF    -MINIMP
+ 0127            CCS    DELAYCTR        DELAYCTR ALWAYS PNZ HERE
+ 0128            TS     DELAYCTR
+ 0129            EXTEND
+ 0130            BZF    PLETRUPT
+ 0131  2         TCF    JETSOFF
+ 0132   +MINIMP  CAF    BIT1
+ 0133            TCF    +2
+ 0134   -MINIMP  CS     BIT1
+ 0135   +2       TS     TPSIG
+ 0136            CAF    ZERO
+ 0137            TS     DELAYCTR
+ 0138  2         TCF    2PJETS
+ 0139   BITSGONE EXTEND                 ARE SWITCHES ALL OPEN
+ 0140            READ   31
+ 0141            COM
+ 0142            MASK   DAPLOW6
+ 0143            EXTEND
+ 0144            BZF    +2
+ 0145  2         TCF    JETSOFF
+ 0146            CAF    BIT4            BIT4 OF DAPBOOLS ZERO IF PREVIOUS
+ 0147            MASK   DAPBOOLS        READING OF 31 FOUND ALL SWITCHES OPEN
+ 0148            EXTEND
+ 0149  2         BZF    PLETRUPT
+ 0150            CS     BIT4
+ 0151            MASK   DAPBOOLS
+ 0152            TS     DAPBOOLS
+ 0153  2         TCF    JETSOFF
+ 0154   PLETRUPT CAF    BIT4
+ 0155            ADS    DAPBOOLS
+ 0156            CAF    BIT12
+ 0157            EXTEND
+ 0158            WOR    13
+ 0159            TCF    JETSOFF
+ 0160   DETENTCK CA     BIT15
+ 0161            EXTEND
+ 0162            RAND   31              CHECK OUT-OF-DETENT BIT.INVERTED.
+ 0163            EXTEND
+ 0164            BZF    RHCMOVED        BRANCH IF OUT OF DETENT
+R0165   ........................................................................
+ 0166            CAF    BIT1            IN DETENT.CHECK THE RATE COMMAND BIT
+ 0167            MASK   DAPBOOLS        BIT1 OF DAPBOOLS IS RATE COMMAND BIT
+ 0168            EXTEND
+ 0169            BZF    PURGENCY        BRANCH IF NOT IN RATE COMMAND
+R0170   ........................................................................
+ 0171            CAF    BIT13           CHECK ATTITUDE HOLD BIT
+ 0172            EXTEND
+ 0173            RAND   31
+ 0174            EXTEND
+ 0175            BZF    JOEY            BRANCH IF IN ATTITUDE HOLD
+R0176   ........................................................................
+ 0177            CCS    OMEGAP          HERE IF IN X-AXIS OVER-RIDE
+ 0178            TCF    +4
+ 0179            TCF    RATEDONE
+ 0180            TCF    +2
+ 0181            TCF    RATEDONE
+ 0182            AD     -RATEDB
+ 0183            EXTEND
+ 0184            BZMF   RATEDONE
+ 0185  2         TCF    JOEY
+ 0186   RATEDONE CS     BIT1
+ 0187            MASK   DAPBOOLS
+ 0188  2         TS     DAPBOOLS
+R0189  2READ CDUS INTO CDU DESIRED REGISTERS
+ 0190            CA     CDUX
+ 0191            TS     CDUXD
+ 0192            CA     CDUY
+ 0193            TS     CDUYD
+ 0194            CA     CDUZ
+ 0195  2         TS     CDUZD
+ 0196  2         TCF    JETSOFF
+ 0197   RHCMOVED CAF    BIT1            CHECKING THE RATE COMMAND BIT
+ 0198            MASK   DAPBOOLS
+ 0199            EXTEND
+ 0200  2         BZF    JUSTOUT
+R0201   READ,ZERO, AND ENABLE COUNTERS
+R0202  2SYSTEM HAS BEEN IN RATE COMMAND FOR AT LEAST THE TIME OF A CAP CHARGE
+ 0203            CAE    P-RHCCTR        1 BIT IN P-RHCCTR WORTH 0.6256 DEG/SEC
+ 0204            EXTEND
+ 0205            MP     BIT9
+ 0206            CA     L
+ 0207            EXTEND
+ 0208            MP     0.88975
+ 0209  2         TS     PRATECOM        COMMANDED RATE SCALED AT PI/4
+ 0210            CAF    ZERO            ZERO COUNTERS
+ 0211            TS     P-RHCCTR
+ 0212            TS     Q-RHCCTR
+ 0213            TS     R-RHCCTR
+ 0214            CA     BITS8,9         ENABALE COUNTERS, START READING
+ 0215            EXTEND
+ 0216            WOR    13
+ 0217            TCF    OBEYRATE
+R0218   ........................................................................
+ 0219   JUSTOUT  INCR   DAPBOOLS        ALWAYS SETS BIT1 ON RATE COMMAND BIT
+ 0220            CAF    BIT2
+ 0221            EXTEND
+ 0222            RAND   30
+ 0223            EXTEND
+ 0224  2         BZF    +5              BRANCH FOR ASCENT CONSTANTS
+ 0225            CAF    -D2JTLIM        -1.4 DEG/SEC SCALED AT PI/4
+ 0226            TS     -2JETLIM
+ 0227            CAF    -DRATEDB        -0.4 DEG/SEC SCALED AT PI/4
+ 0228  2         TCF    +4
+ 0229   +5       CAF    -A2JTLIM        -2.0 DEG/SEC SCALED AT PI/4
+ 0230            TS     -2JETLIM
+ 0231            CAF    -ARATEDB        -1.0 DEG/SEC SCALED AT PI/4
+ 0232  2+4       TS     -RATEDB
+ 0233            CAF    ZERO            ZERO COUNTERS
+ 0234            TS     P-RHCCTR
+ 0235            TS     Q-RHCCTR
+ 0236            TS     R-RHCCTR
+ 0237            CA     BITS8,9
+ 0238            EXTEND
+ 0239            WOR    13
+ 0240            TCF    JETSOFF
+R0241   ........................................................................
+ 0242   JOEY     CAF    ZERO
+ 0243  2         TS     PRATECOM
+R0244  2IN THIS SECTION P RATE ERROR IS COMPUTED AND T-JET IS CALCULATED
+ 0245   OBEYRATE CS     OMEGAP
+ 0246            AD     PRATECOM
+ 0247            TS     TPSIG           SIGN STORAGE TO TELL DIRECTION OF ROT.
+ 0248   OBEYRAPE CCS    A               GET ABVAL OF RATE P-ERROR
+ 0249            TCF    +4
+ 0250            TCF    JETSOFF
+ 0251            TCF    +2
+ 0252            TCF    JETSOFF
+ 0253            AD     BIT1
+ 0254  2         TS     PRATEDIF        ABVAL OF RATE ERROR SCALED AT PI/4
+ 0255  2         TC     T6JOBCHK        T6JOBCHK IS IN FIXED-FIXED
+ 0256            CA     -RATEDB
+ 0257            AD     PRATEDIF
+ 0258            EXTEND
+ 0259  2         BZMF   JETSOFF         RATE ERROR INSIDE DEADBAND
+ 0260            CS     PRATEDIF
+ 0261            EXTEND
+ 0262            SU     -2JETLIM
+ 0263            EXTEND
+ 0264  2         BZMF   RCM4JETS
+ 0265            CA     PRATEDIF        2 JETS ENOUGH.COMPUTE TJET
+ 0266            EXTEND
+ 0267            MP     1/2JTSP         1/2JTACC SCALED AT 2EXP(8)/PI
+ 0268            EXTEND
+ 0269            MP     BIT4
+ 0270            CA     L
+ 0271            EXTEND
+ 0272            MP     25/32           A CONTAINS TJET SCALED AT 2EXP(4)(16/25)
+ 0273  2         TS     TP
+R0274   ........................................................................
+R0275   CHECK RATE COMMAND ON TIME AGAINST MINIMUM IMPULSE
+ 0276            TS     TOFJTCHG
+ 0277            AD     -TJMINT6
+ 0278            EXTEND                   AS TP. TEST JET TIME. IS IT GREATER OR
+ 0279            BZMF   JETSOFF         LESS THAN A MINIMUM IMPULSE
+R0280   ........................................................................
+R0281                2-JET JET SELECT LOGIC
+R0282   READ CHANNEL 6 TO SEE WHAT THE CURRENT STATE OF THE P JETS IS AND
+R0283       CORRECT THE JET TIME FOR THE PROPER AMOUNT OF TIME .
+ 0284   2PJETS   EXTEND                 WHAT IS THE CURRENT STATE OF THE P JETS.
+ 0285            READ   6
+ 0286            EXTEND
+ 0287            BZF    PJETSNOT
+ 0288            CA     MCOMPT          - COMPUTATION TIME FOR THE PAXIS
+ 0289            ADS    TOFJTCHG        ALTER JET OFF TIME PER STATE OF CH 6.
+ 0290            TCF    TESTSIGN
+ 0291   PJETSNOT CA     14-TJMIN        TOTAL DELAY FOR A MIN IMP TO FULL ON.
+ 0292            ADS    TOFJTCHG        ALTER JET OFF TIME PER STATE OF CH 6.
+R0293   ........................................................................
+R0294   SET UP THE ALTERNATING P SELECT BIT IN DAPBOOLS.
+ 0295   ALTPSELT CA     BIT5            COMPLEMENT BIT5 OF DAPBOOLS
+ 0296            LXCH   DAPBOOLS
+ 0297            EXTEND
+ 0298            RXOR   L
+ 0299            TS     DAPBOOLS
+ 0300   TESTSIGN CCS    TPSIG
+ 0301            CA     BIT5
+ 0302            TCF    +2
+ 0303  2         TCF    NEGTP
+ 0304            MASK   DAPBOOLS        IN THE DAP BOOLS WORD.
+ 0305            EXTEND
+ 0306            BZF    ALTPOS1
+ 0307   ALTPOS2  CA     POSPJET1
+ 0308            TC     WRITEJTS +2
+ 0309            CA     BIT9              NOW. ZERO AT CHG.(WRITE LOW8 IN CH.6).
+ 0310            TS     JTSATCHG        STATE OF P AXIS JETS AFTER THE T6 RUPT.
+ 0311            TCF    P+2JET
+ 0312   ALTPOS1  CA     POSPJET0
+ 0313            TC     WRITEJTS +2
+ 0314            CA     BIT9              NOW. ZERO AT CHG.(WRITE LOW8 IN CH.6).
+ 0315            TS     JTSATCHG        JTSONNOW CONTAINS BITS WRITTEN INTO CH 6
+ 0316            TCF    P+2JET
+R0317   ........................................................................
+R0318   TEST DAPBOOLS TO DETERMINE WHICH JET PAIR TO USE FOR P AXIS ROTATION.
+ 0319   NEGTP    CA     BIT5
+ 0320            MASK   DAPBOOLS        IN THE DAP BOOLS WORD.
+ 0321            EXTEND
+ 0322            BZF    ALTNEG1
+ 0323   ALTNEG2  CA     NEGPJET1
+ 0324            TC     WRITEJTS +2
+ 0325            CA     BIT9              NOW. ZERO AT CHG.(WRITE LOW8 IN CH.6).
+ 0326            TS     JTSATCHG        STATE OF P AXIS JETS AFTER THE T6 RUPT.
+ 0327            TCF    P-2JET
+ 0328   ALTNEG1  CA     NEGPJET0
+ 0329            TC     WRITEJTS +2
+ 0330            CA     BIT9              NOW. ZERO AT CHG.(WRITE LOW8 IN CH.6).
+ 0331            TS     JTSATCHG        STATE OF P AXIS JETS AFTER THE T6 RUPT.
+ 0332            TCF    P-2JET
+ 0333   RCM4JETS CA     PRATEDIF
+ 0334            EXTEND
+ 0335            MP     1/2JTSP
+ 0336            EXTEND
+ 0337            MP     BIT3
+ 0338            CA     L
+ 0339            EXTEND
+ 0340            MP     25/32           A NOW CONTAINS TJET SCALED AT 2EXP(4)(16
+ 0341  2         TS     TP              /25).
+R0342   ........................................................................
+R0343   IN THIS SECTION DO THE P AXIS  JET SELECT LOGIC FOR 4 JETS
+ 0344   4PJETS   TS     TOFJTCHG        TOFJTCHG WILL BE MODIFIED AND WILL = T6.
+ 0345            CS     TPSIG
+ 0346            EXTEND
+ 0347            BZMF   POS4P
+ 0348            EXTEND
+ 0349            READ   6
+ 0350            EXTEND
+ 0351            BZF    +4
+ 0352            CA     MCOMPT
+ 0353            ADS    TOFJTCHG        ALTER JET OFF TIME PER STATE OF CH 6.
+ 0354            TCF    +3
+ 0355   +4       CAF    14-TJMIN
+ 0356            ADS    TOFJTCHG        ALTER JET OFF TIME PER STATE OF CH 6.
+ 0357            CA     4NEGPJET
+ 0358            TC     WRITEJTS +2
+ 0359            CA     BIT9            THE LOW 8 BITS ONLY GET WRITTEN INTO CH.
+ 0360            TS     JTSATCHG        STATE OF P AXIS JETS AFTER THE T6 RUPT.
+ 0361            CS     FOUR
+ 0362            TCF    RATE
+ 0363   POS4P    EXTEND
+ 0364            READ   6
+ 0365            EXTEND
+ 0366            BZF    +4
+ 0367            CA     MCOMPT
+ 0368            ADS    TOFJTCHG        ALTER JET OFF TIME PER STATE OF CH 6.
+ 0369            TCF    +3
+ 0370   +4       CA     14-TJMIN        TOTAL DELAY FOR A MIN IMP TO FULL ON.
+ 0371            ADS    TOFJTCHG        ALTER JET OFF TIME PER STATE OF CH 6.
+ 0372            CA     4POSPJET
+ 0373            TC     WRITEJTS +2
+ 0374            CA     BIT9              NOW. ZERO AT CHG.(WRITE LOW8 IN CH.6).
+ 0375            TS     JTSATCHG        STATE OF P AXIS JETS AFTER THE T6 RUPT.
+ 0376            CA     FOUR
+ 0377            TCF    RATE
+ 0378   JETSOFF  CAF    ZERO
+ 0379            TS     JETRATE
+ 0380            TS     TOFJTCHG
+ 0381            TC     WRITEJTS +2
+ 0382            TCF    RESUME
+R0385  2P-AXIS URGENCY FUNCTION CALCULATION
+R0386  2(NOTE -- M13 = 1 IDENTICALLY IMPLIES NULL MULTIPLICATION.)
+ 0387   PURGENCY CA     CDUY            P-ERROR CALCULATION
+ 0388            EXTEND
+ 0389            MSU    CDUYD           CDU VALUE - ANGLE DESIRED (Y-AXIS)
+ 0390            EXTEND
+ 0391            MP     M11             (CDUY-CDUYD)M11 SCALED AT PI RADIANS
+ 0392            XCH    E               SAVE FIRST TERM (OF TWO)
+ 0393            CA     CDUX            THIRD COMPONENT
+ 0394            EXTEND
+ 0395            MSU    CDUXD           CDU VALUE - ANGLE DESIRED (X-AXIS)
+R0396                                                    EXTEND
+R0397                                                    MP     M13
+ 0398  2         ADS    E               SAVE SUM OF TERMS, NO OVERFLOW EVR
+ 0399            TS     PERROR          SAVE P ERR FOR DISPLAY
+ 0400            CAE    1/2JTSP         SET-UP FOR URGENCY SUBROUTINE
+ 0401  2         TS     1/NJETAC
+ 0402  2         TC     T6JOBCHK        CHECK T6 CLOCK HERE, BEFORE URGROUTN
+ 0403            CS     OMEGAPD
+ 0404            AD     OMEGAP
+ 0405            TS     EDOTP
+ 0406            TC     IBNKCALL        *** SUBROUTINE CALL *** (TAKES 24 MCTS)
+ 0407  2         CADR   URGROUTN        (RETURN TAKES 10 MCTS)
+ 04071           EXTEND                 IF URGENCY = 0, FIRE NO JETS
+ 04072 2         BZF    JETSOFF         (FOR EFFICIENCY ONLY)
+ 0408            CCS    A               URGENCY FUNCTION IS IN A, GET ABVAL
+ 0409            AD     UPM
+ 0410            TCF     +2
+ 0411            AD     UPM
+ 0412            EXTEND
+ 0413            BZMF   2JETSP
+ 0414            CA     POSMAX
+ 0415            TS     NJET            INDICATE 4 JETS
+ 0416            CA     1/2JTSP
+ 0417            EXTEND
+ 0418            MP     BIT14           USE 1/4JETSP
+ 0419            TS     1/NJETAC
+ 0420  2         TCF    T-JETLAW
+ 0421   2JETSP   CS     POSMAX
+ 0422            TS     NJET            INDICATE 2 JETS
+ 0423  2T-JETLAW TC     T6JOBCHK        CHECK T6 CLOCK RUPT BEFORE SUBROUTINE
+ 0424            CAF    JETLWADR        TJETLAW CALLING SEQUENCE
+ 0425            TC     ISWCALL
+ 0426            TCF    JETSOFF
+ 0427  2         TS     TP
+ 0428            CCS    NJET
+ 0429            CA     TP
+ 0430            TCF    4PJETS
+ 0431            CA     TP
+ 0432            TS     TOFJTCHG
+ 0433  2         TCF    2PJETS
+R0434  2TORQUE VECTOR RECONSTRUCTION FOR THE P-AXIS
+ 0435   P+2JET   CA     TWO
+ 0436            TCF    RATE
+ 0437   P-2JET   CS     TWO
+ 0438   RATE     TS     NO.PJETS        STORE NO. OF P JETS FOR USE LATER.
+ 0439            CA     100MSPTQ        TORQUE FROM A 100 MS JET PULSE SET BY
+ 0440            EXTEND                   AOS TASK EVERY 2 SECONDS.
+ 0441            MP     1JACC
+ 0442            EXTEND
+ 0443            MP     NO.PJETS
+ 0444            LXCH   JETRATE         STORE JET RATE FOR OMEGAP COMPUTATION.
+ 0445            CS     TOFJTCHG
+ 0446            AD     +1.5CSP         USE 150 MS. TO TEST FOR A PAXIS SKIP.
+ 0447            EXTEND
+ 0448            BZMF   RESUME          TP GREATER THAN 150MS THEN DO NORMAL P.
+ 0449            CA     PSKIPADR        SET UP A P AXIS SKIP.
+ 0450            TS     PJUMPADR
+ 0451   JTLST    CCS    TIME6            TEST CURRENT STATE OF T6.
+ 0452            TCF    T6ONNOW          IF T6 IS + THEN CLOCK IS ON.
+ 0453            TCF    T6OFFNOW         IF T6 IS + ZERO THEN T6 MUST BE OFF
+ 0454            TCF    T6ONNOW            SINCE ALL DINC S LEAD TO MINUS ZERO.
+ 0455            TC     T6JOB           WE ARE IN THE UNIQUE STATE WHICH SAYS
+ 0456            TCF    JTLST             A T6 INTERRUPT IS WAITING.DO T6 JOB.
+ 0457   T6OFFNOW CA     TOFJTCHG
+ 0458            TS     TIME6           WE ARE HERE IF T6 CLOCK IS OFF.
+ 0459            CA     BIT15
+ 0460            EXTEND                 TURN CLOCK PULSE FOR T6 ON AND LOAD T6.
+ 0461            WOR    13
+ 0462            CA     JTSATCHG
+ 0463            TS     T6NEXTJT
+ 0464            CA     ZERO
+ 0465            XCH    ADDTLT6         SET UP NEXT T6 INTERRUPT AFTER THE
+ 0466            TS     T6NEXT            CURRENT ONE IS COMPLETE. ADDTLT6 MAY
+ 0467            CA     ZERO              BE ZERO IN WHICH CASE NO MORE T6.
+ 0468            XCH    ADDT6JTS
+ 0469            TS     T6NEXTJT +1
+ 0470            TCF    RESUME
+ 0471   T6ONNOW  CCS    T6NEXT          HERE IF T6 IS NOW ON. SEE IF T6NEXT IS
+ 0472            TCF    T6NXT=+           ZERO OR NOT.
+ 0473            CS     TOFJTCHG        T6NEXT IS NEVER NEGATIVE.
+ 0474            AD     TIME6           A CONTAINS T6 - TJET.
+ 0475            CCS    A               TEST SIGN OF A (SAVING THE DIFFERENCE).
+ 0476            AD     ONE
+ 0477            TCF    JTSFIRST        TJET IS LESS THAN T6.
+ 0478            NOOP                   IF DIFFERENCE IS NEGATIVE OR ZERO
+ 0479            AD     ONE               WE ADD 1 SO ZERO CAN NEVER BE IN LIST.
+ 0480            TS     T6NEXT
+ 0481            CA     JTSATCHG
+ 0482            TS     T6NEXTJT +1     BEGIN SETTING UP JETS IN THE JET LIST.
+ 0483            CA     ZERO
+ 0484            XCH    ADDTLT6
+ 0485            TS     T6NEXT +1
+ 0486            CA     ZERO
+ 0487            XCH    ADDT6JTS
+ 0488            TS     T6NEXTJT +2
+ 0489            TCF    RESUME
+ 0490   JTSFIRST TS     T6NEXT          HERE IF TJET IS LESS THAN T6.
+ 0491            CA     TOFJTCHG
+ 0492            TS     TIME6           SWITCH T6 AND TJET)
+ 0493            CA     JTSATCHG
+ 0494            XCH    T6NEXTJT        BEGIN SWITCHING JET WORDS IN JET LIST.
+ 0495            TS     T6NEXTJT +1
+ 0496            CS     ADDTLT6
+ 0497            EXTEND
+ 0498            BZF    RESUME          SEE IF AN ADDITIONAL (QR) JET TIME IS
+ 0499            AD     T6NEXT            REQUIRED.
+ 0500            CCS    A               IF AN ADDITIONAL T6 IS NEEDEN, COMPARE
+ 0501            AD     ONE               IT WITH THE CONTENTS OF T6NEXT.
+ 0502            TCF    +11
+ 0503            NOOP
+ 0504            AD     ONE
+ 0505            TS     T6NEXT +1
+ 0506            CA     ZERO
+ 0507            TS     ADDTLT6
+ 0508            XCH    ADDT6JTS
+ 0509            TS     T6NEXTJT +2
+ 0510            TCF    RESUME
+ 0511    +11     TS     T6NEXT +1
+ 0512            CA     ZERO
+ 0513            XCH    ADDTLT6
+ 0514            TS     T6NEXT
+ 0515            CA     ZERO
+ 0516            XCH    ADDT6JTS
+ 0517            XCH    T6NEXTJT +1
+ 0518            TS     T6NEXTJT +2
+ 0519            TCF    RESUME
+ 0520   T6NXT=+  CS     TOFJTCHG
+ 0521            AD     TIME6
+ 0522            AD     T6NEXT
+ 0523            CCS    A
+ 0524            AD     ONE
+ 0525            TCF    +7
+ 0526            NOOP
+ 0527            AD     ONE
+ 0528            TS     T6NEXT +1
+ 0529            CA     JTSATCHG
+ 0530            TS     T6NEXTJT +2
+ 0531            TCF    RESUME
+ 0532    +7      TS     L
+ 0533            CS     TOFJTCHG
+ 0534            AD     TIME6
+ 0535            CCS    A
+ 0536            AD     ONE
+ 0537            TCF    JTSB4T6
+ 0538            NOOP
+ 0539            AD     ONE
+ 0540            TS     T6NEXT
+ 0541            CA     L
+ 0542            TS     T6NEXT +1
+ 0543            CA     JTSATCHG
+ 0544            TCF    +7
+ 0545   JTSB4T6  XCH    T6NEXT
+ 0546            TS     T6NEXT +1
+ 0547            CA     TOFJTCHG
+ 0548            TS     TIME6
+ 0549            CA     JTSATCHG
+ 0550            XCH    T6NEXTJT
+ 0551    +7      XCH    T6NEXTJT +1
+ 0552            XCH    T6NEXTJT +2
+ 0553            TCF    RESUME
+R0741  2T-JET LAW FIXED CONSTANTS
+ 0742   +1.5CSP  DEC    +0.01465
+ 0743   ONE-K    DEC    0.50000
+ 0745   MCOMPT   DEC    -0.00049        -5 MS. SCALED AS T6 (P-AXIS COMP TIME).
+ 0746   14-TJMIN DEC    11
+ 0747   NEGCSP1  DEC    -.00977
+ 0748   MS30P    OCTAL  37775
+ 0749   0.88975  DEC    0.88975
+ 0750   16/25    DEC    0.64000
+ 0751   -DRATEDB OCTAL  77555           -0.4 DEG/SEC SCALED AT PI/4 RADIANS/SEC
+ 0752   -D2JTLIM OCTAL  77001           -1.4 DEG/SEC SCALED AT PI/4
+ 0753   -A2JTLIM OCTAL  76447           -2.0 DEG/SEC SCALED AT PI/4
+ 0754   -ARATEDB OCTAL  77223           -1.0 DEG/SEC SCALED AT PI/4
+ 0755   25/32    DEC    .78125
+ 0756   -TJMINT6 DEC    -.00073
+ 0757   DAPLOW6  OCT    00077
+ 0758   4POSPJET OCTAL  125
+ 0759   4NEGPJET OCTAL  252
+ 0760   NEGPJET0 OCTAL  12
+ 0761   NEGPJET1 OCTAL  240
+ 0762   POSPJET0 OCTAL  120
+ 0763   POSPJET1 EQUALS FIVE
+ 0764   BITS8,9  OCTAL  00600
+ 0765   UPM      DEC    -.2             TEMPORARY ESTIMATE
+ 07651  PSKIPADR GENADR SKIPPAXS
+ 0766  4JETLWADR CADR   TJETLAW
+ 0767   SETIDLE  LXCH   BANKRUPT        FIRST T5RUPT AFTER FRESH START COMES
+ 0768            CAF    IDLERADR        HERE, DAPIDLER IS STARTED IN 1 SECOND.
+ 0769            TS     T5ADR
+ 0770            CAF    1SECRUPT
+ 0771            TS     TIME5
+ 0772  2         TCF    NOQRSM
+ 0773  21SECRUPT OCTAL  37634           1 SECOND SCALED AS TIME5 (100 PULSES)
+ 0774   GOIDLE   EXTEND                 COME HERE TO SHUT DOWN DAP
+ 0775            DCA    GOIDLADR
+ 0776  2         DXCH   T5ADR           SET UP RUPT TO GO IDLE AT DAPIDLER
+ 0777            CAF    ZERO            CLEAR ALL JETS
+ 0778            EXTEND
+ 0779            WRITE  5
+ 0780            EXTEND
+ 0781  2         WRITE  6
+ 0782            CS     BGIM23          STOP THE TRIM GIMBAL DRIVES
+ 0783            EXTEND
+ 0784  2         WAND   12
+ 0785  2         TCF    RESUME
+ 0786   BGIM23   OCTAL  07400
 *       ENDOFJOB
