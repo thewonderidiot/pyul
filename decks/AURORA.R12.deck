@@ -18202,4 +18202,184 @@ R0741  2T-JET LAW FIXED CONSTANTS
  0784  2         WAND   12
  0785  2         TCF    RESUME
  0786   BGIM23   OCTAL  07400
+L      2DAPIDLER PROGRAM
+R0001   THE DAPIDLER PROGRAM IS STARTED BY FRESH START AND RESTART.
+ 0002  9THE DAPIDLER PROGRAM IS DONE 10 TIMES
+R0003   PER SECOND UNTIL THE ASTRONAUT DESIRES THE DAP TO WAKE UP, AND THE IMU A
+ 0004  9ND CDUS ARE READY FOR USE BY THE DAP.
+R0005   THE NECESSARY INITIALIZATION OF THE DAP IS DONE BY THE DAPIDLER PROGRAM.
+R0006  4ADDITIONAL WORK MUST BE DONE ON DAPIDLER IN THE FUTURE.
+ 0007   DAPIDLER LXCH   BANKRUPT        INTERRUPT LEAD IN (CONTINUED)
+ 0008            EXTEND
+ 0009  2         QXCH   QRUPT
+ 0010            CAF    BIT6
+ 0011            MASK   IMODES30
+ 0012            CCS    A
+ 0013  2         TCF    MOREIDLE
+ 0014            CAF    BIT4
+ 0015            AD     BIT5
+ 0016            EXTEND
+ 0017            RAND   12
+ 0018            CCS    A
+ 0019  2         TCF    MOREIDLE
+ 0020            CAF    BIT10           BIT10 OF 30 IS PNGCS CONTROL OF S/C
+ 0021            EXTEND
+ 0022            RAND   30              BITS IN 30 ARE INVERTED
+ 0023            CCS    A
+ 0024  2         TCF    MOREIDLE
+ 0025            CAF    BIT13           ATTITUDE HOLD BIT. INVERTED.
+ 0026            EXTEND
+ 0027            RAND   31
+ 0028            EXTEND
+ 0029  2         BZF    STARTDAP
+ 0030            CA     BIT14
+ 0031            EXTEND
+ 0032            RAND   31
+ 0033            CCS    A
+ 0034  2         TCF    MOREIDLE
+ 0035   STARTDAP CAF    ZERO
+ 0036            TS     TIME6
+ 0037            TS     TIMEOFFQ
+ 0038            TS     TIMEOFFR
+ 0039            TS     LASTPER
+ 0040            TS     LASTQER
+ 0041            TS     LASTRER
+ 0042            TS     PERROR          INITIALIZE TEMPS FOR ATT ERROR DISPLAY
+ 0043            TS     QERROR
+ 0044            TS     RERROR
+ 0045            TS     T6NEXT
+ 0046            TS     T6NEXT +1
+ 0047            TS     DELAYCTR
+ 0048            TS     JETRATE
+ 0049            TS     JETRATEQ
+ 0050            TS     JETRATER
+ 00501           TS     AOSQTERM
+ 00502           TS     AOSRTERM
+ 0051            TS     CH5MASK
+ 0052            TS     CH6MASK
+ 0053            TS     DELTAP
+ 0054            TS     OMEGAP
+ 0055            TS     OMEGAQ
+ 0056            TS     OMEGAR
+ 0057            TS     OMEGAPD
+ 0058            TS     OMEGAQD
+ 0059            TS     OMEGARD
+ 0060            TS     TQR
+ 0061            TS     NO.QJETS
+ 0062            TS     NO.RJETS
+ 0065            CAF    0.62170
+ 0066            TS     4JETTORK
+ 0067            CAF    .68387          2200 FT LBS. SCALED AT 2(10) X PI.
+ 0068            TS     JETTORK4        QR AXIS JET TORQUE FOR 4 JETS.
+ 0069            CA     CDUX
+ 0070            TS     OLDXFORP
+ 0071            TS     CDUXD
+ 0072            CA     CDUY
+ 0073            TS     OLDYFORP
+ 0074            TS     OLDYFORQ
+ 0075            TS     CDUYD
+ 0076            CA     CDUZ
+ 0077            TS     OLDZFORQ
+ 0078            TS     CDUZD
+ 0079            CAF    BIT6            ENABLE CDU ERR CNTR FOR ATT ERROR DISPLA
+ 0080            EXTEND
+ 0081  2         WOR    12
+ 008102          CA     VISFZADR
+ 008104          TS     PJUMPADR
+ 0082            CA     .075DEC         INITIALIZE 100 MS JET PULSE TORQUE TERMS
+ 0083            TS     100MSPTQ          TO VALUES WHEN K = 1/2.
+ 00831           TS     QR.1STOQ        AOSTASK MUST VARY THESE AS K VARIES.
+R00832 8***** JON ADDELSTON TAKE NOT OF THE ABOVE COMMENT - DICK GRAN.
+ 0125            CA     10AT16
+ 0126            TS     WFORP
+ 0127            CA     6.6AT16
+ 0128  2         TS     WFORQR
+ 0129            CAF    ONE
+ 0130            TC     WAITLIST
+ 0131            2CADR  IXXTASK
+ 0132            CA     ONE
+ 0133            TC     WAITLIST
+ 0134            2CADR  IYYTASK
+ 0135            CA     ONE
+ 01351           TC     WAITLIST
+ 01352           2CADR  IZZTASK
+R0136   THIS SECTION COMPUTES THE RATE OF CHANGE OF ACCELERATION DUE TO THE
+R0137     ROTATION OF THE GIMBAL ENGINE. THE EQUATION IMPLEMENTED IN BOTH THE
+R0138     Y-X PLANE AND THE Z-X PLANE IS -- D(ALPHA)/DT = T L/I * D(DELTA)/DT
+R0139     WHERE ----
+R0140               T = ENGINE THRUST COMMAND
+R0141               L = PIVOT TO CG DISTANCE OF THE GIMBAL ENGINE
+R0142               I = INERTIA
+R0143  2            DELTA = GIMBAL ENGINE ANGLE MEASURED FROM THE X AXIS.
+ 0144            CAF    DELTADOT        0.2 DEG/SEC SCALED AT PI/64
+ 0145            EXTEND
+ 0146            MP     L,PVT-CG        GIMBAL PIVOT TO C.G. DISTANCE ,SCALE=8.
+ 0147            EXTEND
+ 0148            MP     THRSTCMD        COMMANDED THRUST SCALED AT 2(14) =16384.
+ 0149            DXCH   ITEMP1
+ 0150            EXTEND
+ 0151            DCA    ITEMP1
+ 0152            EXTEND
+ 0153            DV     IZZ             AT 2(18)
+ 0154            TS     ACCDOTR         AT PI/2(7)
+ 0155            DXCH   ITEMP1
+ 0156            EXTEND
+ 0157            DV     IYY             AT 2(18)
+ 0158  2         TS     ACCDOTQ         AT PI/2(7)
+ 0159            EXTEND                 .3ACCDOTQ AT PI/2(8)
+ 0160            MP     DGBF
+ 0161            TS     KQ
+ 0162            EXTEND
+ 0163            SQUARE
+ 0164  2         TS     KQ2             KQ(2)
+ 0165            CAE    ACCDOTR         .3ACCDOTR AT PI/2(8)
+ 0166            EXTEND
+ 0167            MP     DGBF
+ 0168            TS     KR
+ 0169            EXTEND
+ 0170            SQUARE
+ 0171  2         TS     KR2
+ 0179            CAF    .5ACCMIN
+ 0180            TS     .5ACCMNQ        INITIALIZE FOR DESCENT
+ 0181            TS     .5ACCMNR
+ 0182            TS     .5ACCMNU
+ 0183  2         TS     .5ACCMNV
+ 0184  2         TS     .5ACCMNE        (QUIRK FIX)
+ 0185            CAF    DBMNMP          SET UP DESCENT MINIMUM IMPULSE DEADBANDS
+ 0186            TS     DBMINIMP        (DUPLICATES MONITOR FUNCTION)
+ 0187  2         TS     MINIMPDB
+ 0188            EXTEND                 SET UP P-AXIS TO GO TO DUMMYFIL
+ 0189            DCA    DF2CADR
+ 0190  2         DXCH   PFILTADR
+ 0191            EXTEND
+ 0192            DCA    PAXADIDL
+ 0193            DXCH   T5ADR
+ 0194   MOREIDLE CAF    MS100
+ 0195            TS     TIME5
+ 0196            TCF    RESUME
+ 0197   IDLERADR 2CADR  DAPIDLER
+ 0198  4GOIDLADR EQUALS IDLERADR
+ 019802 VISFZADR GENADR CHKVISFZ
+ 0199   WCHANGER CA     0.31250         CHANGE WFORP AND WFORQR
+ 0200            TS     WFORP           TO REFLECT 100 MS INTERVAL
+ 0201            TS     WFORQR          WHICH CAUSES SMOOTHING IN RATE FILTER.
+ 0202            TCF    TASKOVER        BETWEEN 1ST QR AND 2ND P AFTER STARTDAP
+ 0203   .707P    DEC    .70711          SQUARE ROOT OF 1/2
+ 0204   PAXADIDL 2CADR  PAXIS
+ 0205   DF2CADR  2CADR  DUMMYFIL
+ 0206   MS100    OCTAL  37766
+ 0207   0.00167  DEC    0.00167
+ 0208   0.62170  DEC    0.62170
+ 0209   180MS    OCTAL  00022           18 BITS
+ 0212   .68387   DEC    0.68387
+ 0213   10AT16   DEC    0.62500
+ 0214   6.6AT16  DEC    0.4125          *** IS THIS NEEDED
+ 0215  20.31250  DEC    0.31250
+ 0216   DELTADOT DEC    0.07111         0.2 DEG/SEC SCALED AT PI/64
+ 0217   DGBF     DEC    0.6
+ 0218   OCT70000 OCT    70000
+ 0219   .5ACCMIN DEC    0.30680
+ 0220   DBMNMP   DEC    0.00167         .3 DEGREES SCALED AT PI RADIANS
+ 0221   .075DEC  DEC    0.07500          = T(1-K + KT/(2CSP) ) WHEN T = .1,K=.5
+ 0222   ENDDAP23 EQUALS
 *       ENDOFJOB
