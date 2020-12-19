@@ -19650,4 +19650,437 @@ R1172  2THESE PROGRAMS REDUCE THE RATE ERROR TO 10.6 DEGREES/SECOND.
  1199  2         TC     Q               *** RETURN ***
  1200  410.6D/S  DEC    0.23111         10.6 DEGREES/SECOND SCALED AT PI/4
  1201   ENDDAP24 EQUALS
+L       JET FAILURE CONTROL LOGIC
+ 0001            BANK   25
+ 0002  4         EBANK= DT
+R0003  2DETERMINE MODE - +XTRANS, -XTRANS, ASCENT, MANDATORY ROTATION, OR NORMAL
+ 0004   POLTYPEP CA     BIT7            CHECK +X TRANSLATION
+ 0005            EXTEND
+ 0006            RAND   31
+ 0007            EXTEND
+ 0008  2         BZF    POSXPOLS
+ 0009            CA     BIT8            CHECK -X TRANSLATION
+ 0010            EXTEND
+ 0011            RAND   31
+ 0012            EXTEND
+ 0013  2         BZF    NEGXPOLS        CHECK U,V-MANDATORY AND 4-JET Q,R
+ 0014            CA     DAPBOOLS        CHECK ASCENT BIT OF DAPBOOLS
+ 0015            MASK   BIT8
+ 0016            EXTEND
+ 0017  2         BZF    NORMATT
+ 0018   ASCFLGHT INDEX  POLRELOC
+ 0019            CA     ASCNTPOL
+ 0020            TCF     +9D
+ 0021   NORMATT  INDEX  POLRELOC
+ 0022            CA     NORMLPOL
+ 0023            TCF     +6
+ 0024   NEGXPOLS INDEX  POLRELOC
+ 0025            CA     -XPOLADR
+ 0026            TCF     +3
+ 0027   POSXPOLS INDEX  POLRELOC
+ 0028            CA     +XPOLADR
+ 0029  2         TS     POLRELOC        RESET POLRELOC TO NEW TABLE ENTRY
+ 0030            INDEX  POLRELOC        USE POLRELOC POINTER TO FIND AND
+ 0031            CA     POLTAB1         EXTRACT THE NUMBER OF TESTABLE
+ 0032            EXTEND                 POLICIES AND SAVE IN LOOPCTR
+ 0033            MP     BIT7
+ 0034            MASK   SEVEN
+ 0035            TS     LOOPCTR
+ 0036  2         TCF     +4
+ 0037   POLLOOP  TS     LOOPCTR         RESTORE COUNTER
+ 0038            EXTEND                 CHANGE EFFECTIVE ADDRESS TO NEXT POLICY
+ 0039            DIM    POLRELOC
+ 0040            INDEX  POLRELOC
+ 0041            CA     POLTAB1         PICK UP ROTATIONAL JETS
+ 0042            TS     L
+ 0043            INDEX  POLRELOC
+ 0044            CA     POLTAB2         PICK UP TRANSLATIONAL JETS (MAY BE NONE)
+ 0045            EXTEND                 GET ALL JETS USED IN THIS POLICY
+ 0046            WOR    L               (LOW ORDER 8 BITS ONLY)
+ 0047            MASK   CH5MASK         TEST FOR POLICY FEASIBILITY -
+ 0048            CCS    A               REJECT POLICY IF ANY OF THE JETS IT USES
+ 0049            TCF     +2             ARE THOUGHT TO HAVE FAILED
+ 0050            TCF    POLFND
+ 0051            CCS    LOOPCTR         TEST FOR EXISTENCE OF ADDITIONAL
+ 0052  2         TCF    POLLOOP         TESTABLE POLICY
+ 0053            EXTEND                 LAST FEASIBLE CHOICE -
+ 0054  2         DIM    POLRELOC        CREATE UNTESTED POLICY ADDRESS
+ 0055   POLFND   INDEX  POLRELOC
+ 0056            CA     POLTAB1
+ 0057            MASK   LOW8            GET CHANNEL 5 BIT CONFIGURATION FOR
+ 0058            AD     BIT15           SET SIGN FOR Q,R AXIS FLAG
+ 0059            TS     JTSONNOW        JETS TO BE TURNED ON IMMEDIATELY
+ 0060            INDEX  POLRELOC
+ 0061            CA     POLTAB1
+ 0062            EXTEND
+ 0063            MP     BIT4            GET CODE FOR NUMBER OF TORQUING JETS
+ 0064            CCS    A
+ 0065            TCF     +2
+ 0066            TCF    TORKSETP        N=2, CODE=0
+ 0067            CCS    A
+ 0068            TCF    1/4JETAC
+ 0069            CA     1/NJETAC        N=4, CODE=2
+ 0070            DOUBLE                 N = 1, CODE = 1
+ 0071            TCF    NJETCORR
+ 0072   1/4JETAC CA     1/NJETAC        N = 4, CODE = 2
+ 0073            EXTEND
+ 0074            MP     BIT14
+ 0075  2NJETCORR TS     1/NJETAC
+ 0076   TORKSETP INDEX  POLRELOC
+ 0077            CA     POLTAB2
+ 0078            EXTEND
+ 0079            MP     BIT4            GET CODE FOR NUMBER OF Q-JETS
+ 0080            INDEX  A
+ 0081            CA     TORKTABL        GET NUMBER OF Q-JETS FROM TABLE AND
+ 0082            TS     NO.QJETS        SAVE FOR TORQUE VECTOR RECONSTRUCTION
+ 0083            CA     L
+ 0084            EXTEND
+ 0085            MP     BIT4            GET CODE FOR NUMBER OF R-JETS
+ 0086            INDEX  A
+ 0087            CA     TORKTABL        GET NUMBER OF R-JETS FROM TABLE AND
+ 0088            TS     NO.RJETS        SAVE FOR TORQUE VECTOR RECONSTRUCTION
+ 0089            CA     L
+ 0090            EXTEND
+ 0091            MP     BIT9            GET CHANNEL 5 BIT CONFIGURATION FOR
+ 0092            AD     BIT15           SET SIGN FOR Q,R AXIS FLAG
+ 0093  2         TS     JTSATCHG        JETS TO BE TURNED ON AFTER TORQUING
+ 0094            CA     BBANKSET
+ 0095            TS     L
+ 0096            CA     TJETADR
+ 0097  2         DTCB                   RETURN TO FBANK 24
+ 0098  4BBANKSET OCTAL  50006
+R0099  2TABLE OF Q,R-JET NUMBERS AND DIRECTIONS FOR TORQUE RECONSTRUCTION
+ 0100   TORKTABL DEC    -4
+ 0101            DEC    -2
+ 0102            DEC    -1
+ 0103            DEC    0
+ 0104            DEC    +1
+ 0105            DEC    +2
+ 0106  2         DEC    +4
+R0107  2POLTAB1 LISTS Q,R-AXIS ROTATIONAL JET POLICIES
+ 0108   POLTAB1  OCTAL    220           JETS  9 14  0  0 NO 2  CTR 0
+ 0109            OCTAL      6           JETS  2  5  0  0 NO 2  CTR 0
+ 0110            OCTAL    602           JETS  2 14  0  0 NO 2  CTR 1
+ 0111            OCTAL  10226           JETS  2  5  9 14 NO 4  CTR 0
+ 0112            OCTAL  11626           JETS  2  5  9 14 NO 4  CTR 3
+ 0113            OCTAL    201           JETS  1 14  0  0 NO 2  CTR 0
+ 0114            OCTAL     44           JETS  5 10  0  0 NO 2  CTR 0
+ 0115            OCTAL    640           JETS 10 14  0  0 NO 2  CTR 1
+ 0116            OCTAL  10245           JETS  1  5 10 14 NO 4  CTR 0
+ 0117            OCTAL  11645           JETS  1  5 10 14 NO 4  CTR 3
+ 0118            OCTAL    140           JETS 10 13  0  0 NO 2  CTR 0
+ 0119            OCTAL     11           JETS  1  6  0  0 NO 2  CTR 0
+ 0120            OCTAL    450           JETS  6 10  0  0 NO 2  CTR 1
+ 0121            OCTAL  10151           JETS  1  6 10 13 NO 4  CTR 0
+ 0122            OCTAL  11551           JETS  1  6 10 13 NO 4  CTR 3
+ 0123            OCTAL    102           JETS  2 13  0  0 NO 2  CTR 0
+ 0124            OCTAL     30           JETS  6  9  0  0 NO 2  CTR 0
+ 0125            OCTAL    412           JETS  2  6  0  0 NO 2  CTR 1
+ 0126            OCTAL  10132           JETS  2  6  9 13 NO 4  CTR 0
+ 0127            OCTAL  11532           JETS  2  6  9 13 NO 4  CTR 3
+ 0128            OCTAL    220           JETS  9 14  0  0 NO 2  CTR 0
+ 0129            OCTAL      6           JETS  2  5  0  0 NO 2  CTR 0
+ 0130            OCTAL    424           JETS  5  9  0  0 NO 2  CTR 1
+ 0131            OCTAL  10226           JETS  2  5  9 14 NO 4  CTR 0
+ 0132            OCTAL  11626           JETS  2  5  9 14 NO 4  CTR 3
+ 0133            OCTAL     44           JETS  5 10  0  0 NO 2  CTR 0
+ 0134            OCTAL    201           JETS  1 14  0  0 NO 2  CTR 0
+ 0135            OCTAL    405           JETS  1  5  0  0 NO 2  CTR 1
+ 0136            OCTAL  10245           JETS  1  5 10 14 NO 4  CTR 0
+ 0137            OCTAL  11645           JETS  1  5 10 14 NO 4  CTR 3
+ 0138            OCTAL    140           JETS 10 13  0  0 NO 2  CTR 0
+ 0139            OCTAL     11           JETS  1  6  0  0 NO 2  CTR 0
+ 0140            OCTAL    501           JETS  1 13  0  0 NO 2  CTR 1
+ 0141            OCTAL  10151           JETS  1  6 10 13 NO 4  CTR 0
+ 0142            OCTAL  11551           JETS  1  6 10 13 NO 4  CTR 3
+ 0143            OCTAL     30           JETS  6  9  0  0 NO 2  CTR 0
+ 0144            OCTAL    102           JETS  2 13  0  0 NO 2  CTR 0
+ 0145            OCTAL    520           JETS  9 13  0  0 NO 2  CTR 1
+ 0146            OCTAL  10132           JETS  2  6  9 13 NO 4  CTR 0
+ 0147            OCTAL  11532           JETS  2  6  9 13 NO 4  CTR 3
+ 0148            OCTAL   4046           JETS  2  5 10  0 NO 1  CTR 0
+ 0149            OCTAL   4242           JETS  2 10 14  0 NO 1  CTR 0
+ 0150            OCTAL   4600           JETS 14  0  0  0 NO 1  CTR 1
+ 0151            OCTAL    204           JETS  5 14  0  0 NO 2  CTR 0
+ 0152            OCTAL   1604           JETS  5 14  0  0 NO 2  CTR 3
+ 0153            OCTAL   4142           JETS  2 10 13  0 NO 1  CTR 0
+ 0154            OCTAL   4052           JETS  2  6 10  0 NO 1  CTR 0
+ 0155            OCTAL   4410           JETS  6  0  0  0 NO 1  CTR 1
+ 0156            OCTAL    110           JETS  6 13  0  0 NO 2  CTR 0
+ 0157            OCTAL   1510           JETS  6 13  0  0 NO 2  CTR 3
+ 0158            OCTAL   4211           JETS  1  6 14  0 NO 1  CTR 0
+ 0159            OCTAL   4250           JETS  6 10 14  0 NO 1  CTR 0
+ 0160            OCTAL   4440           JETS 10  0  0  0 NO 1  CTR 1
+ 0161            OCTAL     41           JETS  1 10  0  0 NO 2  CTR 0
+ 0162            OCTAL   1441           JETS  1 10  0  0 NO 2  CTR 3
+ 0163            OCTAL   4230           JETS  6  9 14  0 NO 1  CTR 0
+ 0164            OCTAL   4212           JETS  2  6 14  0 NO 1  CTR 0
+ 0165            OCTAL   4402           JETS  2  0  0  0 NO 1  CTR 1
+ 0166            OCTAL     22           JETS  2  9  0  0 NO 2  CTR 0
+ 0167            OCTAL   1422           JETS  2  9  0  0 NO 2  CTR 3
+ 0168            OCTAL   4221           JETS  1  9 14  0 NO 1  CTR 0
+ 0169            OCTAL   4025           JETS  1  5  9  0 NO 1  CTR 0
+ 0170            OCTAL   4404           JETS  5  0  0  0 NO 1  CTR 1
+ 0171            OCTAL    204           JETS  5 14  0  0 NO 2  CTR 0
+ 0172            OCTAL   1604           JETS  5 14  0  0 NO 2  CTR 3
+ 0173            OCTAL   4031           JETS  1  6  9  0 NO 1  CTR 0
+ 0174            OCTAL   4121           JETS  1  9 13  0 NO 1  CTR 0
+ 0175            OCTAL   4500           JETS 13  0  0  0 NO 1  CTR 1
+ 0176            OCTAL    110           JETS  6 13  0  0 NO 2  CTR 0
+ 0177            OCTAL   1510           JETS  6 13  0  0 NO 2  CTR 3
+ 0178            OCTAL   4144           JETS  5 10 13  0 NO 1  CTR 0
+ 0179            OCTAL   4105           JETS  1  5 13  0 NO 1  CTR 0
+ 0180            OCTAL   4401           JETS  1  0  0  0 NO 1  CTR 1
+ 0181            OCTAL     41           JETS  1 10  0  0 NO 2  CTR 0
+ 0182            OCTAL   1441           JETS  1 10  0  0 NO 2  CTR 3
+ 0183            OCTAL   4106           JETS  2  5 13  0 NO 1  CTR 0
+ 0184            OCTAL   4124           JETS  5  9 13  0 NO 1  CTR 0
+ 0185            OCTAL   4420           JETS  9  0  0  0 NO 1  CTR 1
+ 0186            OCTAL     22           JETS  2  9  0  0 NO 2  CTR 0
+ 0187            OCTAL   1422           JETS  2  9  0  0 NO 2  CTR 3
+ 0188            OCTAL   4004           JETS  5  0  0  0 NO 1  CTR 0
+ 0189            OCTAL   4200           JETS 14  0  0  0 NO 1  CTR 0
+ 0190            OCTAL    604           JETS  5 14  0  0 NO 2  CTR 1
+ 0191            OCTAL   4001           JETS  1  0  0  0 NO 1  CTR 0
+ 0192            OCTAL   4040           JETS 10  0  0  0 NO 1  CTR 0
+ 0193            OCTAL    441           JETS  1 10  0  0 NO 2  CTR 1
+ 0194            OCTAL   4100           JETS 13  0  0  0 NO 1  CTR 0
+ 0195            OCTAL   4010           JETS  6  0  0  0 NO 1  CTR 0
+ 0196            OCTAL    510           JETS  6 13  0  0 NO 2  CTR 1
+ 0197            OCTAL   4020           JETS  9  0  0  0 NO 1  CTR 0
+ 0198            OCTAL   4002           JETS  2  0  0  0 NO 1  CTR 0
+ 0199            OCTAL    422           JETS  2  9  0  0 NO 2  CTR 1
+ 0200            OCTAL     24           JETS  5  9  0  0 NO 2  CTR 0
+ 0201            OCTAL    220           JETS  9 14  0  0 NO 2  CTR 0
+ 0202            OCTAL      6           JETS  2  5  0  0 NO 2  CTR 0
+ 0203            OCTAL   1202           JETS  2 14  0  0 NO 2  CTR 2
+ 0204            OCTAL      5           JETS  1  5  0  0 NO 2  CTR 0
+ 0205            OCTAL    201           JETS  1 14  0  0 NO 2  CTR 0
+ 0206            OCTAL     44           JETS  5 10  0  0 NO 2  CTR 0
+ 0207            OCTAL   1240           JETS 10 14  0  0 NO 2  CTR 2
+ 0208            OCTAL    101           JETS  1 13  0  0 NO 2  CTR 0
+ 0209            OCTAL    140           JETS 10 13  0  0 NO 2  CTR 0
+ 0210            OCTAL     11           JETS  1  6  0  0 NO 2  CTR 0
+ 0211            OCTAL   1050           JETS  6 10  0  0 NO 2  CTR 2
+ 0212            OCTAL    120           JETS  9 13  0  0 NO 2  CTR 0
+ 0213            OCTAL    102           JETS  2 13  0  0 NO 2  CTR 0
+ 0214            OCTAL     30           JETS  6  9  0  0 NO 2  CTR 0
+ 0215            OCTAL   1012           JETS  2  6  0  0 NO 2  CTR 2
+ 0216            OCTAL     24           JETS  5  9  0  0 NO 2  CTR 0
+ 0217            OCTAL    202           JETS  2 14  0  0 NO 2  CTR 0
+ 0218            OCTAL    220           JETS  9 14  0  0 NO 2  CTR 0
+ 0219            OCTAL   1006           JETS  2  5  0  0 NO 2  CTR 2
+ 0220            OCTAL  11626           JETS  2  5  9 14 NO 4  CTR 3
+ 0221            OCTAL      5           JETS  1  5  0  0 NO 2  CTR 0
+ 0222            OCTAL    240           JETS 10 14  0  0 NO 2  CTR 0
+ 0223            OCTAL    201           JETS  1 14  0  0 NO 2  CTR 0
+ 0224            OCTAL   1044           JETS  5 10  0  0 NO 2  CTR 2
+ 0225            OCTAL  11645           JETS  1  5 10 14 NO 4  CTR 3
+ 0226            OCTAL     50           JETS  6 10  0  0 NO 2  CTR 0
+ 0227            OCTAL    101           JETS  1 13  0  0 NO 2  CTR 0
+ 0228            OCTAL    140           JETS 10 13  0  0 NO 2  CTR 0
+ 0229            OCTAL   1011           JETS  1  6  0  0 NO 2  CTR 2
+ 0230            OCTAL  11551           JETS  1  6 10 13 NO 4  CTR 3
+ 0231            OCTAL    120           JETS  9 13  0  0 NO 2  CTR 0
+ 0232            OCTAL     12           JETS  2  6  0  0 NO 2  CTR 0
+ 0233            OCTAL    102           JETS  2 13  0  0 NO 2  CTR 0
+ 0234            OCTAL   1030           JETS  6  9  0  0 NO 2  CTR 2
+ 0235  2         OCTAL  11532           JETS  2  6  9 13 NO 4  CTR 3
+R0236  2POLTAB2 LISTS Q,R-AXIS TRANSLATIONAL POLICIES
+ 0237   POLTAB2  OCTAL  25610           JETS  6 14  QNO  2  RNO  0
+ 0238            OCTAL  25442           JETS  2 10  QNO  2  RNO  0
+ 0239            OCTAL  25400           JETS  0  0  QNO  2  RNO  0
+ 0240            OCTAL  31610           JETS  6 14  QNO  4  RNO  0
+ 0241            OCTAL  31442           JETS  2 10  QNO  4  RNO  0
+ 0242            OCTAL  16610           JETS  6 14  QNO  0  RNO  2
+ 0243            OCTAL  16442           JETS  2 10  QNO  0  RNO  2
+ 0244            OCTAL  16400           JETS  0  0  QNO  0  RNO  2
+ 0245            OCTAL  17210           JETS  6 14  QNO  0  RNO  4
+ 0246            OCTAL  17042           JETS  2 10  QNO  0  RNO  4
+ 0247            OCTAL   5442           JETS  2 10  QNO- 2  RNO  0
+ 0248            OCTAL   5610           JETS  6 14  QNO- 2  RNO  0
+ 0249            OCTAL   5400           JETS  0  0  QNO- 2  RNO  0
+ 0250            OCTAL   1610           JETS  6 14  QNO- 4  RNO  0
+ 0251            OCTAL   1442           JETS  2 10  QNO- 4  RNO  0
+ 0252            OCTAL  14442           JETS  2 10  QNO  0  RNO- 2
+ 0253            OCTAL  14610           JETS  6 14  QNO  0  RNO- 2
+ 0254            OCTAL  14400           JETS  0  0  QNO  0  RNO- 2
+ 0255            OCTAL  14210           JETS  6 14  QNO  0  RNO- 4
+ 0256            OCTAL  14042           JETS  2 10  QNO  0  RNO- 4
+ 0257            OCTAL  25421           JETS  1  9  QNO  2  RNO  0
+ 0258            OCTAL  25504           JETS  5 13  QNO  2  RNO  0
+ 0259            OCTAL  25400           JETS  0  0  QNO  2  RNO  0
+ 0260            OCTAL  31504           JETS  5 13  QNO  4  RNO  0
+ 0261            OCTAL  31421           JETS  1  9  QNO  4  RNO  0
+ 0262            OCTAL  16504           JETS  5 13  QNO  0  RNO  2
+ 0263            OCTAL  16421           JETS  1  9  QNO  0  RNO  2
+ 0264            OCTAL  16400           JETS  0  0  QNO  0  RNO  2
+ 0265            OCTAL  17104           JETS  5 13  QNO  0  RNO  4
+ 0266            OCTAL  17021           JETS  1  9  QNO  0  RNO  4
+ 0267            OCTAL   5504           JETS  5 13  QNO- 2  RNO  0
+ 0268            OCTAL   5421           JETS  1  9  QNO- 2  RNO  0
+ 0269            OCTAL   5400           JETS  0  0  QNO- 2  RNO  0
+ 0270            OCTAL   1504           JETS  5 13  QNO- 4  RNO  0
+ 0271            OCTAL   1421           JETS  1  9  QNO- 4  RNO  0
+ 0272            OCTAL  14421           JETS  1  9  QNO  0  RNO- 2
+ 0273            OCTAL  14504           JETS  5 13  QNO  0  RNO- 2
+ 0274            OCTAL  14400           JETS  0  0  QNO  0  RNO- 2
+ 0275            OCTAL  14104           JETS  5 13  QNO  0  RNO- 4
+ 0276            OCTAL  14021           JETS  1  9  QNO  0  RNO- 4
+ 0277            OCTAL  22042           JETS  2 10  QNO  1  RNO  1
+ 0278            OCTAL  22042           JETS  2 10  QNO  1  RNO  1
+ 0279            OCTAL  22210           JETS  6 14  QNO  1  RNO  1
+ 0280            OCTAL  26610           JETS  6 14  QNO  2  RNO  2
+ 0281            OCTAL  26442           JETS  2 10  QNO  2  RNO  2
+ 0282            OCTAL  11042           JETS  2 10  QNO- 1  RNO- 1
+ 0283            OCTAL  11042           JETS  2 10  QNO- 1  RNO- 1
+ 0284            OCTAL  11210           JETS  6 14  QNO- 1  RNO- 1
+ 0285            OCTAL   4610           JETS  6 14  QNO- 2  RNO- 2
+ 0286            OCTAL   4442           JETS  2 10  QNO- 2  RNO- 2
+ 0287            OCTAL  12210           JETS  6 14  QNO- 1  RNO  1
+ 0288            OCTAL  12210           JETS  6 14  QNO- 1  RNO  1
+ 0289            OCTAL  12042           JETS  2 10  QNO- 1  RNO  1
+ 0290            OCTAL   6442           JETS  2 10  QNO- 2  RNO  2
+ 0291            OCTAL   6610           JETS  6 14  QNO- 2  RNO  2
+ 0292            OCTAL  21210           JETS  6 14  QNO  1  RNO- 1
+ 0293            OCTAL  21210           JETS  6 14  QNO  1  RNO- 1
+ 0294            OCTAL  21042           JETS  2 10  QNO  1  RNO- 1
+ 0295            OCTAL  24442           JETS  2 10  QNO  2  RNO- 2
+ 0296            OCTAL  24610           JETS  6 14  QNO  2  RNO- 2
+ 0297            OCTAL  22021           JETS  1  9  QNO  1  RNO  1
+ 0298            OCTAL  22021           JETS  1  9  QNO  1  RNO  1
+ 0299            OCTAL  22104           JETS  5 13  QNO  1  RNO  1
+ 0300            OCTAL  26504           JETS  5 13  QNO  2  RNO  2
+ 0301            OCTAL  26421           JETS  1  9  QNO  2  RNO  2
+ 0302            OCTAL  11021           JETS  1  9  QNO- 1  RNO- 1
+ 0303            OCTAL  11021           JETS  1  9  QNO- 1  RNO- 1
+ 0304            OCTAL  11104           JETS  5 13  QNO- 1  RNO- 1
+ 0305            OCTAL   4504           JETS  5 13  QNO- 2  RNO- 2
+ 0306            OCTAL   4421           JETS  1  9  QNO- 2  RNO- 2
+ 0307            OCTAL  12104           JETS  5 13  QNO- 1  RNO  1
+ 0308            OCTAL  12104           JETS  5 13  QNO- 1  RNO  1
+ 0309            OCTAL  12021           JETS  1  9  QNO- 1  RNO  1
+ 0310            OCTAL   6421           JETS  1  9  QNO- 2  RNO  2
+ 0311            OCTAL   6504           JETS  5 13  QNO- 2  RNO  2
+ 0312            OCTAL  21104           JETS  5 13  QNO  1  RNO- 1
+ 0313            OCTAL  21104           JETS  5 13  QNO  1  RNO- 1
+ 0314            OCTAL  21021           JETS  1  9  QNO  1  RNO- 1
+ 0315            OCTAL  24421           JETS  1  9  QNO  2  RNO- 2
+ 0316            OCTAL  24504           JETS  5 13  QNO  2  RNO- 2
+ 0317            OCTAL  22000           JETS  0  0  QNO  1  RNO  1
+ 0318            OCTAL  22000           JETS  0  0  QNO  1  RNO  1
+ 0319            OCTAL  26400           JETS  0  0  QNO  2  RNO  2
+ 0320            OCTAL  12000           JETS  0  0  QNO- 1  RNO  1
+ 0321            OCTAL  12000           JETS  0  0  QNO- 1  RNO  1
+ 0322            OCTAL   6400           JETS  0  0  QNO- 2  RNO  2
+ 0323            OCTAL  11000           JETS  0  0  QNO- 1  RNO- 1
+ 0324            OCTAL  11000           JETS  0  0  QNO- 1  RNO- 1
+ 0325            OCTAL   4400           JETS  0  0  QNO- 2  RNO- 2
+ 0326            OCTAL  21000           JETS  0  0  QNO  1  RNO- 1
+ 0327            OCTAL  21000           JETS  0  0  QNO  1  RNO- 1
+ 0328            OCTAL  24400           JETS  0  0  QNO  2  RNO- 2
+ 0329            OCTAL  25400           JETS  0  0  QNO  2  RNO  0
+ 0330            OCTAL  25400           JETS  0  0  QNO  2  RNO  0
+ 0331            OCTAL  25400           JETS  0  0  QNO  2  RNO  0
+ 0332            OCTAL  25400           JETS  0  0  QNO  2  RNO  0
+ 0333            OCTAL  16400           JETS  0  0  QNO  0  RNO  2
+ 0334            OCTAL  16400           JETS  0  0  QNO  0  RNO  2
+ 0335            OCTAL  16400           JETS  0  0  QNO  0  RNO  2
+ 0336            OCTAL  16400           JETS  0  0  QNO  0  RNO  2
+ 0337            OCTAL   5400           JETS  0  0  QNO- 2  RNO  0
+ 0338            OCTAL   5400           JETS  0  0  QNO- 2  RNO  0
+ 0339            OCTAL   5400           JETS  0  0  QNO- 2  RNO  0
+ 0340            OCTAL   5400           JETS  0  0  QNO- 2  RNO  0
+ 0341            OCTAL  14400           JETS  0  0  QNO  0  RNO- 2
+ 0342            OCTAL  14400           JETS  0  0  QNO  0  RNO- 2
+ 0343            OCTAL  14400           JETS  0  0  QNO  0  RNO- 2
+ 0344            OCTAL  14400           JETS  0  0  QNO  0  RNO- 2
+ 0345            OCTAL  25400           JETS  0  0  QNO  2  RNO  0
+ 0346            OCTAL  25400           JETS  0  0  QNO  2  RNO  0
+ 0347            OCTAL  25400           JETS  0  0  QNO  2  RNO  0
+ 0348            OCTAL  25400           JETS  0  0  QNO  2  RNO  0
+ 0349            OCTAL  31400           JETS  0  0  QNO  4  RNO  0
+ 0350            OCTAL  16400           JETS  0  0  QNO  0  RND  2
+ 0351            OCTAL  16400           JETS  0  0  QNO  0  RND  2
+ 0352            OCTAL  16400           JETS  0  0  QNO  0  RNO  2
+ 0353            OCTAL  16400           JETS  0  0  QNO  0  RNO  2
+ 0354            OCTAL  17000           JETS  0  0  QNO  0  RNO  4
+ 0355            OCTAL   5400           JETS  0  0  QNO- 2  RNO  0
+ 0356            OCTAL   5400           JETS  0  0  QNO- 2  RNO  0
+ 0357            OCTAL   5400           JETS  0  0  QNO- 2  RNO  0
+ 0358            OCTAL   5400           JETS  0  0  QNO- 2  RNO  0
+ 0359            OCTAL   1400           JETS  0  0  QNO- 4  RNO  0
+ 0360            OCTAL  14400           JETS  0  0  QNO  0  RNO- 2
+ 0361            OCTAL  14400           JETS  0  0  QNO  0  RNO- 2
+ 0362            OCTAL  14400           JETS  0  0  QNO  0  RNO- 2
+ 0363            OCTAL  14400           JETS  0  0  QNO  0  RNO- 2
+ 0364  4         OCTAL  14000           JETS  0  0  QNO  0  RNO- 4
+R0365  2NORMLPOL LISTS THE ENTRY POINTS OF NORMAL POLICIES
+ 0366            DEC    127
+ 0367            DEC    126
+ 0368            DEC    88
+ 0369            DEC    88
+ 0370            DEC    122
+ 0371            DEC    121
+ 0372            DEC    85
+ 0373   NORMLPOL DEC    85
+ 0374            DEC    91
+ 0375            DEC    91
+ 0376            DEC    82
+ 0377            DEC    82
+ 0378            DEC    117
+ 0379            DEC    116
+ 0380            DEC    112
+ 0381  2         DEC    111
+R0382  2ASCNTPOL LISTS THE ENTRY POINTS UNDER ASCENT CONDITIONS
+ 0383            DEC    127
+ 0384            DEC    107
+ 0385            DEC    88
+ 0386            DEC    88
+ 0387            DEC    122
+ 0388            DEC    103
+ 0389            DEC    85
+ 0390   ASCNTPOL DEC    85
+ 0391            DEC    91
+ 0392            DEC    91
+ 0393            DEC    82
+ 0394            DEC    82
+ 0395            DEC    117
+ 0396            DEC    99
+ 0397            DEC    112
+ 0398  2         DEC    95
+R0399  2+XPOLADR LISTS THE ENTRY POINTS UNDER +X TRANSLATION CONDITIONS
+ 0400            DEC    19
+ 0401            DEC    17
+ 0402            DEC    49
+ 0403            DEC    47
+ 0404            DEC    14
+ 0405            DEC    12
+ 0406            DEC    54
+ 0407   +XPOLADR DEC    52
+ 0408            DEC    59
+ 0409            DEC    57
+ 0410            DEC    44
+ 0411            DEC    42
+ 0412            DEC    9
+ 0413            DEC    7
+ 0414            DEC    4
+ 0415  2         DEC    2
+R0416  2-XPOLADR LISTS THE ENTRY POINTS UNDER -X TRANSLATION CONDITIONS
+ 0417            DEC    39
+ 0418            DEC    37
+ 0419            DEC    69
+ 0420            DEC    67
+ 0421            DEC    34
+ 0422            DEC    32
+ 0423            DEC    74
+ 0424   -XPOLADR DEC    72
+ 0425            DEC    79
+ 0426            DEC    77
+ 0427            DEC    64
+ 0428            DEC    62
+ 0429            DEC    29
+ 0430            DEC    27
+ 0431            DEC    24
+ 0432            DEC    22
 *       ENDOFJOB
