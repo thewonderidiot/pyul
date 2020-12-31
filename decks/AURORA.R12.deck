@@ -21392,4 +21392,97 @@ R0759  2*** FAILSW CAPABILITY FOR CHECKOUT ONLY ***
  1779  2         TC     Q
  1780   ENDRCSFL EQUALS RESUME
  1781   NOSTCHG  EQUALS RESUME
+L      2ASCENT INERTIA UPDATER
+ 0001  2IXXTASK  TC     JACCESTP
+ 0002  2         TC     ASCENGON
+ 0003            EXTEND
+ 0004            DIM    IXX
+ 0005            CAF    IXXTIME
+ 0006            TC     WAITLIST
+ 0007            2CADR  IXXTASK
+ 0008  2         TCF    TASKOVER
+ 0009  2IYYTASK  TC     JACCESTQ
+ 0010  2         TC     ASCENGON
+ 0011            EXTEND
+ 0012            DIM    IYY
+ 0013            CAF    IYYTIME
+ 0014            TC     WAITLIST
+ 0015            2CADR  IYYTASK
+ 0016  2         TCF    TASKOVER
+ 0017  2IZZTASK  TC     JACCESTR
+ 0018  2         TC     ASCENGON
+ 0019            EXTEND
+ 0020            DIM    IZZ
+ 0021            CAF    IZZTIME
+ 0022            TC     WAITLIST
+ 0023            2CADR  IZZTASK
+ 0024  2         TCF    TASKOVER
+ 0025   IXXTIME  DEC    200
+ 0026   IYYTIME  DEC    1300
+ 0027  2IZZTIME  DEC    180
+ 0028   ASCENGON CAF    BIT8
+ 0029            MASK   DAPBOOLS
+ 0030            CCS    A
+ 0031            TC     Q
+ 0032  2         TCF    TASKOVER
+ 0033   JACCESTP CAE    IXX
+ 0034            ZL
+ 0035            EXTEND
+ 0036            DV     4JETTORK
+ 0037            DOUBLE
+ 0038  2         TS     1/2JTSP
+ 0039            CAF    JETTORK
+ 0040            ZL
+ 0041            EXTEND
+ 0042            DV     IXX
+ 0043  2         TS     1JACC
+ 0044  2         TC     Q
+ 0045   JACCESTQ CAE    IYY
+ 0046            ZL
+ 0047            EXTEND
+ 0048            DV     JETTORK4
+ 0049  2         TS     1/NJTSQ
+ 0050            DOUBLE
+ 0051  2         TS     1/2JTSQ
+ 0052            CAF    JETTORK1
+ 0053            ZL
+ 0054            EXTEND
+ 0055            DV     IYY
+ 0056  2         TS     1JACCQ
+ 0057            TC     Q
+ 0058   JACCESTR CAE    IZZ
+ 0059            ZL
+ 0060            EXTEND
+ 0061            DV     JETTORK4
+ 0062  2         TS     1/NJTSR
+ 0063            DOUBLE
+ 0064  2         TS     1/2JTSR
+ 0065            CAF    JETTORK1
+ 0066            ZL
+ 0067            EXTEND
+ 0068            DV     IZZ
+ 0069  2         TS     1JACCR
+ 0070   COMMONQR CAE    1/2JTSQ
+ 0071            AD     1/2JTSR
+ 0072            EXTEND
+ 0073            MP     .707WL
+ 0074  2         TS     1/2JETSU        TEMP
+ 0075            CAE    1/2JTSQ
+ 0076            EXTEND
+ 0077            MP     1/2JTSR
+ 0078            EXTEND
+ 0079            DV     1/2JETSU        TEMP
+ 0080            TS     1/2JETSU
+ 0081  2         TS     1/2JETSV
+ 00811           CAE    1JACCQ
+ 00812           AD     1JACCR
+ 00813           EXTEND
+ 00814           MP     0.35356
+ 00815           TS     1JACCU
+ 00816 2         TS     1JACCV
+ 0082  2         TC     Q
+ 0083   JETTORK  DEC    0.00243         500 FT LBS. SCALED AT PI*2(+16)
+ 0084   JETTORK1 DEC    0.00267         550 FT LBS. SCALED AT PI*2(+16)
+ 00841  0.35356  DEC    0.35356
+ 0085   ENDDAP25 EQUALS
 *       ENDOFJOB
