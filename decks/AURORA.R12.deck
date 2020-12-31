@@ -21079,4 +21079,226 @@ R0549  4DEBRIS: L, Q, ITEMP1, ITEMP2, ITEMP6
  0597   -2MIN256 DEC    -.46875         - 2 MINUTES SCALED AT 256
  0598   128/164  OCTAL  31000           128/163.84 CONVERTING 256 TO WAITLIST/2
  0599   ENDDAP26 EQUALS
+L       AOSTASK
+ 0001            BANK   25
+ 0002  2         EBANK= AOSQ
+ 0003   AOSTASK  CAF    BIT8            TEST POWERED ASCENT FLAG (BIT8/DAPBOOLS)
+ 0004            MASK   DAPBOOLS        0- NOT POWERED ASCENT
+ 0005            EXTEND                 1- POWERED ASCENT
+ 0006  2         BZF    COASTASC        END CYCLE OF TASKS DURING ASCENT COAST
+ 0007            CAE    KCOEFCTR        TEST KCOEFCTR FOR INITIAL PASS
+ 0008            EXTEND
+ 0009  2         BZF    ZEROCOEF        DISCONTINUITY SECTION FOR COEFFA
+ 0010            AD     DEC-399         TEST KCOEFCTR FOR CONSTANT RANGE
+ 0011            EXTEND                 ON BOTH K AND COEFFA
+ 0012            BZMF    +2
+ 00121 2         TCF    KONENOW
+ 001215          CAF    0.00125         COEFFA = 0.00125(T) + 0.25
+ 00122           EXTEND
+ 00123           MP     KCOEFCTR
+ 00124           CAF    BIT13
+ 00125           AD     L
+ 00126 2COEFFA   TS     ITEMP2
+ 0013            CAF    0.0014          K = 0.0014(T) + 0.44
+ 0014            EXTEND
+ 0015            MP     KCOEFCTR
+ 0016            CAF    0.44
+ 0017            AD     L
+ 0018            TS     ITEMP1
+ 0019            COM                    (1-K),QR SCALED AT 1
+ 0020            AD     POSMAX          (1 BIT ERROR DOES NOT COMPOUND)
+ 0022  2         TS     (1-K)QR
+ 0023            EXTEND                 (1-K)/8 IS (1-K) SCALED AT 8
+ 0024            MP     BIT12
+ 0025  2         TS     (1-K)/8
+ 00251           CAE    ITEMP1          WFORQR = K/DT SCALED AT 16
+ 00252           EXTEND
+ 00253           MP     10AT16WL        DT = .1 SECS
+ 00254 2         TS     WFORQR
+ 0026            CS     ITEMP1          FORM (.1-.05K) FROM K SCALED AT 1
+ 0027            EXTEND                 WHICH IS USED AS IS BUT SINCE THE SUM
+ 0028            MP     .05AT.5         IS TO BE SCALED AT 1/2, THE TWO
+ 0029            AD     .1AT.5          CONSTANTS REFLECT THAT SCALE FACTOR
+ 0030  2         TS     ITEMP1
+ 0040   COEFFA1  CAE    ITEMP2          FORM COEFFA(AOSQ)
+ 0041            EXTEND
+ 0042            MP     AOSQ
+ 0043  2         TS     AOSQ            FIRST TERM OF NEW AOSQ, SCALED AT PI/2
+ 0044            CAE    ITEMP2          FORM COEFFA(AOSR)
+ 0045            EXTEND
+ 0046            MP     AOSR
+ 0047  2         TS     AOSR            FIRST TERM OF NEW AOSR, SCALED AT PI/2
+ 0048            CS     ITEMP2          FORM .5(1-COEFFA) SCALED AT 2
+ 00481           EXTEND                 FROM COEFFA SCALED AT 1 WHICH IS THE
+ 00482           MP     BIT13           SAME AS 2(COEFFA) SCALED AT 2
+ 0049            AD     BIT13           SO MULTIPLY BY 1/4 TO GET .5(COEFFA)
+ 0050  2         TS     ITEMP2          AND 1/4 IS 1/2 WHEN SCALED AT 2
+ 0051            CS     OMEGAQ          SAVE PRESENT OMEGAQ FOR NEXT PASS
+ 0052            XCH    OLDWFORQ        GET -(LAST OMEGAQ)
+ 0053            EXTEND
+ 0054            SU     SUMRATEQ        FORM- W - W(OLD) - SUMRATE = SUM
+ 0055            AD     OMEGAQ          SCALED AT PI/4 RADIANS/SECOND
+ 0056            EXTEND
+ 0057            MP     ITEMP2          AOSQ = COEFFA(AOSQ)+.5(1-COEFFA)(SUM)
+ 0058  2         ADS    AOSQ            SCALED AT PI/2 RADIANS/SECOND(2)
+ 0059            CS     OMEGAR          SAVE PRESENT OMEGAQ FOR NEXT PASS
+ 0060            XCH    OLDWFORR        GET -(LAST OMEGAR)
+ 0061            EXTEND
+ 0062            SU     SUMRATER        FORM- W - W(OLD) - SUMRATE = SUM
+ 0063            AD     OMEGAR          SCALED AT PI/4 RADIANS/SECOND
+ 0064            EXTEND
+ 0065            MP     ITEMP2          AOSR = COEFFA(AOSR)+.5(1-COEFFA)(SUM)
+ 0066  2         ADS    AOSR            SCALED AT PI/2 RADIANS/SECOND(2)
+ 00661           CAE    ITEMP1
+ 00662           EXTEND                 FORM TERM FOR RATE DERIVATION
+ 00663           MP     AOSQ            (.1-.05K)AOSQ
+ 00664 2         TS     AOSQTERM        SCALED AT PI/4 RADIANS/SECOND
+ 0067            CAE    ITEMP1
+ 0068            EXTEND                 FORM TERM FOR RATE DERIVATION
+ 0069            MP     AOSR            (.1-.05K)AOSR
+ 0070  2         TS     AOSRTERM        SCALED AT PI/4 RADIANS/SECOND
+ 0071            CAE    AOSQ            FORM AOS FOR U-AXIS
+ 0072            AD     AOSR
+ 0073            EXTEND
+ 0074            MP     .707WL
+ 0075  2         TS     AOSU            SCALED AT PI/2 RADIANS/SECOND(2)
+ 0076            CS     AOSQ            FORM AOS FOR V-AXIS
+ 0077            AD     AOSR
+ 0078            EXTEND
+ 0079            MP     .707WL
+ 0080  2         TS     AOSV            SCALED AT PI/2 RADIANS/SECOND(2)
+ 0081            CAF    THREE           SET UP LOOP FOR Q,R,U,V-AXES
+ 0082  2         TS     AXISCNTR
+ 0083   ALLAXES  INDEX  AXISCNTR
+ 0084            CCS    AOSQ            FORM ABSOLUTE VALUE OF AOS
+ 0085            AD     ONE
+ 0086            TCF     +2
+ 0087            AD     ONE
+ 0088            INDEX  AXISCNTR        SAVE IN ITEMP REGISTER (3-6)
+ 0089            TS     ABVLAOSQ        SCALED AT PI/2 RADIANS/SECOND(2)
+ 0090            AD     -.02R/S2        -.02 RADIANS/SECOND(2) SCALED AT PI/2
+ 0091            EXTEND
+ 0092            BZMF   CONSTMIN        USE 1/(.02) SEC(2)/RAD AS 1/AMIN
+ 00955           AD     +.02R/S2
+ 0096            TS     ITEMP2
+ 0098            CAF    BIT7
+ 0099            ZL                     SCALE FACTOR FOR .5ACCMIN.
+ 00995           EXTEND
+ 0100            DV     ITEMP2
+ 0101   ACCMINVL INDEX  AXISCNTR
+ 0102  2         TS     .5ACCMNQ        SCALED AT 2(+8)/PI
+ 0103            CAF    -.02R/S2        CALCULATE ONE OF THE FOLLOWING (4) SUMS:
+ 0104            EXTEND                 2JETAC(Q,R)-ABAOS(Q,R)-.02RAD/SEC(2) OR
+ 0105            INDEX  AXISCNTR        1JETAC(U,V)-ABAOS(1,V)-.02RAD/SEC(2)
+ 0106            SU     ABVLAOSQ        EACH SUM HAS EACH TERM SCALED AT PI/2
+ 0107            INDEX  AXISCNTR        THE "OUTER LOOP" IS DEFINED TO CALCULATE
+ 0108            AD     1JACCQ          THE VALUES 1JACCQ, 1JACCR SCALED AT PI/4
+ 0109            EXTEND                 AND 1JACCU, 1JACCV SCALED AT PI/2 WHERE
+ 0110            BZMF   DEMANDAC        1JACCU = 2(.707)(1JACCQ+1JACCR) AND
+ 0111            CAF    ZERO            1JACCV = 2(.707)(1JACCQ+1JACCR)
+ 0112            INDEX  AXISCNTR        WHERE THE CALCULATIONS USE THE FACT THAT
+ 0113            TS     QMANDACC        1JACC(Q,R) AT PI/4 = 2JACC(Q,R) AT PI/2
+ 0114            INDEX  AXISCNTR        MANDACC(Q,R)=1 MEANS USE 4 JETS, 0 FOR 2
+ 0115            CAE    1/2JTSQ         MANDACC(U,V)=1 MEANS USE 2 JETS, 0 FOR 1
+ 01151           EXTEND
+ 01152           MP     BIT14
+ 0116   AXISLOOP INDEX  AXISCNTR        SET UP 1/NJTSX TO 1/2JTSX FOR URGENCY
+ 0117  2         TS     1/NJTSQ         (DOES NOT COUNT FOR U,V-AXES)
+ 0118            CCS    AXISCNTR        DECREMENT LOOP COUNTER AND TEST FOR END
+ 0119            TCF     +2
+ 0120  2         TCF    NEXTCALL        FINISHED LOOP
+ 0121            TS     AXISCNTR
+ 0122  2         TCF    ALLAXES         CONTINUE LOOP
+ 0123   CONSTMIN CAF    AMINCNST        1/AMIN = 1/(.02) SEC(2)/RAD AT 2(8)/PI
+ 0124  2         TCF    ACCMINVL
+ 0125   DEMANDAC CAF    POSMAX          SET MANDATORY HIGH ACCELERATION FLAG TO
+ 0126            INDEX  AXISCNTR        OVER-RIDE 2 JET DECISION FOR Q,R-AXES OR
+ 0127            TS     QMANDACC        2 JET OPTIONAL DECISION FOR U,V-AXES
+ 0128            INDEX  AXISCNTR        FORM 1/4JTSX VALUE FOR USE IN URGENCY
+ 0129            CAE    1/2JTSQ         FROM 1/2JTSX
+ 0130            EXTEND                 (DOES NOT COUNT FOR U,V-AXES)
+ 0131            MP     BIT13
+ 0134  2         TCF    AXISLOOP
+ 0135   ZEROCOEF CAF    TWO             INITIALIZE TIME SETTING
+ 01351           TS     KCOEFCTR
+ 01352           CAF    ZERO
+ 0136  2         TCF    COEFFA
+ 0146   KONENOW  CAF    ZERO            K=1, SO 1-K AT EITHER SCALING IS ZERO
+ 01461           ZL                     EXTEND, DCA DPZERO IS FASTER BUT WASTES
+ 01462           DXCH   (1-K)QR         STORAGE IN SWITCHED FIXED UNLESS IN FF
+ 01463           CAF    10AT16WL        WFORQR = K/DT = 10K = 10
+ 01464           TS     WFORQR          SCALED AT 16
+ 01465           CAF    .05AT.5         SAVE (.1-.05K) SCALED AT 1/2
+ 01466           TS     ITEMP1          FOR AOSTERMS
+ 01467           CAF    .75             SET COEFFA = .75
+ 014675          TS     ITEMP2
+ 01468           TCF    COEFFA1
+ 0149   NEXTCALL CAF    2SECSAOS        SET UP WAITLIST CALL FOR TWO SECS
+ 0150            TC     WAITLIST
+ 0151            2CADR  AOSTASK
+ 01511           CAF    TWO             INCREMENT TIME COUNTER
+ 01512           ADS    KCOEFCTR
+ 0152            CAF    ZERO            ZERO SUMMED RATES
+ 0153            TS     SUMRATEQ
+ 0154            TS     SUMRATER
+ 0155  2         TCF    TASKOVER
+ 0156   COASTASC CAF    0.3125WL
+ 0157            TS     WFORQR
+ 0158            EXTEND
+ 0159            DCA    (1-K)S
+ 0160            DXCH   (1-K)QR
+ 0161            CAF    BIT3
+ 0162            MASK   DAPBOOLS
+ 0163            AD     BIT3
+ 0164            TS     DAPBOOLS
+ 0165            CAF    0.30680
+ 0166            TS     .5ACCMNE
+ 01661           TS     .5ACCMNQ
+ 01662           TS     .5ACCMNR
+ 01663           TS     .5ACCMNU
+ 01664           TS     .5ACCMNV
+ 0167            EXTEND
+ 0168            DCA    1/2JTSQ
+ 0169            DXCH   1/NJTSQ
+ 0170            EXTEND
+ 0171            DCA    1/2JETSU
+ 0172            DXCH   1/NJTSU
+ 0173            CAF    0.00167A
+ 0174            TS     MINIMPDB
+ 01741           TS     DBMINIMP
+ 0175            CAF    ZERO
+ 0176            TS     AOSQ
+ 0177            TS     AOSR
+ 0178            TS     AOSQTERM
+ 0179            TS     AOSRTERM
+ 0180            TS     QMANDACC
+ 0181            TS     RMANDACC
+ 0182            TS     UMANDACC
+ 0183            TS     VMANDACC
+ 0184  2         TCF    TASKOVER
+ 0185   AXISCNTR EQUALS ITEMP1
+ 0186   DEC-399  DEC    -399            BOUND FOR CONSTANT RANGE: T.GE.400 SECS.
+ 0187   0.0012   DEC    0.0012
+ 0188   0.52     DEC    0.52
+ 0189   DEC-160  DEC    -160
+ 0190   0.0024   DEC    0.0024
+ 0191   0.366    DEC    0.366
+ 0192   .05AT.5  DEC    0.1
+ 0193   .1AT.5   DEC    0.2
+ 0194   .707WL   DEC    0.70711
+ 0195   -.02R/S2 DEC    -.01273
+ 01951  .04R/S2  DEC    0.02546
+ 0196   0.30680  DEC    0.30680
+ 0197   10AT16WL DEC    0.625
+ 0198   .75      DEC    0.75
+ 0199   AMINCNST EQUALS 0.30680
+ 0200   2SECSAOS DEC    200
+ 0201   0.3125WL DEC    0.3125
+ 0202   0.00167A DEC    0.00167
+ 02021  0.00125  DEC    0.00125
+ 02022  0.0014   DEC    0.0014
+ 02023  0.44     DEC    0.44
+ 02024  +.02R/S2 DEC    0.01273
+ 0203   (1-K)S   DEC    0.5
+ 0204            DEC    0.0625
 *       ENDOFJOB
