@@ -21301,4 +21301,95 @@ L       AOSTASK
  02024  +.02R/S2 DEC    0.01273
  0203   (1-K)S   DEC    0.5
  0204            DEC    0.0625
+L       RCS FAILURE MONITOR
+ 07575           BANK   12
+P0758  2FAILURE MONITOR FOR LEM RCS JETS (4 TIMES/SECOND)
+R0759  2*** FAILSW CAPABILITY FOR CHECKOUT ONLY ***
+ 0760   RCSMONIT CCS    FAILSW
+ 0761  2         TCF    ENDRCSFL        DO NOTHING IF POSITIVE
+ 0762            CA     LASTFAIL        LAST FAILURE CHANNEL VALUE
+ 0763            EXTEND
+ 0764            RXOR   32
+ 0765            MASK   LOW8
+ 0766            EXTEND
+ 0767  2         BZF    NOSTCHG         NO STATUS CHANGE, FINISHED
+ 0768            EXTEND
+ 0769            DCA    MNTRCS
+ 0770            DTCB
+ 0771   MNTRCS   2CADR  RCSMNTR
+ 0772  4ENDT4S   EQUALS
+ 0773            BANK   25
+ 0774   RCSMNTR  CA     ZERO            THERE IS A DIFFERENCE,CLEAR MASKS
+ 1711            TS     CH5MASK
+ 1712  2         TS     CH6MASK
+ 1713            EXTEND                 READ PRESENT FAILURES
+ 1714            READ   32
+ 1715  2         TS     LASTFAIL        SAVE FOR NEXT PASS
+ 1716            COM                    FAILURES NOW ONES
+ 1717            EXTEND
+ 1718            MP     BIT7            SHIFT TO TEST LOW 8 BITS
+ 1719            CA     ZERO
+ 1720            TS     FAILCTR         INITIALIZE COUNTER
+ 1721            CA     L
+ 1722  2         TCF    NXTRCSPR +1
+ 1723    -1      AD     BIT1
+ 1724   NXTRCSPR INCR   FAILCTR
+ 17245   +1      DOUBLE
+ 1725            TS     FAILTEMP        OVERFLOW CHECK
+ 1726  2         TCF    NXTRCSPR
+ 1727            INDEX  FAILCTR
+ 1728  2         TC     RCSFJUMP        GO THROUGH JUMP TABLE
+ 1729            CCS    FAILTEMP
+ 1730  2         TCF    NXTRCSPR -1     FINISH EARLY, OR MORE TO DO
+ 1731            TCF    ENDRCSFL
+ 1732   RCSFJUMP TCF    FM10/11
+ 1733            TCF    FM9/12
+ 1734            TCF    FM13/15
+ 1735            TCF    FM14/16
+ 1736            TCF    FM6/7
+ 1737            TCF    FM1/3
+ 1738            TCF    FM5/8
+ 1739  2         TCF    FM2/4
+ 1740   FM10/11  CA     BIT6
+ 1741            ADS    CH5MASK
+ 1742            CA     BIT4
+ 1743            ADS    CH6MASK
+ 1744  2         TC     Q
+ 1745   FM9/12   CA     BIT5
+ 1746            ADS    CH5MASK
+ 1747            CA     BIT5
+ 1748            ADS    CH6MASK
+ 1749  2         TC     Q
+ 1750   FM13/15  CA     BIT7
+ 1751            ADS    CH5MASK
+ 1752            CA     BIT3
+ 1753            ADS    CH6MASK
+ 1754  2         TC     Q
+ 1755   FM14/16  CA     BIT8
+ 1756            ADS    CH5MASK
+ 1757            CA     BIT8
+ 1758            ADS    CH6MASK
+ 1759  2         TC     Q
+ 1760   FM6/7    CA     BIT4
+ 1761            ADS    CH5MASK
+ 1762            CA     BIT1
+ 1763            ADS    CH6MASK
+ 1764  2         TC     Q
+ 1765   FM1/3    CA     BIT1
+ 1766            ADS    CH5MASK
+ 1767            CA     BIT2
+ 1768            ADS    CH6MASK
+ 1769  2         TC     Q
+ 1770   FM5/8    CA     BIT3
+ 1771            ADS    CH5MASK
+ 1772            CA     BIT6
+ 1773            ADS    CH6MASK
+ 1774  2         TC     Q
+ 1775   FM2/4    CA     BIT2
+ 1776            ADS    CH5MASK
+ 1777            CA     BIT7
+ 1778            ADS    CH6MASK
+ 1779  2         TC     Q
+ 1780   ENDRCSFL EQUALS RESUME
+ 1781   NOSTCHG  EQUALS RESUME
 *       ENDOFJOB
