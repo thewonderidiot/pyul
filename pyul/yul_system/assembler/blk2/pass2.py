@@ -1906,7 +1906,7 @@ class Blk2Pass2(Pass2):
                 self._int_addr[0] &= ~(Bit.BIT25 | Bit.BIT26 | Bit.BIT27)
 
             # Extract general shift opcode additive
-            icommon = (self._int_addr[0] & Bit.BIT39 | Bit.BIT40 | Bit.BIT41)
+            icommon = self._int_addr[0] & (Bit.BIT39 | Bit.BIT40 | Bit.BIT41)
 
             # Branch by address limits type
             limits_type = (self._int_addr[0] >> 21) & 0o7
@@ -1975,6 +1975,9 @@ class Blk2Pass2(Pass2):
             self._int_addr[0] |= Bit.BIT7
         else:
             # Jump if would be an addr in fixed banks.
+            if 0o20000 <= self._address:
+                return self.int_ad_f(popo, check_min=False)
+
             if Bit.BIT37 > self._address:
                 # Must reduce if in E-bank (sigh).
                 return self.int_ad_a14(popo, icommon=0, skip_checks=True)
@@ -1998,9 +2001,9 @@ class Blk2Pass2(Pass2):
         # Finish up elsewhere
         return self.int_ad_a10(popo)
 
-    def int_ad_f(self, popo):
+    def int_ad_f(self, popo, check_min=True):
         # F type addr cannot be less than 20000 nor greater thank BLK2 address max
-        if self._address <= 0o17777 or self._address >= 0o170000:
+        if (check_min and self._address <= 0o17777) or self._address >= 0o170000:
             return self.int_err_41(popo)
 
         return self.int_ad_mar(popo, icommon=0, icommon2=0o77777)

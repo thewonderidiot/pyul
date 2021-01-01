@@ -186,20 +186,19 @@ class Blk2Pass3(Pass3):
         bank_no = (address >> 10) & 0o77
         if bank_no > 3:
             bank_no -= 4
-        self._checksum &= ~Bit.BIT2
 
         # Complement running sum...
         self._checksum ^= 0o2000000000177777
 
         # ...form raw checksum word...
-        checksum = checksum + bank_no
+        checksum = self._checksum + bank_no
 
         # ...and propagate end-around carry.
         if checksum > 0o177777:
             checksum -= 0o177777
 
         # Clean out duplicate sign
-        checksum &= ~0o77777
+        checksum &= 0o77777
 
         parity = 1
         for i in range(16):
