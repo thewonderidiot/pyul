@@ -364,7 +364,7 @@ class Yul:
 
         self.typ_asobj(card, sentence, objc_msg, head_msg)
 
-    def typ_asobj(self, card, sentence, objc_msg, head_msg=None):
+    def typ_asobj(self, card, sentence, objc_msg, head_msg=None, upgrade=False):
         # Type object of task.
         self.yul_typer(objc_msg)
 
@@ -386,6 +386,9 @@ class Yul:
             # Cuss and exit if not there.
             self.yul_typer('COMPUTER NAME NOT RECOGNIZED.')
             self.typ_abort()
+
+        if upgrade:
+            return
 
         # Branch if passes 1-3 available for it.
         for p in ('PASS 1', 'PASS 2', 'PASS 3'):
@@ -589,6 +592,48 @@ class Yul:
 
             self.dup_sub_ch(SwitchBit.BEFORE, is_assembly, sub_card)
             self.switch |= SwitchBit.BEFORE
+
+        elif sub_sent[word] == 'UPGRADE':
+            ## FIXME: Branch if not transferred assembly
+            if self.revno != 0:
+                self.il_reqest(sub_card)
+
+            word += 1
+            if sub_sent[word] != 'TO':
+                self.unrc_sbdr(sub_card, sub_sent[word])
+
+            # Give up if there are extra words.
+            if sub_sent[word + 3] != '':
+                self.unrc_sbdr(sub_card, sub_sent[word + 3])
+
+            # Fake up the form "REVISION NNN OF"
+            sub_sent[word + 3] = 'OF'
+
+            word += 1
+            if sub_sent[word] != 'REVISION':
+                self.unrc_sbdr(sub_card, sub_sent[word])
+
+            # Judge and convert revision number
+            word += 1
+            word = self.cvrt_revn(sub_card, sub_sent, word)
+
+            # Undo damage from detection of rev no.
+            self.switch &= ~SwitchBit.REVISION
+            
+            self.yul_typer('UPGRADE TO REVISION %u' % self.revno)
+
+            # Modify object message per upgrading.
+            objc_msg = 'REVISION %u OF PROGRAM %s BY %s' % (self.revno, self.prog_name, self._auth_name)
+            self.typ_asobj(sub_card, sub_sent, objc_msg, upgrade=True)
+
+            # Update program data in directory
+            prog = self.yulprogs.find_prog(self.comp_name, self.prog_name)
+            prog['REVISION'] = self.revno
+            self.yulprogs.update_prog(self.comp_name, self.prog_name, prog)
+
+        else:
+            self.unrc_sbdr(sub_card, sub_sent[word])
+
 
 
 
@@ -882,35 +927,38 @@ class Yul:
             raise NewVers(objc_msg, head_msg)
 
         elif sentence[word] == 'REVISION':
-            # Length of revision number.
             word += 1
-            if len(sentence[word]) > 3:
-                # Four and up is illegal.
-                self.yul_typer('TOO-LONG REVISION NO.: %s' % sentence[word])
-                self.rejec_dir(card)
-
-            try:
-                revision = int(sentence[word], 10)
-            except:
-                # Error if revision no. not decimal.
-                self.yul_typer('UNDECIMAL REVISION NO.: %s' % sentence[word])
-                self.rejec_dir(card)
-
-            # Error if 3rd word is not "OF".
-            word += 1
-            if sentence[word] != 'OF':
-                self.howz_that(card, sentence[word])
-
-            # Signify revision rather than new.
-            self.switch |= SwitchBit.REVISION
-
-            # Fetch decimal revision number and exit.
-            self.revno = revision
-            return word + 1
+            return self.cvrt_revn(card, sentence, word)
 
         else:
             # In case word is not "REVISION", "VERSION", or "TRANSFERRED".
             self.howz_that(card, sentence[word])
+
+    def cvrt_revn(self, card, sentence, word):
+        # Length of revision number.
+        if len(sentence[word]) > 3:
+            # Four and up is illegal.
+            self.yul_typer('TOO-LONG REVISION NO.: %s' % sentence[word])
+            self.rejec_dir(card)
+
+        try:
+            revision = int(sentence[word], 10)
+        except:
+            # Error if revision no. not decimal.
+            self.yul_typer('UNDECIMAL REVISION NO.: %s' % sentence[word])
+            self.rejec_dir(card)
+
+        # Error if 3rd word is not "OF".
+        word += 1
+        if sentence[word] != 'OF':
+            self.howz_that(card, sentence[word])
+
+        # Signify revision rather than new.
+        self.switch |= SwitchBit.REVISION
+
+        # Fetch decimal revision number and exit.
+        self.revno = revision
+        return word + 1
 
     def reprint(self, card, sentence):
         # Procedure to respond to a request for a repring of an assembly listing. Do not confuse
