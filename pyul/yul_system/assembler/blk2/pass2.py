@@ -1,4 +1,4 @@
-from yul_system.types import ONES, BAD_WORD, Bit, SwitchBit, HealthBit
+from yul_system.types import ONES, BAD_WORD, Bit, SwitchBit, HealthBit, MemType
 from yul_system.assembler.pass2 import Pass2, Cuss
 import copy
 
@@ -31,6 +31,7 @@ class Blk2Pass2(Pass2):
 
         self._interp_wd = 0
         self._store_com = 0
+        self._used_fmax = ONES
 
         # FIXME: Does the real Yul do this?
         yul.switch &= ~SwitchBit.DP_OPCODE
@@ -1055,9 +1056,135 @@ class Blk2Pass2(Pass2):
         # Exit, bypassing word processing.
         self._zequaloc = True
 
+    # Procedure to evaluate BNKSUM constants. The address field should give a bank number or an address within a
+    # fixed bank. Normally, this procedure places two ADRES-self words into the named or implied bank, starting at
+    # the first unused word in the bank (the bank should be empty from that point onward). However, if the first hole
+    # occurs later than relative 3775, the words go into 3775 and 3776 with a conflict cuss. If the bank is empty,
+    # it will receive these words only if there is a higher occupied bank.
     def bnksum(self, popo, adr_wd):
-        # FIXME
-        pass
+        # Initialize various registers.
+        self.int_op_set()
+
+        # Branch if address is not a bank number.
+        if 0o70 > self._address:
+            # Add 4 to any bank number but 2 or 3.
+            if self._address < 2 or self._address >= 4:
+                self._address += 4
+
+            # Form address 2000 within named bank.
+            self._address <<= 10
+
+        # Address must be in fixed.
+        if Bit.BIT37 > self._address:
+            return self.rng_error(popo, adr_wd)
+
+        # Point to beginning of bank, find max bk.
+        self._address &= ~0o1777
+        self.how_high_f()
+
+        # Branch if no fixed was occupied (odd) or banksum is unnecessary.
+        if (self._used_fmax == ONES) or (self._address > self._used_fmax):
+            # Plant good news and join EBANK= proc.
+            self._line[39] = 'NO NEED'
+
+            # Exit, bypassing word processing.
+            self._zequaloc = True
+            self._dp_inst = False
+            return
+
+        i_common = self._address
+        while True:
+            avail_msk = 1 << (i_common & 0x1F)
+            avail_idx = i_common >> 5
+
+            if (self._yul.av_table[avail_idx] & avail_msk) == 0:
+                self._yul.av_table[avail_idx] |= avail_msk
+                break
+
+            # BNKSUM must go no later than word 3775 of the bank, so too bad if it conflicts.
+            if (i_common - self._address) == 0o1775:
+                popo.health |= Bit.BIT16
+                break
+
+            i_common += 1
+
+        # Keep address guess up to date
+        self._address = i_common
+
+        # Get set to look at word for 2nd TC SELF.
+        avail_msk = 1 << ((self._address + 1) & 0x1F)
+        avail_idx = (self._address + 1) >> 5
+
+        if (self._yul.av_table[avail_idx] & avail_msk) == 0:
+            # Both words are now shown occupied.
+            self._yul.av_table[avail_idx] |= avail_msk
+        else:
+            # Plant conflict bit for second word.
+            popo.health |= Bit.BIT16
+
+        # Branch when memory type is found.
+        midx = 0
+        while self._address > self._m_typ_tab[midx][1]:
+            midx += 1
+        mem_type = self._m_typ_tab[midx][0]
+
+        # Branch if 1st or 2nd address is not in fixed.
+        if mem_type != MemType.FIXED or (self._address + 1) > self._m_typ_tab[midx][1]:
+            # Set wrong-memory-type flag.
+            popo.health |= Bit.BIT15
+
+        # Imitate the action of pass 1 for a con.
+        popo.health |= self._address
+
+        # Clear symbolic-location flag.
+        popo.health &= ~Bit.BIT8
+
+        self._word = (Bit.BIT2 | Bit.BIT3) 
+
+        # Now do location value processing.
+        self.instront(popo, skip_checks=True)
+
+        # Distribute address.
+        adr_wd[0] = self._address
+
+        # Exit now if location is bad.
+        if self._location == ONES:
+            return self.bad_basic(popo)
+
+        # Branch if in fixed fixed.
+        if self._address > 0o7777:
+            adr_wd[0] &= 0o1777
+            adr_wd[0] |= 0o2000
+            # Convert bank notation.
+            self._address -= 0o10000
+
+        # Form second TC SELF word.
+        self._sec_half = adr_wd[0] + 1
+
+        # Go print words.
+        return self.print_2pa(popo, adr_wd)
+
+    # Subroutine to compute an address in the highest occupied fixed bank.
+    def how_high_f(self):
+        # Exit if problem has been solved.
+        if self._used_fmax != ONES:
+            return
+
+        # Point to the avail table wd for highest fix.
+        for m_common in range(0o170000, 0o3777, -1):
+            avail_msk = 1 << (m_common & 0x1F)
+            avail_idx = m_common >> 5
+
+            # Branch if no fixed is occupied.
+            if self._yul.av_table[avail_idx] & avail_msk:
+                # Form address 2000 of last used bank.
+                m_common = avail_idx << 5
+
+                # Find memory type of putative bank.
+                for i in range(len(self._m_typ_tab)):
+                    if self._m_typ_tab[i][1] >= m_common and self._m_typ_tab[i][0] == MemType.FIXED:
+                        self._used_fmax = m_common
+                        return
 
     def set_ebcon(self, popo, check_oneshot=False):
         # Bypass update if 1-shot declaration.

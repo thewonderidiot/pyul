@@ -696,23 +696,26 @@ class Pass2:
     # Subroutine in pass 2 to process the location field of an instruction or constant. Cusses about location
     # format and value, determines the value of a leftover location if required, and prints the location value
     # with end of block or bank notation if required.
-    def instront(self, popo):
-        # Branch if location is symbolic.
-        if not popo.health & Bit.BIT8:
-            # Maybe cuss rejection of leftover status.
-            if popo.health & Bit.BIT13:
-                self.cuss_list[3].demand = True
-            # Maybe cuss "D" error, zero equaloc.
-            if popo.health & Bit.BIT9:
-                self.cuss_list[1].demand = True
+    def instront(self, popo, skip_checks=False):
+        if skip_checks:
             loc_symbol = None
         else:
-            # Maybe cuss loc sym no fit in table.
-            if popo.health & Bit.BIT17:
-                self.cuss_list[14].demand = True
+            # Branch if location is symbolic.
+            if not popo.health & Bit.BIT8:
+                # Maybe cuss rejection of leftover status.
+                if popo.health & Bit.BIT13:
+                    self.cuss_list[3].demand = True
+                # Maybe cuss "D" error, zero equaloc.
+                if popo.health & Bit.BIT9:
+                    self.cuss_list[1].demand = True
+                loc_symbol = None
+            else:
+                # Maybe cuss loc sym no fit in table.
+                if popo.health & Bit.BIT17:
+                    self.cuss_list[14].demand = True
 
-            # Analyze and pre-process location symbol.
-            loc_symbol = self.loc_sym_1(popo)
+                # Analyze and pre-process location symbol.
+                loc_symbol = self.loc_sym_1(popo)
 
         # Branch if loc symbol didn't fit in table.
         if loc_symbol is not None:
