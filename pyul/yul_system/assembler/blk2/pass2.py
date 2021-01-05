@@ -1002,7 +1002,7 @@ class Blk2Pass2(Pass2):
             popo.health |= Bit.BIT14
 
             # Join end of BNKSUM procedure.
-            # FIXME
+            return self.bnksum_loc(popo, adr_wd)
 
     def adr_con_1(self, popo, adr_wd):
         code = popo.health & (Bit.BIT28 | Bit.BIT29 | Bit.BIT30)
@@ -1136,6 +1136,9 @@ class Blk2Pass2(Pass2):
         # Imitate the action of pass 1 for a con.
         popo.health |= self._address
 
+        return self.bnksum_loc(popo, adr_wd)
+
+    def bnksum_loc(self, popo, adr_wd):
         # Clear symbolic-location flag.
         popo.health &= ~Bit.BIT8
 
@@ -1201,12 +1204,27 @@ class Blk2Pass2(Pass2):
             self._sbank_reg &= ~b28t30m
             self._sbank_reg |= (self._sbank_reg << 5) & b28t30m
 
-        # Select on * in op code (BBCON or 2CADR).
-        if not self.cuss_list[90].demand:
+        # Select on * in op code (BBCON or 2CADR). Branch if 2CADR*, not BBCON*.
+        b29t30m = Bit.BIT29 | Bit.BIT30
+        if not self.cuss_list[90].demand or (Bit.BIT29 <= (popo.health & b29t30m)):
             self._max_adres = 0o167777
             return self.max_ad_set(popo, skip_ebank=True)
 
-        # FIXME
+        if not (popo.address_1().isspace() and popo.address_2().isspace()):
+            # Mildly cuss nonblank adr fld, proceed.
+            self.cuss_list[63].demand = True
+
+        # Ignore address field of BBCON* and supply the bank number of the highest
+        # bank occupied in this assembly.
+        self.cuss_list[90].demand = False
+        self.how_high_f()
+        self._address = self._used_fmax
+
+        adr_wd = [self._address, self._address]
+        if ONES <= self._address:
+            return self.rng_error(popo, adr_wd)
+
+        return self.bbcon(popo, adr_wd)
 
     # Specific processing for basic instructions.
     def instrop(self, popo, adr_wd):
