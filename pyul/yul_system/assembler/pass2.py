@@ -166,6 +166,7 @@ class Pass2:
             self._line.spacing |= Bit.BIT1
         else:
             # Maybe set up space count.
+            self._line.spacing &= ~0xF
             self._line.spacing |= vert_format
 
         # Set up columns 9-80.
@@ -260,7 +261,7 @@ class Pass2:
         if popo.health & ~HealthBit.CARD_TYPE_MASK:
             return self.card_no(popo, only_cardno=True)
 
-        # Noramlly change marker, get next card.
+        # Normally change marker, get next card.
         self._marker = '@'
 
     def delete(self, popo):
