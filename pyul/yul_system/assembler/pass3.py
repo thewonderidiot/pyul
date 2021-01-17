@@ -838,6 +838,10 @@ class Pass3:
     def close_yul(self):
         # FIXME: Improve BYPT handling
         self._bypt['PARAGRAPHS'] = [{'PARAGRAPH': p.number, 'WORDS': p.words} for n,p in self._paragraphs.items()]
+
+        # Let last line show filing on disc.
+        if self._mon.disc:
+            self._last_line = self._last_line[:54] + 'ON DISC &' + self._last_line[63:]
         
         # Degree of aspersion gives the bad news.
         ecch = False

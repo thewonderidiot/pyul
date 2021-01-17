@@ -10,13 +10,14 @@ from yul_system import pass0
 from yul_system.types import Bit
 
 class Monitor:
-    def __init__(self, card_deck, typewriter=sys.stderr, lineprinter=sys.stdout, year=None, date=None, job=None):
+    def __init__(self, card_deck, typewriter=sys.stderr, lineprinter=sys.stdout, year=None, date=None, job=None, disc=False):
         self._yul = None
         self._card_deck = card_deck
         self._typewriter = typewriter
         self._lineprinter = lineprinter
         self._next_card = ''
         self.year = year
+        self.disc = disc
         self.phi_read()
 
         # Generate a log number for this run
