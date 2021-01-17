@@ -908,6 +908,14 @@ class Pass1:
 
             # FIXME: set up first subro
 
+            # Prevent false alarms in rejection.
+            self._real_cdno = 0
+
+            # Use existing "END OF" card for reprint.
+            if (not (self._yul.switch & SwitchBit.REPRINT)) and (self._yul.switch & SwitchBit.MERGE_MODE):
+                # When revising, first "END OF" card must be replaced by the one made by pass 0.
+                popo.card = self._end_of.card
+
         # FIXME: set up next subro
 
         # Exit via SEND POPO unless freezing subs.
