@@ -32,6 +32,7 @@ class AgcPass2(Pass2):
         self._interp_wd = 0
         self._store_com = 0
         self._used_fmax = ONES
+        self._last_banx = ['  ', '  ']
 
         # FIXME: Does the real Yul do this?
         yul.switch &= ~SwitchBit.DP_OPCODE
@@ -190,7 +191,7 @@ class AgcPass2(Pass2):
             # 90-92
             Cuss('ASTERISK ILLEGAL ON THIS OP CODE', poison=True),
             Cuss('LOCATION SYMBOL IMPROPER ON STADR\'ED STORE WORD ', poison=True),
-            Cuss(''),
+            Cuss('BBANK TYPE CONSTANTS REQUIRE PRECEDING EBANK=   ', poison=True),
 
             # 93-95
             Cuss('SUBROUTINE NAME NOT RECOGNIZED  ', poison=True),
@@ -212,7 +213,7 @@ class AgcPass2(Pass2):
             0o12036052, # PDDL      012
             0o17460056, # MXV       013
             0o14056062, # PDVL      014
-            0o26527066, # CCALL     015
+            0o26517066, # CCALL     015
             0o17460072, # VXM       016
             0o21464076, # NORM      017
             0o12034102, # DMPR      020
@@ -250,10 +251,10 @@ class AgcPass2(Pass2):
             0o31526127, # GO TO     060
             0o31466133, # BPL       061
             0o31466137, # BMN       062
-            0o31526143, # CALL      063
-            0o51466147, # STQ       064
-            0o41426153, # RTB       065
-            0o31466157, # BHIZ      066
+            0o41426143, # RTB       063
+            0o31466147, # BHIZ      064
+            0o31516153, # CALL      065
+            0o51466157, # STQ       066
             0o00000000, # BLANK OP  067
             0o41466173, # BOVB      070
             0o31466177, # BOV       071
@@ -270,7 +271,7 @@ class AgcPass2(Pass2):
             0o66466763, # BOFCLR    104
             0o60466163, # CLEAR     105
             0o66466763, # BON       106
-            0o31506143, # CALRB     107
+            0o31506153, # CALRB     107
             0o66466763, # BOFF      110
             0o26507066, # CCLRB     111
             0o00506001, # EXIT      112
@@ -741,13 +742,13 @@ class AgcPass2(Pass2):
         if self._address <= 0o1377:
             return self.add_adr_wd(popo, adr_wd)
 
-        # OK if we have a pseudo EBANK. OK if loc and adr in different EBANKs.
-        if (((self._ebank_reg & 0o3400) <= 0o1000) or
-            ((self._address & 0o3400) != (self._ebank_reg & 0o3400))):
-            # Put subaddress in the range 1400-1777
-            adr_wd[0] &= ~0o3400
-            adr_wd[0] |= 0o1400
-            return self.add_adr_wd(popo, adr_wd)
+        # OK if we have a pseudo EBANK.
+        if (self._ebank_reg & 0o3400) <= 0o1000:
+            return self.e_subadr(popo, adr_wd)
+
+        # OK if loc and adr in different EBANKs.
+        if (self._address & 0o3400) != (self._ebank_reg & 0o3400):
+            return self.e_subadr(popo, adr_wd, check_declared=True)
 
         return self.cus_e_bank(popo, adr_wd)
 
@@ -990,11 +991,29 @@ class AgcPass2(Pass2):
 
         # Disposition of EBANK=, SBANK=, and BNKSUM if address is bad.
         if code == 0:
+            # Show new non-trivial declaration
+            self._ebank_reg &= ~0o77
+            self._ebank_reg |= 7
+
+            # Print declared EBANK no. as "EN".
             self._line[44] = 'E■'
+
+            # But show that the declaration was bad.
+            self._last_banx[1] = '  '
+
             self._zequaloc = True
 
         elif code == 1:
+            # Set super-bank to 1 (bad).
+            self._sbank_reg &= ~0o77000000
+            self._sbank_reg |= Bit.BIT30
+
+            # Show new sbank declaration.
+            self._last_banx[0] = '  '
+
+            # Print declared superbank no. as "SN".
             self._line[44] = 'S■'
+
             self._zequaloc = True
 
         else:
@@ -1033,6 +1052,8 @@ class AgcPass2(Pass2):
 
         # Print declared superbank no. as "SN".
         self._line[44] = 'S%o' % ((self._sbank_reg >> 18) & 0o77)
+        # Set super-bank flag into buffer.
+        self._last_banx[0] = self._line[44:46]
 
         # Exit, bypassing word processing.
         self._zequaloc = True
@@ -1041,6 +1062,9 @@ class AgcPass2(Pass2):
     def ebank2(self, popo, adr_wd):
         # Branch if EBANK number implied by adr.
         if self._address < 8:
+            # Frown on use of plain Ebank number.
+            self.cuss_list[34].demand = True
+
             # Use EBANK number directly.
             self._ebank_reg &= ~0o77
             self._ebank_reg |= self._address
@@ -1052,6 +1076,9 @@ class AgcPass2(Pass2):
 
         # Print declared EBANK no. as "EN".
         self._line[44] = 'E%o' % (self._ebank_reg & 0o7)
+
+        # Set good or bad EBANK flag in buffer.
+        self._last_banx[1] = self._line[44:46]
 
         # Exit, bypassing word processing.
         self._zequaloc = True
@@ -1092,35 +1119,105 @@ class AgcPass2(Pass2):
             self._dp_inst = False
             return
 
-        i_common = self._address
+        i_common = self._address >> 5
+        self._line[8] = '  NO WORDS LEFT '
+
+        # Point to first avail word for high bank.
+        x6 = i_common
+        # Also point to last possible avail word.
+        au1 = i_common + 31
         while True:
-            avail_msk = 1 << (i_common & 0x1F)
-            avail_idx = i_common >> 5
-
-            if (self._yul.av_table[avail_idx] & avail_msk) == 0:
-                self._yul.av_table[avail_idx] |= avail_msk
+            # Find an avail word with a hole.
+            if self._yul.av_table[x6] < 0xFFFFFFFF:
                 break
 
-            # BNKSUM must go no later than word 3775 of the bank, so too bad if it conflicts.
-            if (i_common - self._address) == 0o1775:
+            x6 += 1
+            self._address += 0o40
+
+            # Branch if about to do last poss. av wd.
+            if x6 == au1:
+                # If hole is before 3776 of bank, 2 TC's.
+                if self._yul.av_table[x6] < (1 << 30):
+                    break
+
+                # Show that banksum will be at most 1P.
+                self._sec_half = ONES
+                self._dp_inst = False
+
+                # Branch if it is indeed one word.
+                if self._yul.av_tale[x6] < (1 << 31):
+                    # No need for TC SELFs if one-word hole.
+                    self._yul.av_table[x6] |= (1 << 31)
+
+                    # Plant good news and join EBANK= proc.
+                    self._line[39] = 'NO NEED'
+
+                    # Exit, bypassing word processing.
+                    self._zequaloc = True
+                    self._dp_inst = False
+                    return
+
+                # Cuss conflict and force hole at end.
                 popo.health |= Bit.BIT16
+                self._yul.av_table[x6] &= ~(1 << 31)
                 break
 
-            i_common += 1
+        # Find first hole in bank for BNKSUM, or force one at 3777.
+        av_msk = 0x1
 
-        # Keep address guess up to date
-        self._address = i_common
+        while True:
+            # Keep address guess up to date.
+            self._address += 1
+            av_msk <<= 1
+            if (self._yul.av_table[x6] & av_msk) == 0:
+                break
 
-        # Get set to look at word for 2nd TC SELF.
-        avail_msk = 1 << ((self._address + 1) & 0x1F)
-        avail_idx = (self._address + 1) >> 5
+        # Get set to look at word for 2nd TC SELF
+        self._yul.av_table[x6] |= av_msk
+        av_msk <<= 1
 
-        if (self._yul.av_table[avail_idx] & avail_msk) == 0:
-            # Both words are now shown occupied.
-            self._yul.av_table[avail_idx] |= avail_msk
-        else:
-            # Plant conflict bit for second word.
+        # Advance to next avail wd if necessary.
+        if av_msk > (1 << 31):
+            av_msk = 1
+            x6 += 1
+
+        # Branch if there are 2 TC SELFs.
+        if self._sec_half == ONES:
+            # Branch if just cussed full bank.
+            if av_msk == 1:
+                return self.sum_confq(popo)
+
+        if self._yul.av_table[x6] & av_msk:
+            # Cuss conflict of 2nd TC SELF or CHKSUM.
             popo.health |= Bit.BIT16
+
+        # Get set to look at the checksum word.
+        self._yul.av_table[x6] |= av_msk
+        av_msk <<= 1
+
+        # Branch if there is one TC SELF word.
+        if self._sec_half == ONES:
+            return self.sum_confq(popo)
+
+        if av_msk <= (1 << 31):
+            return self.sum_confq(popo)
+
+        # 2nd TC SELF was at end of avail word...
+        av_msk = 1
+        x6 += 1
+        # ...was it also at end of paragraph?
+
+        # FIXME: Maybe create a paragraph just for chksum.
+
+    def sum_confq(self, popo, check_avail=True):
+        if check_avail:
+            if self._yul.av_table[x6] & av_msk:
+                # Cuss conflict in checksum word itself.
+                popo.health |= Bit.BIT16
+            else:
+                # Reserve checksum word.
+                self._yul.av_table[x6] |= av_msk
+
 
         # Branch when memory type is found.
         midx = 0
@@ -1128,10 +1225,16 @@ class AgcPass2(Pass2):
             midx += 1
         mem_type = self._m_typ_tab[midx][0]
 
-        # Branch if 1st or 2nd address is not in fixed.
-        if mem_type != MemType.FIXED or (self._address + 1) > self._m_typ_tab[midx][1]:
+        # Branch if 1st address is not in fixed.
+        if mem_type != MemType.FIXED:
             # Set wrong-memory-type flag.
             popo.health |= Bit.BIT15
+        else:
+            # Branch if there is one TC SELF.
+            if self._sec_half != ONES:
+                # Branch if second word is in fixed too.
+                if (self._address + 1) > self._m_typ_tab[midx][1]:
+                    popo.health |= Bit.BIT15
 
         # Imitate the action of pass 1 for a con.
         popo.health |= self._address
@@ -1158,8 +1261,13 @@ class AgcPass2(Pass2):
         if self._address > 0o7777:
             adr_wd[0] &= 0o1777
             adr_wd[0] |= 0o2000
-            # Convert bank notation.
-            self._address -= 0o10000
+
+        # Numer of words left in bank, in decimal.
+        ## FIXME
+
+        # Exit here when there is one TC SELF.
+        if self._sec_half == ONES:
+            return self.add_addr_wd(popo, adr_wd)
 
         # Form second TC SELF word.
         self._sec_half = adr_wd[0] + 1
@@ -1195,6 +1303,9 @@ class AgcPass2(Pass2):
             # Position current setting for BBCON fmt.
             self._ebank_reg &= ~ 0o7
             self._ebank_reg |= (self._ebank_reg >> 8) & 0o7
+
+            # Cuss BBCON word without 1-shot EBANK=.
+            self.cuss_list[92].demand = True
 
         # Bypass update if 1-shot declaration.
         b25t27m = Bit.BIT25 | Bit.BIT26 | Bit.BIT27
@@ -1308,13 +1419,27 @@ class AgcPass2(Pass2):
         elif self._address <= 0o1377:
             return self.add_adr_wd(popo, adr_wd)
 
-        # Forgive all if we have pseudo Ebank. Branch on E-bank error.
-        if ((self._ebank_reg & 0o3400) <= 0o1000) or ((self._ebank_reg & 0o3400) == (self._address & 0o3400)) :
-            # Put subaddress in the range 1400-1777
-            adr_wd[0] &= ~0o3400
-            adr_wd[0] |= 0o1400
-            return self.add_adr_wd(popo, adr_wd)
+        # Forbid all Ebanks if pseudo-bk declared.
+        if (self._ebank_reg & 0o3400) <= 0o1000:
+            return self.cus_ebank(popo, adr_wd)
 
+        # Branch on E-bank error.
+        if (self._ebank_reg & 0o3400) != (self._address & 0o3400):
+            return self.cus_ebank(popo, adr_wd)
+
+        return self.e_subadr(popo, adr_wd, check_declared=True)
+
+    def e_subadr(self, popo, adr_wd, check_declared=False):
+        # Cuss if there's no declared Ebank.
+        if check_declared and (self._user_log[118:120] == '  '):
+            return self.cus_ebank(popo, adr_wd)
+
+        # Put subaddress in the range 1400-1777
+        adr_wd[0] &= ~0o3400
+        adr_wd[0] |= 0o1400
+        return self.add_adr_wd(popo, adr_wd)
+
+    def cus_ebank(self, popo, adr_wd):
         adr_wd[0] &= ~0o3400
         adr_wd[0] |= 0o1400
         self.cuss_bank()
@@ -1563,6 +1688,15 @@ class AgcPass2(Pass2):
             self._sbank_reg &= ~0o160000
             self._sbank_reg |= (self._sbank_reg >> 5) & 0o160000
 
+            # Branch on old-Ebank-declaration bit
+            if (self._ebank_reg & 0o77) < 8:
+                # Announce new permanent declaration.
+                self._user_log[118] = self._last_banx[1]
+
+            # Branch on old-Sbank-declaration bit
+            if (self._sbank_reg & 0o70000000) == 0:
+                self._user_log[114] = self._last_banx[0]
+
         # If in fixed, go see if in superbank.
         if self._location < 0o4000:
             # Exit if location is not in an Ebank.
@@ -1575,6 +1709,9 @@ class AgcPass2(Pass2):
                 if (self._ebank_reg & 0o3400) != (self._location & 0o3400):
                     # E(S)Bank conflict with location.
                     self.cuss_list[70].demand = True
+
+            # Show E-bank status in subhead.
+            self._user_log[118] = 'E%u' % ((self._location >> 8) & 0o7)
 
             # Force agreement and exit.
             self._ebank_reg &= ~0o3400
@@ -1597,6 +1734,9 @@ class AgcPass2(Pass2):
             if (self._sbank_reg & 0o160000) != (location & 0o160000):
                 # E(S)Bank conflict with location.
                 self.cuss_list[70].demand = True
+
+        # Show S-bank status in subhead.
+        self._user_log[114] = 'S%u' % ((location >> 13) & 0o7)
 
         # Force agreement and exit.
         self._sbank_reg &= ~0o160000
@@ -2089,6 +2229,10 @@ class AgcPass2(Pass2):
             # Insert additive portion
             self._address += icommon
 
+            # Gen. shifts additive = 20000 (non-vac).
+            self._address &= (Bit.BIT33 | Bit.BIT34)
+            self._address |= Bit.BIT35
+
             return self.int_ad_a15(popo, Bit.BIT14)
 
         # Branch by non-zero address type
@@ -2122,10 +2266,6 @@ class AgcPass2(Pass2):
             # Jump if would be an addr in fixed banks.
             if 0o20000 <= self._address:
                 return self.int_ad_f(popo, check_min=False)
-
-            if Bit.BIT37 > self._address:
-                # Must reduce if in E-bank (sigh).
-                return self.int_ad_a14(popo, icommon=0, skip_checks=True)
 
         return self.int_ad_oaf(popo, 0)
 
@@ -2177,33 +2317,25 @@ class AgcPass2(Pass2):
 
                 return self.int_ad_a15(popo, icommon)
 
+            # SETPD address must be in VAC area.
+            if (self._int_addr[0] & 0o177) == 0o176:
+                self.cuss_list[10].demand = True
+                return self.int_err_41(popo, cuss=False)
+
             # Error in 53 to 77 octal range
             if self._address <= 0o77:
                 r = self.int_err_21(popo)
                 if r != True:
                     return r
 
-        # Jump if in 100 to 1377 octal range
-        if self._address <= 0o1377:
-            # Add 256 to look like boundary check
-            self._add_rev += Bit.BIT40
-            return self.int_ad_oaf(popo, icommon)
-
         # Jump if 4000 octal or over. Maybe fixed
         if self._address < 0o4000:
-            # Jump if addr not in req E-Bank
-            if (self._address & 0o3400) != (self._ebank_reg & 0o3400):
-                # Go to cuss bank
-                self.sbank_cus(self._address)
-                # Put E Bank number in bank error cuss
-                bank_no = self._address >> 8
-                cuss = self.cuss_list[33]
-                cuss.msg = cuss.msg[:19] + ('E%o' % bank_no) + cuss.msg[21:]
+            # Fake up an additive to test for array reference across E-banks.
+            icommon2 = 0o1777 - (self._address & 0o1777)
+            self._add_rev &= ~0o3400
+            self._add_rev |= icommon2 & 0o3400
 
-            # Change addr to 1400-1777 range
-            self._address &= ~0o3400
-            self._address |= 0o1400
-            return self.int_ad_oaf(popo, icommon)
+            return self.int_ad_oaf(popo, icommon, icommon2=icommon2)
 
         # Error if addr E type
         if icommon <= 0:
@@ -2219,8 +2351,8 @@ class AgcPass2(Pass2):
 
         # Jump if in inst loc in memory low half
         if self._location > 0o47777:
-            # Error if address outside 52000-167777
-            if self._address <= 0o51777 or self._address >= 0o170000:
+            # Error if address outside 54000-167777
+            if self._address <= 0o53777 or self._address >= 0o170000:
                 return self.int_err_41(popo)
 
             # Chop to 14 bits
@@ -2257,11 +2389,13 @@ class AgcPass2(Pass2):
         self._address &= icommon2
         return self.int_ad_oaf(popo, icommon)
 
-    def int_ad_oaf(self, popo, icommon):
+    def int_ad_oaf(self, popo, icommon, icommon2=0):
         # Hope indexing will right a wrong if any
         if (self._int_addr[0] & Bit.BIT24) == 0:
             # Checking crossing bank boundaries now
-            self._add_rev += self._address & 0o1777
+            icommon2 &= ~0o1777
+            icommon2 |= self._address & 0o1777
+            self._add_rev += icommon2
             if 0o2000 <= self._add_rev:
                 self.cuss_list[81].demand = True
 
@@ -2373,57 +2507,58 @@ class AgcPass2(Pass2):
             # Avoid overflow trouble
             self._address = 0
 
-        # Jump if no indexing
-        if self._int_addr[0] & Bit.BIT24:
-            # Assume X1 used
-            self._address += Bit.BIT38
-            # Jump if so
-            if self._int_addr[0] & Bit.BIT7:
-                # Now X2 used
-                self._address += Bit.BIT38
+        # Branch if store and (load or call).
+        if not (popo.health & (Bit.BIT29 | Bit.BIT30)):
+            # Jump if no indexing
+            if self._int_addr[0] & Bit.BIT24:
+                # Assume X1 used
+                self._address += Bit.BIT37
+                # Jump if so
+                if self._int_addr[0] & Bit.BIT7:
+                    # Now X2 used
+                    self._address += Bit.BIT37
+
+            self._int_addr[0] = 0
+            return self.int_op_bat(popo)
 
         # Reopen judgement of opcode asterisk.
         self.cuss_list[90].demand = False
 
+        # Indexed address illegal
+        if self._int_addr[0] & Bit.BIT24:
+            self.cuss_list[7].demand = True
+
         # Branch by store code type
         store_type = (popo.health >> 18) & 0o3
-        if store_type == 0:
-            # Store code
-            self._int_addr[0] = 0
-            # Asterisk on opcode illegal
-            self.cuss_list[90].demand = bool(popo.health & Bit.BIT11)
-
-        elif store_type == 1:
+        if store_type == 1:
             # Set mode out to double
             self._mode_out = Bit.BIT47 | Bit.BIT48
-            # DLOAD additive = OCT 06000
-            self._address += Bit.BIT37 | Bit.BIT38
             # DP mode. A14 addr with pushup
             self._int_addr[0] = 0o12030000
+            # DLOAD additive = OCT 14000
+            self._address += Bit.BIT36 | Bit.BIT37
 
             return self.int_op_stl(popo)
 
         elif store_type == 2:
             # Set mode out to vector
             self._mode_out = Bit.BIT46 | Bit.BIT48
-            # Vload additive = OCT22000
-            self._address += Bit.BIT35 | Bit.BIT38
+            # Vload additive = OCT24000
+            self._address += Bit.BIT35 | Bit.BIT37
             # Vmode. A14 address with pushup
             self._int_addr[0] = 0o14050000
 
             return self.int_op_stl(popo)
 
         else:
-            # Call additive = OCT36000
-            self._address += Bit.BIT35 | Bit.BIT36 | Bit.BIT37 | Bit.BIT38
+            # Call additive = OCT34000
+            self._address += Bit.BIT35 | Bit.BIT36 | Bit.BIT37
             # Mode out = unknown.
             self._mode_out = Bit.BIT47
-            # Indexed opcode illegal
-            self.cuss_list[67].demand = bool(popo.health & Bit.BIT11)
-            # Indexed address illegal
-            self.cuss_list[7].demand = bool(self._int_addr[0] & Bit.BIT24)
             # Unkown mode. A address, no pushup.
             self._int_addr[0] = 0o30420000
+
+            return self.int_op_bat(popo)
 
         return self.int_op_bat(popo)
 
@@ -2436,8 +2571,8 @@ class AgcPass2(Pass2):
 
         # Jump if opcode not indexed:
         if self._int_addr[0] & Bit.BIT24:
-            # LOAD* additive = OCT6000
-            self._address += Bit.BIT37 | Bit.BIT38
+            # LOAD* additive = OCT4000
+            self._address += Bit.BIT37
 
         return self.int_op_bat(popo)
 
