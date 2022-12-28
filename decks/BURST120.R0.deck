@@ -3084,4 +3084,507 @@ R03706 2***WARNING*** THIS PROGRAM IS TO BE PLACED IN FIXED-FIXED AND UNSWITCHED
  0389  2         DXCH   -PHASE1 -2
  03895           RELINT
  0390            TC     Q               NOW RETURN TO CALLER
+L      2FRESH START AND RESTART
+ 0010            BANK   01
+ 0015  2         EBANK= LST1
+ 0020   SLAP1    INHINT                 FRESH START. COMES HERE FROM PINBALL.
+ 0025  2         TC     STARTSUB        SUBROUTINE DOES MOST OF THE WORK.
+ 0030  2STARTSW  TCF    GOON            PATCH FOR SIMULATIONS
+ 0035  2STARTSIM CAF    BIT14
+ 0040            TC     FINDVAC
+ 0045            EBANK= ITEMP1
+ 0050  2         2CADR  BEGIN206
+ 0055   GOON     CAF    BIT15           TURN OFF ALL DSPTAB +11D LAMPS ONLY ON
+ 0060  2         TS     DSPTAB +11D     REQUESTED FRESH START.
+ 0065            CS     ZERO
+ 0066            TS     RSTRTWRD
+ 0067            TS     THRUST          INITIALIZE THROTTLE COUNTER.
+ 0068            TS     DAPOFFDT        OVERWRITE IN ERASABLE LOAD IF DESIRED.
+ 0070  2         TS     JETRESET        PROPERTY OF RCSMONIT.
+ 0075            CA     EBANK5
+ 0080            TS     L
+ 0085            LXCH   EBANK
+ 0090            EBANK= ABDELV
+ 0095            CA     ZERO
+ 0100            TS     ABDELV          FOR DAP INITIALIZATION
+ 0105            TS     ABDELV +1
+ 0110            EBANK= LST1
+ 0115  2         LXCH   EBANK
+ 0120            TS     THISCH32
+ 0125            TS     LMPJFAIL
+ 0130            TS     CH5MASK
+ 0135  2         TS     CH6MASK
+ 0145            TS     REDOCTR
+ 0150            TS     FAILREG
+ 0155            TS     FAILREG +1
+ 0160  2         TS     FAILREG +2
+ 0180            CA     TWO             SET UP VALUES FOR DVCNTR.  THESE MAY
+ 0185            TS     STARTDVC        BE OVERWRITTEN IN ERASABLE LOAD IF
+ 0190  2         TS     STOPDVC         ANYBODY WANTS TO.
+ 0195            CA     POSMAX          TENTATIVELY LOAD WITH INFINITY.  MAY
+ 0200  2         TS     SLOSHCTR        BE REPLACED VIA ERASABLE LOAD.
+ 0220   DOFSTART CS     ZERO            MAKE ALL MTIMER/MPHASE PAIRS AVAILABLE.
+ 0225            TS     MTIMER4
+ 0230            TS     MTIMER3
+ 0235            TS     MTIMER2
+ 0240            TS     MTIMER1
+ 0245            TS     MPHASE4
+ 0250            TS     MPHASE3
+ 0255            TS     MPHASE2
+ 0260  2         TS     MPHASE1
+ 0275            CS     ONE
+ 0280  2         TS     LMPOUTT
+R0285  2INITIALIZE SWITCH REGISTERS INCLUDING DAPBOOLS:
+ 0290            CA     FOUR            INITIALIZE STATE THRU STATE +4 ONLY.
+ 0295   INITSW   TS     L
+ 0300            INDEX  L
+ 0305            CA     SWINIT
+ 0310            INDEX  L
+ 0315            TS     STATE
+ 0320            CCS    L
+ 0325  2         TCF    INITSW
+ 0326            TS     SMODE
+ 0327            TS     ERESTORE
+ 0330            TS     LMPCMD          RESET LMP COMMAND AREA.
+ 0335            TS     LMPCMD +1
+ 0340            TS     LMPCMD +2
+ 0345            TS     LMPCMD +3
+ 0350            TS     LMPCMD +4
+ 0355            TS     LMPCMD +5
+ 0360            TS     LMPCMD +6
+ 0365            TS     LMPCMD +7
+ 0370            TS     LMPIN
+ 0375  2         TS     LMPOUT
+ 0380            EXTEND                 TURN THE RCS JETS OFF.
+ 0385            WRITE  5
+ 0390            EXTEND
+ 0395  2         WRITE  6
+ 0400            CAF    IM30INIF        FRESH START IMU INITIALIZATION.
+ 0405  2         TS     IMODES30
+ 0410            CAF    BIT10           REMOVE IMU FAIL INHIBIT IN 5 SECS.
+ 0415            TC     WAITLIST
+ 0420            EBANK= LST1
+ 0425            2CADR  IFAILOK
+ 0440            EXTEND                 SETTING T5RUPT FOR SETIDLER PROGRAM
+ 0445            DCA    SETADR          THE SETIDLER PROGRAM ASSURES 1 SECOND
+ 0450  2         DXCH   T5ADR           DELAY BEFORE THE DAPIDLER BEGINS.
+ 0451            CAF    LNORMT4
+ 0452  2         TS     T4LOC
+ 0453            CA     LDNTMGO
+ 0454            TS     L
+ 0455  2         LXCH   EBANK
+ 0456  2         EBANK= DNTMGOTO
+ 0457            CA     LDNPHAS1
+ 0458  2         TS     DNTMGOTO
+ 0459            CA     SETCDULM
+ 0460  2         TS     CDULMIT         OVERWRITE IN ERASABLE LOAD IF DESIRED.
+ 0461            CA     IDNCDUN
+ 0462  2         TS     DNCDUN          OVERWRITE IN ERASABLE LOAD IF DESIRED.
+ 0463  2         LXCH   EBANK
+ 0464  2         EBANK= LST1
+ 0465  2         TC     MR.CLEAN        DEACTIVATE ALL RESTART GROUPS.
+ 0466            RELINT                 LET AN INTERRUPT IN.
+ 0467            NOOP
+ 0468  2         INHINT
+ 0469            TC     IBNKCALL
+ 0470  2         CADR   1STENGOF
+ 0472   POOH3    CA     ZERO
+ 0475            TS     MODREG
+ 0480  2         TS     PHASENUM
+ 0482   ENDRSTRT RELINT
+ 0485            TC     BANKCALL        DISPLAY MAJOR MODE.
+ 0490  2         CADR   DSPMM
+ 0495            TC     FLAG1UP         TURN ON RESTARTABILITY FLAG.
+ 0500  2         OCT    4000
+ 0505  4         TCF    DUMMYJOB +2     DONT ZERO NEWJOB
+ 0525   MR.CLEAN CAF    ELEVEN          INITIALIZE PHASE TABLE.  DO IT THIS WAY
+ 0530  2 +1      TS     BUF             TO MINIMIZE THE TIME OF PHASE TABLE
+ 0535            CS     ZERO            DISAGREEMENT.
+ 0540            ZL
+ 0545            INDEX  BUF
+ 0550  2         DXCH   -PHASE1 -1
+ 0555            CCS    BUF
+ 0560            CCS    A
+ 0565  2         TCF    MR.CLEAN +1
+ 0570            TC     Q
+P0600  2         COMES HERE FROM LOCATION 4000, GOJAM. RESTART ANY PROGRAMS WHIC
+ 0605  9H MAY HAVE BEEN RUNNING AT THE TIME.
+ 0610  2GOPROG   INCR   REDOCTR         ANOTHER RESTART.
+ 0611            LXCH   Q
+ 0612  2         DXCH   RSBB&Q          SAVE BBANK & Q FOR RESTART ANALYSIS.
+ 0615  2         TC     STARTSUB
+ 0620            CA     BIT15           TEST THE OSC FAIL BIT TO SEE IF WE HAVE
+ 0622            EXTEND                 HAD A POWER TRANSIENT.  IF SO, ATTEMPT
+ 0625            WAND   33              A RESTART.  IF NOT, CHECK THE PRESENT
+ 0627            EXTEND                 STATE OF AGC WARNING.
+ 0630  2         BZF    LIGHTSET
+ 0632            CA     BIT14           IF AGC WARNING ON (BIT = 0), DO A FRESH
+ 0635            EXTEND                 START ON THE ASSUMPTION THAT WE'RE IN A
+ 0637            RAND   33              RESTART LOOP.
+ 0640            EXTEND
+ 0642  2         BZF    DOFSTART
+ 0645   LIGHTSET EXTEND                 DONT TRY TO RESTART IF ERROR
+ 0650            READ   15              AND MARK REJECT BUTTONS DEPRESSED.
+ 0655            AD     -ELR
+ 0660            EXTEND
+ 0665            BZF    +2
+ 0670  2         TCF    +7
+ 0675            CAF    BIT5
+ 0680            EXTEND
+ 0685            RAND   16
+ 0690            AD     -MKREJ
+ 0695            EXTEND
+ 0700  2         BZF    DOFSTART
+ 0705            CA     ERESTORE        IF SELF-CHECK ERASABLE-MEMORY TEST WAS
+ 0710            EXTEND                 INTERRUPTED BY A RESTART, DOUBT ERASABLE
+ 0715            BZF    +2              AND DO A FRESH START.
+ 0720  2         TCF    DOFSTART
+ 0725            CA     9,6,4           LEAVE PROG ALARM, GIMBAL LOCK & NO ATT
+ 0730            MASK   DSPTAB +11D     LAMPS INTACT ON RESTART.
+ 0735            AD     BIT15
+ 0740            XCH    DSPTAB +11D     IF NO ATT LAMP WAS ON, LEAVE ISS IN
+ 0745            MASK   BIT4            COARSE ALIGN.
+ 0750            EXTEND
+ 0755  2         WOR    12
+ 0760            CAF    IFAILINH        LEAVE IMU FAILURE INHIBITS INTACT ON
+ 0765            MASK   IMODES30        RESTART, RESETTING ALL FAILURE CODES.
+ 0770            AD     IM30INIR        THE RECORD OF THE ISS OPERATE BIT IS
+ 0775  2         TS     IMODES30        ALSO LEFT ALONE (206 ONLY).
+ 0780            EXTEND                 SETTING T5RUPT FOR DAPIDLER PROGRAM
+ 0785            DCA    IDLEADR
+ 0790  2         DXCH   T5ADR
+ 0795            CAF    PRIO37          DISPLAY FAILREG AS INDICATION OF RESTART
+ 0800            TC     NOVAC           OR TO DISPLAY ABORT CODE AS ABOVE.
+ 0805            EBANK= LST1
+ 0810            2CADR  DOALARM
+ 0815            CS     T4LOC           SEE IF LMP COMMAND WAS SITTING IN CH 10
+ 0820            AD     LLMPRS2         WHEN RESTART OCCURRED. IF SO, SET BIT 15
+ 0825            EXTEND                 BACK TO ZERO SO THE COMMAND WILL BE
+ 0830  2         BZF    LMPRUPT         RESENT.
+ 0835            CCS    LMPOUTT         IF NOT, SEE IF UPDATE OF REFERENCE
+ 0840            AD     ONE             POINTER (LMPOUT) WAS IN PROCESS. IF SO,
+ 0845            TS     LMPOUT          LMPOUTT IS NON-NEGATIVE.
+ 0850            CS     ONE             SHOW LMPOUT UPDATED.
+ 0855            TS     LMPOUTT
+ 0860  2         TCF    T4LOCRST
+ 0865   LMPRUPT  INDEX  LMPOUT
+ 0870            CS     LMPCMD
+ 0875            MASK   BIT15
+ 0880            INDEX  LMPOUT
+ 0885  2         ADS    LMPCMD
+ 0890   T4LOCRST CAF    LNORMT4
+ 0895  2         TS     T4LOC
+ 0896            CA     BIT4            TURN THROTTLE COUNTER ON.  (IF EMPTY,
+ 0897            EXTEND                 NO HARM DONE.  IF NON-EMPTY, ASSUME
+ 0898  2         WOR    14              CONTENTS ARE VALID.)
+ 0900            CAF    BIT12           TEST THE RESTARTABILITY FLAG.
+ 0905            MASK   FLAGWRD1
+ 0910            CCS    A
+ 0915            TCF    +3              RESTARTABLE.
+ 0920            TC     POSTJUMP        NOT RESTARTABLE.  DO A FAKESTART.
+ 0925  2         CADR   FAKESTRT
+ 0930   GOPROG2  RELINT
+ 0935            NOOP                   LET AN INTERRUPT IN
+ 0940  2         INHINT
+ 0945            CAF    NUMGRPS         VERIFY PHASE TABLE AGREEMENT.
+ 0950   PCLOOP   TS     MPAC +5
+ 0955            DOUBLE
+ 0960            EXTEND
+ 0965            INDEX  A
+ 0970            DCA    -PHASE1         COMPLEMENT INTO A, DIRECT INTO L.
+ 0975            EXTEND
+ 0980            RXOR   L               RESULT MUST BE -0 FOR AGREEMENT.
+ 0985            CCS    A
+ 0990            TCF    PTBAD           RESTART FAILURE.
+ 0995            TCF    PTBAD
+ 1000  2         TCF    PTBAD
+ 1005            CCS    MPAC +5         PROCESS ALL RESTART GROUPS.
+ 1010  2         TCF    PCLOOP
+ 1015  2         TS     MPAC +6         SET TO +0.
+ 1020            CAF    NUMGRPS         SEE IF ANY GROUPS RUNNING.
+ 1025   NXTRST   TS     MPAC +5
+ 1030            DOUBLE
+ 1035            INDEX  A
+ 1040            CCS    PHASE1
+ 1045            TCF    PACTIVE         PNZ - GROUP ACTIVE.
+ 1050  2         TCF    PINACT          +0 - GROUP NOT RUNNING.
+ 1055   PACTIVE  TS     MPAC
+ 1060            INCR   MPAC            ABS OF PHASE.
+ 1065            INCR   MPAC +6         INDICATE GROUP DEMANDS PRESENT.
+ 1070            CA     RACTCADR        GO TO RESTARTS AND PROCESS PHASE INFO.
+ 1075  2         TC     SWCALL          MUST RETURN TO SWRETURN.
+ 1080   PINACT   CCS    MPAC +5         PROCESS ALL RESTART GROUPS.
+ 1085  2         TCF    NXTRST
+ 1090            CCS    MPAC +6         SEE IF ANY GROUPS WERE ACTIVE.
+ 1095  2         TCF    ENDRSTRT        YES, THERE WERE.
+ 1100            TC     ALARM           RESTART WITH NO ACTIVE GROUPS.
+ 1105  2         OCT    1110
+ 1110            CS     FLAGWRD1        WAS THE RESTARTABILITY FLAG SET?
+ 1115            MASK   BIT12
+ 1120            CCS    A
+ 1125            TCF    POOH2           NO.
+ 1130            TS     MODREG          YES.  SET MAJOR MODE TO 00.
+ 1132  2         TCF    ENDRSTRT
+ 1135   PTBAD    TC     ALARM           SET ALARM TO SHOW PHASE TABLE FAILURE.
+ 1140  2         OCT    1107
+ 1142            INHINT
+ 1145  2         TCF    DOFSTART
+ 1150  2RACTCADR CADR   RESTARTS
+ 1151   ENEMA    INHINT                 HAVING PRESET PHASE REGISTERS, DO A
+ 1152            TC     STARTSB2        PSEUDO-RESTART.  (THE RESTARTABILITY
+ 1153            TCF    GOPROG2         FLAG MUST BE SET WHEN ENEMA IS CALLED.)
+P1155  2         INITIALIZATION COMMON TO BOTH FRESH START AND RESTART.
+ 1185   STARTSUB CA     ZERO
+ 1190            EXTEND                 TURN THE RCS JETS OFF.
+ 1195            WRITE  5
+ 1200            EXTEND
+ 1205  2         WRITE  6
+ 1210            EXTEND
+ 1215  2         WRITE  12              TURN OFF TRIM GIMBAL.
+ 1220            CA     POSMAX
+ 1225            TS     TIME3           37777 TO TIME3.
+ 1230            AD     MINUS2
+ 1235            TS     TIME4           37775 TO TIME4.
+ 1240            AD     NEGONE
+ 1245  2         TS     TIME5           37774 TO TIME5.
+ 1250   STARTSB2 CAF    ZERO            ENTRY FROM P00 AND FORGETIT.
+ 1255            EXTEND
+ 1260            WRITE  7               NOTHING IN SUNBURST IS IN BANKS 40 - 43.
+ 1265            EXTEND
+ 1270            WRITE  11
+ 1275            EXTEND
+ 1280  2         WRITE  14
+ 1285            CA     TRIMGIMB        TURN OFF ALL BITS BUT TRIM GIMBAL.
+ 1290            EXTEND
+ 1295  2         WAND   12
+ 1300            CAF    PRIO34          ENABLE INTERRUPTS.
+ 1305            EXTEND
+ 1310  2         WRITE  13
+ 1315  2         EBANK= LST1
+ 1320            CAF    STARTEB
+ 1325  2         TS     EBANK           SET FOR E3
+ 1330            CAF    NEG1/2          INITIALIZE WAITLIST DELTA-TS.
+ 1335            TS     LST1 +7
+ 1340            TS     LST1 +6
+ 1345            TS     LST1 +5
+ 1350            TS     LST1  +4
+ 1355            TS     LST1  +3
+ 1360            TS     LST1  +2
+ 1365            TS     LST1  +1
+ 1370  2         TS     LST1
+ 1375            CS     ENDTASK
+ 1380            TS     LST2
+ 1385            TS     LST2 +2
+ 1390            TS     LST2 +4
+ 1395            TS     LST2 +6
+ 1400            TS     LST2 +8D
+ 1405            TS     LST2 +10D
+ 1410            TS     LST2 +12D
+ 1415            TS     LST2 +14D
+ 1420            TS     LST2 +16D
+ 1425            CS     ENDTASK +1
+ 1430            TS     LST2 +1
+ 1435            TS     LST2 +3
+ 1440            TS     LST2 +5
+ 1445            TS     LST2 +7
+ 1450            TS     LST2 +9D
+ 1455            TS     LST2 +11D
+ 1460            TS     LST2 +13D
+ 1465            TS     LST2 +15D
+ 1470  2         TS     LST2 +17D
+ 1475            CS     ZERO            MAKE ALL EXECUTIVE REGISTER SETS
+ 1480            TS     PRIORITY        AVAILABLE.
+ 1485            TS     PRIORITY +12D
+ 1490            TS     PRIORITY +24D
+ 1495            TS     PRIORITY +36D
+ 1500            TS     PRIORITY +48D
+ 1505            TS     PRIORITY +60D
+ 1510  2         TS     PRIORITY +72D
+ 1515  2         TS     NEWJOB          SHOWS NO ACTIVE JOBS.
+ 1520            CAF    VAC1ADRC        MAKE ALL VAC AREAS AVAILABLE.
+ 1525            TS     VAC1USE
+ 1530            AD     LTHVACA
+ 1535            TS     VAC2USE
+ 1540            AD     LTHVACA
+ 1545            TS     VAC3USE
+ 1550            AD     LTHVACA
+ 1555            TS     VAC4USE
+ 1560            AD     LTHVACA
+ 1565  2         TS     VAC5USE
+ 1570            CAF    TEN             TURN OFF ALL DISPLAY SYSTEM RELAYS.
+ 1575            TS     DIDFLG          DISPLAY INERTIAL DATA FLAG.
+ 1580   DSPOFF   TS     MPAC
+ 1585            CS     BIT12
+ 1590            INDEX  MPAC
+ 1595            TS     DSPTAB
+ 1600            CCS    MPAC
+ 1605            TCF    DSPOFF
+ 1615            TS     INLINK
+ 1620            TS     DSPCNT
+ 1625            TS     CADRSTOR
+ 1630            TS     REQRET
+ 1635            TS     CLPASS
+ 1640            TS     DSPLOCK
+ 1645            TS     MONSAVE         KILL MONITOR
+ 1650            TS     MONSAVE1
+ 1655            TS     GRABLOCK
+ 1660            TS     VERBREG
+ 1665            TS     NOUNREG
+ 1670            TS     DSPLIST
+ 1675            TS     DSPLIST +1
+ 1680  2         TS     DSPLIST +2
+ 1685            TS     MARKSTAT
+ 1690            TS     EXTVBACT        MAKE EXTENDED VERBS AVAILABLE
+ 1695            TS     IMUCADR
+ 1700            TS     OPTCADR
+ 1705            TS     RADCADR
+ 1710            TS     ATTCADR
+ 1720            TS     LGYRO
+ 1725            TS     DSRUPTSW
+ 1730            CAF    NOUTCON
+ 1735  2         TS     NOUT
+ 1740            CS     ONE             NO RADAR DESIGNATION.
+ 1745  2         TS     SAMPLIM         NO RADAR RUPTS EXPECTED.
+ 1750            CAF    IM33INIT        NO PIP OR TM FAILS.
+ 1755  2         TS     IMODES33
+ 1760            CAF    BIT6            SET LR POS.
+ 1765            EXTEND
+ 1770            RAND   33
+ 1775            AD     RMODINIT
+ 1780  2         TS     RADMODES
+ 1785            CAF    LESCHK          SELF CHECK GO-TO REGISTER.
+ 1790  2         TS     SELFRET
+ 1795            CS     VD1
+ 1800  2         TS     DSPCOUNT
+ 1805            CAF    NOMTMLST        SET UP NOMINAL DOWNLINK LIST.
+ 1810  2         TS     DNLSTADR
+ 1815  2         TC     Q
+ 1820   LDNPHAS1 GENADR DNPHASE1
+ 1825   LDNTMGO  ECADR  DNTMGOTO
+ 1830   NOMTMLST GENADR NOMDNLST
+ 1832   SETCDULM DEC    0.05555555      10 DEGREES, SCALED IN HALF-REVS.
+ 1833   IDNCDUN  DEC    198             199 CDU SAMPLES + ONE ID = 4 SECS.
+ 1835   LESCHK   GENADR SELFCHK
+ 1840   LLMPRS2  GENADR LMPRESET
+ 1845   VAC1ADRC ADRES  VAC1USE
+ 1850   LTHVACA  DEC    44
+ 1855   STARTEB  ECADR  LST1
+ 1860   NUMGRPS  EQUALS FIVE            SIX GROUPS CURRENTLY.
+ 1865   -ELR     OCT    -22             -ERROR LIGHT RESET KEY CODE.
+ 1870   -MKREJ   OCT    -20             - MARK REJECT.
+ 1875   TRIMGIMB OCT    07400           TRIM GIMBAL DRIVE BITS IN CHANNEL 12.
+ 1880   IM30INIF OCT    37411           INHIBITS IMU FAIL FOR 5 SEC AND PIP ISSW
+ 1885   IFAILINH OCT    435             ISS OPERATE, & FAILURE INHIBIT BITS.
+ 1890   IM30INIR OCT    37000           LEAVE FAIL INHIBITS & OPERATE ALONE.
+ 1895   IM33INIT OCT    16000           NO PIP OR TM FAIL SIGNALS.
+ 1900   9,6,4    OCT    450
+ 1905  2RMODINIT OCT    00102
+ 1910   SWINIT   OCT    0
+ 1915            OCT    0
+ 1920            OCT    00005
+ 1925   DAPINIT  OCT    40512           DB SET IN SETIDLE
+ 1930  2         OCT    0
+ 1935            EBANK= DT
+ 1940   IDLEADR  2CADR  DAPIDLER
+ 1945            EBANK= DT
+ 1950   SETADR   2CADR  SETIDLE
+P1955  2PROGRAM TO REVERT TO IDLING MODE (P 00).
+R1960  2CALLING SEQUENCE:  TC (OR TCF)   POOH     UNDER EXEC (NOT INTERRUPTED).
+ 1965  2         BLOCK  2
+ 1970   POOH     TC     POSTJUMP
+ 1975  4         CADR   POOH2           DO A PARTIAL FRESH START.
+ 1980  2         BANK   01
+ 1985   POOH2    INHINT
+ 1990  2         TC     STARTSB2
+ 1995            TC     IBNKCALL
+ 2000  2         CADR   STOPRATE
+ 2005            TC     IBNKCALL
+ 2010  2         CADR   SETMAXDB
+ 2015            TC     FLAG1DWN        FOR A MOMENT, INDICATE NON-RESTART-
+ 2020  2         OCT    4000            ABILITY, SO A RESTART HERE WILL DO POOH.
+ 2025            TC     FLAG2DWN
+ 2030  2         OCT    20              TURN OFF MISSION TIMER FLAG.
+ 2035            INHINT
+ 2040  2         TC     MR.CLEAN        DEACTIVATE ALL RESTART GROUPS.
+ 2045            CA     LPOOH3          PICK UP RETURN FOR MSTART.
+ 2050            TC     MSTART -1       START MISSION TIMERS COUNTING.
+A2055  4                                WE GET A RELINT AT MSTART.
+ 2060   LPOOH3   ADRES  POOH3
+P2065  2FAKESTRT IS ENTERED FROM GOPROG WHEN A RESTART OCCURS AND THE RESTARTABI
+ 2070  9LITY FLAG IS OFF.
+ 2075            BANK   7
+ 2080   FAKESTRT TC     ALARM
+ 2085  2         OCT    0316            FAKESTRT ALARM
+ 2090  4         TCF    FORGET2
+R2095   FORGETIT IS ENTERED FROM:
+R2100            1)  FAKESTRT (VIA FORGET2).
+R2105            2)  VERB 74 UPLINK COMMAND.
+R2110            3)  ILLEGAL MISSION PHASE COMES DUE IN MISSION SCHEDULING ROUTI
+ 2115  9NE.
+R2120            4)  ENGINE FAILURE, ETC.
+R2125
+ 2130   DOV74    INHINT
+ 2131            TC     IBNKCALL
+ 2132  2         CADR   STARTSB2
+ 2133  2         TCF    FORGET2         BYPASS THE PROGRAM ALARM & 315 DISPLAY.
+ 2135   FORGETIT INHINT
+ 2140            TC     IBNKCALL
+ 2145  2         CADR   STARTSB2
+ 2150            TC     ALARM
+ 2155  2         OCT    315             UNIQUE ALARM FOR FORGETIT.
+ 2160   FORGET2  TC     FLAG1DWN        ENTRY FROM FAKESTRT.
+ 2165  2         OCT    04000           KNOCK DOWN RESTART FLAG TO PERMIT POOH.
+ 2170            INHINT
+ 2175            EXTEND
+ 2180            DCA    KILLCAD
+ 2185  2         DXCH   DVMNEXIT
+ 2190            EXTEND
+ 2195            DCA    CADAVER
+ 2200  2         DXCH   AVGEXIT
+ 2205            CAF    PINGSMON
+ 2207            TS     OLDDVSEL
+ 2210  2         TS     DVSELECT
+ 2215            TC     IBNKCALL
+ 2220  2         CADR   ENGINOFF
+ 2225            TC     IBNKCALL
+ 2230  2         CADR   STOPRATE
+ 2232            TC     IBNKCALL
+ 2233  2         CADR   NOULLAGE
+ 2235            TC     IBNKCALL
+ 2240  2         CADR   SETMAXDB
+ 2245            CS     BGIMBALS        TURN OFF TRIM GIMBALS
+ 2250            EXTEND
+ 2255  2         WAND   12
+ 2280            CS     ZERO            MAKE ALL RESTART PHASES INACTIVE EXCEPT
+ 2285            ZL                     SERVICER AND STATE VECTOR COPY.
+ 2290            DXCH   -PHASE2
+ 2295            CS     ZERO
+ 2300            ZL
+ 2305            DXCH   -PHASE3
+ 2310            CS     ZERO
+ 2315            ZL
+ 2320            DXCH   -PHASE4
+ 2321            CS     ZERO
+ 2323            ZL
+ 2325  2         DXCH   -PHASE6
+ 2328            CS     ZERO
+ 2330            TS     MPHASE1         SET TIMER/PHASE PAIRS TO IDLE STATE
+ 2335            TS     MPHASE2
+ 2340            TS     MPHASE3
+ 2345            TS     MPHASE4
+ 2350            TS     MTIMER4
+ 2355            TS     MTIMER3
+ 2360            TS     MTIMER2
+ 2365  2         TS     MTIMER1
+ 2390            TC     POSTJUMP
+ 2395  4         CADR   GOPROG2
+ 2400   AVEGKILL TC     FLAG1DWN        COMES HERE WHEN ENGINE OFF
+ 2405  2         OCT    00041           KNOCK DOWN POOH FLAG AND AVERAGEG FLAG
+ 2420  4         TCF    ENDOFJOB
+ 2440  2BGIMBALS OCT    7400
+ 2445   PINGSMON GENADR PGNCSMON
+ 2450            EBANK= LST1
+ 2455   CADAVER  2CADR  SERVEXIT
+ 2460            EBANK= LST1
+ 2465   KILLCAD  2CADR  AVEGKILL
 *       ENDOFJOB
