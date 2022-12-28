@@ -79,7 +79,7 @@ class AgcPass1(Pass1):
             '5DNADR': self.agc_5dnadr,
             'RESUME': 0o6442,
             'RETURN': 0o4012,
-            'EDRUPT': 0o4272,
+            'EDRUPT': 0o4024,
             'NDX':    0o6450,
             # CODES 20
             '':       0o4754,
