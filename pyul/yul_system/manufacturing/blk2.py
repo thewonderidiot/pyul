@@ -102,7 +102,8 @@ class ManufacturingBlk2:
         self._by_pas_mdn = True
         self.read_a_req()
 
-        bin_fn = self._yul.prog_name + ('.R%u' % self._yul.revno) + '.bin'
+        ext = '.bin' if virtualagc else '.rope'
+        bin_fn = self._yul.prog_name + ('.R%u' % self._yul.revno) + ext
 
         par_data = [None] * 36 * 4
 
