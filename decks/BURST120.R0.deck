@@ -5178,4 +5178,322 @@ P0510  2         CONSTANTS FOR MODE SWITCHING ROUTINES
  0517   -COMMAX- DEC    -192
  0518   600MS    DEC    60
  0519   3SECSM   EQUALS 3SECS
+L      2AOTMARK
+ 0001            BANK   13
+ 0002            EBANK= AOTAZ
+ 0003   AOTMARK  INHINT
+ 0004            TS     RUPTREG2        BIT14=INFLIGHT  0=NONFLIGHT
+ 0005            CCS    MARKSTAT        ARE MARKS BUTTONS IN USE
+ 0006            TC     +2              MARKS BUTTONS NOT AVAILABLE
+ 0007            TC     MKVAC           FIND A VAC AREA
+ 0008            TC     ALARM
+ 0009            OCT    00105
+ 0010  2         TC     ENDOFJOB
+ 0011   MKVAC    CCS    VAC1USE
+ 0012            TC     MKVACFND
+ 0013            CCS    VAC2USE
+ 0014            TC     MKVACFND
+ 0015            CCS    VAC3USE
+ 0016            TC     MKVACFND
+ 0017            CCS    VAC4USE
+ 0018            TC     MKVACFND
+ 0019            CCS    VAC5USE
+ 0020            TC     MKVACFND
+ 0021            TC     ABORT           VAC AREAS OCCUPIED
+ 0022  2         OCT    01207
+ 0023   MKVACFND AD     TWO
+ 0024            TS     MARKSTAT
+ 0025            CAF    ZERO
+ 0026            TS     XYMARK          INITIALIZE MARK ID REGISTER
+ 0027            INDEX  MARKSTAT
+ 0028  2         TS     0 -1            SHOW VAC OCCUPIED
+ 0029            CA     RUPTREG2
+ 0030  2         ADS    MARKSTAT
+ 0031            CAF    PRIO32
+ 0032            TC     NOVAC
+ 00325           EBANK= AOTAZ
+ 0033            2CADR  GETMKS
+ 0034  2         TC     MODEEXIT
+ 0035   MKRELEAS CAF    ZERO
+ 0036            XCH    MARKSTAT        SET MARKSTAT  ZERO
+ 0037            CCS    A
+ 0038            INDEX  A
+ 0039            TS     0               SHOW VAC AREA AVAILABLE
+ 0040  8         TC     SWRETURN
+ 0041   GETMKS   CAF    ZERO
+ 0042            TS     XYMARK
+ 0043            CAF    BIT14           FIND IF IN-FLIGHT OR NON-FLIGHT
+ 0044            MASK   MARKSTAT
+ 0045            CCS    A
+ 0046            TC     MKVB53          IN-FLIGHT
+ 0047            CS     BIT11           NON-FLIGHT, SET Y MARK =1
+ 0048            MASK   MARKSTAT
+ 0049            AD     BIT11
+ 0050            TS     MARKSTAT
+ 0051            CAF    VB51            REQUEST X MARK
+ 0052            TC     +2
+ 0053   MKVB53   CAF    VB53            REQUEST X AND Y MARKS
+ 0054            TC     NVSBWAIT
+ 0055            TC     FLASHON
+ 0056            TC     ENDIDLE
+ 0057            TC     GETMKS +1
+ 0058  2         TC     GETMKS +1
+ 0059   MKCHEK   CAF    BIT10           WAS X MARK MADE
+ 0060            MASK   MARKSTAT
+ 0061            CCS    A
+ 0062            TC     +2              X MARK MADE-LOOK AT Y MARK
+ 0063            TC     MKALARM
+ 0064            CAF    BIT11
+ 0065            MASK   MARKSTAT
+ 0066            CCS    A
+ 0067  2         TC     GETDET          BOTH MARKS MADE-SHOW ACCEPT-GET DETENT
+ 0068   MKALARM  TC     ALARM           IF EITHER MARK IS MISSING AFTER ENTER
+ 0069            OCT    111
+ 0070            CS     PRIO17          SET BITS 10,11,12,13 TO ZERO IN MARKSTAT
+ 0071            MASK   MARKSTAT
+ 0072            TS     MARKSTAT
+ 0073  2         TC     GETMKS          GETMKS AGAIN
+ 0074   GETDET   CS     BIT12
+ 0075            MASK   MARKSTAT
+ 0076            AD     BIT12           SET BIT12=1 TO SHOW MARKS ACCEPTED
+ 0077            TS     MARKSTAT
+ 0078   DETVB21  CAF    V21N43E
+ 0079            TC     NVSBWAIT
+ 0080            TC     ENDIDLE
+ 0081            TC     DETVB21
+ 0082  2         TC     DETVB21
+ 0083            CS     OCT3
+ 0084            MASK   DETCODE
+ 0085            CCS    A
+ 0086            TC     DETVB21         BAD CODE, REQUEST AGAIN
+ 0087            TC     +3              LOOKS GOOD BUT COULD BE ZERO
+ 0088            TC     +1
+ 0089            TC     DETVB21
+ 0090            CAF    OCT3
+ 0091            MASK   DETCODE         SEE IF ZERO
+ 0092            CCS    A
+ 0093            TC     +2              GOOD CODE-STORE ANGLES
+ 0094  2         TC     DETVB21         ZERO-BAD CODE-REQUEST AGAIN
+ 0095            CAF    LOW9
+ 0096            MASK   MARKSTAT
+ 0097            TS     BASVAC          STORE VAC AREA ADDRESS
+ 0098            INDEX  DETCODE
+ 0099            CA     AOTEL -1
+ 0100            INDEX  BASVAC
+ 0101            TS     9D              STORE ELV ANGLE IN VAC +9
+ 0102            INDEX  DETCODE
+ 0103            CA     AOTAZ -1
+ 0104            INDEX  BASVAC
+ 0105  2         TS     8D              STORE AZIMUTH IN VAC +8
+ 01051           CA     AOTAZ +1        COMPENSATION FOR THE APPARENT TILT OF
+ 01052           EXTEND                 AOT FIELD OF VIEW IN THE LEFT AND RIGHT
+ 01053           INDEX  DETCODE         DETENTS IS STORED IN LOC 10D OF VAC
+ 01054           MSU    AOTAZ -1        IN ONES COMPLEMENT
+ 01055           INDEX  BASVAC
+ 01056 2         TS     10D             SINGLE PREC. TILT COMPENSATION  ANGLE
+ 0106            CAF    BIT14           IN-FLIGHT OR NON-FLIGHT
+ 0107            MASK   MARKSTAT
+ 0108            CCS    A
+ 0109            TC     MKOUT           IN-FLIGHT, NO MORE DATA NEEDED
+ 0110  2         TC     ROTVB24         NON-FLIGHT, GET ROTATION ANGLES
+ 0111   ROTVB24  CAF    V24N42E         REQUEST RETICLE ROTATION ANGLES
+ 0112            TC     NVSBWAIT
+ 0113            TC     ENDIDLE
+ 0114            TC     ROTVB24
+ 0115  2         TC     ROTVB24
+ 0116            CAF    LOW9
+ 0117            MASK   MARKSTAT
+ 0118            TS     BASVAC
+ 0119            CA     DSPTEM2         YROT
+ 0120            INDEX  BASVAC
+ 0121            TS     3               STORE Y RETICLE ROT ANGLE IN VAC +3
+ 0122            CA     DSPTEM2 +1      SROT
+ 0123            INDEX  BASVAC
+ 0124  2         TS     5               STORE SPIRAL ROT ANGLE VAC +5
+ 0125   MKOUT    CAF    LOW9
+ 0126            MASK   MARKSTAT
+ 0127  2         TS     MARKSTAT        SET HI5 ZERO
+ 0128            INHINT
+ 0129            CAF    ONE
+ 0130            TC     WAITLIST
+ 01305           EBANK= AOTAZ
+ 0131            2CADR  ENDMARKS
+ 0132  2         TC     ENDOFJOB
+ 0133   ENDMARKS CAF    ONE
+ 0134  8         TCF    GOODEND
+ 0135   MARKRUPT TS     BANKRUPT
+ 0136            CA     CDUY            STORE CDU DATA AND TIME IN TEMP
+ 0137            TS     ITEMP3
+ 0138            CA     CDUZ
+ 0139            TS     ITEMP4
+ 0140            CA     CDUX
+ 0141            TS     ITEMP5
+ 0142            EXTEND
+ 0143            DCA    TIME2
+ 0144            DXCH   ITEMP1
+ 0145            XCH    Q
+ 0146  2         TS     QRUPT
+ 0147            CAF    OCT34           SEE IF X OR Y MARK OR MKREJECT
+ 0148            EXTEND
+ 0149            RAND   NAVKEYIN
+ 0150            CCS    A
+ 0151            TC     +2              ITS A LIVE ONE-CHECK FOR ACCEPT
+ 0152  2         TC     SOMEKEY         SOME OTHER KEY
+ 0153            CAF    BIT12           HAVE MARKS BEEN ACCEPTED
+ 0154            MASK   MARKSTAT
+ 0155            CCS    A
+ 0156  2         TC     RESUME          MARKS MADE AND ACCEPTED - DO NOTHING
+ 0157            CCS    MARKSTAT        ARE MARKS BEING ACCEPTED
+ 0158            TC     FINDKEY
+ 0159            TC     ALARM           MARKS NOT BEING ACCEPTED
+ 0160            OCT    112
+ 0161  2         TC     RESUME
+ 0162   FINDKEY  CAF    BIT5
+ 0163            EXTEND
+ 0164            RAND   NAVKEYIN        CHANNEL 16
+ 0165            CCS    A
+ 0166            TC     MKREJ           ITS A MARK REJECT
+ 0167            CAF    BIT4
+ 0168            EXTEND
+ 0169            RAND   NAVKEYIN
+ 0170            CCS    A
+ 0171            TC     YMKRUPT         ITS A Y MARK
+ 0172            CAF    BIT3
+ 0173            EXTEND
+ 0174            RAND   NAVKEYIN
+ 0175            CCS    A
+ 0176            TC     XMKRUPT         ITS AN X MARK
+ 0177   SOMEKEY  CAF    OCT140          NOT MARK OR MARK REJECT
+ 0178            EXTEND
+ 0179            RAND   NAVKEYIN
+ 0180            EXTEND
+ 0181  2         BZF    +3              IF NO INBITS.
+ 0182            TC     POSTJUMP        IF DESCENT BITS.
+ 0183  2         CADR   DESCBITS
+ 0184    +3      TC     ALARM
+ 0185            OCT    113
+ 0186  2         TC     RESUME
+ 0187   XMKRUPT  CAF    ZERO
+ 0188            TS     RUPTREG1        SET X MARK STORE INDEX TO ZERO
+ 0189            CAF    BIT10
+ 0190            TC     +4
+ 0191   YMKRUPT  CAF    ONE
+ 0192            TS     RUPTREG1        SET Y MARK STORE INDEX TO ONE
+ 0193            CAF    BIT11
+ 0194  2         TS     XYMARK          SET MARK ID
+ 0195            MASK   MARKSTAT
+ 0196            CCS    A
+ 0197            TC     +2              MARK MADE BUT NOT DESIRED
+ 0198            TC     VACSTOR         MARK DESIRED AND MADE-STORE CDUS
+ 0199            TC     ALARM
+ 0200            OCT    114
+ 0201  2         TC     REMARK          RENEW REQUEST
+ 0202   VACSTOR  CAF    LOW9            STORE TIME AND CDUS IN VAC AREA
+ 0203            MASK   MARKSTAT
+ 0204            TS     RUPTREG2        PICK UP VAC ADR
+ 0205            EXTEND
+ 0206            DCA    ITEMP1
+ 0207            INDEX  RUPTREG2
+ 0208            DXCH   0               STORE TIME1 AND TIME2 IN VAC
+ 0209            CA     RUPTREG2
+ 0210            ADS    RUPTREG1        INCREMENT CDU STORE ADR BY MARK INDEX
+ 0211            CA     ITEMP3          PICK UP CDUY
+ 0212            INDEX  RUPTREG1
+ 0213            TS     2
+ 0214            CA     ITEMP4          PICK UP CDUZ
+ 0215            INDEX  RUPTREG1
+ 0216            TS     4
+ 0217            CA     ITEMP5          PICK UP CDUX
+ 0218            INDEX  RUPTREG1
+ 0219  2         TS     6
+ 0220            CAF    BIT13
+ 0221            AD     XYMARK
+ 0222            COM
+ 0223            MASK   MARKSTAT
+ 0224            AD     XYMARK          SET MARK MADE BIT IN MARKSTAT=1
+ 0225            TS     MARKSTAT        AND SET BIT13 ZERO TO SHOW MARK
+ 0226  8         TC     REMARK          MADE BEFORE A REJECT - GO REMARK
+ 0227   REMARK   CAF    ZERO
+ 0228            TS     MKDEX           MKDEX=0
+ 0229            CAF    BIT11           LOOK A Y MARK
+ 0230            MASK   MARKSTAT
+ 0231            CCS    A
+ 0232            TC     +3              Y MARK MADE
+ 0233            CAF    BIT8            Y MARK REQUIRED
+ 0234  2         TS     MKDEX
+ 0235            CAF    BIT10           LOOK AT X MARK
+ 0236            MASK   MARKSTAT
+ 0237            CCS    A
+ 0238            TC     MKJOB
+ 0239            CAF    BIT7            X MARK REQUIRED
+ 0240  2         ADS    MKDEX
+ 0241   MKJOB    CAF    PRIO32
+ 0242            TC     NOVAC           ENTER JOB TO PASTE VERB
+ 02425           EBANK= AOTAZ
+ 0243            2CADR  CHANGVB
+ 0244            CA     RUPTREG4
+ 0245            INDEX  LOCCTR
+ 0246            TS     MPAC
+ 0247  2         TC     RESUME
+ 0248   CHANGVB  CCS    MPAC
+ 0249            TC     SHOWVB
+ 0250            CAF    VB21N30E
+ 0251            TC     SHOWVB +2
+ 0252   SHOWVB   CAF    VB50
+ 0253            AD     MPAC
+ 0254            TS     NVTEMP
+ 0255            CA     CADRSTOR        NVSUB CLOBBERS THIS-USE LOC AS TEMP
+ 0256            TS     LOC
+ 0257            TC     NVSUB +3
+ 0258   VB51     OCT    5100
+ 0259            CA     LOC             RESTORE CADRSTOR
+ 0260            TS     CADRSTOR
+ 0261  2         TC     ENDOFJOB
+ 0262   MKREJ    CAF    BIT14           IN-FLIGHT OR NON-FLIGHT
+ 0263            MASK   MARKSTAT
+ 0264            CCS    A
+ 0265            TC     REJIN           IN-FLIGHT
+ 0266            CAF    BIT10           NON-FLIGHT, SEE IF X MARK MADE
+ 0267            MASK   MARKSTAT
+ 0268            CCS    A
+ 0269            TC     REJECT2         XMARK MADE-REJECT IT
+ 0270  2         TC     REJALARM        X MARK NOT MADE-ALARM-NO MARKS TO REJ
+ 0271   REJIN    CAF    PRIO3           WERE IN-FLIGHT MARKS MADE
+ 0272            MASK   MARKSTAT
+ 0273            CCS    A
+ 0274            TC     REJECT          MARKS MADE-REJECT ONE
+ 0275   REJALARM TC     ALARM           NO MARKS MADE TO REJECT-GET MARKS
+ 0276            OCT    115
+ 0277            TC     REJECT2
+ 0278   REJECT   CS     BIT13           SHOW MKREJECT AND SEE MARK MADE
+ 0279            MASK   MARKSTAT        SINCE LAST REJECT
+ 0280            AD     BIT13
+ 0281            XCH    MARKSTAT
+ 0282            MASK   BIT13
+ 0283            CCS    A
+ 0284            TC     REJECT2         ANOTHER REJECT
+ 0285            CS     XYMARK          MARK MADE SINCE LAST REJECT-REJECT IT
+ 0286            MASK   MARKSTAT
+ 0287            TS     MARKSTAT
+ 0288  2         TC     REMARK          GO REQUEST MARKS
+ 0289   REJECT2  CS     PRIO3           NO MARKS SINCE LAST REJECT SO SET
+ 0290            MASK   MARKSTAT        MARKSTAT TO WANT X AND Y MARKS
+ 0291            XCH    MARKSTAT
+ 0292            MASK   BIT14           IN-FLIGHT OR NON-FLIGHT
+ 0293            CCS    A
+ 0294            TC     REMARK          IN-FLIGHT, GO GET MARKS
+ 0295            CAF    BIT11           NON-FLIGHT, STILL REQUEST X MARK ONLY
+ 0296            ADS    MARKSTAT
+ 0297  2         TC     REMARK          GO GET X MARK
+ 0298   OCT3     EQUALS THREE
+ 0299   OCT34    OCT    00034
+ 0300   OCT140   OCT    00140
+ 0301   V21N43E  OCT    2143
+ 0302   V24N42E  OCT    2442
+ 0303   VB53     OCT    5300
+ 0304   MKDEX    EQUALS RUPTREG4
+ 0305   DETCODE  EQUALS XYMARK
+ 0306   BASVAC   EQUALS Q
+ 0307   VB21N30E OCT    2130
+ 0308   VB50     OCT    5000
 *       ENDOFJOB
