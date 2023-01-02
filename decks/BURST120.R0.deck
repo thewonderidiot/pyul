@@ -5496,4 +5496,844 @@ L      2AOTMARK
  0306   BASVAC   EQUALS Q
  0307   VB21N30E OCT    2130
  0308   VB50     OCT    5000
+L0001  2RADAR LEAD-IN ROUTINES
+ 0001            BLOCK  02
+ 0002  2         EBANK= RRRET
+R0003            THE FOLLOWING SUBROUTINE RETURNS TO CALLER + 2 IF THE ABSOLUTE
+ 0004  9VALUE OF C(A) IS GREATER THAN THE
+R0005  2NEGATIVE OF THE NUMBER AT CALLER +1. OTHERWISE IT RETURNS TO CALLER +3.
+ 0006  9MAY BE CALLED IN RUPT OR UNDER EXEC.
+ 0007   MAGSUB   EXTEND
+ 0008            BZMF   +2
+ 0009            TCF    +2
+ 0010  2         COM
+ 0011            INDEX  Q
+ 0012            AD     0
+ 0013            EXTEND
+ 0014            BZMF   Q+2             ABS(A) LEQ CONSTANT
+ 0015            TCF    Q+1             ABS(A) G CONSTANT
+P0019            THE FOLLOWING SUBROUTINE CHECKS RR GIMBAL ANGLES TO SEE IF THEY
+ 0020  9 ARE IN THE LIMITS OF THE CURRENT MODE.
+R0021  2CALLING SEQUENCE IS AS FOLLOWS:
+A0022            TC     RRLIMCHK        (WITH INTERRUPT INHIBITED).
+A0023  2         ADRES  T,S             (IN UNSWITCHED E OR CURRENT EBANK).
+R0024  2         RETURN IS TO CALLER +2 IF NOT IN LIMITS AND TO CALLER +3 IF SO.
+ 0025   RRLIMCHK INDEX  Q               READ GIMBAL ANGLES INTO ITEMP STORAGE.
+ 0026            CAF    0
+ 0027            INCR   Q
+ 0028            EXTEND
+ 0029            INDEX  A
+ 0030            DCA    0
+ 0031            DXCH   ITEMP1
+ 0032  2         LXCH   Q               L(CALLER +2) TO L.
+ 0033            CAF    BIT12           SEE WHICH MODE RR IS IN.
+ 0034            MASK   RADMODES
+ 0035            CCS    A
+ 0036  2         TCF    MODE2CHK
+ 0037            CA     ITEMP1          MODE 1 IS DEFINED AS
+ 0038            TC     MAGSUB              1. ABS(T) L 55 DEGS.
+ 0039            DEC    -.30555             2. ABS(S + 5.5 DEGS) L 64.5 DEGS
+ 0040  2         TC     L                       (SHAFT LIMITS AT +59, -70 DEGS)
+ 0041            CAF    5.5DEGS
+ 0042            AD     ITEMP2          S
+ 0043            TC     MAGSUB
+ 0044            DEC    -.35833         64.5 DEGS
+ 0045            TC     L
+ 0046  2         TC     RRLIMOK         IN LIMITS.
+ 0047   MODE2CHK CAF    82DEGS          MODE 2 IS DEFINED AS
+ 0048            AD     ITEMP2              1. ABS(T) G 125 DEGS.
+ 0049            TC     MAGSUB              2. ABS(S + 82 DEGS) L 57 DEGS
+ 0050            DEC    -.31667                 (SHAFT LIMITS AT -25, -139 DEGS)
+ 0051  2         TC     L
+ 0052            CA     ITEMP1
+ 0053            TC     MAGSUB
+ 0054  2         DEC    -.69444         125 DEGS
+ 0055   RRLIMOK  INDEX  L
+ 0056  2         TC     L               ( = TC 1)
+ 00565  5.5DEGS  DEC    .03056
+ 0057   5DEGS    DEC    .02777          SCALED IN HALF-REVOLUTIONS.
+ 0058   82DEGS   DEC    .45556
+P0059  2         THE FOLLOWING ROUTINE UPDATES THE TRACKER FAIL LAMP ON THE DSKY
+ 0060  9. IF EITHER:
+R0061            1. N SAMPLES OF RR DATA COULD NOT BE OBTAINED FROM 2N TRIES
+R0062            2. N SAMPLES OF LR DATA COULD NOT BE TAKEN IN 2N TRIES WITH EIT
+ 0063  9HER THE ALT OR VEL INFORMATION.
+R0064  2         3. RR CDU FAILED WITH RR IN AUTO MODE AND RR CDU NOT BEING ZERO
+ 0065  9ED.
+ 0066   SETTRKF  CAF    BIT1            NO ACTION IF DURING LAMP TEST.
+ 0067            MASK   IMODES33
+ 0068            CCS    A
+ 0069  2         TC     Q
+ 0070            CAF    13,7,2          SEE IF CDU FAILED.
+ 0071            MASK   RADMODES
+ 0072            EXTEND
+ 0073  2         BZF    TRKFLON         CONDITION 3 ABOVE.
+ 0074            CS     RADMODES        SEE IF LR FAILED.
+ 0075            MASK   8,5
+ 0076            EXTEND
+ 0077  2         BZF    TRKFLON         CONDITION 2 ABOVE.
+ 0078            CAF    BIT4            SEE IF RR DATA FAILED.
+ 0079            MASK   RADMODES
+ 0080            CCS    A
+ 0081   TRKFLON  CAF    BIT8
+ 0082            AD     DSPTAB +11D     HALF ADD DESIRED AND PRESENT STATES.
+ 0083            MASK   BIT8
+ 0084            EXTEND
+ 0085  2         BZF    TCQ             NO CHANGE.
+ 0086            TS     L               INVERT BIT 8 AND SET BIT 15.
+ 0087            CA     DSPTAB +11D     CANT USE LXCH DSPTAB +11D (RESTART PROB)
+ 0088            EXTEND
+ 0089            RXOR   L
+ 0090            MASK   POSMAX
+ 0091            AD     BIT15
+ 0092            TS     DSPTAB +11D
+ 0093  2         TC     Q
+ 0094   13,7,2   OCT    10102
+ 0095  28,5      OCT    00220
+ 0096   ENDRMODF EQUALS
+P0097  2         TURNON SEQUENCE TO ZERO THE CDUS AND DETERMINE THE RR MODE.
+ 0098  2         BANK   10
+ 0099   RRTURNON TC     RRZEROSB
+ 0100            TC     FIXDELAY        WAIT 1 SEC BEFORE REMOVING TURN ON FLAG
+ 0101            DEC    100             SO A MONITOR REPOSITION WONT ALARM.
+ 0102            CS     BIT1
+ 0103            MASK   RADMODES
+ 0104            TS     RADMODES
+ 0105            CS     STATE           SEE IF SOMEONE IS WAITING TO USE THE RR.
+ 0106            MASK   RRUSEFLG
+ 0107            CCS    A
+ 0108  2         TCF    TASKOVER
+ 0109            TCF    ENDRADAR        CHECK RR CDU FAIL BEFORE EXIT.
+P0110  2         CLOSED SUBROUTINE TO ZERO THE RR CDUS.
+ 0111   RRZEROSB EXTEND
+ 0112            QXCH   RRRET
+ 0113            CAF    BIT1            BIT 13 OF RADMODES MUST BE SET BEFORE
+ 0114            EXTEND                 COMING HERE.
+ 0115            WOR    12
+ 0116            TC     FIXDELAY
+ 0117  2         DEC    2
+ 0118            CAF    ZERO
+ 0119            TS     OPTY
+ 0120            TS     OPTX
+ 0121            CS     ONE             REMOVE ZEROING BIT.
+ 0122            EXTEND
+ 0123            WAND   12
+ 0124            TC     FIXDELAY
+ 0125  2         DEC    400
+ 0126            CS     BIT13           REMOVE ZEROING IN PROCESS BIT.
+ 0127            MASK   RADMODES
+ 0128  2         TS     RADMODES
+ 0129            CA     OPTY
+ 0130            TC     MAGSUB
+ 0131            DEC    -.5
+ 0132  2         TCF    +3              IF MODE 2.
+ 0133            CAF    ZERO
+ 0134            TCF    +2
+ 0135            CAF    BIT12
+ 0136            XCH    RADMODES
+ 0137            MASK   -BIT12
+ 0138  2         ADS    RADMODES
+ 0139  2         TC     SETTRKF         TRACKER LAMP MIGHT GO ON NOW.
+ 0140  2         TC     RRRET           DONE.
+ 0141   -BIT12   EQUALS -1/8            IN SPROOT
+P0142  2         SEQUENCE OF TASKS TO DRIVE THE RR TO A SAFE POSITION.
+ 0143  2DORREPOS TC     SETRRECR        SET UP RR CDU ERROR COUNTERS.
+ 0144            CAF    BIT1            DO AN ALARM UNLESS RR JUST TURNED ON.
+ 0145            MASK   RADMODES
+ 0146            CCS    A
+ 0147  2         TCF    +3
+ 0148            TC     ALARM
+ 0149            OCT    501
+ 0150            TC     FIXDELAY
+ 0151  2         DEC    2
+ 0152            CAF    BIT12           MANEUVER TRUNNION ANGLE TO NOMINAL POS.
+ 0153            MASK   RADMODES
+ 0154            CCS    A
+ 0155            CAF    BIT15           0 FOR MODE 1 AND 180 FOR MODE 2.
+ 0156  2         TC     RRTONLY
+ 0157            CAF    BIT12           NOW PUT SHAFT IN RIGHT POSITION.
+ 0158            MASK   RADMODES
+ 0159            CCS    A
+ 0160            CS     HALF            -90 FOR MODE 2.
+ 0161  2         TC     RRSONLY
+ 0162   REPOSRPT CS     BIT11           RETURNS HERE FROM RR1AXIS IF REMODE
+A0163                                   REQUESTED DURING REPOSITION.
+ 0164            MASK   RADMODES        REMOVE REPOSITION BIT.
+ 0165            TS     RADMODES
+ 0166            MASK   BIT10           SEE IF SOMEONE IS WAITING TO DESIGNATE.
+ 0167            CCS    A
+ 0168            TCF    BEGDES
+ 0169            CS     BIT2            IF NO FURTHER ANTENNA CONTROL REQUIRED,
+ 0170            EXTEND                 REMOVE ERROR COUNTER ENABLE.
+ 0171            WAND   12
+ 0172  2         TCF    TASKOVER
+ 0173   SETRRECR CAF    BIT2            SET UP RR ERROR COUNTERS.
+ 0174            EXTEND
+ 0175  2         WOR    12
+ 0176            CAF    ZERO
+ 0177            TS     LASTYCMD
+ 0178            TS     LASTXCMD
+ 0179            TC     Q
+P0180            GENERAL REMODING SUBROUTINE. DRIVES TRUNION TO 0 (180), THEN DR
+ 0181  9IVES SHAFT TO -45, AND FINALLY DRIVES
+R0182   TRUNNION TO -130 (-50) BEFORE INITIATING 2-AXIS CONTROL. ALL RE-MODING I
+ 0183  9S DONE WITH SINGLE AXIS ROTATIONS (SEE
+R01835 2RR1AXIS).
+ 0184   REMODE   CAF    BIT12           DRIVE TRUNNION TO 0 (180).
+ 0185            MASK   RADMODES        (ERROR COUNTER ALREADY ENABLED)
+ 0186            CCS    A
+ 0187            CAF    BIT15
+ 0188  2         TC     RRTONLY
+ 0189            CAF    -45DEGSR
+ 0190  2         TC     RRSONLY
+ 0191            CS     RADMODES
+ 0192            MASK   BIT12
+ 0193            CCS    A
+ 0194            CAF    -80DEGSR        GO TO T = -130 (-50).
+ 0195            AD     -50DEGSR
+ 0196  2         TC     RRTONLY
+ 0197  2         TC     RMODINV
+ 0198            CS     BIT14           END OF REMODE.
+ 0199            MASK   RADMODES
+ 0200  2         TS     RADMODES
+ 0201  2         TC     STDESIG         BEGIN 2-AXIS CONTROL.
+ 0202   -45DEGSR OCT    70000
+ 02025  -50DEGSR DEC    -.27778
+ 0203  2-80DEGSR DEC    -.44444
+ 0204   RMODINV  LXCH   RADMODES        INVERT THE MODE STATUS.
+ 0205            CAF    BIT12
+ 0206            EXTEND
+ 0207            RXOR   L
+ 0208            TS     RADMODES
+ 0209            TC     Q
+P0210  2         SUBROUTINES FOR DOING SINGLE AXIS RR MANEUVERS FOR REMODE AND R
+ 0211  9EPOSITION. DRIVES TO WITHIN 1 DEGREE.
+ 0212   RRTONLY  TS     RDES            DESIRED TRUNION ANGLE.
+ 0213            CAF    ZERO
+ 0214  2         TCF    RR1AXIS
+ 0215   RRSONLY  TS     RDES            SHAFT COMMANDS ARE UNRESOLVED SINCE THIS
+ 0216  2         CAF    ONE             ROUTINE ENTERED ONLY WHEN T = 0 OR 180.
+ 0217   RR1AXIS  TS     RRINDEX
+ 0218            EXTEND
+ 0219            QXCH   RRRET
+ 0220  2         TCF    RR1AX2
+ 0221   NXTRR1AX TC     FIXDELAY
+ 0222  2         DEC    50              2 SAMPLES PER SECOND.
+ 0223   RR1AX2   CS     RADMODES        IF SOMEONE REQUESTES AS DESIGNATE WHICH
+ 0224            MASK   PRIO22          REQUIRES A REMODE AND A REPOSITION IS IN
+ 0225            EXTEND                 PROGRESS, INTERRUPT IT AND START THE
+ 0226  2         BZF    REPOSRPT        REMODE IMMEDIATELY.
+ 0227            CA     RDES
+ 0228            EXTEND
+ 0229            INDEX  RRINDEX
+ 0230            MSU    OPTY
+ 0231            TS     Q               SAVE ERROR SIGNAL.
+ 0232            EXTEND
+ 0233            MP     RRSPGAIN        TRIES TO NULL .7 OF ERROR OVER NEXT .5
+ 0234            TS     L
+ 0235            CA     Q               SEE IF WITHIN 1 DEGREE.
+ 0236            TC     MAGSUB
+ 0237  2         DEC    -.00555         SCALED IN HALF-REVS.
+ 0238            TCF    +2              NO.
+ 0239  2         TC     RRRET           RETURN TO CALLER.
+ 0240            CCS    RRINDEX         COMMAND FOR OTHER AXIS IS ZERO.
+ 0241            TCF    +2              SETTING A TO 0.
+ 0242            XCH    L
+ 0243  2         DXCH   TANG
+ 0244  2         TC     RROUT
+ 0245  2         TCF    NXTRR1AX        COME BACK IN .5 SECONDS.
+ 0246   RRSPGAIN DEC    .59062          NULL .7 ERROR IN .5 SEC.
+P0247            THE FOLLOWING ROUTINE RECEIVES RR GYRO COMMANDS IN TANG,+1 IN E
+ 0248  9RROR COUNTER SCALING. RROUT LIMITS THEM
+R0249  2AND GENERATES COMMANDS TO THE CDU TO ADJUST THE ERROR COUNTERS TO THE DE
+ 0250  9SIRED VALUES. RUPT MUST BE INHIBITED.
+ 0251   RROUT    LXCH   Q               SAVE RETURN.
+ 0252            CAF    ONE             LOOP TWICE.
+ 0253   RROUT2   TS     ITEMP2
+ 0254            INDEX  A
+ 0255            CA     TANG
+ 0256  2         TS     ITEMP1          SAVE SIGN OF COMMAND FOR LIMITING.
+ 0257            TC     MAGSUB          SEE IF WITHIN LMITS.
+ 0258   -RRLIMIT DEC    -384
+ 0259  2         TCF    RROUTLIM        LIMIT COMMAND TO MAG OF 384.
+ 0260   SETRRCTR CA     ITEMP1          COUNT OUT DIFFERENCE BETWEEN DESIRED
+ 0261            INDEX  ITEMP2          STATE AND PRESENT STATE AS RECORDED IN
+ 0262            XCH    LASTYCMD        LASTYCMD AND LASTXCMD
+ 0263            COM
+ 0264            AD     ITEMP1
+ 02645           AD     NEG0
+ 0265            INDEX  ITEMP2
+ 0266  2         TS     OPTYCMD
+ 0267            CCS    ITEMP2          PROCESS BOTH INPUTS.
+ 0268  2         TCF    RROUT2
+ 0269            CAF    PRIO6           ENABLE COUNTERS.
+ 0270            EXTEND
+ 0271  2         WOR    14
+ 0272  2         TC     L               RETURN.
+ 0273   RROUTLIM CCS    ITEMP1          LIMIT COMMAND TO ABS VAL OF 384.
+ 0274            CS     -RRLIMIT
+ 0275            TCF    +2
+ 0276            CA     -RRLIMIT
+ 0277            TS     ITEMP1
+ 0278            TCF    SETRRCTR +1
+P0279  2         ROUTINE TO ZERO THE RR CDUS AND DETERMINE THE ANTENNA MODE.
+ 0280   RRZERO   INHINT
+ 0281            CS     RRUSEFLG        SET FLAG TO SHOW SOMEONE USING THE RR.
+ 0282            MASK   STATE
+ 0283            AD     RRUSEFLG
+ 0284  2         TS     STATE
+ 0285            CAF    BIT1            SEE IF RR COMING UP. IF SO, TURNON
+ 0286            MASK   RADMODES        PROGRAM WILL DO THE WORK.
+ 0287            CCS    A
+ 0288  2         TCF    ROADBACK
+ 0289            CAF    BIT11           SEE IF MONITOR REPOSITION IN PROGRESS.
+ 0290            MASK   RADMODES        IF SO, DONT RE-ZERO CDUS.
+ 0291            CCS    A
+ 0292  2         TCF    RADNOOP         (IMMEDIATE TASK TO RGOODEND).
+ 0293            CS     BIT13           SET FLAG TO SHOW ZEROING IN PROGRESS.
+ 0294            MASK   RADMODES
+ 0295            AD     BIT13
+ 0296  2         TS     RADMODES
+ 0297            CAF    ONE
+ 0298            TC     WAITLIST
+ 02985           EBANK= RRRET
+ 0299            2CADR  RRZ2
+ 0300            CS     RADMODES        SEE IF IN AUTO MODE.
+ 0301            MASK   BIT2
+ 0302            CCS    A
+ 0303            TCF    ROADBACK
+ 0304            TC     ALARM           AUTO DISCRETE NOT PRESENT - TRYING
+ 0305            OCT    510
+ 0306   ROADBACK RELINT
+ 0307  2         TCF    SWRETURN
+ 0308   RRZ2     TC     RRZEROSB        COMMON TO TURNON AND RRZERO.
+ 0309  2         TCF    ENDRADAR
+ 0310   RRUSEFLG EQUALS BIT7
+ 0311   LOKONFLG EQUALS BIT5
+P0312            STABLE-MEMBER RR DESIGNATE ROUTINE. DESIGNATE TO A SM LOS VECTO
+ 0313  9R (HALF-UNIT) IN RRTARGET. REMODES IF
+R0314  2REQUIRED. RETURNS TO CALLER IF MANEUVER REQUIRED FOR DES AND SKIPS IF IT
+ 0315  9 CAN BE DONE IN PRESENT VEH ATTITUDE.
+ 0316   RRDESSM  STQ    CLEAR
+ 0317                   DESRET
+ 0318                   RRNBSW
+ 0319            RTB    SSP             READ CDUS FOR SMNB.
+ 0320                   READCDUS
+ 0321                   S1
+ 0322                   20D
+ 0323            STOVL  20D
+ 0324                   RRTARGET
+ 0325            STCALL 32D
+ 0326  2                SMNB
+ 0327            CALL                   GET RR GIMBAL ANGLES IN PRESENT AND
+ 0328                   RRANGLES        ALTERNATE MODE.
+ 0329  2         EXIT
+ 0330            INHINT
+ 0331            TC     RRLIMCHK
+ 0332            ADRES  MODEA           CONFIGURATION FOR CURRENT MODE.
+ 0333  2         TCF    TRYSWS
+ 0334   OKDESSM  INCR   DESRET          INCREMENT SAYS NO VEHICLE MANEUVER REQ.
+P0335            AT THIS POINT WE ARE READY TO BEGIN DESIGNATION. THE TARGET IS
+ 0336  9STORED AS A HALF-UNIT VECTOR IN RRTARGET
+R0337   WITH RRNBSW SET IF IT IS REFERRED TO NAV BASE AXES. LOKONSW IS SET IF LO
+ 0338  9CKON IS DESIRED. BIT14 OF RADMODES IS
+R0339   SET IF A REMODE IS REQUIRED. AT THIS TIME, THE ANTENNA MAY BE IN A MONIT
+ 0340  9OR REPOSITION OPERATION. IN THIS
+R0341   CASE, IF A REMODE IS REQUIRED IT MAY HAVE ALREADY BEGUN BUT IT ANY CASE
+ 0342  9THE REPOSITION WILL BE INTERRUPTED.
+R0343  2OTHERWISE, THE REPOSITION WILL BE COMPLETED BEFORE 2-AXIS DESIGNATION BE
+ 0344  9GINS.
+ 0345   STARTDES CAF    MAXTRIES        ALLOW 30 SECS.
+ 0346  2         TS     DESCOUNT
+ 0347            CAF    BIT10           SHOW DESIGNATE REQUIRED.
+ 0348            ADS    RADMODES
+ 0349            MASK   BIT11           SEE IF REPOSITION IN PROGRESS.
+ 0350            CCS    A
+ 0351  2         TCF    DESRETRN        ECTR ALREADY SET UP.
+ 0352  2         TC     SETRRECR        SET UP ERROR COUNTERS.
+ 0353            CAF    TWO
+ 0354            TC     WAITLIST
+ 03545           EBANK= RRRET
+ 0355            2CADR  BEGDES
+ 0356   DESRETRN RELINT                 RETURN VIA DESRET
+ 0357    +1      CA     DESRET
+ 0358  2         TCF    BANKJUMP
+ 0359   MAXTRIES DEC    60
+P0360  2         SEE IF RRDESSM CAN BE ACCOMPLISHED AFTER A REMODE.
+ 0361   TRYSWS   TC     RMODINV         (NOTE RUPT INHIBIT)
+ 0362            TC     RRLIMCHK        TRY DIFFERENT MODE.
+ 0363            ADRES  MODEB
+ 0364  2         TCF    NODESSM         VEHICLE MANEUVER REQUIRED.
+ 0365            TC     RMODINV         RESET BIT12
+ 0366            CAF    BIT14           SET FLAG FOR REMODE.
+ 0367  2         ADS    RADMODES
+ 0368  2         TCF    OKDESSM
+ 0369   NODESSM  TC     RMODINV         RE-INVERT MODE AND RETURN WITHOUT IN-
+ 0370            TCF    DESRETRN        CREMENTING DESRET
+P0371            DESIGNATE TO SPECIFIC RR GIMBAL ANGLES (INDEPENDENT OF VEHICLE
+ 0372  9MOTION). ENTER WITH DESIRED ANGLES IN
+R0373  2TANG AND TANG +1.
+ 0374   RRDESNB  TC     MAKECADR
+ 0375  2         TS     DESRET
+ 0376            INHINT                 SEE IF CURRENT MODE OK.
+ 0377            TC     RRLIMCHK
+ 0378            ADRES  TANG
+ 0379  2         TCF    TRYSWN          SEE IF IN OTHER MODE.
+ 0380   OKDESNB  RELINT
+ 0381  2         TC     INTPRET
+ 0382            CALL                   GET LOS IN NB COORDS.
+ 0383                   RRNB
+ 0384  2         STORE  RRTARGET
+ 0385            SET    EXIT
+ 0386  2                RRNBSW
+ 0387            INHINT
+ 0388  2         TCF    STARTDES
+ 0389   TRYSWN   TC     RMODINV         SEE IF OTHER MODE WILL DO.
+ 0390            TC     RRLIMCHK
+ 0391            ADRES  TANG
+ 0392  2         TCF    NODESNB         NOT POSSIBLE.
+ 0393            TC     RMODINV
+ 0394            CAF    BIT14           CALL FOR REMODE.
+ 0395            ADS    RADMODES
+ 0396  2         TCF    OKDESNB
+ 0397   NODESNB  CAF    BIT1            CALL FOR ERROR RETURN.
+ 0398            TC     WAITLIST
+ 03985           EBANK= RRRET
+ 0399            2CADR  RDBADEND
+ 0400            TC     RMODINV
+ 0401            TC     ALARM           BAD GIMBAL ANGLE INPUTS.
+ 0402            OCT    502
+ 0403            TCF    DESRETRN +1     ALARM DID A RELINT.
+P0404  2         WAITLIST TASKS TO RUN RR DESIGNATION.
+ 0405   BEGDES   CAF    BIT14           ENTER HERE FROM STARTDES OR REPOSRPT.
+ 0406            MASK   RADMODES        SEE IF REMODE REQUIRED.
+ 0407            CCS    A
+ 0408            TCF    REMODE
+ 0409  2         TCF    STDESIG
+ 0410   DESLOOP  TC     FIXDELAY        2 SAMPLES PER SECOND.
+ 0411  2         DEC    50
+ 0412   STDESIG  CAF    BIT11           ENTRY FROM BEGDES AND REMODE.
+ 0413            MASK   RADMODES        SEE IF GIMBAL LIMIT MONITOR HAS FOUND US
+ 0414            CCS    A               OUT OF BOUNDS. IF SO, THIS BIT SHOWS A
+ 0415  2         TCF    BADDES          REPOSITION TO BE IN PROGRESS.
+ 0416            CCS    RADMODES        SEE IF CONTINUOUS DESIGNATE WANTED.
+ 0417            TCF    +3              IF SO, DONT CHECK BIT 10 TO SEE IF IN
+ 0418            TCF    +2              LIMITS BUT GO RIGHT TO FINDVAC ENTRY.
+ 0419  2         TCF    MOREDES +1
+ 0420            CS     RADMODES        IF NON-CONTINUOUS, SEE IF END OF
+ 0421            MASK   BIT10           PROBLEM (DATA GOOD IF LOCK-ON WANTED OR
+ 0422            CCS    A               WITHIN LIMITS IF NOT). IF SO, EXIT AFTER
+ 0423  2         TCF    ENDRADAR        CHECKING RR CDU FAIL.
+ 0424            CCS    DESCOUNT        SEE IF TIME LIMIT HAS EXPIRED.
+ 0425  2         TCF    MOREDES
+ 0426            TC     ALARM           OUT OF TIME.
+ 0427            OCT    503
+ 0428            CS     B14+B2          IF OUT OF TIME, REMOVE ECR ENABLE + TRKR
+ 0429            EXTEND
+ 0430            WAND   12
+ 0431   BADDES   CS     BIT10           REMOVE DESIGNATE FLAG.
+ 0432            MASK   RADMODES
+ 0433            TS     RADMODES
+ 0434  2         TCF    RDBADEND
+ 0435   MOREDES  TS     DESCOUNT
+ 0436            CAF    PRIO26          UPDATE GYRO TORQUE COMMANDS.
+ 0437            TC     FINDVAC
+ 04375           EBANK= RRRET
+ 0438            2CADR  DODES
+ 0439  2         TCF    DESLOOP
+ 0440   B14+B2   OCT    20002
+P0441  2         CALCULATE GYRO TORQUE COMMANDS.
+ 0442   DODES    EXTEND
+ 0443            DCA    OPTY
+ 0444  2         DXCH   TANG
+ 0445  2         TC     INTPRET
+ 0446            VLOAD                  MOVE TARGET VECTOR TO 32D.
+ 0447                   RRTARGET
+ 0448  2         STORE  32D
+ 0449            BON    RTB             DO STABLE-MEMBER TO NAVBASE TRANSFORMA-
+ 0450                   RRNBSW          TION IF TARGET IN SM COORDS. OTHERWISE,
+ 0451                   DONBRD          IN NB COORDS ALREADY.
+ 0452  2                READCDUS
+ 0453            SSP
+ 0454                   S1
+ 0455                   20D             LOC OF ICDUS.
+ 0456            STCALL 20D
+ 0457  8                SMNB
+ 0458   DONBRD   SETPD  SLOAD           DO NAVBASE TO RADAR DISH TRANSFORMATION.
+ 0459                   0
+ 0460                   TANG +1
+ 0461            RTB    PUSH            SHAFT COMMAND = V(32D).(COS(S), 0,
+ 0462                   CDULOGIC             (-SIN(S)).
+ 0463            SIN    PDDL            SIN(S) TO 0 AND COS(S) TO 2.
+ 0464            COS    PUSH
+ 0465            DMP    PDDL
+ 0466                   32D
+ 0467                   36D
+ 0468            DMP    BDSU
+ 0469                   0
+ 0470            STADR
+ 0471  2         STORE  TANG +1         SHAFT COMMAND
+ 0472            SLOAD  RTB
+ 0473                   TANG
+ 0474                   CDULOGIC
+ 0475            PUSH   COS             COS(T) TO 4.
+ 0476            PDDL   SIN
+ 0477            PUSH   DMP             SIN(T) TO 6.
+ 0478                   2
+ 0479            SL1    PDDL            DEFINE VECTOR U = (SIN(T)SIN(S))
+ 0480                   4                                 (COS(T)      )
+ 0481            PDDL   DMP                               (SIN(T)COS(S))
+ 0482                   6
+ 0483                   0
+ 0484            SL1    VDEF
+ 0485            DOT    EXIT            DOT U WITH LOS TO GET TRUNNION COMMAND.
+ 0486                   32D
+P0487            AT THIS POINT WE HAVE A ROTATION VECTOR IN DISH AXES LYING IN T
+ 0488  9HE TS PLANE. CONVERT THIS TO A
+R0489  2COMMANDED RATE AND ENABLE THE TRACKER IF WE ARE WITHIN 1 DEGREE OF THE T
+ 0490  9ARGET.
+ 0491            CS     MPAC            DOT WAS NEGATIVE OF DESIRED ANGLE.
+ 0492  2         TS     TANG
+ 0493            CS     RADMODES        A RELAY IN THE RR REVERSES POLARITY OF
+ 0494            MASK   BIT12           THE SHAFT COMMANDS IN MODE 2 SO THAT A
+ 0495            CCS    A               POSITIVE TORQUE APPLIED TO THE SHAFT
+ 0496  2         TCF    +3              GYRO CAUSES A POSITIVE CHANGE IN THE
+ 0497            CS     TANG +1         SHAFT ANGLE. COMPENSATE FOR THIS SWITCH
+ 0498  2         TS     TANG +1         BY CHANGING THE POLARITY OF OUR COMMAND.
+ 0499            CAF    ZERO
+ 0500            TS     MPAC +1
+ 0501  2         CAF    ONE
+ 0502   RRSCALUP TS     MPAC
+ 0503            INDEX  A
+ 0504            CA     TANG            TRUNNION COMPONENT OF ROTATION.
+ 0505            EXTEND
+ 0506            MP     RDESGAIN        SCALING ON INPUT ANGLE WAS 4 RADIANS.
+ 0507            INDEX  MPAC
+ 0508            XCH    TANG            MAKE EACH COMPONENT LESS THAN .7 DEGREES
+ 0509            TC     MAGSUB          BEFORE SENDING TRACK ENABLE.
+ 0510            DEC    -.00305
+ 0511  2         INCR   MPAC +1         IF OUT OF BOUNDS.
+ 0512            CCS    MPAC
+ 0513            TCF    RRSCALUP
+P0514  2         SEE IF TRACKER SHOULD BE ENABLED OR DISABLED.
+ 0515  2         INHINT
+ 0516            CCS    RADMODES        IF CONTINUOUS DESIGNATE WANTED, PUT OUT
+ 0517            TCF    +3              COMMANDS WITHOUT CHECKING MAGNITUDE OF
+ 0518            TCF    +2              ERROR SIGNALS.
+ 0519  2         TCF    TRKOFF
+ 0520            CCS    MPAC +1         SEE IF BOTH AXES WERE WITHIN .7 DEGS.
+ 0521  2         TCF    TRKOFF
+ 0522            CS     STATE           IF WITHIN LIMITS AND NO LOCK-ON WANTED,
+ 0523            MASK   LOKONFLG        PROBLEM IS FINISHED.
+ 0524            CCS    A
+ 0525  2         TCF    RRDESDUN
+ 0526            CAF    BIT14           ENABLE THE TRACKER.
+ 0527            EXTEND
+ 0528  2         WOR    12
+ 0529            CAF    BIT4            SEE IF DATA GOOD RECEIVED YET.
+ 0530            EXTEND
+ 0531            RAND   33
+ 0532            CCS    A
+ 0533  2         TCF    DORROUT
+ 0534   RRDESDUN CS     BIT10           WHEN PROBLEM DONE, REMOVE BIT 10 SO NEXT
+ 0535            MASK   RADMODES        WAITLIST TASK WE WILL GO TO RGOODEND.
+ 0536  2         TS     RADMODES
+ 0537            CS     BIT2
+ 0538            EXTEND
+ 0539            WAND   12
+ 0540  2         TCF    ENDOFJOB        WITH ECTR DISABLED.
+ 0541   TRKOFF   CS     BIT14
+ 0542            EXTEND
+ 0543  2         WAND   12
+ 0544   DORROUT  CS     RADMODES        PUT OUT COMMAND UNLESS MONITOR
+ 0545            MASK   BIT11           REPOSITION HAS TAKEN OVER.
+ 0546            CCS    A
+ 0547  2         TC     RROUT
+ 0548  2         TCF    ENDOFJOB
+ 0549   RDESGAIN DEC    .53624          TRIES TO NULL .5 ERROR IN .5 SEC.
+P0550  2RADAR READ INITIALIZATION
+R0551  4RADAR DATA ARE READ BY A BANKCALL FOR THE APPROPRIATE LEAD-IN BELOW.
+ 0552   LRALT    TC     INITREAD -1     ONE SAMPLE PER READING.
+ 0553  2ALLREAD  OCT    17
+ 0554   LRVELZ   TC     INITREAD
+ 0555  2         OCT    16
+ 0556   LRVELY   TC     INITREAD
+ 0557  2         OCT    15
+ 0558   LRVELX   TC     INITREAD
+ 0559  2         OCT    14
+ 0560   RRRDOT   TC     INITREAD -1
+ 0561  2         OCT    12
+ 0562   RRRANGE  TC     INITREAD -1
+ 0563  8         OCT    11
+ 0564    -1      CAF    ONE             ENTRY TO TAKE ONLY 1 SAMPLE.
+ 0565  2INITREAD INHINT
+ 0566            TS     TIMEHOLD        GET DT OF MIDPOINT OF NOMINAL SAMPLING
+ 0567            EXTEND                 INTERVAL (ASSUMES NO BAD SAMPLES WILL BE
+ 0568            MP     BIT3            ENCOUNTERED).
+ 0569  2         DXCH   TIMEHOLD
+ 0570            CCS    A
+ 0571            TS     NSAMP
+ 0572            AD     ONE
+R0573            INSERT FOLLOWING INSTRUCTION TO GET 2N TRIES FOR N SAMPLES.
+A0574            DOUBLE
+ 0575  2         TS     SAMPLIM
+ 0576            CAF    DGBITS          READ CURRENT VALUE OF DATA GOOD BITS.
+ 0577            EXTEND
+ 0578            RAND   33
+ 0579  2         TS     OLDATAGD
+ 0580            CS     ALLREAD
+ 0581            EXTEND
+ 0582  2         WAND   13              REMOVE ALL RADAR BITS
+ 0583            INDEX  Q
+ 0584            CAF    0
+ 0585            EXTEND
+ 0586  2         WOR    13              SET NEW RADAR BITS
+ 0587            EXTEND
+ 0588            DCA    TIME2
+ 0589  2         DAS    TIMEHOLD        TIME OF NOMINAL MIDPOINT.
+ 0590            CAF    ZERO
+ 0591            TS     L
+ 0592            DXCH   SAMPLSUM
+ 0593  2         TCF    ROADBACK
+ 0594   DGBITS   OCT    230
+P0595  2RADAR RUPT READER
+R0596  2THIS ROUTINE STARTS FROM A RADARUPT. IT READS THE DATA $ LOTS MORE.
+ 0597   RADAREAD TS     BANKRUPT
+ 0598            EXTEND
+ 0599  2         QXCH   QRUPT
+ 0600   ANGLREAD EXTEND
+ 0601            DCA    OPTY
+ 0602  2         DXCH   OPTYHOLD        SAVE RAW CDU ANGLES
+ 0603   TRYCOUNT CCS    SAMPLIM
+ 0604            TCF    PLENTY
+ 0605            TCF    NOMORE
+ 0606            TC     ALARM
+ 0607            OCT    520
+ 0608  2         TC     RESUME
+ 0609   NOMORE   TC     ALARM
+ 0610            OCT    521
+ 0611   BADRAD   CS     ONE
+ 0612            TS     SAMPLIM
+ 0613  2         TC     RDBADEND -2
+ 0614   PLENTY   TS     SAMPLIM
+ 0615            CAF    BIT3
+ 0616            EXTEND
+ 0617            RAND   13              TO FIND OUT WHICH RADAR
+ 0618            EXTEND
+ 0619  2         BZF    RENDRAD
+ 0620   LRPOSCHK CA     RADMODES        SEE IF LR IN DESIRED POSITION.
+ 0621            EXTEND
+ 0622            RXOR   33
+ 0623            MASK   BIT6
+ 0624            EXTEND
+ 0625  2         BZF    VELCHK
+ 0626            TC     ALARM
+ 0627            OCT    522
+ 0628  2         TC     BADRAD
+ 0629   VELCHK   CAF    BIN3            = 00003 OCT
+ 0630            EXTEND
+ 0631            RXOR   13
+ 0632            MASK   BIN3
+ 0633            EXTEND
+ 0634  2         BZF    LRHEIGHT        TAKE A LR RANGE READING
+ 0635            CAF    POSMAX
+ 0636            MASK   RNRAD
+ 0637            AD     LVELBIAS
+ 0638            TS     L
+ 0639            CAE    RNRAD
+ 0640            DOUBLE
+ 0641            MASK   BIT1
+ 0642  2         DXCH   ITEMP3
+ 0643            CAF    BIT8            DATA GOOD ISNT CHECKED UNTIL AFTER READ-
+ 0644            TC     DGCHECK         ING DATA SO SOME RADAR TESTS WILL WORK
+A0645  2                                INDEPENDENT OF DATA GOOD.
+ 0646            CCS    NSAMP
+ 0647            TC     NOEND
+ 0648   GOODRAD  CS     ONE
+ 0649            TS     SAMPLIM
+ 0650            CS     ITEMP1          WHEN ENOUGH GOOD DATA HAS BEEN GATHERED,
+ 0651            MASK   RADMODES        RESET DATA FAIL FLAGS FOR SETTRKF.
+ 0652            TS     RADMODES
+ 0653            TC     SETTRKF         LAMP MIGHT GO OFF IF DATA JUST GOOD.
+ 0654  2         TC     RGOODEND -2
+ 0655   NOEND    TS     NSAMP
+ 0656   RESAMPLE CCS    SAMPLIM         SEE IF ANY MORE TRIES SHOULD BE MADE.
+ 0657            TCF    +2
+ 0658            TCF    DATAFAIL        N SAMPLES NOT AVAILABLE.
+ 0659            CAF    BIT4            RESET ACTIVITY BIT.
+ 0660            EXTEND
+ 0661            WOR    13              RESET ACTIVITY BIT
+ 0662  4         TC     RESUME
+ 0663   LRHEIGHT CAF    BIT5
+ 0664  2         TS     ITEMP1          (POSITION OF DATA GOOD BIT IN CHAN 33)
+ 0665            CAF    BIT9
+ 0666  2         TC     SCALECHK -1
+ 0667   RENDRAD  CAF    BIT11           MAKE SURE ANTENNA HAS NOT GONE OUT OF
+ 0668            MASK   RADMODES        LIMITS.
+ 0669            CCS    A
+ 0670  2         TCF    BADRAD
+ 0671            CS     RADMODES        BE SURE RR CDU HASNT FAILED.
+ 0672            MASK   BIT7
+ 0673            CCS    A
+ 0674  2         TCF    BADRAD
+ 0684            CAF    BIT4            SEE IF DATA HAS BEEN GOOD.
+ 0685  2         TS     ITEMP1          (POSITION OF DATA GOOD BIT IN CHAN 33)
+ 0686            CAF    BIT1            SEE IF RR RDOT.
+ 0687            EXTEND
+ 0688            RAND   13
+ 0689            TS     Q               FOR LATER TESTING.
+ 0690            CCS    A
+ 0691            TCF    +2
+ 0692            TCF    RADIN           NO SCALE CHECK FOR RR RDOT.
+ 0693            CAF    BIT3
+ 0694  2         TS     L
+ 0695   SCALECHK EXTEND
+ 0696            RAND   33              SCALE STATUS NOW
+ 0697            XCH    L
+ 0698            MASK   RADMODES        SCALE STATUS BEFORE
+ 0699            EXTEND
+ 0700            RXOR   01              SEE IF THEY DIFFER
+ 0701            CCS    A
+ 0702  2         TC     SCALCHNG        THEY DIFFER
+ 0703   RADIN    CAF    POSMAX
+ 0704            MASK   RNRAD
+ 0705  2         TS     ITEMP4
+ 0706            CAE    RNRAD
+ 0707            DOUBLE
+ 0708            MASK   BIT1
+ 0709  2         TS     ITEMP3
+ 0710            CCS    Q               SEE IF RR RDOT.
+ 0711  2         TCF    SCALADJ         NO, BUT SCALE CHANGING MAY BE NEEDED.
+ 0712            EXTEND                 IF RR RANGE RATE, THROW OUT BIAS.
+ 0713            DCS    RDOTBIAS
+ 0714   DASAMPL  DAS    ITEMP3
+ 0715   DGCHECK2 CA     ITEMP1          SEE THAT DATA HAS BEEN GOOD BEFORE AND
+ 0716            TC     DGCHECK +1      AFTER TAKING SAMPLE.
+ 0717  2         TC     GOODRAD
+ 0718   SCALCHNG LXCH   RADMODES
+ 0719            AD     BIT1
+ 0720            EXTEND
+ 0721            RXOR   01
+ 0722            TS     RADMODES
+ 0723            CAF    DGBITS          UPDATE LAST VALUE OF DATA GOOD BITS.
+ 0724            EXTEND
+ 0725            RAND   33
+ 0726            TS     OLDATAGD
+ 0727            TCF    BADRAD
+P0728  2         THE FOLLOWING ROUTINE INCORPORATES RR RANGE AND LR ALT SCALE IN
+ 0729  9FORMATION AND LEAVES DATA AT LO SCALE.
+ 0730   SCALADJ  CCS    L               L HAS SCALE INBIT FOR THIS RADAR.
+ 0731            TCF    +2              ON HIGH SCALE.
+ 0732  2         TCF    DGCHECK2
+ 0733            DXCH   ITEMP3
+ 0734            DDOUBL
+ 0735            DDOUBL
+ 0736            DDOUBL
+ 0737  2         DXCH   ITEMP3
+ 0738            CAF    BIT3            SEE IF LR OR RR.
+ 0739            EXTEND
+ 0740            RAND   13
+ 0741            EXTEND                 IF RR, NO MORE ACTION REQUIRED.
+ 0742  2         BZF    DGCHECK2
+ 0743            CAF    LRRATIO         IF LR, CONVERT TO LO SCALING.
+ 0744            EXTEND
+ 0745            MP     ITEMP4
+ 0746            TS     ITEMP4
+ 0747            CAF    ZERO            (SO SUBSEQUENT DAS WILL BE OK)
+ 0748            XCH    ITEMP3
+ 0749            EXTEND
+ 0750            MP     LRRATIO
+ 0751  8         TCF    DASAMPL
+ 0752   DGCHECK  TS     ITEMP1          UPDATE DATA GOOD BIT IN OLDATAGD AND
+ 0753            EXTEND                 MAKE SURE IT WAS ON BEFORE AND AFTER THE
+ 0754            RAND   33              SAMPLE WAS TAKEN BEFORE RETURNING. IF
+ 0755            TS     L               NOT, GOES TO RESAMPLE TO TRY AGAIN. IF
+ 0756            CS     ITEMP1          MAX NUMBER OF TRIES HAS BEEN REACHED,
+ 0757            MASK   OLDATAGD        THE BIT CORRESPONDING TO THE DATA GOOD
+ 0758            AD     L               WHICH FAILED TO APPEAR IS IN ITEMP1 AND
+ 0759            XCH    OLDATAGD        CAN BE USED TO SET RADMODES WHICH VIA
+ 0760            MASK   ITEMP1          SETTRKF SETS THE TRACKER FAIL LAMP.
+ 0761            AD     L
+ 0762            CCS    A               SHOULD BOTH BE ZERO.
+ 0763            TC     RESAMPLE
+ 0764            DXCH   ITEMP3          IF DATA GOOD BEFORE AND AFTER, ADD TO
+ 0765            DAS    SAMPLSUM        ACCUMULATION.
+ 0766  2         TC     Q
+ 0767   DATAFAIL CS     ITEMP1          IN THE ABOVE CASE, SET RADMODES BIT
+ 0768            MASK   RADMODES        SHOWING SOME RADAR DATA FAILED.
+ 0769            AD     ITEMP1
+ 0770  2         TS     RADMODES
+ 0771            DXCH   ITEMP3          IF WE HAVE BEEN UNABLE TO GATHER N
+ 0772  2         DXCH   SAMPLSUM        SAMPLES, USE LAST ONE ONLY.
+ 0773  2         TC     SETTRKF
+ 0774  2         TCF    NOMORE
+ 0775   LRRATIO  DEC    4.9977 B -3
+ 0776   LVELBIAS DEC    -12288          LANDING RADAR BIAS FOR 153.6 KC.
+ 0777   RDOTBIAS 2DEC   17000           BIAS COUNT FOR RR RANGE RATE
+P0778  2THIS ROUTINE CHANGES THE LR POSITION, AND CHECKS THAT IT GOT THERE.
+ 0779  2LRPOS2   INHINT
+ 0780            CS     BIT6            DESIRED LR POSITION IS NOW 2.
+ 0781            MASK   RADMODES
+ 0782            AD     BIT6
+ 0783  2         TS     RADMODES
+ 0784            CAF    BIT7
+ 0785            EXTEND
+ 0786            RAND   33              SEE IF ALREADY THERE.
+ 0787            EXTEND
+ 0788  2         BZF    RADNOOP
+ 0789            CAF    BIT13
+ 0790            EXTEND
+ 0791  2         WOR    12              COMMAND TO POSITION 2
+ 0792            CAF    6SECS           START SCANNING FOR INBIT AFTER 7 SECS.
+ 0793            TC     WAITLIST
+ 07935           EBANK= RRRET
+ 0794            2CADR  LRPOSCAN
+ 0795  2         TC     ROADBACK
+ 07960  LRPOSNXT TS     SAMPLIM
+ 07965           TC     FIXDELAY        SCAN ONCE PER SECOND 15 TIMES MAX AFTER
+ 07970 2         DEC    100             INITIAL DELAY OF 7 SECONDS.
+ 07975           CAF    BIT7
+ 07980           EXTEND
+ 07985           RAND   33
+ 07990           EXTEND
+ 08000 2         BZF    LASTLRDT        IF THERE, WAIT FINAL SECOND FOR BOUNCE.
+ 08005           CCS    SAMPLIM         SEE IF MAX TIME UP.
+ 08010 2         TCF    LRPOSNXT
+ 08020           CS     BIT13           IF TIME UP, DISABLE COMMAND AND ALARM.
+ 08025           EXTEND
+ 0803  2         WAND   12
+ 0804            TC     ALARM           LR ANTENNA DIDNT MAKE IT.
+ 0805            OCT    523
+ 0806  2         TCF    RDBADEND
+ 0807   RADNOOP  CAF    ONE             NO FURTHER ACTION REQUESTED.
+ 0808            TC     WAITLIST
+ 08085           EBANK= RRRET
+ 0809            2CADR  RGOODEND
+ 0810  2         TC     ROADBACK
+ 0811   LASTLRDT TC     FIXDELAY        WAIT ONE SECOND AFTER RECEIPT OF INBIT
+ 08111 2         DEC    100             TO WAIT FOR ANTENNA BOUNCE TO DIE OUT.
+ 08112           CS     BIT13           REMOVE COMMAND
+ 08113           EXTEND
+ 08114           WAND   12
+ 08115 2         TCF    RGOODEND
+ 08116  LRPOSCAN CAF    BIT5            SET UP FOR 15 SAMPLES.
+ 08117 2         TCF    LRPOSNXT
+ 08118  6SECS    DEC    600
+P0812  2         SEQUENCES TO TERMINATE RR OPERATIONS.
+ 0813   ENDRADAR CAF    BIT7            PROLOG TO CHECK RR CDU FAIL BEFORE END.
+ 0814            MASK   RADMODES
+ 0815            CCS    A
+ 0816            TCF    RGOODEND
+ 0817            TCF    RDBADEND
+ 0818    -2      CS     ZERO            RGOODEND WHEN NOT UNDER WAITLIST CONTROL
+ 0819  2         TS     RUPTAGN
+ 0820   RGOODEND CAF    TWO
+ 0821            TC     POSTJUMP
+ 0822  2         CADR   GOODEND
+ 0823    -2      CS     ZERO            RDBADEND WHEN NOT UNDER WAITLIST.
+ 0824            TS     RUPTAGN
+ 0825   RDBADEND CAF    TWO
+ 0826            TC     POSTJUMP
+ 0827  2         CADR   BADEND
+ 0828   BIN3     EQUALS THREE
 *       ENDOFJOB
