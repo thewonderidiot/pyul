@@ -10258,4 +10258,292 @@ A0484  4                                (RETURNS HERE)
  05544           MASK   FLAGWRD1        A RESTART TO YIELD A FAKESTRT.
  05546           TS     FLAGWRD1
  0555   WHIMPER  TCF    WHIMPER
+L      2UPDATE PROGRAM PART 1 OF 2
+R00010  PROGRAM NAME- UPDATE PROGRAM
+R000105 PROGRAM WRITTEN BY- RHODE
+R00011  MOD NO.- 2
+R00012  MOD BY- KILROY TO ADD AGC CLOCK AND TE(V75E4ETTTTTE) UPDATE FEATURE.
+R00013  DATE- 01FEB67
+R00014  LOG SECTIONS- UPDATE PROGRAM PART 1 OF 2
+R00015                UPDATE PROGRAM PART 2 OF 2
+R00016  ASSEMBLY- REV 93 OF SUNBURST
+R00017  FUNCTIONAL DESCRIPTION- TO PROCESS COMMANDS AND DATA INSERTIONS
+R00018           REQUESTED BY THE GROUND VIA UPLINK.
+R00019           VERBS V64, V67, V70, V71, V72, V73, V75 AND V76 WILL NOT BE
+R00020           PROCESSED IF THE MISSION TIMERS ARE DISABLED(I.E. AN MP IS IN
+R00021           PROGRESS). OPERATOR ERROR LIGHT WILL BE TURNED ON.
+R00022           V65, V66 AND V74 WILL BE PROCESSED EVEN IF A MP IS IN PROGRESS
+R00025  CALLING SEQUENCE- TCF XXUPDAT   WHERE XX = EXTENDED VERBS(64 TO 76)
+R00026                                  LST2FAN CONTAINS A LIST OF TCF XXUPDAT
+R00027                                  WHICH ARE USED BY VERBFAN IN PINBALL TO
+R00028                                  GIVE CONTROL TO THE UPDATE PROGRAM.
+R00029  SUBROUTINES CALLED- POSTJUMP,IBNKCALL, BANKCALL, CHECKMM, GRABWAIT,
+R00030           NEWMODEX, FREEDSP, WAITLIST, ENDOFJOB, NOVAC, TASKOVER, FINDVAC
+R00031           ENDUP, DOV67, DOV70, DOV71, DOV72, DOV73, DOV74, DFITMCAL,
+R00032           GRRPLACE, NVSBWAIT, ENDIDLE, XACTALM, MGETUP, UPDATINT, TPAGREE
+R00033  NORMAL EXIT MODE- TC    BANKCALL
+R00034                    CADR  ENDUP
+R00035  ALARM OR ABORT EXIT MODE- BZF   XACTALM    IF MP IN PROGRESS
+R00036
+R00037                            TC    BANKCALL   IF MP IN PROGRESS
+R00038                            CADR  XACTALM
+R00039  RESTART PROTECTION- NONE FOR VERBS 64 TO 74. RESTART PROTECTION IS
+R00040           INCLUDED FOR V75 AND V76 UNDER THE FOLLOWING CIRCUMSTANCES-----
+R00041           1. THE DATA HAS BEEN SENT AND VERIFIED(I.E. V33E HAS BEEN SENT)
+R00042           2. PROGRAM IS IN THE PROCESS OF MOVING DATA FROM STBUFF TO
+R00043              APPROPRIATE REGISTERS OR
+R00044              VERB 76 OR VERB 75(INDEX = 4 ONLY) PROGRAM(S) ARE WAITING(VI
+ 0004459A WAITLIST
+R00045              3 SEC CALL) FOR ORBITAL INTEGRATION TO BE TURNED OFF.
+R00046           ***OF COURSE ALL GROUND UPDATES(IF LOST DUE TO A RESTART) CAN
+R00047           BE RESTARTED BY SENDING THE COMMANDS AND DATA A SECOND TIME***
+R00051  INPUT(SEE LATEST AS206 GSOP:R527:FOR MORE INFO)-    ..................DE
+ 00052 9SCRIPTION OF UPDATE COMPONENTS..........
+R00053                                                      COMP.
+R00054  UPDATE ENTRY    DESCRIPTION OF UPDATE VERBS         NO.  SYMBOL  VALUES
+ 00055 9         DEFINITION  (WHERE STORED)
+R00056  --------------- ----------------------------------- ---- ------- -------
+ 00057 9-------- -------------------------------
+R00058  V64EIEXXXXXE    SET MISSION TIMER I TO ELAPSE AT A   1.    I     1,2,3,4
+ 00059 9         MISSION TIMERS
+R00060        XXXXXE    GIVEN GROUND ELAPSED TIME(GET).X-S   2.  XXXXX
+ 00061 9         MSB OF GET(MUST BE IN)
+R00062                  ARE THE GET(IN CENTISECONDS OF THE   3.  XXXXX
+ 00063 9         LSB OF GET(THE FUTURE)
+R00064                  DESIRED EVENT.
+R00065  V65E            SET GUIDANCE REFERENCE RELEASE       NONE
+R00066                  DISCRETE.
+R00067  V66E            INITIATE THE LGC DFI TLM CALIBRATE   NONE
+R00068                  ROUTINE.
+R00069  V67EXXXE        ENTER A THREE DIGIT OCTAL NUMBER     1.   XXX      1-377
+ 00070 9(OCTAL)  SEE GSOP FOR LIST OF COMMANDS
+R00071                  REPRESENTING THE 8 BIT COMMAND TO
+R00072                  BE SENT TO THE LMP.
+R00073  V70EIETTTTTE    INCREMENT TIMER I BY TTTTT OCTAL     1.    I     1,2,3,4
+ 00074 9         MISSION TIMERS
+R00075                  SECONDS.                             2.  TTTTT
+ 00076 9         **SEE NOTES TO LEFT**
+R00077                  **SEE BELOW FOR DESCRIPTION OF
+R00079                  :UPDATE OF TIMERI LOGIC : AND
+R00081                  :TIMER MAINTENANCE LOGIC:**
+R00085  V71EIEPPE       SET MISSION PHASE REGISTER I TO      1.    I     1,2,3,4
+ 00086 9         MISSION PHASE REGISTERS
+R00087                  MISSION PHASE PP (OCTAL)             2.   PP  7,10,11,13
+ 00088 9,15(OCT) MISSION PHASES
+R00089  V72EIEPPETTTTTE (--COMBINATION OF V70 AND V71.--)
+R00090  V73EIE          CHANGE THE STATE OF THE DPS COLD     1.    I      1
+ 00091 9         ENABLE/INHIBIT RCS TESTING
+R00092                  SOAK (MISSION PHASE 8) DISCRETE(I=2)       I      2
+ 00093 9         ENABLE/INHIBIT DPS COLD SOAK
+R00094                                                             I      3
+ 00095 9         ENABLE/INHIBIT RCS COLD SOAK
+R00096
+ 00097 9         (I = 1 OR 3 WILL ONLY INVERT
+R00098
+ 00099 9         RESPECTIVE BITS OF FLAGWRD2 AND
+R00100
+ 00101 9         HAVE NO OTHER EFFECT ON 206)
+R00102  V74E            MISSION IDLE COMMAND.                NONE
+R00104                  (VERB 15,NOUN 50, R1 = FAILREG,
+R00105                  R2 = FAILREG +1, R3 = FAILREG +2
+R00106                  WILL APPEAR ON DSKY)
+R00107  V75E1EXXXXXE    UPDATE TARGET PARAMETERS FOR DPS1    1.    I      1
+ 00108 9         DPS1 TARGET PARAMS UPDATE CODE
+R00109        XXXXXE    BURN.(MISSION PHASE 9).              2.  XXXXX
+ 00110 9         MSB OF R(P)   (RP   )
+R00111                                                       3.  XXXXX
+ 00112 9         LSB OF R(P)   (RP +1)
+R001121
+ 0011229(RP IS THE DESIRED PERIGEE OR APOGEE
+R001123
+ 0011249RADIUS SCALED AT METERS  2(24))
+R00113  V75E2EXXXXXE    UPDATE TARGET PARAMETERS FOR DPS2    1.    I      2
+ 00114 9         DPS2 TARGET PARAMS UPDATE CODE
+R00115        XXXXXE    BURN (MISSION PHASE 11).             2.  XXXXX
+ 00116 9         MSB OF CPT(6) (CPT6/2   )
+R00117        XXXXXE                                         3.  XXXXX
+ 00118 9         LSB OF CPT(6) (CPT6/2 +1)
+R00119        XXXXXE                                         4.  XXXXX
+ 00120 9         MSB OF CPT(7) (CPT6/2 +2)
+R00121        XXXXXE                                         5.  XXXXX
+ 00122 9         LSB OF CPT(7) (CPT6/2 +3)
+R00123        XXXXXE                                         6.  XXXXX
+ 00124 9         MSB OF CPT(8) (CPT6/2 +4)
+R00125                                                       7.  XXXXX
+ 00126 9         LSB OF CPT(8) (CPT6/2 +5)
+R00127
+ 00128 9(CPT/6 IS 1/2 UNIT NORMAL TO THE
+R00129
+ 00130 9DESIRED ORBITAL PLANE IN STABLE MEMBER
+R001301
+ 0013029COORDINATES)
+R00131  V75E3EXXXXXE    UPDATE TARGET PARAMETERS FOR APS2    1.    I      3
+ 00132 9         APS2 TARGET PARAMS UPDATE CODE
+R00133        XXXXXE    BURN (MISSION PHASE 13).             2.  XXXXX
+ 00134 9         MSB OF RCSM(TA)0  (RIVEC   )
+R00135        XXXXXE                                         3.  XXXXX
+ 00136 9         LSB OF RCSM(TA)0  (RIVEC +1)
+R00137        XXXXXE                                         4.  XXXXX
+ 00138 9         MSB OF RCSM(TA)1  (RIVEC +2)
+R00139        XXXXXE                                         5.  XXXXX
+ 00140 9         LSB OF RCSM(TA)1  (RIVEC +3)
+R00141        XXXXXE                                         6.  XXXXX
+ 00142 9         MSB OF RCSM(TA)2  (RIVEC +4)
+R00143        XXXXXE                                         7.  XXXXX
+ 00144 9         LSB OF RCSM(TA)2  (RIVEC +5)
+R00145        XXXXXE                                         8.  XXXXX
+ 00146 9         MSB OF TA         (TINT    )
+R00147        XXXXXE                                         9.  XXXXX
+ 00148 9         LSB OF TA         (TINT +1 )
+R00149        XXXXXE                                        10.  XXXXX
+ 00150 9         MSB OF RD         (RCO     )
+R00151                                                      11.  XXXXX
+ 00152 9         LSB OF RD         (RCO +1  )
+R001530
+ 0015319(RIVEC IS THE POSITION VECTOR OF THE
+R001532
+ 0015339 DESIRED INTERCEPT POINT IN STABLE
+R001540
+ 0015419 MEMBER COORD SCALED AT METERS 2(25).
+R001542
+ 0015439TINT IS THE TIME SCALED AT CSEC 2(28).
+R00155
+ 0015559RCO IS THE DESIRED RADIUS AT CUTOFF
+R00156
+ 0015659 SCALED AT METERS 2(25))
+R00157  V75E4ETTTTTE    UPDATE LGC CLOCK(TIME2,TIME1)        1.    I      4
+ 00158 9         LGC AND SV CLOCK UPDATE CODE
+R00159                  AND STATE VECTOR TIME(TE,TE +1)      2.  TTTTT
+ 00160 9         DELTA TIME(SP,OCTAL,CSEC) TO
+R00161                  WITH TTTTT(IN CENTISECONDS)
+ 00162 9         BE ADDED TO TIME1 AND TE +1
+R00163  V76E  XXXXXE    STATE VECTOR UPDATE.                 1.  XXXXX
+ 00164 9         MSB OF X POSITION (REFRRECT   )
+R00165        XXXXXE                                         2.  XXXXX
+ 00166 9         LSB OF X POSITION (REFRRECT +1)
+R00167        XXXXXE                                         3.  XXXXX
+ 00168 9         MSB OF Y POSITION (REFRRECT +2)
+R00169        XXXXXE                                         4.  XXXXX
+ 00170 9         LSB OF Y POSITION (REFRRECT +3)
+R00171        XXXXXE                                         5.  XXXXX
+ 00172 9         MSB OF Z POSITION (REFRRECT +4)
+R00173        XXXXXE                                         6.  XXXXX
+ 00174 9         LSB OF Z POSITION (REFRRECT +5)
+R00175        XXXXXE                                         7.  XXXXX
+ 00176 9         MSB OF X VELOCITY (REFVRECT   )
+R00177        XXXXXE                                         8.  XXXXX
+ 00178 9         LSB OF X VELOCITY (REFVRECT +1)
+R00179        XXXXXE                                         9.  XXXXX
+ 00180 9         MSB OF Y VELOCITY (REFVRECT +2)
+R00181        XXXXXE                                        10.  XXXXX
+ 00182 9         LSB OF Y VELOCITY (REFVRECT +3)
+R00183        XXXXXE                                        11.  XXXXX
+ 00184 9         MSB OF Z VELOCITY (REFVRECT +4)
+R00185        XXXXXE                                        12.  XXXXX
+ 00186 9         LSB OF Z VELOCITY (REFVRECT +5)
+R00187        XXXXXE                                        13.  XXXXX
+ 00188 9         MSB OF TIME       (TE         )
+R00189        XXXXXE                                        14.  XXXXX
+ 00190 9         LSB OF TIME       (TE +1      )
+R00191
+ 00192 9(POSITION SCALED AT KILOMETERS 2(14).
+R00193
+ 00194 9VELOCITY SCALED AT METERS/CSEC
+R00195
+ 00196 9 2(7) / 1.29753638
+R001961
+ 0019629TIME SCALED AT CENTISECONDS 2(28) )
+R00197  UPDATE OF TIMERI LOGIC(UPDT = TTTTT TIME SENT VIA UPLINK)-
+R00198                                                        T
+R00199  BEFORE   A        A                 A                 H
+R00200  UPDATE   N        N                 N                 E
+R00201  TIMERI = D UPDT = D TIMERI + UPDT = D TIMERI + UPDT = N TIMERI =
+R00202  -------- - ------ - --------------- - --------------- - -------------
+R00203           (        (
+R00204           (        ( OVERFLOW                            NO CHANGE (EXCEP
+ 0020459T OPERATOR ERROR = ON)
+R00205           (        (
+R00206           (        (
+R00207           (        (                 (
+R00208           ( .GT. +0(                 (  .GE. +0          TIMERI + UPDT
+R00209           ( .LT. -0(   NO            (
+R00210           (        ( OVERFLOW        (  .LT. -0             0
+R00211   .GE. +0 (        (                 (
+R00212           (        (                 (  .EQ. -0             0
+R00213           (        (                 (
+R00214           (        (
+R00215           (
+R00216           (        (
+R00217           ( .EQ. +0(                                       UPDT
+R00218           ( .EQ. -0(
+R00219           (        (
+R00220           (
+R00221
+R00222 2 .LE. -0                                                  UPDT
+R00223  TIMER MAINTENANCE LOGIC(BY MMAINT)-
+R00224  TIMERI =  MEANS
+R00225  --------  --------------------------------------------------------------
+R00226   .GT. +0  TIMERI IS COUNTING DOWN
+R00227   .EQ. +0  MISSION PHASE IN ASSOCIATED MISSION PHASE REGISTER IS NOW DUE
+R00228   .LT. -0  FREE BUT LOADED BY GROUND
+R00229   .EQ. -0  FREE
+R003210 OUTPUT- PERFORM UPDATES AS DESCRIBED IN GSOP AND :INPUT:
+R003215 ERASABLE INITIALIZATION REQUIRED- NONE
+R003220 DEBRIS(ERASABLE LOCATIONS DESTROYED BY THIS PROGRAM)- MPAC - MPAC +2,
+R003225          STCOUNT, EBANK, UPVERB, UPOLDMOD, FLAGWRD2(BIT6),UPTEMP,
+R003230          UPTEMP1, COMPNUMB, REFRRECT - REFRRECT +5, REFRCV - REFRCV +5,
+R003235          REFVRECT - REFVRECT +5, REFVCV - REFVCV +5, TE - TE +1,
+R003240          DELTAV - DELTAV +5, NUV - NUV +5, REFTC - REFTC +1,
+R003245          REFKEP - REFKEP +1, UPINDEX, UPDT
+R0032502         AND CENTRAL REGISTERS
+ 003290          BANK   11
+ 003291          EBANK= STBUFF
+ 0033   65UPDAT  TC     POSTJUMP
+ 0034            CADR   GRRPLACE
+ 0035   74UPDAT  TC     POSTJUMP
+ 0036            CADR   DOV74
+ 0037   66UPDAT  INHINT
+ 00375           TC     IBNKCALL
+ 0038            CADR   DFITMCAL
+ 0039  2         TCF    ENDOFJOB
+ 0040   73UPDAT  CA     OCT73
+ 0041            TC     67UPDAT +1
+ 0042   67UPDAT  CA     OCT67
+ 0043            TS     MPAC
+ 0044            CA     ONE
+ 0045            TC     76UPDAT +3
+ 0046   70UPDAT  CA     OCT70
+ 0047            TC     71UPDAT +1
+ 0048   71UPDAT  CA     OCT71
+ 0049            TS     MPAC
+ 0050            CA     TWO
+ 0051            TC     76UPDAT +3
+ 0052   64UPDAT  CA     11OCT64
+ 0053            TC     72UPDAT +1
+ 0054   72UPDAT  CA     OCT72
+ 0055            TS     MPAC
+ 0056            CA     THREE
+ 0057            TC     76UPDAT +3
+ 0058   76UPDAT  CA     OCT76
+ 0059            TS     MPAC
+ 0060            CA     11OCT16
+ 0061            TS     MPAC +1
+ 0062            TC     75UPDAT +2
+ 0063   75UPDAT  CA     11OCT75
+ 0064            TS     MPAC
+ 0065            CA     FLAGWRD2        TEST IF TIMERS ENABLED
+ 0066            MASK   BIT5
+ 0067            EXTEND
+ 0068            BZF    XACTALM          NO, RETURN
+ 0070            TC     BANKCALL
+ 0071            CADR   UPPART2
+ 0072   OCT73    OCT    00073
+ 0073   OCT67    OCT    00067
+ 0074   OCT70    OCT    00070
+ 0075   OCT71    OCT    00071
+ 0076   11OCT64  OCT    00064
+ 0077   OCT72    OCT    00072
+ 0078   OCT76    OCT    00076
+ 0079   11OCT16  OCT    16
+ 0080   11OCT75  OCT    00075
 *       ENDOFJOB
