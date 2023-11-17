@@ -10546,4 +10546,350 @@ R0032502         AND CENTRAL REGISTERS
  0078   OCT76    OCT    00076
  0079   11OCT16  OCT    16
  0080   11OCT75  OCT    00075
+L      2UPDATE PROGRAM PART 2 OF 2
+ 0001            BANK   26
+ 0002            EBANK= STBUFF
+ 0003   UPPART2  CA     UPE4
+ 0004            TS     EBANK
+ 0005            TC     CHECKMM
+ 0006            OCT    27
+ 0007            TC      +2
+ 0008            TC     21XCTALM
+ 0009            CA     ONE
+ 0010            TS     STCOUNT
+ 00105           TC     GRABWAIT
+ 00106           CA     MPAC
+ 00107           TS     UPVERB
+ 0011            CA     MODREG
+ 0012            TS     UPOLDMOD
+ 00125           TC     PHASCHNG
+ 00126 2         OCT    00076           6.7 SPOT TO RESTORE OLD PROGRAM MODE.
+ 0013            TC     NEWMODEX
+ 0014            OCT    27
+ 0015            CS     UPVERB
+ 0016            AD     21OCT75
+ 0017            EXTEND
+ 0018            BZF     +4
+ 00183           CA     MPAC +1
+ 00186           TS     COMPNUMB
+ 0019            TC     UPIN +1
+ 0020   UPNO33   CA     ONE             CONTINUE V75
+ 0021            AD     ASTBFM1
+ 0022            TS     MPAC +2
+ 0023            CA     STATENV         UPDATE PROGRAM IS READY TO ACCEPT TARGET
+ 0024            TC     NVSBWAIT        UPDATE INDEX. FLASH V 21 N 01
+ 00241           TC     ENDIDLE         WAIT FOR V33, V34 OR DATA.
+ 00242           TCF    UPVERB34        V34 TERMINATE UPDATE PROGRAM.
+ 0025            TC     UPNO33          V33, IGNORE
+ 0026            CA     FOUR            OCTAL NO. IN STBUFF
+ 0027            TS     UPTEMP
+ 0028            CA     STBUFF
+ 0029            TC     UPRANGE         IS STBUFF GE 1 AND LE 4
+ 0030            TC     UPNO33           NO, TRY AGAIN
+ 0031            INDEX  STBUFF           YES
+ 0032            CA     AOFC -1
+ 0033            TS     COMPNUMB
+ 0034            CA     TWO
+ 0035   UPIN     TS     STCOUNT
+ 0036            CA     ASTBFM1
+ 0037            AD     STCOUNT
+ 0038            TS     MPAC +2
+ 0039            CA     STATENV         UPDATE PROGRAM IS READY TO ACCEPT THE
+ 0040            TC     NVSBWAIT        NEXT COMPONENT. FLASH V21 N01
+ 00401           TC     ENDIDLE         WAIT FOR V33, V34 OR DATA.
+ 00402           TCF    UPVERB34        V34 TERMINATE UPDATE PROGRAM.
+ 0041            TC     UPIN +1         V33 , IGNORE
+ 0042            CS     STCOUNT         OCTAL NO.
+ 0043            AD     COMPNUMB
+ 0044            EXTEND
+ 0045            BZF     +3
+ 0046            INCR   STCOUNT
+ 0047            TC     UPIN +1
+ 0048   UPHERE   CA     UPAOFTP1
+ 0049            TS     MPAC +2
+ 0050            CA     OCTID           INDICATE TO GROUND THAT ALL COMPONENTS
+ 0051            TC     NVSBWAIT        HAVE BEEN RECEIVED BY FLASHING V21 N02.
+ 00511           TC     ENDIDLE         WAIT FOR V33, V34 OR DATA(COMPONENT NO.)
+ 00512           TCF    UPVERB34        V34 TERMINATE UPDATE PROGRAM.
+ 0052            TC     UPSTORE         V33, VERIFY
+ 0053            CA     COMPNUMB        OCTAL IDENTIFIER
+ 0054            TS     UPTEMP
+ 0055            CA     UPTEMP1
+ 0056            TC     UPRANGE
+ 0057            TC     UPHERE          BAD OCTAL IDENTIFIER
+ 0058            CA     UPTEMP1
+ 0059            AD     ASTBFM1
+ 0060            TC     UPIN +3
+ 0061   UPSTORE  TC     FREEDSP
+ 0062            INHINT
+ 0063            CS     FLAGWRD2        INVERT VERIFLAG FOR GROUND VERIFY
+ 0064            MASK   BIT6
+ 0065            TS     Q
+ 0066            CS     BIT6
+ 0067            MASK   FLAGWRD2
+ 0068            AD     Q
+ 0069            TS     FLAGWRD2
+ 00691           RELINT
+ 006911          CS     UPVERB          IF A VERB 75 OR 76 UPDATE
+ 006912          AD     21OCT75         STAY IN P27 UNTIL UPDATE IS COMPLETED.
+ 006913          EXTEND                 (THIS IS DONE SO THAT NO OTHER UPDATES
+ 006914          BZMF   UPRETURN        WILL BE ALLOWED IF ORBIT INT IS ON)
+ 00692           TC     CHECKMM
+ 00694           OCT    27
+ 00696           TC     UPRETURN
+ 0070            CA     UPOLDMOD        RESTORE PRE-P27 MODE
+ 0071            TC     NEWMODEX +3     (THIS WILL CAUSE A RELINT)
+ 0072   UPRETURN INHINT
+ 00721           CA     BIT5
+ 0073            MASK   FLAGWRD2
+ 0074            EXTEND
+ 0075            BZF    XCTALMRM
+ 0076            CS     21OCT64           BEGIN STORING DATA FROM STBUFF
+ 0077            AD     UPVERB          YES, CONTINUE
+ 0078            INDEX  A
+ 0079            TC      +1
+ 0080            EXTEND
+ 0081            DCA    STBUFF +1
+ 0082            TC     UPEND64
+ 0083            TC     UPEND67         V67
+ 0084            TC     UPEND70         V70
+ 0085            TC     UPEND71         V71
+ 0086            TC     UPEND72         V72
+ 0087            TC     UPEND73
+ 0088   21OCT64  OCT    00064
+ 0089            TC     UPEND75         V75
+ 0090   UPEND76  CS     FLAGWRD2        IS ORBITAL INTEGRATION ON
+ 0091            MASK   BIT7
+ 0092            EXTEND
+ 0093            BZF    SETUPRCK        YES, SET UP 3SEC CALL TO CHECK AGAIN
+ 00931           TC     PHASCHNG
+ 00932           OCT    05026
+ 00933           OCT    33000
+ 00934           INHINT                 INHINT BECAUSE PHASCHNG RELINTS AND BECA
+ 00935 9                                USE RESTARTED JOB WILL NEED IT.
+ 0094            EXTEND                 V76
+ 0095            DCA    STBUFF          NO, BEGIN LOAD OF UPDATE PARAMETERS
+ 0096            DXCH   REFRRECT
+ 0097            EXTEND
+ 0098            DCA    STBUFF
+ 0099            DXCH   REFRCV
+ 0100            EXTEND
+ 0101            DCA    STBUFF +2
+ 0102            DXCH   REFRRECT +2
+ 0103            EXTEND
+ 0104            DCA    STBUFF +2
+ 0105            DXCH   REFRCV +2
+ 0106            EXTEND
+ 0107            DCA    STBUFF +4
+ 0108            DXCH   REFRRECT +4
+ 0109            EXTEND
+ 0110            DCA    STBUFF +4
+ 0111            DXCH   REFRCV +4
+ 0112            EXTEND
+ 0113            DCA    STBUFF +6
+ 0114            DXCH   REFVRECT
+ 0115            EXTEND
+ 0116            DCA    STBUFF +6
+ 0117            DXCH   REFVCV
+ 0118            EXTEND
+ 0119            DCA    STBUFF +8D
+ 0120            DXCH   REFVRECT +2
+ 0121            EXTEND
+ 0122            DCA    STBUFF +8D
+ 0123            DXCH   REFVCV +2
+ 0124            EXTEND
+ 0125            DCA    STBUFF +10D
+ 0126            DXCH   REFVRECT +4
+ 0127            EXTEND
+ 0128            DCA    STBUFF +10D
+ 0129            DXCH   REFVCV +4
+ 0130            EXTEND
+ 0131            DCA    STBUFF +12D
+ 0132            DXCH   TE
+ 0133            CA     ZERO
+ 0134            TS     DELTAV
+ 0135            TS     DELTAV +1
+ 0136            TS     DELTAV +2
+ 0137            TS     DELTAV +3
+ 0138            TS     DELTAV +4
+ 0139            TS     DELTAV +5
+ 0140            TS     NUV
+ 0141            TS     NUV +1
+ 0142            TS     NUV +2
+ 0143            TS     NUV +3
+ 0144            TS     NUV +4
+ 0145            TS     NUV +5
+ 0146            TS     REFTC
+ 0147            TS     REFTC +1
+ 0148            TS     REFXKEP
+ 0149            TS     REFXKEP +1
+ 01491           CAF    PRIO20          SET UP JOB TO STORE NEW STATE FOR DWNTEL
+ 01492           TC     FINDVAC
+ 01493           EBANK= TDEC
+ 01494           2CADR  UPDATINT
+ 0150            TCF    UPVERB34 +1     RESTORE PRE-P27 MODE AND EXIT UPDATE
+ 0151   SETUPRCK CA     3SEC21
+ 0152            TC     WAITLIST
+ 0153            EBANK= STBUFF
+ 0154            2CADR  UPDOAGN
+ 01541           TC     PHASCHNG
+ 01542           OCT    47016
+ 01543           DEC    300
+ 01544           EBANK= STBUFF
+ 01545           2CADR  UPDOAGN
+ 0155            TC     ENDOFJOB
+ 0156   UPDOAGN  CA     PRIO27
+ 0157            TC     NOVAC
+ 0158            EBANK= STBUFF
+ 0159            2CADR  UPRETURN
+ 0160            TC     TASKOVER
+ 0163   UPEND64  DXCH   UPGET
+ 01631           CA     STBUFF
+ 01634           TS     UPINDEX
+ 01638           CA     PRIO27
+ 0164            TC     FINDVAC
+ 0165            EBANK= STBUFF
+ 0166            2CADR  MGETUP
+ 0167            TC     UPQUIT
+ 0168   UPEND67  CA     STBUFF
+ 0169            TS     UPINDEX
+ 0170            TC     POSTJUMP
+ 0171            CADR   DOV67
+ 0172   UPEND70  CA     STBUFF
+ 0173            TS     UPINDEX
+ 0174            CA     STBUFF +1
+ 0175            TS     UPDT
+ 0176            TC     POSTJUMP
+ 0177            CADR   DOV70
+ 0178   UPEND71  CA     STBUFF
+ 0179            TS     UPINDEX
+ 0180            CA     STBUFF +1
+ 0181            TS     UPPHASE
+ 0182            TC     POSTJUMP
+ 0183            CADR   DOV71
+ 0184   UPEND72  CA     STBUFF
+ 0185            TS     UPINDEX
+ 0186            CA     STBUFF +1
+ 0187            TS     UPPHASE
+ 0188            CA     STBUFF +2
+ 0189            TS     UPDT
+ 0190            TC     POSTJUMP
+ 0191            CADR   DOV72
+ 0192   UPEND73  CA     STBUFF
+ 0193            TS     UPINDEX
+ 0194            TC     POSTJUMP
+ 0195            CADR   DOV73
+ 0196   UPEND75  TC     PHASCHNG
+ 01961           OCT    05026
+ 01962           OCT    33000
+ 01963           INHINT                 INHINT BECAUSE PHASCHNG RELINTS AND BECA
+ 01964 9                                USE RESTARTED JOB WILL NEED IT.
+ 01965           INDEX  COMPNUMB        V75
+ 0197            TC                     FAN TO V75 ROUTINES
+ 0198   OCTID    OCT    02102
+ 0199            TC     I=4
+ 0200   I=1      EXTEND
+ 0201            DCA    STBUFF +1
+ 0202            DXCH   RP
+ 0203            TC     UPQUITRM        RESTORE PRE-P27 MODE AND EXIT UPDATE
+ 0204            TC     I=2
+ 0205   21OCT75  OCT    75
+ 0206            TC     I=4
+ 0207   STATENV  OCT    2101
+ 0208   I=3      EXTEND
+ 0209            DCA    STBUFF +1
+ 0210            DXCH   R1VEC
+ 0211            EXTEND
+ 0212            DCA    STBUFF +3
+ 0213            DXCH   R1VEC +2
+ 0214            EXTEND
+ 0215            DCA    STBUFF +5
+ 0216            DXCH   R1VEC +4
+ 0217            EXTEND
+ 0218            DCA    STBUFF +7
+ 0219            DXCH   TINT
+ 0220            EXTEND
+ 0221            DCA    STBUFF +9D
+ 0222            DXCH   RCO
+ 0223            TC     UPQUITRM        RESTORE PRE-P27 MODE AND EXIT UPDATE
+ 0224   I=2      EXTEND
+ 0225            DCA    STBUFF +1
+ 0226            DXCH   CPT6/2
+ 0227            EXTEND
+ 0228            DCA    STBUFF +3
+ 0229            DXCH   CPT6/2 +2
+ 0230            EXTEND
+ 0231            DCA    STBUFF +5
+ 0232            DXCH   CPT6/2 +4
+ 0233            TC     UPQUITRM        RESTORE PRE-P27 MODE AND EXIT UPDATE
+ 02345  I=4      CS     FLAGWRD2        IS ORBITAL INTEGRATION ON
+ 0235            MASK   BIT7
+ 02355           EXTEND
+ 0236            BZF    SETUPRCK        YES
+ 02372           CAE    STBUFF +1
+ 02374           AD     TE +1
+ 02376           TS     STBUFF +13D
+ 02378           CAF    ZERO
+ 02380           AD     TE
+ 02382           TS     STBUFF +12D
+ 02384           CA     ZERO
+ 02386           TS     L
+ 02388           DXCH   TIME2
+ 02390           DXCH   STBUFF +10D
+ 02392           CA     FIVE
+ 02393           TC     NEWPHASE
+ 02394 2         OCT    00006
+ 02396  I=4.CONT INHINT
+ 02398           CA     ZERO
+ 02400           TS     MPAC +2         FOR TPAGREE
+ 02412           EXTEND
+ 02414           DCA    STBUFF +12D
+ 02416           DXCH   TE
+ 02418           CA     STBUFF +1
+ 02420           AD     STBUFF +11D
+ 02422           TS     L
+ 02424           CA     ZERO
+ 02426           AD     STBUFF +10D
+ 02428           DXCH   MPAC
+ 02430           TC     TPAGREE         FORCE SIGN AGREEMENT
+ 02432           DXCH   MPAC
+ 02434           DAS    TIME2           NEW CLOCK
+ 02436           CAF    SEVEN           6.7 SPOT TO RESTORE OLD PROGRAM MODE.
+ 02437           TC     NEWPHASE
+ 02438 2         OCT    00006
+ 02457           TC     UPQUITRM        RESTORE PRE-P27 MODE AND EXIT UPDATE
+ 02460  UPVERB34 TC     FREEDSP
+ 02462  UPQUITRM TC     CHECKMM         RESTORE MODE AND UPQUIT
+ 02464           OCT    27
+ 02466           TCF    UPQUIT
+ 0247            CA     UPOLDMOD
+ 0248  2         TC     NEWMODEX +3
+ 0249   UPQUIT   TC     BANKCALL        SETS 6.0 SPOT AND DOES ENDOFJOB
+ 0250            CADR   ENDUP
+ 0259   UPRANGE  EXTEND
+ 0260            BZMF   UPRAUS          C(A) LE ZERO RETURN TO Q
+ 0261            CS     A
+ 0262            INCR   A
+ 0263            AD     UPTEMP
+ 0264            EXTEND
+ 0265            BZMF   UPRAUS          C(A) GT C(LOC) RETURN TO Q
+ 0266            INCR   Q
+ 0267   UPRAUS   TC     Q               C(A) LE C(LOC) AND GT 0 RETURN TO Q+1
+ 02671  XCTALMRM TC     CHECKMM
+ 02672           OCT    27
+ 02673           TCF     +3
+ 02674           CA     UPOLDMOD
+ 02675           TC     NEWMODEX +3
+ 02676           TC     PHASCHNG
+ 02677           OCT    00006
+ 0268   21XCTALM TC     BANKCALL
+ 0269  2         CADR   XACTALM
+ 0270   UPE4     OCT    2000
+ 0272   AOFC     OCT    00003
+ 0273            OCT    00007
+ 0274            OCT    00013
+ 0275            OCT    00002
+ 0276   UPAOFTP1 ECADR  UPTEMP1
+ 0277   ASTBFM1  ECADR  STBUFF -1
+ 0278   3SEC21   DEC    300
 *       ENDOFJOB
