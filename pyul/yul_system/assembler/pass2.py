@@ -37,6 +37,7 @@ class Pass2:
         self._head = ' '
         self._line = Line()
         self._old_line = Line()
+        self._location = ONES
         self._user_log = Line(' '*81 + 'USER\'S OWN PAGE NO.' + 20*' ', spacing=2)
         self._card_typs = [
             (self.end_of,      2),
@@ -804,7 +805,7 @@ class Pass2:
             # Cuss fullness.
             self.sym_cuss(self.cuss_list[14], adr_wd[0])
             # Go to join end of setloc procedure.
-            self.cuss_list[0].demand = True
+            self.cuss_list[15].demand = True
             return self.form_locn(good_loc=False)
 
         # Recover address symbol information
