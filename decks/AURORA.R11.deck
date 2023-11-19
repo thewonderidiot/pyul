@@ -12885,7 +12885,7 @@ R0010  4MGC, AND OGC RESPECTIVELY. ANGLES ARE SCALED PROPERLY FOR IMUPULSE.
  0016                   XDC +4
  0017            DCOMP  VDEF
  0018            UNIT
- 0019            STODL  ZPRIME          ZP = UNIT(-XD3 O XD1) = (ZP1 ZP2 ZP3)
+ 0019            STODL  ZPRIME          ZP = UNIT(-XD3 0 XD1) = (ZP1 ZP2 ZP3)
  0020  2                ZPRIME
  0021            SR1
  0022            STODL  SINTH           SIN(IGC) = ZP1
@@ -13017,7 +13017,7 @@ R0129  4AREA. THE OUTPUT IS ALSO AVAILABLE AT MPAC.
  0148            GOTO
  0149  8                S2
 R0150  4AXISROT IS UTILIZED BY THE SMNB AND NBSM ROUTINES. SEE REMARKS ON THESE
- 0151  9                                ROUTINES FOR INPUTS AND OUTPUTS.
+ 0151  9ROUTINES FOR INPUTS AND OUTPUTS.
  0152   AXISROT  XSU,1  SLOAD*
  0153                   S1                   SMNB          .       NBSM
  0154                   4,1             IG    MG    OG     .  OG    MG    IG
@@ -13294,7 +13294,7 @@ R0491
  0523            SIN    PUSH
  0524            DMP    SL1
  0525                   0
- 0526            STODL  0
+ 0526  2         STODL  0
  0527                   2
  0528            DMP    STADR
  0529  2         STORE  2
