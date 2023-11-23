@@ -11957,4 +11957,206 @@ R0707  2-SIN(T),COS(S)COS(T)) IS LEFT IN MPAC AND 32D.
  0724            STOVL  32D
  0725                   32D
  0726            RVQ
+L      2RTB OP CODES
+ 0001            BANK   15
+R0002  2         LOAD TIME2, TIME1 INTO MPAC:
+ 0003   LOADTIME EXTEND
+ 0004            DCA    TIME2
+ 0005  2         TCF    SLOAD2
+R0006            CONVERT THE SINGLE PRECISION 2'S COMPLEMENT NUMBER ARRIVING IN
+ 0007  9MPAC (SCALED IN HALF-REVOLUTIONS) TO A
+R0008  2DP 1'S COMPLEMENT NUMBER SCALED IN REVOLUTIONS.
+ 0009   CDULOGIC CCS    MPAC
+ 0010            CAF    ZERO
+ 0011            TCF    +3
+ 0012            NOOP
+ 0013  2         CS     HALF
+ 0014            TS     MPAC +1
+ 0015            CAF    ZERO
+ 0016            XCH    MPAC
+ 0017            EXTEND
+ 0018            MP     HALF
+ 0019            DAS    MPAC
+ 0020  2         TCF    SLOAD2 +2       C(A) = +0.
+R0021  2         READ IMU CDUS INTO MPAC AS A VECTOR. ESPECIALLY USEFUL IN CONNE
+ 0022  9CTION WITH SMNB, ETC.
+ 0023   READCDUS INHINT
+ 0024            CA     CDUY            IN ORDER Y Z X
+ 0025            TS     MPAC
+ 0026            CA     CDUZ
+ 0027            TS     MPAC +3
+ 0028            CA     CDUX
+ 0029  2         TCF    READPIPS +6     COMMON CODING.
+R0030  2         READ THE PIPS INTO MPAC WITHOUT CHANGING THEM:
+ 0031   READPIPS INHINT
+ 0032            CA     PIPAX
+ 0033            TS     MPAC
+ 0034            CA     PIPAY
+ 0035            TS     MPAC +3
+ 0036            CA     PIPAZ
+ 0037            RELINT
+ 0038  2         TS     MPAC +5
+ 0039            CAF    ZERO
+ 0040            TS     MPAC +1
+ 0041            TS     MPAC +4
+ 0042  2         TS     MPAC +6
+ 0043   VECMODE  CS     ONE
+ 0044  2         TCF    NEWMODE
+R0045  2         FORCE TP SIGN AGREEMENT IN MPAC:
+ 0046   SGNAGREE TC     TPAGREE
+ 0047  2         TCF    DANZIG
+R0048            CONVERT THE DP 1'S COMPLEMENT ANGLE SCALED IN REVOLUTIONS TO A
+ 0049  9SINGLE PRECISION 2'S COMPLEMENT ANGLE
+R0050  2SCALED IN HALF-REVOLUTIONS.
+ 0051   1STO2S   TC     1TO2SUB
+ 0052            CAF    ZERO
+ 0053            TS     MPAC +1
+ 0054  2         TCF    NEWMODE
+R0055  2         DO 1STO2S ON A VECTOR OF ANGLES:
+ 0056  2V1STO2S  TC     1TO2SUB         ANSWER ARRIVES IN A AND MPAC.
+ 0057            DXCH   MPAC +5
+ 0058            DXCH   MPAC
+ 0059            TC     1TO2SUB
+ 0060  2         TS     MPAC +2
+ 0061            DXCH   MPAC +3
+ 0062            DXCH   MPAC
+ 0063            TC     1TO2SUB
+ 0064  2         TS     MPAC +1
+ 0065            CA     MPAC +5
+ 0066  2         TS     MPAC
+ 0067   TPMODE   CAF    ONE             MODE IS TP.
+ 0068  2         TCF    NEWMODE
+R0069  2         V1STO2S FOR 2 COMPONENT VECTOR. USED BY RR.
+ 0070   2V1STO2S TC     1TO2SUB
+ 0071            DXCH   MPAC +3
+ 0072            DXCH   MPAC
+ 0073            TC     1TO2SUB
+ 0074            TS     L
+ 0075            CA     MPAC +3
+ 0076  2         TCF    SLOAD2
+R0077  2         SUBROUTINE TO DO DOUBLING AND 1'S TO 2'S CONVERSION:
+ 0078   1TO2SUB  DXCH   MPAC            FINAL MPAC +1 UNSPECIFIED.
+ 0079            DDOUBL
+ 0080            CCS    A
+ 0081            AD     ONE
+ 0082            TCF    +2
+ 0083  2         COM                    THIS WAS REVERSE OF MSU.
+ 0084            TS     MPAC            AND SKIP ON OVERFLOW.
+ 0085  2         TC     Q
+ 0086            INDEX  A               OVERFLOW UNCORRECT AND IN MSU.
+ 0087            CAF    LIMITS
+ 0088            ADS    MPAC
+ 0089            TC     Q
+P0090            SUBROUTINE TO INCREMENT CDUS
+ 0091   INCRCDUS CAF    LOCTHETA
+ 0092            TS     BUF             PLACE ADRES(THETA) IN BUF.
+ 0093            CAE    MPAC            INCREMENT IN 1S COMPL.
+ 0094  2         TC     CDUINC
+ 0095            INCR   BUF
+ 0096            CAE    MPAC +3
+ 0097  2         TC     CDUINC
+ 0098            INCR   BUF
+ 0099            CAE    MPAC +5
+ 0100  2         TC     CDUINC
+ 0101  2         TCF    VECMODE
+ 0102  2LOCTHETA ADRES  THETAD
+R0103            THE FOLLOWING ROUTINE INCREMENTS IN 2S COMPLEMENT THE REGISTER
+ 0104  9WHOSE ADDRESS IS IN BUF BY THE 1S COMPL.
+R0105   QUANTITY FOUND IN TEM2. THIS MAY BE USED TO INCREMENT DESIRED IMU AND OP
+ 0106  9TICS CDU ANGLES OR ANY OTHER 2S COMPL.
+R0107  2(+0 UNEQUAL TO -0) QUANTITY. MAY BE CALLED BY BANKCALL/SWCALL.
+ 0108   CDUINC   TS     TEM2            1S COMPL.QUANT. ARRIVES IN ACC. STORE IT
+ 0109            INDEX  BUF
+ 0110            CCS    0               CHANGE 2S COMPL. ANGLE(IN BUF)INTO 1S
+ 0111            AD     ONE
+ 0112            TCF    +4
+ 0113            AD     ONE
+ 0114            AD     ONE             OVERFLOW HERE IF 2S COMPL. IS 180 DEG.
+ 0115  2         COM
+ 0116            AD     TEM2            ADD IN INCREMENT. WILL OVERFLOW IF RE-
+ 0117  9SULT MOVES FROM 2ND TO 3D QUAD.(OR BACK)
+ 0118            CCS    A               BACK TO 2S COMPL.
+ 0119            AD     ONE
+ 0120            TCF    +2
+ 0121            COM
+ 0122            TS     TEM2            STORE 14BIT QUANTITY WITH PRESENT SIGN
+ 0123            TCF    +4
+ 0124            INDEX  A               OVERFLOW MEANS CORRECT 14BIT VALUE,WRONG
+ 0125  9 SIGN.
+ 0126            CAF    LIMITS          FIX IT,BY ADDING IN 37777 OR 40000
+ 0127  2         AD     TEM2
+ 0128            INDEX  BUF
+ 0129            TS     0               STORE NEW ANGLE IN 2S COMPLEMENT.
+ 0130            TC     Q
+P0131  2         RTB TO TORQUE GYROS, EXCEPT FOR THE CALL TO IMUSTALL. ECADR OF
+ 0132  9COMMANDS ARRIVES IN X1.
+ 0133   PULSEIMU INDEX  FIXLOC          ADDRESS OF GYRO COMMANDS SHOULD BE IN X1
+ 0134            CA     X1
+ 0135            TC     BANKCALL
+ 0136            CADR   IMUPULSE
+ 0137            TCF    DANZIG
+P0138  2         THE FOLLOWING ROUTINE IS USED ONLY IN BENCH TESTING THE RR.
+ 0139   RRSIM    TC     FIXDELAY
+ 0140  2         DEC    50
+ 0141   RRSIM2   CAF    BIT2            SEE IF RR ECTR ENABLED.
+ 0142            EXTEND
+ 0143            RAND   12
+ 0144            EXTEND
+ 0145  2         BZF    RRSIM
+ 0146            CA     TEM2            SAVE EXEC TEMPS SINCE IN RUPT.
+ 0147            TS     RUPTREG1
+ 0148            CAF    LOPTY
+ 0149            XCH    BUF
+ 0150            TS     RUPTREG2
+ 0151            CA     LASTYCMD        ECTR.
+ 0152            DOUBLE
+ 0153            EXTEND
+ 0154            MP     RRSIMG
+ 0155            TC     CDUINC
+ 0156            INCR   BUF
+ 0157            CA     OPTY            SHAFT CMD IS DIVIDED BY THE ABS VALUE OF
+ 0158            EXTEND                 THE COS OF THE TRUNNION ANGLE.
+ 0159            MSU    7               TO 1S COMPLEMENT.
+ 0160            TC     SPCOS                                           *
+ 0161            EXTEND                 SPCOS NOW GIVES COS SCALED AT 1 *
+ 0162            MP     BIT14               (A DAP GROUP FIX)           *
+ 0163            CCS    A
+ 0164            TCF    +3
+ 0165            TCF    +2
+ 0166            TCF    +1
+ 0167            AD     ONE
+ 0168  2         TS     ITEMP1
+ 0169            CA     LASTXCMD        SHAFT RATE DEPENDS ON TRUNNION.
+ 0170            EXTEND
+ 0171            MP     RRSIMG
+ 0172            EXTEND
+ 0173            DV     ITEMP1
+ 0174            TC     CDUINC
+ 0175            CA     RUPTREG1
+ 0176            TS     TEM2
+ 0177            CA     RUPTREG2
+ 0178            TS     BUF
+ 0179  2         TCF    RRSIM
+ 0180   LOPTY    ADRES  OPTY
+ 0181   RRSIMG   DEC    .59259
+R0181012START CODING FOR MODULE 3 REMAKE, AUGUST 1967***START CODING FOR MODULE
+ 01810293 REMAKE, AUGUST 1967*******************
+ 0181032         EBANK= DNCDUCNT
+ 018104215INSRT  TS     DNCDUCNT
+ 018105          CA     EBANK6
+ 018107          XCH    EBANK
+ 0181092         TS     L
+ 0181102         EBANK= RGIMTIMR
+ 018111          CS     GMBLBITS
+ 018113          EXTEND
+ 0181152         WAND   12
+ 018117          CA     NEGMAX
+ 018119          TS     RGIMTIMR
+ 0181212         TS     QGIMTIMR
+ 018123          LXCH   EBANK
+ 0181252         TCF    DNCDUSGO
+ 0181272GMBLBITS OCT    7400
+ 018200 CHKSUM15 OCT    37777
+R018202 **END CODING FOR MODULE 3 REMAKE, AUGUST 1967*****END CODING FOR MODULE
+ 01820393 REMAKE, AUGUST 1967*******************
 *       ENDOFJOB
