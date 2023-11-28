@@ -13719,4 +13719,998 @@ R0993  2DATA WAS NOT IN TRANSITION WHEN IT WAS READ.
  1032            TC     BANKCALL
  1033            CADR   ENABLE
  1034   CHKSUM14 OCT    37777
+L      2IMU PERFORMANCE TESTS 2
+ 0001            BANK   24
+ 0002  4         EBANK= XSM
+ 00021  IMUTEST  CA     ZERO            DRIFT AND SCALE FACTOR TEST
+ 00022           TS     DRIFTT
+ 00023           TS     GEOCOMPS
+ 00024           CAF    1SECX
+ 00025 2         TS     1SECXT
+ 0003            TC     INTPRET
+ 0004            CALL
+ 0005                   LATAZCHK
+ 0006            EXIT
+ 0009            CA     ONE
+ 0010  2         TS     POSITON
+ 0011            TS     DSPTEM2 +2
+ 00111  GEOIMUTT CA     ONE              COMPASS COMES IN HERE
+ 0012            TS     THETAD
+ 0013            TS     THETAD +1
+ 0014            TS     THETAD +2
+ 0015            TC     BANKCALL
+ 0016            CADR   IMUZERO
+ 0017            TC     BANKCALL
+ 0018            CADR   IMUSTALL
+ 0019            TCF    ENDTEST1
+ 0020   IMUBACK  CA     ZERO
+ 0021            TS     DSPTEM2 +1
+ 0022            TS     NDXCTR
+ 0023            TS     TORQNDX
+ 0024            TS     TORQNDX +1
+ 0026            CAF    TESTTIME
+ 0028            TS     DSPTEM2
+ 0029            TC     BANKCALL        ISS RETURNS IN COARSE ALIGN MODE TO
+ 0030            CADR   IMUCOARS        ENABLE OPERATOR TO DECIDE WHAT TO DO
+R0031   ABOUT GIMBAL LOCK
+ 00311           CCS    GEOCOMPS
+ 00312           TC     +3
+ 0032            TC     SHOWLD
+ 0033  4         TC     SHOW
+ 0034            TC     BANKCALL
+ 0035            CADR   IMUSTALL
+ 0036            TC     ENDTEST1
+ 0037            TC     NBPOSPL
+ 0038            TC     POSGMBL
+ 0039            TC     PIPACHK         IF MGA IS 60DEG+ PROG WILL STAY IN COARS
+ 0040  9ALIGN AND MEASURE VERTICAL PIPA RATE
+ 0041            TC     FALNE
+ 0042            TC     BANKCALL
+ 0043            CADR   IMUSTALL
+ 0044            TCF    ENDTEST1
+ 00442           CCS    GEOCOMPS
+ 00443           TC     JUMPLOAD
+ 0045   GUESS    TC     INTPRET         CALCULATE -COS LATITUDE AND SIN LATITUDE
+ 0046            DLOAD  COS             FOR ESTIMATE
+ 0047                   LATITUDE
+ 0048            DCOMP  SL1
+ 0049            STODL  WANGI
+ 0050                   LATITUDE
+ 0051            SIN    SL1
+ 0052            STOVL  WANGO            LOAD TRANSITION MATRIX INTO ERASABLE
+ 00521                  GEORGED
+ 00522           STOVL  TRANSM1
+ 00523                  GEORGEC
+ 00524           STOVL  TRANSM1 +6
+ 00525                  GEORGEB
+ 00526           STORE  TRANSM1 +12D
+ 0053            EXIT
+ 005301          TC     +2
+ 00531  JUMPLOAD TC     FREEDSP          FREE DISPLAY IF IN GYROCOMPASS
+ 00532           TC     LOADGTSM
+ 0054            TC     BANKCALL
+ 0055            CADR   ESTIMS
+ 0075   TORQUE   TC     PHASCHNG         FILTER RETURNS AFTER TORQUE AND ER SET
+ 0076            OCT    00005
+ 0081            CA     ZERO
+ 0082            TS     DSPTEM2
+ 0083            CA     DRIFTI
+ 0084            TS     DSPTEM2 +1
+ 0085            INDEX  POSITON
+ 0086            TS     SOUTHDR -1
+ 0087  2         TC     SHOW
+ 0088   PIPACHK  INDEX  NDXCTR          TORQUE PLATFORM TO CORRECT  LEVELING ERR
+ 0089            TC     +1              IN PREPARATION TO MEASURING VERTICAL
+ 0090            TC     BANKCALL        PIPA OUTPUT PULSE RATE
+ 0091  2         CADR   EARTHR
+ 0092            CA     DEC17            ALLOW PIP COUNTER TO OVERFLOW 17 TIMES
+ 0093            TS     DATAPL +4
+ 0094            CA     BIT10           IN THE ALLOTED TIME INTERVAL
+ 0095            TS     LENGTHOT
+ 0096            CA     ONE
+ 0097            TS     RESULTCT
+ 0098            CA     ZERO            ZERO PIPA COUNTER INITIALLY
+ 0099            INDEX  PIPINDEX
+ 0100            TS     PIPAX
+ 0101            TS     DATAPL
+ 0102            CA     DEC56            LOOP 56 TIMES 5.12 SEC "ACH. EACH INCR.
+ 0103            TC     WAITLOOP        WILL ALSO CORRECT EARTH RATE
+ 0104            INHINT
+ 0105            TC     CHECKG
+ 0106            RELINT
+ 0107            TC     DATALD
+ 0108            CA     FIVE
+ 0109            TS     RESULTCT
+ 0110            INDEX  NDXCTR
+ 0111            TC     +1
+ 0112            TC     BANKCALL
+ 0113            CADR   EARTHR
+ 0114            CCS    COUNTPL
+ 0115            TC     WAITLP2
+ 0116            CCS    DATAPL +1
+ 0117            TC     +4
+ 0118            TC     CCSHOLE
+ 0119            CS     DATAPL +4
+ 0120            TS     DATAPL +4
+ 0121            EXTEND
+ 0122            DCS    DATAPL
+ 0123  2         DAS    DATAPL +4
+ 0124            TC     INTPRET
+ 0125            DLOAD  DSU
+ 0126                    DATAPL +6
+ 0127                   DATAPL +2
+ 0128            PDDL   DDV
+ 0129                   DATAPL +4
+ 0130            PDDL   DMP
+ 0131                   DEC585          DEC585 HAS BEEN REDEFINED FOR LEM
+ 0132            RTB
+ 0133                   SGNAGREE
+ 0134            STORE  DSPTEM2
+ 0135            EXIT
+ 0136            TC     SHOW
+ 0137   VERTDRFT CA     3990DEC         3900 SECONDS FOR VERTICAL DRIFT
+ 0138            TS     LENGTHOT
+ 01381           TC     BANKCALL        THIS WILL CORRECT FOR EARTH RATE DURING
+ 01382           CADR   EARTHR          TIME SPENT IN SHOW ABOVE*
+ 01383           CA     CDUX            STOORE AXIS  FOR LAB CALC OF DRIFT
+ 01384           TS     LOSVEC
+ 0139            INDEX  POSITON
+ 0140            CS     SOUTHDR -2
+ 0141            TS     DRIFTT
+ 014101          TC     LOADGTSM
+ 0142            CA     ZERO            ALLOW ONLY SOUTH GYRO EARTH RATE COMPENS
+ 0143            TS     XSM
+ 0144            TS     XSM +1
+ 0145            TS     XSM +4
+ 0146            TS     XSM +5
+ 0147            TS     YSM
+ 0148            TS     YSM +1
+ 0149            TS     YSM +4
+ 0150            TS     YSM +5
+ 0151            TS     ZSM
+ 0152            TS     ZSM +1
+ 0153            TS     ZSM +4
+ 0154            TS     ZSM +5
+ 0155   GUESS1   CAF    POSMAX
+ 0156            TS     TORQNDX
+ 0157            TS     TORQNDX +1
+ 0158            TC     BANKCALL
+ 0159            CADR   ESTIMS
+ 0160   VALMIS   TC     PHASCHNG
+ 0161            OCT    00005
+ 0170            CA     DRIFTO
+ 0171            TS     DSPTEM2 +1
+ 01711           CA     CDUX            STORE OG ANGLE FOR LAB CALC OF DRIFT**
+ 01715           TS     LOSVEC +1
+ 0172            CA     ZERO
+ 0173            TS     DSPTEM2
+ 0174  4         TC     SHOW
+ 0175   FINISH   CA     ONE
+ 0176            AD     POSITON
+ 0177            TS     DSPTEM2 +2
+ 0178            CA     TWO
+ 0179            TS     QPLACE
+ 0180            TC     BANKCALL
+ 0181            CADR   TSELECT -6
+ 0182   ENDTEST1 TC     BANKCALL
+ 0183  8         CADR   ENDTEST
+ 0184   OPCHK    CAF    DELYOFF         AUTOMATIC TEST FOR SYSTEM OPERATION
+ 0185            EXTEND
+ 0186            RAND   30              CHECK TO SEE IF IMU IS ON
+ 0187            CCS    A
+ 0188            TC     ALARMS
+ 0189            CAF    V16N20S
+ 0190  2         TC     NVSBWAIT
+ 0191            TC     FREEDSP
+ 0192            TC     BANKCALL
+ 0193            CADR   IMUZERO
+ 0194            TC     BANKCALL
+ 0195  2         CADR   IMUSTALL
+ 0196            TCF    ENDTEST1
+ 0197            CA     BIT8            ZERO ALL ERASEABLE USED IN TEST
+ 0198            TS     ZERONDX
+ 0199            CA     GENPLAD
+ 0200            TC     ZEROING
+ 0201  2         TC     NBPOSPL         ALIGN ANGLE COMPUTATION
+ 0202  2         TC     POSGMBL         COARSE ALIGN THOSE GIMBALS NOW
+ 0203            TCF    OPCHK
+ 0204  2         TC     FALNE           FINE ALIGN PLATFORM BY TORQUING GYROS
+ 0205            TC     BANKCALL
+ 0206            CADR   IMUSTALL
+ 0207            TCF    ENDTEST1
+ 0208            CA     TWO
+ 0209   CDUCHECK TS     CDUNDX          THIS LOOP CHECKS FOR NO ERROR BETWEEN
+ 0210            INDEX  CDUNDX          DESIRED CDU ANGLES AND THE ACTUAL ANGLES
+ 0211            CS     THETAD
+ 0212            INDEX  CDUNDX
+ 0213            AD     CDUX
+ 0214            TS     STOREPL
+ 0215            CCS    STOREPL
+ 0216            TC     ERRMASK
+ 0217            TC     NOERR
+ 0218            TC     ERRMASK
+ 0219   NOERR    CCS    CDUNDX
+ 0220            TC     CDUCHECK
+ 0221            TC     LOADIC
+ 0222   ERRMASK  MASK   LOWFOUR         ALLOW FIVE BIT ERRORS
+ 0223            CCS    A
+ 0224            TC     ALARMS
+ 0225            TC     NOERR
+ 0226   LOADIC   CA     ONE
+ 0227            TS     RESULTCT
+ 0228            CS     ONE
+ 0229  2         TS     MASKREG         SETS UP AZIMUTH AND VERTICAL VECTORS FOR
+ 0230            CA     ZERO
+ 0231            TS     PIPAX
+ 0232            TS     PIPAY
+ 0233  2         TS     PIPAZ
+ 0234            CA     BIT11
+ 0235            TS     LENGTHOT         VECTOR IN PIPA COUNTERS
+ 0236            CA     ONE
+ 0237            TC     WAITLOOP
+ 0238            CCS    COUNTPL
+ 0239            TC     WAITLP2
+ 0240            CA     DEC56
+ 0241            TC     WAITLOOP
+ 0242   OPCHK1   CA     TWO
+ 0243   OPCHK2   TS     PIPINDEX
+ 0244            INHINT
+ 0245            TC     CHECKG
+ 0246            RELINT
+ 0247            CA     ZERO
+ 0248            INDEX  PIPINDEX
+ 0249            TS     PIPAX
+ 0250            TC     DATALD          LOAD PIPA DATA AND TIME IN DATAPL
+ 0251            XCH    RESULTCT
+ 0252            AD     FOUR
+ 0253            TS     RESULTCT
+ 0254            CCS    PIPINDEX
+ 0255            TC     OPCHK2
+ 0256   READOUT  CS     FOUR
+ 0257            AD     RESULTCT
+ 0258            TS     RESULTCT
+ 0259            ZL
+ 0260            INDEX  RESULTCT
+ 0261            CA     DATAPL
+ 0262            LXCH   A
+ 0263            INDEX  RESULTCT
+ 0264            DAS    GENPL +1
+ 0265            CA     RESULTCT
+ 0266            MASK   MASKREG
+ 0267            CCS    A
+ 0268            TC     READOUT
+ 0269            CA     TEN
+ 0270            AD     THREE
+ 0271            TS     RESULTCT
+ 0272            CS     A
+ 0273            TS     MASKREG
+ 0274            CCS    COUNTPL
+ 0275            TC     WAITLP2
+ 0276            TC     COMPUT
+ 0277   RADCK    CA     V16N40S
+ 0278            TC     NVSBWAIT        OPERATOR WILL CHECK RADAR STATUS.IN LAB.
+ 0279            TC     FLASHON         SET RADAR OFF THEN PUT RESOLVER STANDARD
+ 0280            TC     ENDIDLE         ON TRUNNION AND SET TO +45 DEG.SHAFT WIL
+ 0281            TC     ENDTEST1
+ 0282            TC     +1              AFTER SETTING RES STANDARD DO A V33
+ 0283            CA     ZERO
+ 0284            TS     TANG +1
+ 0285            CA     45DEG
+ 0286            TS     TANG
+ 0287   DRIVRAD  TC     BANKCALL        IN SC WHEN RAD PRESENT DO V33 RIGHT AWAY
+ 0288            CADR   RRZERO          LGC WILL ATTEMPT TO DRIVE 45 DEG TRUNN.
+ 0289            TC     BANKCALL        TO MATCH STANDARD, AFTER ZEROING CDUS
+ 0290            CADR   RADSTALL
+ 0291            TC     ENDTEST1
+ 0292            TC     BANKCALL
+ 0293  2         CADR   RRDESNB
+ 0295            TC     BANKCALL
+ 0296            CADR   RADSTALL        IF CDU FAILS TO AGREE WITH COMMAND TO
+ 0297  2         TC     ALARMS          1 DEG GET ALARM HERE
+ 0298            TC     FLASHON         OPERATOR WILL CHECK STATUS OF RADAR
+ 0299            TC     ENDIDLE         IN S/C DO V33 TO CONTINUE WITH SHAFT
+ 0300            TC     ENDTEST1        TEST
+ 0301            TC     +1              IN LAB TURN RADAR OFF CHANGE RES STANDAR
+ 0302            CA     ZERO            TO SHAFT AND SET FOR -45DEG.
+ 0303            TS     TANG            THEN DO A V33 IF WANT TO REPEAT CHECK
+ 0304            CS     45DEG           DO A V34 TO TERMINATE
+ 0305            TS     TANG +1
+ 0306            TC     DRIVRAD
+ 0307   ALARMS   XCH    Q
+ 0308            TS     QPLACE
+ 0309            TC     ALARM
+ 0310            OCT    1411
+ 0311  8         TC     QPLACE
+ 0312   GYRSFTST TC     INTPRET         START ADRESS FOR IRIG SF TEST
+ 0313            CALL
+ 0314                   LATAZCHK        LOAD AZ AND LAT
+ 0315            EXIT
+ 0316   TESTCALL CAF    V21N30E
+ 0317            TC     NVSBWAIT        LOAD + OR - 1 FOR + OR - X TEST (+00001)
+ 0318            TC     ENDIDLE         LOAD + OR - 2 FOR + OR - Y TEST
+ 0319            TCF    ENDTEST1        LOAD + OR - 3 FOR + OR - Z TEST
+ 0320            TC     TESTCALL
+ 0321            XCH    DSPTEM1
+ 0322            TS     CALCDIR
+ 03221           EXTEND                 THIS ROUTINE LOOKS AT THE SIZE OF THE
+ 03222           BZMF   NEGSIZ          ENTRY MADE BY THE OPERATOR, IF HE DID NO
+ 03223  SIZLOOK  MASK   NEG3            T ENTER TEST NO THAT IS W/I PERMISSIBLE
+ 03224           EXTEND                 RANGE- HE WILL BE ASKED TO LOAD AGAIN.
+ 03225           BZF    GUDENTRY          THIS IS CONSIDERED NECESSARY BECAUSE
+ 03226 2         TC     TESTCALL        OF FOLLOWING INDEXED TC WHICH COULD
+ 03227  NEGSIZ   COM                    SEND THE COMPUTER OFF INTO THE BOONDOCKS
+ 03228           TC     SIZLOOK         TO PLAY WITH ITSELF IF THE OPERATOR
+ 03229  GUDENTRY CA     CALCDIR         MAKES ABAD ENTRY******
+ 0323            AD     FOUR
+ 0324            INDEX  A
+ 0325            TC     +1
+ 0326            TC     TESTCALL
+ 0327            TC     +6              C(A)=+00001 FOR -Z
+ 0328            TC     +4              C(A)=+00002 FOR -Y
+ 0329            TC     +2              C(A)=+00003 FOR -X
+ 0330            TC     -4              C(A)=+00004   ERROR
+ 0331            TC     +3              C(A)=+00005 FOR +X
+ 0332            TC     +6
+ 0333            TC     +10
+ 0334            CAF    FOUR
+ 0335            TS     POSITON         4 IS FOR A.L. POSN 4 USED FOR X SF TEST
+ 0336            TC     +7
+ 0337            TC     +6
+ 0338            CAF    TWO
+ 0339            TS     POSITON         +2 IS A.L. POS 2 USED FOR Y SF TEST
+ 0340            TC     +3
+ 0341            CAF    ONE
+ 0342            TS     POSITON         +1 IS A.L. POS 1 USED FOR Z SF TEST
+ 0343            TS     OPTNREG         C(K) = (4,2,1) FOR X,Y,Z
+ 0344            TS     SAVE +1
+ 0345            TC     FREEDSP
+ 0346            CAF    ZERO
+ 0347            TS     NBPOS           SET UP NB COORD TO Z NORTH, X UP
+ 0348            TS     SAVE +2         INITIALIZE FOR EARTHR DESIGNATE USAGE
+ 0349            TS     TESTNO          INITIALIZE FOR TEST ABORT ROUTINE
+ 0350            TS     CDUFLAG         ZEROS FOR STRTWACH USE
+ 0351            CAF    SFCONST
+ 0352  2         TS     SFCONST1         FOR DIVISION DURING CALCSFE
+ 0353            TC     BANKCALL
+ 0354            CADR   IMUZERO
+ 0355            TC     BANKCALL
+ 0356            CADR   IMUSTALL
+ 0357            TCF    ENDTEST1
+ 0358            TC     NBPOSPL
+ 0359            TC     POSGMBL
+ 0360            TCF    ENDTEST1
+ 0361            TC     FALNE
+ 0362            TC     BANKCALL
+ 0363            CADR   REDYTORK
+ 0364   WAITFIVE TS     SOUTHDR
+ 0365            CAF    BIT6            THIS SECTION CALLS FOR 2-32 MSEC WAITS
+ 0366            TC     DIRECTN -5
+ 0367   ENABLE   CAF    BIT6
+ 0368            EXTEND                 ENABLE GYRO TORQUING LOOP BY TURNING
+ 0369  2         WOR    14C             ON CAL MODULE RELAY
+ 0370            INHINT
+ 0371            CS     TWO             SETS UP EXEC SWITCH SO IMUPULSE WILL
+ 0372            MASK   IMODES33        NOT TURN OFF GYRO TORQ ENABLE RELAY
+ 0373            AD     TWO
+ 0374            TS     IMODES33
+ 0375            CAF    TWO
+ 0376            TS     SOUTHDR
+ 0377            TS     LENGTHOT         20 MSEC DELAY FOR GYRO LOOP STABILIZAT.
+ 0378            CA     ONE
+ 0379            TC     WAITLOOP
+ 0380            CCS    COUNTPL
+ 0381            TC     WAITLP2
+ 0382   DIRECTN  TC     BANKCALL         TORQUING ROUTINE IN IMU PERFORMANCE
+ 0383            CADR   SILVER             BANK 3
+ 0384            CCS    SOUTHDR         A ONE FIRST TIME THROUGH, THEN ZERO
+ 0385  2         TC     WAITFIVE
+ 0386   STRTWACH CCS    CDUFLAG          RETURNS HERE VIA QPLACE FROM SILVER
+ 0387            TC     CDUZOTST        BEEN CAUGHT AND CDU THROUGH ZERO IS
+ 0388            CCS    SAVE +1
+ 0389            TC     LOOKCDUP -4
+ 0390            TC     LOOKCDUP
+ 0391   CORRECT  CAF    ZERO
+ 0392            TS     LGYRO            RELEASES GYROS FOR IMUPULSE USAGE
+ 0393            TC     BANKCALL        EARTHRATE CORRECTION TO GYROS NOT EAST
+ 0394            CADR   EARTHR          OR WEST
+ 0395            CAF    ONE
+ 0396            TS     LGYRO           RESERVES GYROS FOR S.F. TEST TORQUING
+ 0397            TS     SAVE +2         INITIALIZES TO INSURE 5.6 DEG OF TORQ)
+ 0398            ADS    TESTNO          INCR THE BURST COUNTER, WHICH IS USED TO
+ 0399            CS     TESTNO          COUNT THE NO. OF TIMES THE GYRO COUNTER
+ 0400            MASK   FIVE            IS LOADED. IF A TENTH LOAD IS REQUESTED
+ 0401            EXTEND                 THE SFE IS TOO LARGE TO BE MEANINGFULL
+ 0402            BZF    STOPTEST        OR THE CDU,S ARE NOT WORKING.
+ 0403  2         TC     DIRECTN
+ 0404            CAF    ZERO            ZEROS CDU REG WHICH WILL BE USED TO
+ 0405            TS     SAVE +1
+ 0406            INDEX  CDUNDX          MEASURE ANGLE.
+ 0407            TS     CDUX
+ 0408   LOOKCDUP INHINT
+ 0409            CAF    BIT5
+ 0410   STILLOOK TS     TIMER
+ 0411            INDEX  CDUNDX          LOOKS FOR FIRST CDU PULSE AFTER TORQUING
+ 0412            CCS    CDUX            STARTS
+ 0413            TC     OUTPLUS         HERE IS PLUS PULSE
+ 0414            TC     TIMEWACH
+ 0415            TC     ALARMS          TTELL OPERATOR FIRST CDU PULSE WAS MISSD
+ 0416            TC     OUTNEG          HERE IS MINUS PULSE
+ 0417   TIMEWACH CCS    TIMER           WATCHES TIME IN INHINT SO COPS WILL NOT
+ 0418            TC     STILLOOK        CATCH US
+ 0419  2         RELINT
+ 0420            CCS    NEWJOB
+ 0421            TC     CHANG1
+ 0422  2         TC     LOOKCDUP        KEEP WATCHING IF THE PULSE IS NOT HERE
+ 0423   OUTPLUS  CS     DESANGLE        -2047 CDU PULSES ADDED TO CDU REG SO
+ 0424            INDEX  CDUNDX          ZERO CROSSOVER CAN BE DETECTED
+ 0425            TS     CDUX
+ 0426   LOADFLAG CAF    ONE
+ 0427            TS     CDUFLAG
+ 0428            CA     GYROCTR         GYRO TORQ CMDS LEFT OUT OF FIRST 5.625
+ 0429            TS     SAVE            DEG COMMANDED WHEN CDU PULSE ARRIVED
+ 0430            RELINT
+ 0431  2         TC     CDUZOTST
+ 0432   OUTNEG   CA     DESANGLE
+ 0433            INDEX  CDUNDX
+ 0434            TS     CDUX
+ 0435  2         TC     LOADFLAG
+ 0436   CDUZOTST INDEX  CDUNDX
+ 0437            CCS    CDUX
+ 0438            TC     +4
+ 0439            TC     ENDWATCH
+ 0440            TC     +2
+ 0441            TC     ENDWATCH
+ 0442            CAF    BIT10           RAND WITH BIT 10 TO SEE IF STILL TORQ.
+ 0443            EXTEND
+ 0444            RAND   14C
+ 0445            CCS    A
+ 0446  2         TC     +6
+ 0447            CCS    SAVE +2          SEE IF 2.8DEG OR 5.6 DEG SINCE LAST
+ 0448            TC     +2              EEARTHR USE, IF 2.8 DEG, DO 2.8 MORE
+ 0449            TC     CORRECT           THEN GO TO CORRECT
+ 0450            TS     SAVE +2
+ 0451            TC     DIRECTN
+ 0452            CCS    NEWJOB
+ 0453            TC     CHANG1
+ 0454  2         TC     CDUZOTST
+ 0455   ENDWATCH INHINT                 WWILL STOR GYROCTR AT END OF 2048 CDU
+ 0456            CAF    ZERO            PULSES AND STOP TORQ BY ZEROING REQUESTS
+ 0457            TS     LGYRO            RELEASE GYROS FOR OTHERS USAGE
+ 04575           AD     NEG0            PREVENT +0 IN OUTPUT COUNTER
+ 0458            XCH    GYROCTR
+ 0459            TS     SAVE +1         AND STOPS TORQUING BY ZEROING TORQ
+ 0460            CS     TWO
+ 0461            MASK   IMODES33        THIS TURNS OFF EXEC SWITCH SO THE GYRO
+ 0462            TS     IMODES33        TORQ. ENABLE RELAY CAN BE TURNED OFF.
+ 0463            RELINT
+ 0464   CALCSFE  CA     SAVE            GYROCTR AT TEST START
+ 0465            EXTEND
+ 0466            SU     SAVE +1         GYROCTR AT TEST END
+ 0467            TS     SAVE +2
+ 0468            EXTEND
+ 0469            BZMF   ARITH           SEE IF IT IS NEG OR ZERO,IF NEG,SFE IS +
+ 0470            MASK   SIZCHK
+ 0471            EXTEND                 THIS ROUTINE TESTS SAVE-(SAVE+1) TO SEE
+ 0472            BZF    NEGSFE          IF THE RESULT IS WITHIN PERMISSIBLE SIZE
+ 0473            CS     SAVE +2         AND DETERMINES POLARITY OF SFE USING THE
+ 0474            MASK   SIZCHK          PRESENCE OR ABSENCE OF BITS 12,13,14.
+ 0475            EXTEND                 IF BITS ARE PRESENT IN POSITIVE SAVE +2
+ 0476            BZF    POSSFE          THEN THE SFE MUST BE POS. IF DIFFERENCE
+ 0477            TC     STOPTEST        IS GREATER THAN 2047 PULSES FROM THE
+ 0478   NEGSFE   CAE    SAVE +2         IDEAL NO OF PULSES, THE SFE EXCEEDS
+ 0479  2         TC     ARITH           15600 PPM, THE TEST IS NOT VALID AND
+R0480   THEREFORE ABORTS AND TURNS ON PROGRAM ALARM
+ 0481   POSSFE   CAF    POSMAX          POS SFE DEFINITION = IRIG SF IN SEC OF
+ 0482            EXTEND                 ARC PER PULSE IS GREATER THAN
+ 0483            SU     SAVE +2         .61798095703125  SEC OF ARC/ PULSE
+ 0484  2         TC     ARITH +1
+ 0485   ARITH    COM
+ 0486            ZL
+ 0487            EXTEND
+ 0488            DV     SFCONST1
+ 0489   LOADIT   TS     DSPTEM2
+ 0490  2         TC     DATADSP
+ 0491   DATADSP  TC     GRABDSP
+ 0492            TC     PREGBSY
+ 0493            CA     CALCDIR
+ 0494            TS     DSPTEM2 +2      DISPLAYS TEST NO JUST PERFORMED
+ 0495            CAF    VB06N66          R3 = TEST NO JUST PERFORMED
+ 0496            TC     NVSBWAIT
+ 0497            TC     FLASHON
+ 0498            TC     ENDIDLE         TO END TEST DO V34E
+ 0499            TC     +2
+ 0500            TC     TESTCALL        TO CONTINUE TEST DO V33E
+ 0501            TC     BANKCALL
+ 0502            CADR   IMUZERO
+ 0503            TC     BANKCALL
+ 0504            CADR   IMUSTALL
+ 0505            TCF    ENDTEST1
+ 0506  2         TCF    ENDTEST1
+ 0507   STOPTEST TC     BANKCALL
+ 0508            CADR   IMUZERO
+ 0509            TC     BANKCALL        CORRECT CDUCTRS AND TURN ON PROG ALARM
+ 0510            CADR   IMUSTALL        TO TELL OPERATOR LAST CDU PULSE WAS
+ 0511            TCF    ENDTEST1        MISSED OR GYRO TORQ LOOP WAY OUT OF
+ 0512            CAF    ZERO            ALLOWABLE LIMITS.........
+ 05122           TS     LGYRO           **** RELEASE GYROS FOR OTHERS USAGE*****
+ 05126           TC     ALARMS
+ 0513  8         TCF    ENDTEST1
+ 0514   CHECKG   EXTEND                 PIP PULSE CATCHING ROUTINE
+ 0515            QXCH   QPLACE          RECORDS TIME AT OCCURRENCE OF A DELTA V
+ 0516   CHECKG1  RELINT                 KEEPS CONTENT OF PIPA REG INTACT
+ 0517            CCS    NEWJOB
+ 0518            TC     CHANG1
+ 0519            INHINT
+ 0520            CAF    ZERO
+ 0521            INDEX  PIPINDEX
+ 0522            XCH    PIPAX
+ 0523            TS     STOREPL
+ 0524            CCS    STOREPL
+ 0525            TC     CHECKP
+ 0526            TC     RESTOREA
+ 0527            TC     CHECKM
+ 0528            TC     RESTOREA
+ 0529   CHECKP   CAF    BIT6            LOOKS FOR ONE MORE PLUS PULSE
+ 0530            TS     PIPANO
+ 0531            INDEX  PIPINDEX
+ 0532            CCS    PIPAX
+ 0533            TC     CHECKG3
+ 0534            TC     +3
+ 0535            TC     RESTOREA
+ 0536            TC     +1
+ 0537            CCS    PIPANO
+ 0538            TC     CHECKP +1
+ 0539            TC     RESTOREA
+ 0540   CHECKM   CAF    BIT6            LOOKS FOR ONE MORE MINUS PULSE
+ 0541            TS     PIPANO
+ 0542            INDEX  PIPINDEX
+ 0543            CCS    PIPAX
+ 0544            TC     RESTOREA
+ 0545            TC     +3
+ 0546            TC     CHECKG3
+ 0547            TC     +1
+ 0548            CCS    PIPANO
+ 0549            TC     CHECKM +1
+ 0550            TC     RESTOREA
+ 0551  2CHECKG3  TC     FINETIME        TIME IN DOUBLE PRECISION LEFT IN MPAC
+ 0552            DXCH   MPAC
+ 0553            CAF    BIT4
+ 0554   CHECKG5  TS     PIPANO
+ 0555            INDEX  PIPINDEX
+ 0556            CCS    PIPAX
+ 0557            TC     +4
+ 0558            TC     RESTOREA
+ 0559            TC     +2
+ 0560            TC     RESTOREA
+ 0561            CCS    PIPANO
+ 0562            TC     CHECKG5
+ 0563   NREAD    TC     RESTORE
+ 0564            TS     STOREPL
+ 0565            TC     QPLACE
+ 0566   RESTORE  XCH    STOREPL         A WILL CONTAIN PREVIOUS PIPA CNTR CONTEN
+ 0567            INDEX  PIPINDEX        STOREPL WILL CONTAIN ZERO
+ 0568            AD     PIPAX
+ 0569            INDEX  PIPINDEX
+ 0570            TS     PIPAX
+ 0571  8         TC     Q
+ 0572   RESTOREA TC     RESTORE
+ 0573            TC     CHECKG1
+ 0574   DATALD   CA     STOREPL
+ 0575            INDEX  RESULTCT
+ 0576            TS     DATAPL
+ 0577            CA     MPAC
+ 0578            INDEX  RESULTCT
+ 0579            TS     DATAPL +1
+ 0580            CA     MPAC +1
+ 0581            INDEX  RESULTCT
+ 0582            TS     DATAPL +2
+ 0583  6         TC     Q
+ 0584   POSGMBL  EXTEND                 COARSE ALIGNING SUBROUTINE
+ 0585  2         QXCH   QPLACE
+ 0586            TC     INTPRET
+ 0587            CALL
+ 0588                   CALCGA
+ 0589  2         EXIT
+ 0590            TC     BANKCALL
+ 0591            CADR   IMUCOARS
+ 0592            CA     FLAGWRD1
+ 0593            MASK   BIT8
+ 0594            CCS    A               L +1, OTHERWISE TO L +2.
+ 0595            TC     LOCK
+ 0596            INCR   QPLACE
+ 0597            TC     +3
+ 0598   LOCK     CA     TWO
+ 0599            TS     NDXCTR
+ 05991           TC     FLAG1DWN
+ 059912          OCT    200
+ 0600            TC     BANKCALL
+ 0601            CADR   IMUSTALL
+ 0602            TCF    ENDTEST1
+ 0603            TC     QPLACE
+ 0604  8GMLOCKCK OCT    00401
+ 0606   FALNE    EXTEND                 TORQUES GYROS TO NULL OVT DIFFERENCE
+ 0607            QXCH   QPLACE          BETWEEN DESIRED SM ORIENTATION WITH RESP
+ 0608            TC     BANKCALL        TO NBASE AND ACTUAL
+ 0609            CADR   IMUZERO
+ 0610            TC     BANKCALL
+ 0611            CADR   IMUSTALL
+ 0612            TCF    ENDTEST1
+ 0613            TC     BANKCALL
+ 0614            CADR   IMUFINE
+ 0615            TC     BANKCALL
+ 0616            CADR   IMUSTALL
+ 0617            TCF    ENDTEST1
+ 0618   FALNE1   CA     CDUX
+ 0619            INDEX  FIXLOC
+ 0620            TS     24
+ 0621            CA     CDUY
+ 0622            INDEX  FIXLOC
+ 0623            TS     20
+ 0624            CA     CDUZ
+ 0625            INDEX  FIXLOC
+ 0626            TS     22
+ 0627            CA     BIT5
+ 0628            AD     FIXLOC
+ 0629            INDEX  FIXLOC
+ 0630            TS     S1
+ 0631            TC     INTPRET
+ 0632            VLOAD  MXV
+ 0633                   XSM
+ 0634                   STARAD
+ 0635            VSL1
+ 0636            STCALL 32D
+ 0637                   NBSM
+ 0638            STOVL  XDC
+ 0639                   YSM
+ 0640            MXV    VSL1
+ 0641                   STARAD
+ 0642            STCALL 32D
+ 0643                   NBSM
+ 0644            STOVL  YDC
+ 0645                   XDC
+ 0646            VXV    VSL1
+ 0647                   YDC
+ 0648            STCALL ZDC
+ 0649                   CALCGTA
+ 0650            EXIT
+ 0651            CA     OGCPL
+ 0652            TC     BANKCALL
+ 0653            CADR   IMUPULSE
+ 0654  2         TC     QPLACE
+ 0655   WAITLOOP EXTEND                 LOOPS IN X SEC INCREMENTS FOR NUMBER OF
+ 0656            QXCH   QPLAC
+ 0657            TS     COUNTPL         NUMBER PUT INTO LENGTHOT
+ 0658   WAITLP1  CCS    COUNTPL
+ 0659            TC     +4
+ 0660            TC     QPLAC
+ 0661            TC     +2
+ 0662            TC     WAITLP1 -1
+ 0663            INHINT
+ 0664            CAE    LENGTHOT
+ 0665            TC     WAITLIST
+ 06655           EBANK= XSM
+ 0666            2CADR  WAITLP3
+ 0667            RELINT
+ 0668            CCS    COUNTPL
+ 0669            TC     QPLAC
+ 0670            TC     QPLAC
+ 0671            NOOP
+ 0672   WAITLP2  TS     COUNTPL         ENTER HERE AFTER DOING CALLING JOB
+ 0673            CAF    WTLPCADR
+ 0674            TC     JOBSLEEP
+ 0675   WTLPCADR CADR   WAITLP1
+ 0676   WAITLP3  CAF    WTLPCADR
+ 0677            TC     JOBWAKE
+ 0678  6         TC     TASKOVER
+ 0679   ZEROING  TS     L
+ 0680            TCF    +2
+ 0681   ZEROING1 TS     ZERONDX
+ 0682            CAF    ZERO
+ 0683            INDEX  L
+ 0684            TS     0
+ 0685            INCR   L
+ 0686            CCS    ZERONDX
+ 0687            TCF    ZEROING1
+ 0688            TC     Q
+ 0689   COMPUT   TC     INTPRET         CALCULATE LENGTH OF GRAVITY VECTOR AS
+ 0690            AXT,1  AXT,2           MEASURED BY ACCELEROMETERS
+ 0691                   22D
+ 0692                   10D
+ 0693            SSP
+ 0694                   S1
+ 0695                   4
+ 0696            SSP
+ 0697                   S2
+ 0698                   4
+ 0699   LOPDELOP DLOAD* DSU*
+ 0700                   DATAPL +24D,2
+ 0701                   DATAPL +24D,1
+ 0702            PDDL*  DMP
+ 0703                   GENPL +24D,2
+ 0704                   DEC585
+ 0705            DDV
+ 0706            TIX,2  VDEF
+ 0707                   NEXT
+ 0708            ABVAL  RTB
+ 0709                   SGNAGREE
+ 0710            STCALL DSPTEM2
+ 0711                   KODU
+ 0712   NEXT     PUSH   TIX,1
+ 0713                   LOPDELOP
+ 0714   KODU     EXIT
+ 0715            TC     GRABWAIT
+ 0716            TC     SHOW
+ 0717            TC     INTPRET
+ 0718            SLOAD  PUSH
+ 0719                   DATAPL +1
+ 0720            SLOAD  PUSH
+ 0721                   DATAPL +5
+ 0722            SLOAD  VDEF
+ 0723                   DATAPL +11
+ 0724            UNIT   VSL1
+ 0725            PUSH
+ 0726            SLOAD  PUSH
+ 0727                   DATAPL +15
+ 0728            SLOAD  PUSH
+ 0729                   DATAPL +21
+ 0730            SLOAD  VDEF
+ 0731                   DATAPL +25
+ 0732            UNIT   VSL1
+ 0733            PDDL   DSU
+ 0734                   DATAPL +26
+ 0735                   DATAPL +12
+ 0736            SL4
+ 0737            SL3
+ 0738            STOVL  LENGTHOT
+ 0739            VXV    ABVAL
+ 0740            DMP    DDV
+ 0741                   ERUNITS
+ 0742                   LENGTHOT
+ 0743            RTB
+ 0744                   SGNAGREE
+ 0745            STORE  DSPTEM2
+ 0746            EXIT
+ 0747            TC     SHOW
+ 0748            TCF    RADCK
+ 0749   NBPOSPL  EXTEND                 SETS UP AZIMUTH AND VERTICAL VECTORS FOR
+ 0750            QXCH   QPLACE          AXISGEN,RESULTS TO BE USED IN CALCGA TO
+ 0751            TC     INTPRET
+ 0752            AXC,1  XSU,1           AZIMUTH IN NB COORDS
+ 0753                   SCNBAZ
+ 0754                   NBPOS
+ 0755            VLOAD*
+ 0756                   0,1
+ 0757  2         STORE  STARAD
+ 0758            AXC,1  XSU,1           VERTICAL IN NB COORDS
+ 0759                   SCNBVER
+ 0760                   NBPOS
+ 0761            VLOAD*
+ 0762                   0,1
+ 0763            STODL  STARAD +6
+ 0764                   SCHZEROS
+ 0765            STODL  6D
+ 0766                   AZIMUTH
+ 0767            COS    DCOMP
+ 0768            STODL  8D
+ 0769                   AZIMUTH
+ 0770            SIN
+ 0771            STORE  10D             VERTICAL IN CER
+ 0772            VLOAD
+ 0773                   SCNBVER
+ 0774            STCALL 12D
+ 0775                   AXISGEN
+ 0776  2         EXIT
+ 0777   SELPOSN  CA     DEC17
+ 0778            TS     ZERONDX
+ 0779            CA     XSMADR
+ 0780  2         TC     ZEROING
+ 0781            INDEX  POSITON
+ 0782            TC     +1
+ 0783            TC     OPCHKPOS        OPCHK WILL PUT ZERO IN POSITON
+ 0784            TC     POSN1
+ 0785            TC     POSN2
+ 0786            TC     POSN3
+ 0787            TC     POSN4
+ 0788            TC     POSN5
+ 0789            TC     POSN6
+ 0790            TC     POSN7
+ 0791            TC     POSN8
+ 0792            TC     POSN9
+ 0793            TC     POSN10
+ 0794  2         TC     POSN11           COMPASS POSITION
+R0795   (XXX.XX MERU) AND A VERTICAL TEST BY DV (XXX.XX MERU) EACH POSITION TELL
+R0796   HOW THE DISPLAYS ARE RELATED TO TTHE DRIFT COEFFICIENTS BEING MEASURED.
+R0797   NOTE THAT IT IS ILLEGAL TO RUN VERTICAL IN POS 6,4, OR 2 WITHOUT FIRST
+R0798   RUNNING HORIZONTAL OF POS 5,3, OR1. THIS IS BECAUSE THE HORIZ DRIFT CALC
+R0799   IN 1,3, OR 5 IS USED AS EAST DRIFFFT FOR VERTICAL TEST. THIS IS DONE BY
+R0800   THE MACHINE AUTOMATICALLY EXCEPT FOR VERTICAL POSITION 6 WHICH THE
+R0801   OPERATOR MUST DO. (SEE POSITION 6 BELOW)
+ 0802   POSN1    CA     HALF            X UP, Y SOUTH, Z EAST
+ 0803            TS     XSM
+ 0804            TS     YSM +2            NBDY = DH
+ 0805            TS     ZSM +4
+ 0806   NGUBGH   CA     ZERO
+ 0807            TS     PIPINDEX
+ 0808  4         TC     QPLACE
+ 0817   POSN2    CS     HALF            X DOWN, Y WEST, Z NORTH
+ 0818            TS     XSM
+ 0819            TS     YSM +4           NBDZ=DH,NBDX-ADIAX=-DV
+ 0820            TS     ZSM +2
+ 0821  4         TC     NGUBGH
+ 0832   POSN3    CA     HALF             Z UP, Y WEST ,X NORTH
+ 0833            TS     ZSM
+ 0834            COM                      NBDX = -DH
+ 0835            TS     XSM +2
+ 0836            TS     YSM +4
+ 0837   NSFLAGD  CA     TWO
+ 0838            TS     PIPINDEX
+ 0839   NSBUGD   CA     ZERO
+ 0840            TS     DRIFTT
+ 0841  4         TC     QPLACE
+ 0845   POSN4    CA     HALF             Z DOWN, Y SOUTH ,X EAST
+ 0846            TS     XSM +4
+ 0847            TS     YSM +2
+ 0848            COM                     NBDY+SRAY=DH,NBDZ+ADIAZ=DV
+ 0849            TS     ZSM
+ 0850            CA     TWO
+ 0851            TS     PIPINDEX
+ 0852  4         TC     QPLACE
+ 0855   POSN5    CA     HALF            Y UP, Z NORTH, X WEST
+ 0856            TS     YSM
+ 0857            COM                     NBDZ-SRAZ=DH
+ 0858            TS     XSM +4
+ 0859            TS     ZSM +2
+ 0860            CA     ONE
+ 0861            TS     PIPINDEX
+ 0862  4         TC     NSBUGD
+R0866   TO RUN POSITION 6 VERTICAL AFTER PIP TEST POS 6 IS DISPLAYED THE OPERATR
+R0867   MUST CALCULATE FROM POSN 2,5 -NBDZ-ADSRAZ (XXX.XX)MERU. WHEN P
+R0868   IP DATA FLASHES DO VERB 33 ENTER. THIS STARTS VERTICAL TEST. THEN THE
+R0869   DATA XXX.XX MERU AS CALCULATED MUST BE ENTERED INTO DRIFTT. IE VERB 21
+R0870   ENTER NOUN 01 ENTER LOCATION OF DRIFTT ENTER + (OR -) XXXXX ENTER
+ 0871   POSN6    CA     HALF            Y DOWN, Z EAST, X SOUTH
+ 0872            TS     XSM +2
+ 0873            TS     ZSM +4
+ 0874            COM                     NBDX +ADSRAX = DH, NBDY -ADIAY = -DV
+ 0875            TS     YSM
+ 0876            CA     ONE
+ 0877            TS     PIPINDEX
+ 0878  4         TC     QPLACE
+ 0883   POSN7    CS     HALF            Z UP-EAST,Y UP-WEST,X NORTH.THIS POSITON
+ 0884            TS     XSM +2
+ 0885            CA     ROOT1/2
+ 0886            TS     YSM              NBDX - .707 ADSRAX = -DH
+ 0887            TS     ZSM
+ 0888            TS     ZSM +4
+ 0889            COM
+ 0890            TS     YSM +4
+ 0891   GEORGES  TC     FLAG1DWN        UNSET GIMBAL LOCK FLAG
+ 0892            OCT    200
+ 0893  4         TC     NSBUGD
+ 0907   POSN8    CA     HALF            Z UP-SOUTH,Y UP-NORTH,X EAST.THIS POSITN
+ 0908            TS     XSM +4
+ 0909            CA     ROOT1/2          .707(-NBDZ-NBDY) +.5(ADIAZ-ADIAY)
+ 0910            TS     YSM              +.5(ADSRAY +ADSRAZ)=DH
+ 0911            TS     ZSM +2
+ 0912            TS     ZSM
+ 0913            COM
+ 0914            TS     YSM +2
+ 0915  4         TC     NSBUGD
+ 0922   OPCHKPOS CA     ROOT1SQ          OG=+45DEG,IG=-45DEG,MG=+45DEG.
+ 0923            TS     XSM
+ 0924            TS     YSM +2
+ 0925            TS     YSM +4
+ 0926            TS     ZSM
+ 0927            CA     ROOT1/2
+ 0928            TS     YSM
+ 0929            CA     ROOT3SQ
+ 0930            TS     XSM +2
+ 0931            TS     ZSM +4
+ 0932            CS     ROOT2SQ
+ 0933            TS     XSM +4
+ 0934            TS     ZSM +2
+ 0935  2         TC     QPLACE
+ 0936   POSN9    CA     HALF            X UP EAST,Y UP WEST,Z SOUTH.THIS POSITON
+ 0937            TS     ZSM +2
+ 0938            CA     ROOT1/2          -NBDZ +.707 SRAZ =DH
+ 0939            TS     XSM
+ 0940            TS     XSM +4
+ 0941            TS     YSM
+ 0942            COM
+ 0943            TS     YSM +4
+ 0944  4         TC     NSBUGD
+ 0955   POSN10   CA     HALF            X UP NORTH,Y UP SOUTH,Z EAST.THIS POSITN
+ 0956            TS     ZSM +4
+ 0957            CA     ROOT1/2           .707(NBDY -NBDX) +.5(ADIAY -ADIAX)
+ 0958            TS     XSM              +.5(ADSRAX) = DH
+ 0959            TS     YSM
+ 0960            TS     YSM +2
+ 0961            COM
+ 0962            TS     XSM +2
+ 0963  4         TC     NSBUGD
+ 0964   POSN11   TC     BANKCALL         COMPASS POSITION
+ 0965            CADR   LOADXSM
+ 0966  4         TC     QPLACE
+ 0970   SHOWLD   CA     DSPTEM2
+ 0971            TS     LENGTHOT
+ 0972            CA     DSPTEM2 +1
+ 0973            TS     NBPOS
+ 0974            CA     DSPTEM2 +2
+ 0975            TS     POSITON
+ 0976  2         TC     Q
+ 0977   SHOW     EXTEND
+ 0978            QXCH   QPLACE
+ 0979   SHOW1    CA     POSITON
+ 0980            TS     DSPTEM2 +2
+ 0981            CA     VB06N66
+ 0982            TC     NVSBWAIT
+ 0983            TC     FLASHON
+ 0984            TC     ENDIDLE
+ 0985            TC     FINISH
+ 0986            TC     QPLACE
+ 0987            TC     SHOWLD
+ 0988  4         TCF    SHOW1
+ 098801 LOADGTSM EXTEND                 THIS LOADS XSM INTO GEOMATRX
+ 098802          QXCH   QPLACE
+ 098803          TC     INTPRET
+ 098804          VLOAD
+ 098805                 XSM
+ 098806          STOVL  GEOMTRX
+ 098807                 YSM
+ 098808          STOVL  GEOMTRX +6
+ 098809                 ZSM
+ 098810          STORE  GEOMTRX +12D
+ 098811          EXIT
+ 0988128         TC     QPLACE
+ 0989   14C      EQUALS 0014
+ 0990   V21N30E  OCT    02130
+ 0991   DESANGLE DEC    2048
+ 0992   SFCONST  DEC    .13107
+ 0993   SIZCHK   OCT    34000
+ 0994   180DEC   DEC    180
+ 0995   3990DEC  DEC    3990
+ 0996   VB06N66  OCT    00666
+ 0997   TESTTIME DEC    600
+ 0998   V16N20S  OCT    01620
+ 0999   V16N40S  OCT    01640
+ 1000   DEC17    DEC    17
+ 1001   DEC585   2DEC   3200 B+14
+ 1002   DELYOFF  OCT    00400
+ 1003   ERUNITS  2DEC   342844 B-28
+ 1004   GENPLAD  GENADR AZIMUTH
+ 1005   GYRODPL  ECADR  GYROD
+ 1006   OGCPL    ECADR  OGC
+ 1007   LOWFOUR  OCT    77760
+ 1008   DEC56    DEC    56
+ 1009   45DEG    OCT    10000
+ 1010   ROOT1/2  DEC    .353553
+ 1011   ROOT1SQ  DEC    .250000
+ 1012   ROOT2SQ  DEC    .426776
+ 1013   ROOT3SQ  DEC    .073223
+ 1014  4XSMADR   GENADR XSM
+ 1018   SCNBAZ   2DEC   0
+ 1019            2DEC   0
+ 1020   LABNBAZ  2DEC   .5
+ 1021            2DEC   0
+ 1022            2DEC   0
+ 1023   SCNBVER  2DEC   .5
+ 1024            2DEC   0
+ 1025   LABNBVER 2DEC   0
+ 1026            2DEC   0
+ 1027            2DEC   -.5
+ 10271  1SECX    DEC    100
+ 10272  GEORGED  2DEC   .47408845
+ 10273           2DEC   .23125894
+ 10274           2DEC   .14561689
+ 10275  GEORGEC  2DEC   -.06360691
+ 10276           2DEC   -.16806746
+ 10277           2DEC   .15582939
+ 10278  GEORGEB  2DEC   -.06806784
+ 10279           2DEC   -.75079894
+ 102791          2DEC   -.24878704
+ 1030   DOCHECKG TC     MAKECADR
+ 1031            TS     QPLACES
+ 1032            TC     CHECKG
+ 1033            CA     QPLACES
+ 1034            TC     BANKJUMP
 *       ENDOFJOB
