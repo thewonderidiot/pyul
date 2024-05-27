@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import datetime
 from yul_system.yulprogs import Yulprogs
 from yul_system.assembler import pass1
@@ -34,6 +35,7 @@ class Yul:
         self.err_pages = [None, None]
         self._auth_name = ''
         self.prog_name = ''
+        self._prog = None
         self._new_auth_name = ''
         self._new_prog_name = ''
         self.tape = 'YULPROGS'
@@ -405,7 +407,11 @@ class Yul:
                 self.typ_abort()
 
             # Type out entire subdirector card.
-            self.yul_typer(' '.join(sub_sent))
+            sub_str = ' '.join(sub_sent)
+            self.yul_typer(sub_str)
+
+            # Make up line about who gets the reprint.
+            self._sors_line = '        THIS REPRINT IS ' + sub_str
 
             # Request reprint, check prg/sub name etc.
             self.switch |= SwitchBit.REPRINT | SwitchBit.MERGE_MODE
@@ -418,14 +424,20 @@ class Yul:
             self.switch |= SwitchBit.MERGE_MODE
 
             # Check prog/sub name, revno, author, etc.
-            self.known_psr()
+            self.known_psr(old_ok=True)
 
             # Recover new progname, force revision.
             self.prog_name = self._new_prog_name
             self.switch |= SwitchBit.REVISION
 
-            # Recoer author name of version.
+            # Recover author name of version.
             self._auth_name = self._new_auth_name
+
+            if self.switch & SwitchBit.SUBROUTINE:
+                self._sors_line = '  THIS SUBROUTINE WAS AS'
+            else:
+                self._sors_line = '     THIS PROGRAM WAS AS'
+            self._sors_line += 'SEMBLED AS A VERSION OF ' + self._objc_msg
 
             # Go join procedure for new prog/subro.
             self.new_prsub()
@@ -446,9 +458,10 @@ class Yul:
 
             # Request merging, check program name etc.
             self.switch |= SwitchBit.MERGE_MODE
-            prog = self.known_psr()
+            self.known_psr()
 
             # New revno.
+            prog = deepcopy(self._prog) 
             prog['REVISION'] += 1
             prog['MODIFIED'] = self._yul_date
             self.yulprogs.update_prog(self.comp_name, self.prog_name, prog)
@@ -468,6 +481,11 @@ class Yul:
 
         # Initialize POPO list
         self.popos = []
+
+        # For reprint, print name of customer.
+        # For version assembly, print source name.
+        if self.switch & (SwitchBit.REPRINT | SwitchBit.VERSION):
+            self._mon.phi_print(self._sors_line, spacing=4)
 
         sub_card, sub_sent = self.rd_subdrc()
         while sub_card is not None:
@@ -715,7 +733,7 @@ class Yul:
             self._mon.mon_typer('CONTROLLED SUBROUTINE CANNOT BE DIDDLED.')
             self.typ_abort()
 
-        return prog
+        self._prog = prog
 
     def new_prsub(self):
         # Seek program/subro name in directory.
@@ -786,6 +804,7 @@ class Yul:
 
         # Object message begins with "NEW" or "REVISION" and ends with author name.
         objc_msg = ' '.join(sentence)
+        self._objc_msg = objc_msg
 
         return objc_msg
 

@@ -1541,13 +1541,17 @@ class Pass1:
         return common, value
 
     def get_tape(self):
+        if self._yul._prog is None:
+            return None
+
         if self._sypt is None:
-            revno = self._yul.revno
-            if not self._yul.switch & SwitchBit.REPRINT:
-                revno -= 1
-            self._sypt = self._yul.yulprogs.find_sypt(self._yul.comp_name, self._yul.prog_name, revno)
-            if self._sypt is None:
-                return None
+            self._sypt = self._yul.yulprogs.find_sypt(
+                self._yul._prog['COMPUTER'], 
+                self._yul._prog['NAME'], 
+                self._yul._prog['REVISION'],
+                self._yul._prog['TYPE'] == 'SUBROUTINE'
+            )
+            # FIXME: Error if SYPT/SYLT entry not found
 
         tape_card = self._sypt.readline()
         if tape_card == '':
@@ -1561,7 +1565,7 @@ class Pass1:
         # Clear asterisk if fetching main input, freezing subroutines, or not revising.
         cacn = SwitchBit.KNOW_SUBS | SwitchBit.FREEZE_P1 | SwitchBit.REVISION
         if (self._yul.switch & cacn) != (SwitchBit.KNOW_SUBS | SwitchBit.REVISION):
-            if not self._yul.switch & SwitchBit.REPRINT: # FIXME
+            if not ((self._yul.switch & SwitchBit.REPRINT) and (tape_card[0] != 'L')): # FIXME
                 tape.unmark()
 
         # Branch if no sequence break
