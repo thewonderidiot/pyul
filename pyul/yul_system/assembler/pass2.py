@@ -38,6 +38,7 @@ class Pass2:
         self._line = Line()
         self._old_line = Line()
         self._location = ONES
+        self._subro = False
         self._user_log = Line(' '*81 + 'USER\'S OWN PAGE NO.' + 20*' ', spacing=2)
         self._card_typs = [
             (self.end_of,      2),
@@ -832,7 +833,7 @@ class Pass2:
             return self.health_cq(popo, loc_symbol)
 
         # Select local cussing procedure on 1 - 4.
-        if loc_symbol.health == 1:
+        if loc_symbol.health == 1 and not self._subro:
             self.cuss_list[28].demand = True
             self.sym_cuss(self.cuss_list[28], loc_symbol.name)
             return self.no_loc_sym(popo, loc_symbol)
@@ -842,7 +843,7 @@ class Pass2:
             self.sym_cuss(self.cuss_list[31], loc_symbol.name)
             return self.no_loc_sym(popo, loc_symbol)
 
-        elif loc_symbol.health == 3:
+        elif (loc_symbol.health == 3) or (loc_symbol.health == 1 and self._subro):
             self.print_lin()
             return self.pag_loxim(popo, loc_symbol)
 
@@ -1102,15 +1103,17 @@ class Pass2:
 
         if symbol.health == 0:
             # Undefined.
-            self.cuss_list[9].demand = True
-            self.sym_cuss(self.cuss_list[9], symbol.name)
+            if not self._subro:
+                self.cuss_list[9].demand = True
+                self.sym_cuss(self.cuss_list[9], symbol.name)
             self._address = ONES
             return None
 
         elif symbol.health == 1:
             # Nearly defined by equals.
-            self.cuss_list[47].demand = True
-            self.sym_cuss(self.cuss_list[47], symbol.name)
+            if not self._subro:
+                self.cuss_list[47].demand = True
+                self.sym_cuss(self.cuss_list[47], symbol.name)
             self._address = ONES
             return None
 
@@ -1217,16 +1220,17 @@ class Pass2:
         if self._adr_symbol is None:
             return self.form_locn(popo)
 
-        if popo.health & Bit.BIT11:
-            # Undefined setloc symbol is fatal.
-            self.sym_cuss(self.cuss_list[44], self._adr_symbol.name)
-            # Cuss no define by pass 1.
-            self.cuss_list[44].demand = True
+        if not self._subro:
+            if popo.health & Bit.BIT11:
+                # Undefined setloc symbol is fatal.
+                self.sym_cuss(self.cuss_list[44], self._adr_symbol.name)
+                # Cuss no define by pass 1.
+                self.cuss_list[44].demand = True
 
-        if popo.health & Bit.BIT12:
-            self.sym_cuss(self.cuss_list[45], self._adr_symbol.name)
-            # Cuss near define by pass 1.
-            self.cuss_list[45].demand = True
+            if popo.health & Bit.BIT12:
+                self.sym_cuss(self.cuss_list[45], self._adr_symbol.name)
+                # Cuss near define by pass 1.
+                self.cuss_list[45].demand = True
 
         # Modify and visit address symbol cusser.
         self.symb_fits(self._adr_symbol)
@@ -2184,6 +2188,15 @@ class Pass2:
         # Initialize count of word records.
         self._n_word_recs = 0
         self._yul.switch &= ~SwitchBit.LAST_REM
+
+        # Branch if assembing a subroutine
+        if self._yul.switch & SwitchBit.SUBROUTINE:
+            # Yul disables several cusses via self-modification. We instead set a flag...
+            # Don't cuss near definition in SUBRO assembly.
+            # Nor undefined setlocs.
+            # Nor undefined.
+            # Nor nearly defined symbols.
+            self._subro = True
 
         self._yul.err_pages = [None, None]
 
