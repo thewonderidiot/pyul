@@ -2159,12 +2159,16 @@ class Pass2:
         # Say "REJECT" on every page.
         self._yul.page_head = self._yul.page_head[:104] + '■REJECT ' + self._yul.page_head[112:]
         
-        # FIXME: Branch unless version or transferred.
-
-        # A revision is rejected. Subtract one from the revision number.
-        prog = self._yul.yulprogs.find_prog(self._yul.comp_name, self._yul.prog_name)
-        prog['REVISION'] -= 1
-        self._yul.yulprogs.update_prog(self._yul.comp_name, self._yul.prog_name, prog)
+        # Branch unless version or transferred.
+        if self._yul.switch & SwitchBit.VERSION:
+            # FIXME: handle switch bit 13?
+            # A version or transferred assembly is rejected. Delete the new prog/sub name without typing anything.
+            self._yul.yulprogs.remove_prog(self._yul.comp_name, self._yul.prog_name)
+        else:
+            # A revision is rejected. Subtract one from the revision number.
+            prog = self._yul.yulprogs.find_prog(self._yul.comp_name, self._yul.prog_name)
+            prog['REVISION'] -= 1
+            self._yul.yulprogs.update_prog(self._yul.comp_name, self._yul.prog_name, prog)
 
         return self.inish_p2()
 

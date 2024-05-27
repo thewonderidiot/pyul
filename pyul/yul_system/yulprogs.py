@@ -115,6 +115,17 @@ class Yulprogs:
         with open(prog_fn, 'w') as f:
             json.dump(prog_data, f, indent=4)
 
+    def remove_prog(self, comp_name, prog_name):
+        prog_data = self.find_prog(comp_name, prog_name)
+        if not prog_data:
+            return
+
+        auth_data = self.find_auth(prog_data['AUTHOR'])
+        prog_entry = comp_name + ' ' + prog_name
+        auth_data['PROGRAMS'].remove(prog_entry)
+        self.update_auth(prog_data['AUTHOR'], auth_data)
+        os.remove(os.path.join(self._tape, 'DIR', 'PROG', comp_name, prog_name))
+
     def list_progs(self, comp_name):
         # Return all computers currently known to this tape
         progs = list(os.walk(os.path.join(self._tape, 'DIR', 'PROG', comp_name)))[0][2]

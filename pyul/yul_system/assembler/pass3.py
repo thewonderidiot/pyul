@@ -61,6 +61,8 @@ class Pass3:
                                 'BER OF DEFINITION, AND NUMBER OF REFEREN' +
                                 'CES WITH FIRST AND LAST PAGE NUMBERS    ', spacing=2)
 
+        self._last_line = '%-120s' % self._last_line
+
         self._rej_rev = '  PRECEDING REVISION REMAINS ON '
         self._rej_vers = 'THE NEW VERSION IS NOT FILED ON '
         self._subl_head = 'SUBROUTINE  REV#  CALLED  BEGINS'
@@ -836,55 +838,70 @@ class Pass3:
     # subroutine, YULPROGS has already been closed and rewound, and bit 11 set. Otherwise the existence of a bypt
     # record for the program is noted in the directory, unless the assembly is bad. The file tape is closed and rewound.
     def close_yul(self):
-        # FIXME: Improve BYPT handling
-        self._bypt['PARAGRAPHS'] = [{'PARAGRAPH': p.number, 'WORDS': p.words} for n,p in self._paragraphs.items()]
+        # Branch if new BYPT records were written.
+        update_bypt = True
+        if self._yul.switch & SwitchBit.REPRINT:
+            # Branch if bad merge
+            if self._yul.switch >= SwitchBit.REPRINT_PASS1P5:
+                # Reprint must not change BYPT bit status.
+                update_bypt = False
 
-        # Let last line show filing on disc.
-        if self._mon.disc:
-            self._last_line = self._last_line[:54] + 'ON DISC &' + self._last_line[63:]
-        
-        # Degree of aspersion gives the bad news.
-        ecch = False
-        if self._yul.n_err_lins <= 2:
-            horrid = self._joyful[2]
-        elif self._yul.n_err_lins <= 9:
-            horrid = self._joyful[3]
-        elif self._yul.n_err_lins <= 99:
-            horrid = self._joyful[4]
-        elif self._yul.n_err_lins <= 999:
-            horrid = self._joyful[5]
+            self._line[0] = self._last_line
+            self._line[0] = 'ALL INPUT CARDS WERE REJECTED.  '
+            self._line[32] = self._rej_rev
+
+            # Be most emphatic about rejection.
+            self._mon.mon_typer('ALL INPUT CARDS REJECTED')
         else:
-            ecch = True
+            # FIXME: Improve BYPT handling
+            self._bypt['PARAGRAPHS'] = [{'PARAGRAPH': p.number, 'WORDS': p.words} for n,p in self._paragraphs.items()]
 
-        # Branch if subroutine, not program.
-        self._line[0] = self._last_line
-
-        if not self._yul.switch & SwitchBit.SUBROUTINE:
-            # Admit to BYPT if good/fair prog assy.
-            if self._yul.switch & SwitchBit.BAD_ASSEMBLY:
-                self._line[16] = self._bad
-                if ecch:
-                    self._mon.mon_typer('YUCCCHHHH')
-                else:
-                    self._mon.mon_typer(horrid + 'ASSEMBLY; FILED ON DISC')
+            # Let last line show filing on disc.
+            if self._mon.disc:
+                self._last_line = self._last_line[:54] + 'ON DISC &' + self._last_line[63:]
+            
+            # Degree of aspersion gives the bad news.
+            ecch = False
+            if self._yul.n_err_lins <= 2:
+                horrid = self._joyful[2]
+            elif self._yul.n_err_lins <= 9:
+                horrid = self._joyful[3]
+            elif self._yul.n_err_lins <= 99:
+                horrid = self._joyful[4]
+            elif self._yul.n_err_lins <= 999:
+                horrid = self._joyful[5]
             else:
-                self._bypt['MANUFACTURABLE'] = True
-                if self._yul.n_err_lins == 0:
-                    self._line[16] = self._good
-                    self._mon.mon_typer(self._joyful[0] + 'ASSEMBLY; FILED ON DISC')
+                ecch = True
+
+            # Branch if subroutine, not program.
+            self._line[0] = self._last_line
+
+            if not self._yul.switch & SwitchBit.SUBROUTINE:
+                # Admit to BYPT if good/fair prog assy.
+                if self._yul.switch & SwitchBit.BAD_ASSEMBLY:
+                    self._line[16] = self._bad
+                    if ecch:
+                        self._mon.mon_typer('YUCCCHHHH')
+                    else:
+                        self._mon.mon_typer(horrid + 'ASSEMBLY; FILED ON DISC')
                 else:
-                    self._line[16] = self._fair
-                    self._mon.mon_typer(self._joyful[1] + 'ASSEMBLY; FILED ON DISC')
-        else:
-            self._mon.mon_typer(' END OF ASSEMBLY; FILED ON DISC')
+                    self._bypt['MANUFACTURABLE'] = True
+                    if self._yul.n_err_lins == 0:
+                        self._line[16] = self._good
+                        self._mon.mon_typer(self._joyful[0] + 'ASSEMBLY; FILED ON DISC')
+                    else:
+                        self._line[16] = self._fair
+                        self._mon.mon_typer(self._joyful[1] + 'ASSEMBLY; FILED ON DISC')
+            else:
+                self._mon.mon_typer(' END OF ASSEMBLY; FILED ON DISC')
 
         # Branch if no errors in program.
         if self._yul.n_err_lins > 0:
             # Set error count in print.
             self._line[72] = ('%8d' % self._yul.n_err_lins) + \
-                              ' LINES CUSSED BETWEEN PAGES' + \
-                              self._yul.err_pages[0] + ' AND' +\
-                              self._yul.err_pages[1] + '.'
+                            ' LINES CUSSED BETWEEN PAGES' + \
+                            self._yul.err_pages[0] + ' AND' +\
+                            self._yul.err_pages[1] + '.'
             self._mon.mon_typer(self._line[72:])
 
         self._old_line.spacing = 4

@@ -758,7 +758,8 @@ class Yul:
         if auth is None:
             # Include it now if not found.
             self.yulprogs.add_auth(self._auth_name)
-            self.yulprogs.incr_auth(self._auth_name, self.comp_name, self.prog_name)
+
+        self.yulprogs.incr_auth(self._auth_name, self.comp_name, self.prog_name)
 
     def task_objc(self, card, sentence, word):
         # Some initializations.
@@ -914,6 +915,7 @@ class Yul:
             if sentence[word] != 'BY':
                 self.howz_that(card, sentence[word])
 
+            word += 1
             self.dcod_auth(card, sentence, word)
 
             # Save these quantities in parsed form.
