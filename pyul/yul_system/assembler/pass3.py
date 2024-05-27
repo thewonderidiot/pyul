@@ -839,13 +839,8 @@ class Pass3:
     # record for the program is noted in the directory, unless the assembly is bad. The file tape is closed and rewound.
     def close_yul(self):
         # Branch if new BYPT records were written.
-        update_bypt = True
-        if self._yul.switch & SwitchBit.REPRINT:
-            # Branch if bad merge
-            if self._yul.switch >= SwitchBit.REPRINT_PASS1P5:
-                # Reprint must not change BYPT bit status.
-                update_bypt = False
-
+        # Branch if bad merge
+        if (self._yul.switch & SwitchBit.REPRINT) and (self._yul.switch < SwitchBit.REPRINT_PASS1P5):
             self._line[0] = self._last_line
             self._line[0] = 'ALL INPUT CARDS WERE REJECTED.  '
             self._line[32] = self._rej_rev
