@@ -911,7 +911,8 @@ class Pass1:
             # Prohibit renumbering in subroutines.
             self._yul.switch &= ~SwitchBit.RENUMBER
 
-            # FIXME: set up first subro
+            # Initialize thread to current subroutine.
+            self._subro_idx = 0
 
             # Prevent false alarms in rejection.
             self._real_cdno = 0
@@ -921,11 +922,26 @@ class Pass1:
                 # When revising, first "END OF" card must be replaced by the one made by pass 0.
                 popo.card = self._end_of.card
 
-        # FIXME: set up next subro
+        # Branch if more subs in this assembly.
+        if self._subro_idx < len(self._yul.adhoc_subs):
+            # Point to next subroutine to enter assy.
+            subro_name = list(self._yul.adhoc_subs.keys())[self._subro_idx]
+            self._sypt = self._yul.adhoc_subs[subro_name]['SYLT']
+
+            # FIXME: Establish HEAD specified in call
+
+            # "Branch" if there is a good base addr.
+            self._loc_ctr = self._yul.adhoc_subs[subro_name]['BASE']
+
+            # Leave pointer to following subroutine.
+            self._subro_idx += 1
 
         # Exit via SEND POPO unless freezing subs.
         if not self._yul.switch & SwitchBit.FREEZE:
             return self.send_popo(popo)
+
+        # Otherwise kill intermediate "END OF"s.
+        return # FIXME
 
     def illegop(self, popo):
         self._yul.switch &= ~(Bit.BIT25 | Bit.BIT26 | Bit.BIT27)
@@ -1546,10 +1562,10 @@ class Pass1:
         return common, value
 
     def get_tape(self):
-        if self._yul._prog is None:
-            return None
-
         if self._sypt is None:
+            if self._yul._prog is None:
+                return None
+
             self._sypt = self._yul.yulprogs.find_sypt(
                 self._yul._prog['COMPUTER'], 
                 self._yul._prog['NAME'], 
@@ -1560,6 +1576,7 @@ class Pass1:
 
         tape_card = self._sypt.readline()
         if tape_card == '':
+            self._mon.mon_typer('CLOSING SYPT')
             self._sypt.close()
             return None
 
@@ -2312,6 +2329,14 @@ class Pass1:
         if subro_rev is None:
             subro_rev = subro_info['REVISION']
 
+        sylt_file = self._yul.yulprogs.find_sypt(self._yul.comp_name, subro_name, subro_rev, sylt=True)
+        if sylt_file is None:
+            popo.health |= Bit.BIT11
+            return self.subro_loc(popo)
+
+        # Yul allows subroutines to specify HEAD characters. GAP allows for
+        # specific revisions to be asked for. The latter is dramatically more
+        # useful, so that's the behavior implemented here, for now.
         if subro_name in self._yul.adhoc_subs:
             # Cuss multiple calls from one program.
             popo.health |= Bit.BIT13
@@ -2332,6 +2357,7 @@ class Pass1:
             'ACTIVE': subro_active,
             'BASE': ONES,
             'CALLED': 0,
+            'SYLT': sylt_file,
         }
 
         # Thread health to tape file directory.
