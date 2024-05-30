@@ -106,6 +106,7 @@ class Yulprogs:
             'REVISION': 0,
             'MODIFIED': date,
             'CONTROLLED': False,
+            'SUBROUTINES': {}
         }
 
         self.update_prog(comp_name, prog_name, prog_data)

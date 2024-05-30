@@ -111,8 +111,9 @@ class Pass1:
             0x1FFFFFF2FF,
         ]
 
-
     def post_spec(self):
+        # Location counter has good initial value for subroutine assembly,
+        # but in program assembly it is made hideous.
         if self._yul.switch & SwitchBit.SUBROUTINE:
             self._loc_ctr = self.subr_loc
         else:
@@ -837,7 +838,11 @@ class Pass1:
             if popo.card[67:69] != '  ' or popo.card[70:72] != '  ':
                 popo.card = popo.card[:69] + '-' + popo.card[70:72] + '-' + popo.card[73:]
 
-            # FIXME: Send a dummy acceptor ahead of a marked log card entering as a member of a called subro
+            # Send a dummy acceptor ahead of a marked log card entering as a member of a called subro
+            if popo.marked and (self._yul.switch & SwitchBit.KNOW_SUBS):
+                popo.health |= HealthBit.CARD_TYPE_ACCEPT
+                self.send_popo(popo)
+
             popo.health |= HealthBit.CARD_TYPE_REMARK
             return self.send_popo(popo)
 
@@ -950,7 +955,7 @@ class Pass1:
         popo.health |= self._loc_state
         return self.send_popo(popo)
 
-    def location(self, popo, blank=False):
+    def location(self, popo, blank=False, reserve=True):
         self._field_cod[1] = None
         symbol = None
         new_health = 0
@@ -1000,7 +1005,7 @@ class Pass1:
                 self.incr_lctr()
             self.loc_exit(loc_value, symbol, new_health)
         else:
-            self.ok_l_size(loc_value, symbol, sym_xform, new_health)
+            self.ok_l_size(loc_value, symbol, sym_xform, new_health, reserve=reserve)
 
     def loc_exit(self, loc_value, symbol, new_health):
         self._loc_state |= loc_value
@@ -1026,7 +1031,7 @@ class Pass1:
             # Location-symbol-didn't-fit-in-table-flg.
             self._loc_state |= Bit.BIT17
 
-    def ok_l_size(self, loc_value, symbol, sym_xform, new_health):
+    def ok_l_size(self, loc_value, symbol, sym_xform, new_health, reserve=True):
         # Look up memory type.
         midx = 0
         while loc_value > self.m_typ_tab[midx][1]:
@@ -1053,7 +1058,7 @@ class Pass1:
             if (self._yul.switch & MemType.MEM_MASK) != leftover_type:
                 new_health = (sym_xform >> 6*4) & 0xF
 
-        if not self.avail(loc_value, reserve=True):
+        if not self.avail(loc_value, reserve=reserve):
             new_health = (sym_xform >> 5*4) & 0xF
             self._loc_state |= LocStateBit.CONFLICT
 
@@ -1565,7 +1570,8 @@ class Pass1:
         # Clear asterisk if fetching main input, freezing subroutines, or not revising.
         cacn = SwitchBit.KNOW_SUBS | SwitchBit.FREEZE_P1 | SwitchBit.REVISION
         if (self._yul.switch & cacn) != (SwitchBit.KNOW_SUBS | SwitchBit.REVISION):
-            if not ((self._yul.switch & SwitchBit.REPRINT) and (tape_card[0] != 'L')): # FIXME
+            # FIXME: Yul appears to unmark all cards here, while GAP retains marks for reprints.
+            if not ((self._yul.switch & SwitchBit.REPRINT) and (tape_card[0] != 'L')):
                 tape.unmark()
 
         # Branch if no sequence break
@@ -2257,7 +2263,108 @@ class Pass1:
         return self.send_popo(popo)
 
     def subro(self, popo):
-        pass
+        popo.health |= HealthBit.CARD_TYPE_SUBRO
+        # Asterisk bit has a different use here.
+        popo.health &= ~HealthBit.ASTERISK
+        # Snub SUBRO cards after 1st "END OF".
+        if self._send_endo:
+            return self.illegop(popo)
+        # For now, forbid SUBROs to call SUBROs.
+        if self._yul.switch & SwitchBit.SUBROUTINE:
+            return self.illegop(popo)
+
+        afield = (popo.address_1() + popo.address_2()).strip()
+        # Address field all blank is bad.
+        if len(afield) == 0:
+            popo.health |= Bit.BIT12
+            return self.subro_loc(popo)
+
+        subro_head = afield.split()
+        subro_name = subro_head[0]
+
+        # Branch if SUBRO name over 8 characters.
+        if len(subro_name) > 8:
+            popo.health |= Bit.BIT12
+            return self.subro_loc(popo)
+
+        # Convert SUBRO revision to an integer.
+        subro_rev = None
+        if len(subro_head) > 1:
+            try:
+                subro_rev = int(subro_head[1])
+            except:
+                popo.health |= Bit.BIT12
+                return self.subro_loc(popo)
+
+        # Look up the subroutine name in the tape directory and the ad hoc
+        # directory simultaneously.
+        subro_info = self._yul.yulprogs.find_prog(self._yul.comp_name, subro_name)
+        if subro_info is None:
+            # Cuss unrecognized subroutine name.
+            popo.health |= Bit.BIT11
+            return self.subro_loc(popo)
+
+        # "Branch" if program, not subroutine.
+        if subro_info['TYPE'] != 'SUBROUTINE':
+            popo.health |= Bit.BIT12
+            return self.subro_loc(popo)
+
+        if subro_rev is None:
+            subro_rev = subro_info['REVISION']
+
+        if subro_name in self._yul.adhoc_subs:
+            # Cuss multiple calls from one program.
+            popo.health |= Bit.BIT13
+            # Branch if head designations conflict.
+            if subro_rev != self._yul.adhoc_subs[subro_name]['REVISION']:
+                popo.health |= Bit.BIT19
+            return self.subro_loc(popo, subro_name=subro_name)
+
+        subro_active = ((self._yul._prog is None) or
+                        (subro_name not in self._yul._prog['SUBROUTINES']) or
+                        (subro_rev != self._yul._prog['SUBROUTINES'][subro_name]) or
+                        (popo.op_field().strip()[-1] == '*')) # Op code SUBRO* demands printing
+
+        # Store finished entry in ad hoc subroutine directory and proecss location
+        # field, checking conflict of 1st loc.
+        self._yul.adhoc_subs[subro_name] = {
+            'REVISION': subro_rev,
+            'ACTIVE': subro_active,
+            'BASE': ONES,
+            'CALLED': 0,
+        }
+
+        # Thread health to tape file directory.
+        subro_idx = list(self._yul.adhoc_subs.keys()).index(subro_name) + 1
+        popo.health |= (subro_idx << 16)
+
+        # Branch if not freezing subroutines.
+        if self._yul.switch & SwitchBit.FREEZE_P1:
+            # Otherwise make SUBRO cards into remarks.
+            popo.card = 'R' + popo.card[1:]
+            return self.send_popo(popo)
+
+        return self.subro_loc(popo, subro_name=subro_name, base_address=True)
+
+    def subro_loc(self, popo, subro_name=None, base_address=False):
+        self._loc_state = 0
+        # Modify location subroutine so as not to reserve any locations, while checking.
+        self.location(popo, reserve=False)
+
+        if not base_address:
+            return self.send_popo(popo)
+
+        # Exit now if no good location.
+        if self._loc_ctr >= ONES:
+            popo.health |= self._loc_state
+            return self.send_popo(popo)
+
+        # Show that there is a base address.
+        self._yul.adhoc_subs[subro_name]['BASE'] = self._loc_ctr
+
+        popo.health |= self._loc_state
+        return self.send_popo(popo)
+
 
     def count(self, popo):
         pass

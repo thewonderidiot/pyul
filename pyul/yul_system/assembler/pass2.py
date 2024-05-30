@@ -897,11 +897,14 @@ class Pass2:
 
         self.send_word(popo, self._word)
 
+        return self.no_word(popo, loc_symbol, print_line=False)
+
+    def no_word(self, popo, loc_symbol, print_line=False):
         # Branch if there is no location symbol or loc sym not in symbol table.
         if not popo.health & Bit.BIT8 or loc_symbol is None:
-            return self.no_loc_sym(popo, loc_symbol, print_line=False)
+            return self.no_loc_sym(popo, loc_symbol, print_line=print_line)
 
-        return self.health_cq(popo, loc_symbol, print_line=False)
+        return self.health_cq(popo, loc_symbol, print_line=print_line)
 
     def health_cq(self, popo, symbol, print_line=True):
         # Branch if symbol health is B or more.
@@ -1440,7 +1443,88 @@ class Pass2:
         self.proc_word(popo, None)
 
     def subro(self, popo):
-        pass
+        # Maybe cuss oversize/ill-defined loc.
+        if popo.health & Bit.BIT14:
+            self.cuss_list[6].demand = True
+
+        # Maybe cuss "D" error, loc in wrong memtyp.
+        if popo.health & Bit.BIT9:
+            self.cuss_list[1].demand = True
+        if popo.health & Bit.BIT15:
+            self.cuss_list[5].demand = True
+
+        # Maybe cuss head def or loc use conflicts.
+        if popo.health & Bit.BIT19:
+            self.cuss_list[95].demand = True
+        if popo.health & Bit.BIT16:
+            self.cuss_list[4].demand = True
+
+        # Maybe cuss no such sub, loc predef fail.
+        if popo.health & Bit.BIT11:
+            self.cuss_list[93].demand = True
+        if popo.health & Bit.BIT10:
+            self.cuss_list[13].demand = True
+
+        # Maybe cuss meaningless address field.
+        if popo.health & Bit.BIT12:
+            self.cuss_list[8].demand = True
+
+        # Maybe cuss loc sym no fit in table.
+
+        # Fetch and set in print the location value.
+        self._location = popo.health & 0xFFFF
+        self.m_ploc_is(self._location)  # FIXME: I don't see how Yul actually calls this
+
+        # "Branch" if bad location value.
+        if popo.health & Bit.BIT14:
+            self._location = ONES
+        # Branch unless no such sub or bad adrfld.
+        elif popo.health & (Bit.BIT11 | Bit.BIT12):
+            self._location = ONES
+
+        # Maybe cuss multiple calls in a prog/sub.
+        if popo.health & Bit.BIT13:
+            self.cuss_list[94].demand = True
+
+        # Print line with location value.
+        self.print_lin()
+
+        # Branch unless subs frozen this assembly.
+        if popo.card[0] == 'R':
+            # Otherwise undo queer-col-1 cuss, exit.
+            self.cuss_list[60].demand = False
+            return self.end_subro(popo, skip_symbol=True)
+
+        # Branch if pass 1 failed to find a subro.
+        subro_idx = ((popo.health >> 16) & 0o3777) - 1
+        if subro_idx < 0:
+            return self.end_subro(popo)
+
+        # Find subro entry in ad hoc dir.
+        subro_name = list(self._yul.adhoc_subs.keys())[subro_idx]
+
+        # Branch if subro page call already done.
+        if self._yul.adhoc_subs[subro_name]['CALLED'] == 0:
+            called_page = self._yul.page_no
+            # May compensate for owed page heads.
+            if self._yul.switch & SwitchBit.OWE_HEADS:
+                called_page += 1
+
+            # Record page number of first call to sub.
+            self._yul.adhoc_subs[subro_name]['CALLED'] = called_page
+
+        return self.end_subro(popo)
+
+
+    def end_subro(self, popo, skip_symbol=False):
+        loc_symbol = None
+
+        # Branch if there is no location symbol.
+        if (not skip_symbol) and (popo.health & Bit.BIT8):
+            # Analyze and pre-process location symbol.
+            loc_symbol = self.loc_sym_1(popo)
+
+        return self.no_word(popo, loc_symbol, print_line=False)
 
     def instruct_p1(self, popo):
         self.instruct(popo, do_instront=False)
