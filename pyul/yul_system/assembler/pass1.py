@@ -447,6 +447,7 @@ class Pass1:
         while True:
             # Illegal to accept an "END OF" card thus.
             if self._tape.cardno_wd() == self._end_of.cardno_wd():
+                self._real.health |= Bit.BIT10
                 raise BadMerge()
 
             if ((self._tape_cdno != self._real_cdno) or         # Demand equality of formal card number.
