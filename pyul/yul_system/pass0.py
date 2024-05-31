@@ -475,7 +475,7 @@ class Yul:
         # Procedure to initialize a permissible assembly or reprint.
         # Initialize symbol table
         self.sym_thr = SymbolTable()
-        self.adhoc_subs = {}
+        self.adhoc_subs = []
 
         # Initialize availability table.
         self.av_table = [0]*2048

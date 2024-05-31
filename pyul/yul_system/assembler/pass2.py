@@ -39,6 +39,8 @@ class Pass2:
         self._old_line = Line()
         self._location = ONES
         self._subro = False
+        self._subro_idx = 0
+        self._heads_only = False
         self._user_log = Line(' '*81 + 'USER\'S OWN PAGE NO.' + 20*' ', spacing=2)
         self._card_typs = [
             (self.end_of,      2),
@@ -205,11 +207,12 @@ class Pass2:
 
     # Procedure in pass 2 for "END OF" cards.
     def end_of(self, popo):
-        # Branch if not for new and main program
         if self._mon.year <= 1965:
             self._line[0] = '  END OF ' + popo.card[8:68] + ' '*51
         else:
             self._line[0] = '    END OF ' + popo.card[8:68] + ' '*49
+
+        # Branch if not for new and main program
         if popo.card[8] == 'N':
             # Change "NEW" to "REVISION 0 OF".
             popo.card = popo.card[:8] + 'REVISION 0 OF' + popo.card[11:58] + popo.card[68:]
@@ -217,18 +220,63 @@ class Pass2:
         # Force space 3 after preceding line.
         self._old_line.spacing = 3
 
-        # Branch if main "END OF" in reprint.
-        if self._yul.switch & SwitchBit.REPRINT_PASS1P5:
-            self._line[80] = 'LAST ASSEMBLED ON ' + popo.card[69:]
+        # On first "END OF" card, send SYPT, close out last SYPT buffer, print "END OF"
+        # line (with date if reprint). Subsequently, just print line with date.
 
-        # FIXME: Handle more elaborate printing cases
-        self._line.spacing = Bit.BIT1
-        self.print_lin()
-
+        # Send SYPT of main "END OF" card only.
         if self._sypt_file is not None:
             self.send_sypt(popo.card)
+            # Close out last SYPT buffer.
             self._sypt_file.close()
+            # Destroy send_sypt
             self._sypt_file = None
+
+        # Branch if main "END OF" in reprint.
+        if self._yul.switch & SwitchBit.REPRINT_PASS1P5:
+            # Include date last assembled.
+            self._line[80] = 'LAST ASSEMBLED ON ' + popo.card[69:]
+
+        # Clear any wham call.
+        self._yul.switch &= ~SwitchBit.CUSSES_ON_PAGE
+        self.print_lin()
+
+        # Branch unless page heads are owed.
+        if self._yul.switch & SwitchBit.OWE_HEADS:
+            # Print page heads only and restore printing routine.
+            self._heads_only = True
+            self.print_old()
+
+        # Branch if there are no more subroutines.
+        if self._subro_idx < len(self._yul.adhoc_subs):
+            subro = self._yul.adhoc_subs[self._subro_idx]
+            # Plant starting page number for subro
+            subro['BEGINS'] = self._yul.page_no + 1
+
+            # Branch unless reject or obsolete reprint.
+            if self._yul.page_head[104] != '■':
+                # Put subro name in page head if possible.
+                self._yul.page_head = (self._yul.page_head[:103] + 
+                                       ('%-8s' % subro['NAME']) +
+                                       self._yul.page_head[111:])
+
+                # Print subro rev no. in subhead.
+                self._user_log[104] = '  REV%3u' % subro['REVISION']
+
+            # FIXME: Establish head that was gien in adrfld.
+            self._subro_idx += 1
+
+            # Branch unless inactive subs suppressed.
+            if self._yul.switch & SwitchBit.SUPPRESS_INACTIVE:
+                # Branch if coming subroutine is active.
+                if subro['ACTIVE']:
+                    self._yul.switch |= SwitchBit.PRINT
+                else:
+                    self._yul.switch &= ~SwitchBit.PRINT
+                    # Owe heads.
+                    self._yul.switch |= SwitchBit.OWE_HEADS
+                    # Branch if more copies must be made.
+                    if self._yul.n_copies > 0:
+                        self.copy_prt5()
 
         # Leave log-card mode
         self._user_page = 0
@@ -1495,23 +1543,22 @@ class Pass2:
             self.cuss_list[60].demand = False
             return self.end_subro(popo, skip_symbol=True)
 
-        # Branch if pass 1 failed to find a subro.
+        # Find subro entry in ad hoc dir.
         subro_idx = ((popo.health >> 16) & 0o3777) - 1
+
+        # Branch if pass 1 failed to find a subro.
         if subro_idx < 0:
             return self.end_subro(popo)
 
-        # Find subro entry in ad hoc dir.
-        subro_name = list(self._yul.adhoc_subs.keys())[subro_idx]
-
         # Branch if subro page call already done.
-        if self._yul.adhoc_subs[subro_name]['CALLED'] == 0:
+        if self._yul.adhoc_subs[subro_idx]['CALLED'] == 0:
             called_page = self._yul.page_no
             # May compensate for owed page heads.
             if self._yul.switch & SwitchBit.OWE_HEADS:
                 called_page += 1
 
             # Record page number of first call to sub.
-            self._yul.adhoc_subs[subro_name]['CALLED'] = called_page
+            self._yul.adhoc_subs[subro_idx]['CALLED'] = called_page
 
         return self.end_subro(popo)
 
@@ -2153,6 +2200,10 @@ class Pass2:
             return self.endoform(old_line, False)
 
     def print_old(self, old_line=None):
+        if self._heads_only:
+            self._heads_only = False
+            return
+
         if old_line is not None:
             if self._yul.n_copies != 0:
                 self.copy_prt5()

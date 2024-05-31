@@ -36,6 +36,7 @@ class Pass3:
 
         self._line = Line()
         self._old_line = old_line
+        self._old_line.spacing = Bit.BIT1
         self._lin_count = 0
         self._n_oct_errs = 0
 

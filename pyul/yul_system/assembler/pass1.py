@@ -926,13 +926,12 @@ class Pass1:
         # Branch if more subs in this assembly.
         if self._subro_idx < len(self._yul.adhoc_subs):
             # Point to next subroutine to enter assy.
-            subro_name = list(self._yul.adhoc_subs.keys())[self._subro_idx]
-            self._sypt = self._yul.adhoc_subs[subro_name]['SYLT']
+            self._sypt = self._yul.adhoc_subs[self._subro_idx]['SYLT']
 
             # FIXME: Establish HEAD specified in call
 
             # "Branch" if there is a good base addr.
-            self._loc_ctr = self._yul.adhoc_subs[subro_name]['BASE']
+            self._loc_ctr = self._yul.adhoc_subs[self._subro_idx]['BASE']
 
             # Leave pointer to following subroutine.
             self._subro_idx += 1
@@ -2338,13 +2337,14 @@ class Pass1:
         # Yul allows subroutines to specify HEAD characters. GAP allows for
         # specific revisions to be asked for. The latter is dramatically more
         # useful, so that's the behavior implemented here, for now.
-        if subro_name in self._yul.adhoc_subs:
+        old_idx = next((i for i,subro in enumerate(self._yul.adhoc_subs) if subro['NAME'] == subro_name), None)
+        if old_idx is not None:
             # Cuss multiple calls from one program.
             popo.health |= Bit.BIT13
             # Branch if head designations conflict.
-            if subro_rev != self._yul.adhoc_subs[subro_name]['REVISION']:
+            if subro_rev != self._yul.adhoc_subs[old_idx]['REVISION']:
                 popo.health |= Bit.BIT19
-            return self.subro_loc(popo, subro_name=subro_name)
+            return self.subro_loc(popo, subro_idx=old_idx)
 
         subro_active = ((self._yul._prog is None) or
                         (subro_name not in self._yul._prog['SUBROUTINES']) or
@@ -2353,17 +2353,18 @@ class Pass1:
 
         # Store finished entry in ad hoc subroutine directory and proecss location
         # field, checking conflict of 1st loc.
-        self._yul.adhoc_subs[subro_name] = {
+        self._yul.adhoc_subs.append({
+            'NAME': subro_name,
             'REVISION': subro_rev,
             'ACTIVE': subro_active,
             'BASE': ONES,
             'CALLED': 0,
             'SYLT': sylt_file,
-        }
+        })
 
         # Thread health to tape file directory.
-        subro_idx = list(self._yul.adhoc_subs.keys()).index(subro_name) + 1
-        popo.health |= (subro_idx << 16)
+        subro_idx = len(self._yul.adhoc_subs) - 1
+        popo.health |= ((subro_idx + 1) << 16)
 
         # Branch if not freezing subroutines.
         if self._yul.switch & SwitchBit.FREEZE_P1:
@@ -2371,9 +2372,9 @@ class Pass1:
             popo.card = 'R' + popo.card[1:]
             return self.send_popo(popo)
 
-        return self.subro_loc(popo, subro_name=subro_name, base_address=True)
+        return self.subro_loc(popo, subro_idx=subro_idx, base_address=True)
 
-    def subro_loc(self, popo, subro_name=None, base_address=False):
+    def subro_loc(self, popo, subro_idx=None, base_address=False):
         self._loc_state = 0
         # Modify location subroutine so as not to reserve any locations, while checking.
         self.location(popo, reserve=False)
@@ -2387,7 +2388,7 @@ class Pass1:
             return self.send_popo(popo)
 
         # Show that there is a base address.
-        self._yul.adhoc_subs[subro_name]['BASE'] = self._loc_ctr
+        self._yul.adhoc_subs[subro_idx]['BASE'] = self._loc_ctr
 
         popo.health |= self._loc_state
         return self.send_popo(popo)
