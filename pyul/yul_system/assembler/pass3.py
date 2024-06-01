@@ -832,8 +832,46 @@ class Pass3:
                 self._n_oct_errs = 0
 
     def subr_list(self):
-        # FIXME: implement subroutines
-        pass
+        # Set up page subhead for subroutine list.
+        self._page_hed2[0] = '%-120s' % self._subl_head
+
+        # Initialize 4-lines-per-group counter.
+        self._old_line.spacing = Bit.BIT1
+        subro_no = 0
+
+        # Clean line lest octl map was suppressed.
+        self._line[0] = ' '*120
+
+        # Begin by seeing if there are none.
+        if len(self._yul.adhoc_subs) < 1:
+            return
+
+        for subro in self._yul.adhoc_subs:
+            # Set subroutine name in print.
+            self._line[0] = subro['NAME']
+            # Set revision number in print.
+            self._line[13] = '%3u' % subro['REVISION']
+
+            # Branch if subro call was not confirmed.
+            if subro['CALLED'] != 0:
+                # Set in print page of confirming call.
+                self._line[21] = '%3u' % subro['CALLED']
+
+                # Branch if subroutine was not printed
+                if subro['BEGINS'] != 0:
+                    # Set in print page where subro begins.
+                    self._line[29] = '%3u' % subro['BEGINS']
+
+            self._line.spacing = 1
+            if (subro_no & 3) == 3:
+                # SP2 between groups of four lines
+                self._line.spacing = 2
+
+            subro_no += 1
+
+            # Advance to next subroutine and print.
+            self.print_lin()
+
 
     # Procedure for pass 3 to clean up the end of YULPROGS. If the assembly is a reprint or a rejected assy. or a
     # subroutine, YULPROGS has already been closed and rewound, and bit 11 set. Otherwise the existence of a bypt

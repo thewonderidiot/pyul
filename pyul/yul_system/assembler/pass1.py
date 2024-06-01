@@ -2359,6 +2359,7 @@ class Pass1:
             'ACTIVE': subro_active,
             'BASE': ONES,
             'CALLED': 0,
+            'BEGINS': 0,
             'SYLT': sylt_file,
         })
 
