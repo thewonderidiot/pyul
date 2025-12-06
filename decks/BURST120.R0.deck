@@ -22633,4 +22633,101 @@ R2384  4ADDRESSES, THE SECOND TAKEN AS THE DIRECT (OR INDIRECT IF IN ERASABLE) A
  2435  2SWSKIP   INCR   LOC
  2436  2SW/      EQUALS SWITCHES
  2437  2 +13D    TCF    DANZIG          11 - NOOP.
+L      2SINGLE PRECISION SUBROUTINES
+ 0001            BLOCK  02
+R0002  2SINGLE PRECISION SINE AND COSINE
+ 0003   SPCOS    AD     HALF            ARGUMENTS SCALED AT PI
+ 0004   SPSIN    TS     TEMK
+ 0005            TCF    SPT
+ 0006            CS     TEMK
+ 0007   SPT      DOUBLE
+ 0008            TS     TEMK
+ 0009            TCF    POLLEY
+ 0010            XCH    TEMK
+ 0011            INDEX  TEMK
+ 0012            AD     LIMITS
+ 0013            COM
+ 0014            AD     TEMK
+ 0015            TS     TEMK
+ 0016            TCF    POLLEY
+ 0017            TCF    ARG90
+ 0018   POLLEY   EXTEND
+ 0019            MP     TEMK
+ 0020            TS     SQ
+ 0021            EXTEND
+ 0022            MP     C5/2
+ 0023            AD     C3/2
+ 0024            EXTEND
+ 0025            MP     SQ
+ 0026            AD     C1/2
+ 0027            EXTEND
+ 0028            MP     TEMK
+ 0029            DDOUBL
+ 0030            TS     TEMK
+ 0031            TC     Q
+ 0032   ARG90    INDEX  A
+ 0033            CS     LIMITS
+ 0034            TC     Q               RESULT SCALED AT 1
+ 0035   C1/2     DEC    .7853134
+ 0036   C3/2     DEC    -.3216146
+ 0037  8C5/2     DEC    .0363551
+R0038   ENTER WITH ARGUMENT IN A, EXIT WITH ROOT IN A.  IF GIVEN A NEGATIVE ARGU
+ 0039  9MENT, THE RETURN SKIPS WITH CCS RESULT.
+R0040   MINUS ZERO RETURNS LIKE PLUS ZERO.
+R0041   MAXIMUM ERROR IN ANSWER IS NO GREATER THAN 2 BITS.
+R0042  4INTERRUPT PROGRAMS USING SPROOT MUST SAVE AND RESTORE SR.
+ 0043   SPROOT   TS     SQRARG          ENTER WITH C(A) = Y
+ 0044            CCS    A
+ 0045            TCF    POSARG          IF PNZ, CONTINUE
+ 0046            TC     Q               RETURN WITH 0 FOR +0
+ 0047            INCR   Q
+ 0048  2         TC     Q               RETURN WITH 0 FOR -0
+ 0049   POSARG   EXTEND
+ 0050            QXCH   ROOTRET         WILL BE CALLING SPROOT1
+ 0051            AD     63/64+1         B(A) = Y - 1
+ 0052            OVSK
+ 0053            TCF    SPROOT2
+ 0054  2         XCH    SQRARG          ARG JUGGLING
+ 0055   SPROOT3  TS     SQRARG
+ 0056            TS     SR              C(A) = Y
+ 0057            XCH    SR              (LOSE 1 BIT)
+ 0058            TS     HALFY           HALFY = Y/2
+ 0059            AD     -1/8            FORM Y/2 - 1/8
+ 0060            CCS    A               TEST FOR FIRST GUESS
+ 0061            AD     5/8+1           Y .G. 1/4, X = Y/2 + 1/2
+ 0062            TC     HIGUESS         +0 IMPOSSIBLE FROM ADDITION
+ 0063            NOOP                   Y .LE. 1/4, X/2 = Y + 1/16
+ 0064            CAF    BIT11           1/16
+ 0065            AD     SQRARG          SQRARG = Y
+ 0066            DOUBLE                 X FROM X/2
+ 0067   HIGUESS  TC     SPROOT1
+ 0068            TC     SPROOT1         ITERATE TWICE
+ 0069            XCH    ROOTRET         SAVE ANSWER AND GET Q
+ 0070            CCS    A
+ 0071            XCH    ROOTRET         NO SHIFT NEEDED
+ 0072            TC     ROOTBCK
+ 0073            XCH    ROOTRET         Q NEG, SHIFT RIGHT THREE
+ 0074            EXTEND
+ 0075            MP     BIT12           EXP -3
+ 0076   ROOTBCK  INDEX  ROOTRET         ROOTRET = Q - 1
+ 0077  2         TC     1               RETURN, C(A) = SQRT(Y)
+ 0078   SPROOT1  XCH    SR              SR = X/2
+ 0079            CS     HALFY           NEWTON ITER  X = X/2 + (Y/2 / X/2) / 2
+ 0080            ZL
+ 0081            EXTEND
+ 0082            DV     SR              C(SR) = X/2 DV DOES NOT EDIT
+ 0083            XCH    SR
+ 0084            EXTEND
+ 0085            SU     SR
+ 0086  2         TC     Q               C(A) = X (NEXT)
+ 0087   SPROOT2  CS     ROOTRET         SET RETURN Q NEG, AS FLAG
+ 0088            TS     ROOTRET
+ 0089            CAF    BIT7            SHIFT FOR SIGNIFCANCE
+ 0090            EXTEND
+ 0091            MP     SQRARG
+ 0092            CA     L               B(A) = 0
+ 0093  2         TC     SPROOT3
+ 0094   -1/8     OCTAL  73777
+ 0095   5/8+1    OCTAL  24001
+ 0096  463/64+1  OCTAL  37401
 *       ENDOFJOB
