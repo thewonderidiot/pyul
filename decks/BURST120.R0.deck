@@ -23484,4 +23484,1198 @@ R10571           *** WAITLIST TASK  GETCADR ***
  1058   GETCADR  DXCH   LONGCADR        GET THE LONGCALL THAT WE WISHED TO START
  1059  2         DTCB                   AND TRANSFER CONTROL TO IT
  1062   TSKOVCDR GENADR TASKOVER
+L      2AGC BLOCK TWO SELF-CHECK
+R000001 PROGRAM DESCRIPTION
+ 0000029    DATE  14 FEBRUARY 1967
+R000003 PROGRAM NAME -  SELF-CHECK
+ 0000049    LOG SECTION AGC BLOCK TWO SELF-CHECK
+R000005 MOD NO -  0
+ 0000069    ASSEMBLY SUNBURST REV 107
+R0000074MOD BY - GAUNTT
+R0000082FUNCTIONAL DESCRIPTION
+R000009      PROGRAM HAS TWO MAIN PARTS. THE FIRST IS SELF-CHECK WHICH RUNS AS A
+ 0000109 ZERO PRIORITY JOB WITH NO CORE SET, AS
+R000011 PART OF THE BACK-UP IDLE LOOP. THE SECOND IS SHOW-BANKSUM WHICH RUNS AS
+ 0000129A REGULAR EXECUTIVE JOB WITH ITS OWN
+R000013 STARTING VERB.
+R000014      THE PURPOSE OF SELF-CHECK IS TO CHECK OUT VARIOUS PARTS OF THE COMP
+ 0000159UTER AS OUTLINED BELOW IN THE OPTIONS.
+R000016      THE PURPOSE OF SHOW-BANKSUM IS TO DISPLAY THE SUM OF EACH BANK , ON
+ 0000179E AT A TIME.
+R000018      A THIRD SECTION, DSKYCHK, LIGHTS UP ALL THE DSKY ELECTROLUMINESCENT
+ 0000199 ELEMENTS.
+R000020      IN ALL THERE ARE 15 POSSIBLE OPTIONS IN THIS BLOCK II VERSION OF SE
+ 0000219LF-CHECK. MORE DETAIL DESCRIPTION MAY BE
+R000022 FOUND IN E-2065 BLOCK II AGC SELF-CHECK AND SHOW BANKSUM BY EDWIN D. SMA
+ 0000239LLY DECEMBER 1966.
+R000024      THE DIFFERENT OPTIONS ARE CONTROLLED BY PUTTING DIFFERENT NUMBERS I
+ 0000259N THE SMODE REGISTER (NOUN 27). BELOW IS
+R000026 A DESCRIPTION OF WHAT PARTS OF THE COMPUTER THAT ARE CHECKED BY THE OPTI
+ 0000279ONS, AND THE CORRESPONDING NUMBER, IN
+R000028 OCTAL, TO LOAD INTO SMODE.
+R000029 +-1   ALL PULSES POSSIBLE BY INTERNAL CONTROL OF THE COMPUTER.
+R000030 +-2   ALL THE IN-OUT INSTRUCTION PULSES.
+R000031 +-3   SPECIAL AND CENTRAL REGISTERS, ALL BIT COMBINATIONS.
+R000032 +-4   ERASABLE MEMORY
+R000033 +-5   FIXED MEMORY
+R000034 +-6,7,10   EVERYTHING IN THE PREVIOUS 5 OPTIONS.
+R000035 +-11   TURNS ON THE ELECTROLUMINESCENT DISPLAY IN THE DSKY.
+R000036 -0    SAME AS +-10 UNTIL AN ERROR IS DETECTED.
+R0000374+0    NO CHECK, PUTS COMPUTER INTO THE BACKUP IDLE LOOP.
+R0000382WARNINGS
+R000039      SMODE LOADED WITH GREATER THAN OCTAL 11 PUTS COMPUTER INTO THE BACK
+ 0000409UP IDLE LOOP.
+R0000413
+R0000422CALLING SEQUENCE
+R000043      TO CALL SELF-CHECK KEY IN
+R000044           V 21 N 27 E  OPTION NUMBER E
+R000045      TO CALL DSKYCHK KEY IN
+R000046           V 21 N 27 E +-11 E
+R000047      TO CALL SHOW-BANKSUM KEY IN
+R000048           V 56 E         DISPLAYS FIRST BANK
+R0000494          V 33 E         PROCEED, DISPLAYS NEXT BANK
+R0000502EXIT MODES, NORMAL AND ALARM
+R000051      SELF-CHECK NORMALLY CONTINUES INDEFINITELY UNLESS THERE IS AN ERROR
+ 0000529 DETECTED. IF SO + OPTION NUMBERS PUT
+R000053 COMPUTER INTO BACKUP IDLE LOOP, - OPTION NUMBERS RESTART THE OPTION.
+R000054      THE -0 OPTION PROCEEDS FROM THE LINE FOLLOWING THE LINE WHERE THE E
+ 0000559RROR WAS DETECTED.
+R000056      COMPLETION OF DSKYCHK PUTS THE COMPUTER INTO THE BACKUP IDLE LOOP.
+R000057      SHOW-BANKSUM PROCEEDS UNTIL A TERMINATE IS KEYED IN (V 34 E). THE C
+ 0000589OMPUTER IS PUT INTO THE BACKUP IDLE LOOP
+R0000593
+R0000602OUTPUT
+R000061      SELF-CHECK UPON DETECTING AN ERROR LOADS THE SELF-CHECK ALARM CONST
+ 0000629ANT (01102) INTO THE FAILREG SET AND
+R000063 TRIGGERS THE ALARM. THE ALARM ROUTINE DISPLAYS THE THREE FAILREGS. IF OP
+ 0000649ERATOR DESIRES FURTHER INFORMATION HE
+R000065 MAY KEY IN   V 05 N 31 E    DSKY DISPLAY IN R1 WILL BE ADDRESS +1 OF WHE
+ 0000669RE THE ERROR WAS DETECTED, IN R2 THE
+R000067 BANK NUMBER OF SELF-CHECK (37 OCTAL), AND IN R3 THE TOTAL NUMBER OF ERRO
+ 0000689RS DETECTED BY SELF-CHECK SINCE THE LAST
+R000069 FRESH START.
+R000070      DSKYCHK LIGHTS UP THE DSKY DISPLAY ELEMENTS STARTING WITH THE DIGIT
+ 00007199 IN ALL POSITIONS. EACH DISPLAY LASTS
+R000072 5 SECONDS.
+R000073      SHOW-BANKSUM STARTING WITH BANK 0 DISPLAYS IN R1 +- THE BANK SUM (S
+ 0000749HOULD EQUAL THE BANK NUMBER), IN R2 THE
+R0000754BANK NUMBER, AND IN R3 THE BUGGER WORD.
+R0000762ERASABLE INITIALIZATION REQUIRED
+R000077      ACCOMPLISHED BY FRESH START
+R0000784          SMODE & ERESTORE SET TO +0
+R0000792DEBRIS
+R000080      ALL EXITS FROM THE CHECK OF ERASABLE (ERASCHK) RESTORE ORIGINAL CON
+ 0000819TENTS TO REGISTERS UNDER CHECK.
+R000082 EXCEPTION IS A RESTART. RESTART THAT OCCURS DURING ERASCHK DOES A FRESH
+ 0000839START.
+R0000847
+ 0001            BANK   37
+ 0002   SBIT1    EQUALS BIT1
+ 0003   SBIT2    EQUALS BIT2
+ 0004   SBIT3    EQUALS BIT3
+ 0005   SBIT4    EQUALS BIT4
+ 0006   SBIT5    EQUALS BIT5
+ 0007   SBIT6    EQUALS BIT6
+ 0008   SBIT7    EQUALS BIT7
+ 0009   SBIT8    EQUALS BIT8
+ 0010   SBIT9    EQUALS BIT9
+ 0011   SBIT10   EQUALS BIT10
+ 0012   SBIT11   EQUALS BIT11
+ 0013   SBIT12   EQUALS BIT12
+ 0014   SBIT13   EQUALS BIT13
+ 0015   SBIT14   EQUALS BIT14
+ 0016  2SBIT15   EQUALS BIT15
+ 0017   S+ZERO   EQUALS ZERO
+ 0018   S+1      EQUALS BIT1
+ 0019   S+2      EQUALS BIT2
+ 0020   S+3      EQUALS THREE
+ 0021   S+4      EQUALS FOUR
+ 0022   S+5      EQUALS FIVE
+ 0023   S+6      EQUALS SIX
+ 0024   S+7      EQUALS SEVEN
+ 0025   S8BITS   EQUALS LOW8            00377
+ 0026   CNTRCON  OCTAL  00050           USED IN CNTRCHK
+ 0027   ERASCON1 OCTAL  00061           USED IN ERASCHK
+ 0028   ERASCON2 OCTAL  01374           USED IN ERASCHK
+ 0029   ERASCON6 OCTAL  01400           USED IN ERASCHK
+ 0030   ERASCON3 OCTAL  01461           USED IN ERASCHK
+ 0031   ERASCON4 OCTAL  01774           USED IN ERASCHK
+ 0032   S10BITS  EQUALS LOW10           01777, USED IN ERASCHK
+ 0033   SBNK03   EQUALS PRIO6           06000, USED IN ROPECHK
+ 0034   SIXTY    OCTAL  00060
+ 0035   SUPRCON  OCTAL  60017           USED IN ROPECHK
+ 0036   S13BITS  OCTAL  17777
+ 0037   CONC+S1  OCTAL  25252           USED IN CYCLSHFT
+ 0038   OVCON    OCTAL  37737           USED IN RUPTCHK
+ 0039   DVCON    OCTAL  37776
+ 0040   CONC+S2  OCTAL  52400           USED IN CYCLSHFT
+ 0041   ERASCON5 OCTAL  76777
+ 0042   S-7      OCTAL  77770
+ 0043   S-4      EQUALS NEG4
+ 0044   S-3      EQUALS NEG3
+ 0045   S-2      EQUALS NEG2
+ 0046   S-1      EQUALS NEGONE
+ 0047  2S-ZERO   EQUALS NEG0
+ 0048            EBANK= LST1
+ 0049   ADRS1    ADRES  SKEEP1
+ 0050   SRADRS   ADRES  SR
+ 0051   SELFADRS ADRES  SELFCHK         SELFCHK RETURN ADDRESS. SHOULD BE PUT
+A0052                                   IN SELFRET WHEN GOING FROM SELFCHK TO
+A0053                                   SHOWSUM AND PUT IN SKEEP1 WHEN GOING
+A0054  2                                FROM SHOWSUM TO SELF-CHECK.
+ 00541  PRERRORS CA     ERESTORE        IS IT NECESSARY TO RESTORE ERASABLE
+ 00542           EXTEND
+ 00543           BZF    ERRORS          NO
+ 00544           EXTEND
+ 00545           DCA    SKEEP5
+ 00546           INDEX  SKEEP7
+ 00547           DXCH   0000            RESTORE THE TWO ERASABLE REGISTERS
+ 00548           CA     S+ZERO
+ 00549           TS     ERESTORE
+ 00550  ERRORS   INHINT
+ 00555           CA     Q
+ 00560           TS     SFAIL           SAVE Q FOR FAILURE LOCATION
+ 00565           TS     ALMCADR         FOR DISPLAY WITH BBANK AND ERCOUNT
+ 0057            INCR   ERCOUNT         KEEP TRACK OF NUMBER OF MALFUNCTIONS.
+ 0058   TCALARM2 TC     ALARM2
+ 0059            OCT    01102           SELF-CHECK MALFUNCTION INDICATOR
+ 0060            CCS    SMODE
+ 0061            CA     S+ZERO
+ 0062            TS     SMODE
+ 0063            TC     SELFCHK         GO TO IDLE LOOP
+ 0064  2         TC     SFAIL           CONTINUE WITH SELF-CHECK
+ 0065   +0CHK    CS     A
+ 0066   -0CHK    CCS    A
+ 0067            TCF    ERRORS
+ 0068            TCF    ERRORS
+ 0069            TCF    ERRORS
+ 0070  2         TC     Q
+ 0071   +1CHK    CS     A
+ 0072   -1CHK    CCS    A
+ 0073            TCF    PRERRORS
+ 0074            TCF    PRERRORS
+ 0075            CCS    A
+ 0076            TCF    PRERRORS
+ 0077  2         TC     Q
+ 0078   SMODECHK EXTEND
+ 0079            QXCH   SKEEP1
+ 0080            TC     CHECKNJ         CHECK FOR NEW JOB
+ 0081            CCS    SMODE
+ 0082            TC     SOPTIONS
+ 0083            TC     SMODECHK +2     TO BACKUP IDLE LOOP
+ 0084            TC     SOPTIONS
+ 0085            INCR   SCOUNT
+ 0086  2         TC     SKEEP1          CONTINUE WITH SELF-CHECK
+ 0087   SOPTIONS AD     S-7
+ 0088            EXTEND
+ 0089            BZMF   +2              FOR OPTIONS BELOW NINE.
+ 0090   BNKOPTN  TC     SBNKOPTN        FOR OPTIONS ABOVE EIGHT
+ 0091            INCR   SCOUNT          FOR OPTIONS BELOW NINE.
+ 0092  2         AD     S+7
+ 0093            INDEX  A
+ 0094            TC     SOPTION1
+ 0095   SOPTION1 TC     TC+TCF
+ 0096   SOPTION2 TC     IN-OUT1
+ 0097   SOPTION3 TC     COUNTCHK
+ 0098   SOPTION4 TC     ERASCHK
+ 0099   SOPTION5 TC     ROPECHK
+ 0100   SOPTION6 TC     SKEEP1
+ 0101   SOPTION7 TC     SKEEP1
+ 0102  2SOPTON10 TC     SKEEP1          CONTINUE WITH SELF-CHECK
+ 0103  2SELFCHK  TC     SMODECHK        ** CHARLEY, COME IN HERE
+R0104   TC+TCF CHECKS ALL OF THE PULSES OF TCF AND ALL OF THE PULSES OF TC
+R0105   EXCEPT ABILITY TO TC TO ERASABLE.
+R0106   ALSO FIRST TIME CS FIXED MEMORY IS USED
+ 0107   TC+TCF   TC     +2
+ 0108            TC     CCSCHK
+ 0109            TCF    +2              $ TCF FIXED MEMORY
+ 0110            TC     ERRORS
+ 0111            CS     S+3             $ CS FIXED MEMORY
+ 0112            TC     Q               $
+ 0113  2         TC     ERRORS
+R0114   CCSCHK CHECKS ALL OF CCS EXCEPT RB WG.
+R0115   ALSO CHECKS TS ERASABLE, CS SC, AND CS ERASABLE MEMORY.
+ 0116   CCSCHK   CCS    A               $ CCS SC, C(A) = -3
+ 0117            TC     ERRORS
+ 0118            TC     ERRORS
+ 0119            TC     +2
+ 0120            TC     ERRORS
+ 0121            CCS    A               $ C(A) = +2, RESULT OF CCS -NUMBER
+ 0122            TC     +4
+ 0123            TC     ERRORS
+ 0124            TC     ERRORS
+ 0125            TC     ERRORS
+ 0126            TS     SKEEP1          $ TS ERASABLE
+ 0127            CCS    SKEEP1          $ CCS ERASABLE, C(A) = +1, RESULT OF
+ 0128            TC     +4              CCS +NUMBER
+ 0129            TC     ERRORS
+ 0130            TC     ERRORS
+ 0131            TC     ERRORS
+ 0132            CCS    A               $ C(A) = +0, RESULT OF CCS +1, CHECKS CI
+ 0133            TC     ERRORS
+ 0134            TC     +3
+ 0135            TC     ERRORS
+ 0136            TC     ERRORS
+ 0137            CS     A               $ CS SC
+ 0138            CCS    A               $ C(A) = -0, RESULT OF CCS +0
+ 0139            TC     ERRORS
+ 0140            TC     ERRORS
+ 0141            TC     ERRORS
+ 0142            CCS    A               $ RESULT OF CCS -0
+ 0143            TC     ERRORS
+ 0144            TC     +3
+ 0145            TC     ERRORS
+ 0146            TC     ERRORS
+ 0147            CS     SKEEP1          $ CS ERASABLE. ALSO CHECKS BACK INTO
+ 0148  2         TC     -1CHK           ERASABLE SEQUENCE.
+R0149   BZMFCHK CHECKS ALL PULSES OF BZMF.
+R0150   ALSO CHECKS CA FIXED MEMORY.
+ 0151   BZMFCHK  CAF    SBIT9           $ CA FIXED MEMORY
+ 0152            EXTEND
+ 0153            BZMF   ERRBZMF
+ 0154            CS     A
+ 0155            EXTEND
+ 0156            BZMF   +2              $
+ 0157            TC     ERRORS
+ 0158            CA     S+MAX
+ 0159            AD     S+1
+ 0160            EXTEND
+ 0161            BZMF   ERRBZMF2        $ + OVERFLOW, CHECK 01-0000
+ 0162            CA     S+ZERO
+ 0163            EXTEND
+ 0164            BZMF   +2              $
+ 0165            TC     ERRORS
+ 0166            CS     A
+ 0167            EXTEND
+ 0168            BZMF   +4              $
+ 0169            TC     ERRORS
+ 0170   ERRBZMF  TC     ERRORS          FROM BZMF WITH +NON-ZERO
+ 0171  2ERRBZMF2 TC     ERRORS          OVERFLOW WITH +0
+R0172   RESTORE1 AND 2 CHECKS INSTRUCTIONS (WITH STAR) ABILITY TO READ BACK INTO
+R0173   ERASABLE MEMORY. NOT NORMALLY INTERESTED IN CONTENTS OF A REGISTER.
+R0174   FIRST TIME MANY INSTRUCTIONS ARE USED.
+R0175   RESTORE1 ALSO CHECKS INDEX (WITHOUT EXTRACODE) ERASABLE, CA ERASABLE,
+R0176   AND MASK ERASABLE.
+ 0177   RESTORE1 CAF    SRADRS          ADDRESS OF SR
+ 0178            TS     SKEEP7
+ 0179            CA     S8BITS          00377
+ 0180            NDX    SKEEP7          $ INDEX ERASABLE                       *
+ 0181            TS     0000            TS SR, C(SR) = 00177
+ 0182            CCS    SR              C(SR) = 00077                          *
+ 0183            NDX    SKEEP7          CHECKS C(SKEEP7) CORRECT
+ 0184            CS     0000            C(SR) = 00037
+ 0185            AD     SR              C(SR) = 00017                          *
+ 0186            EXTEND
+ 0187            MSU    SR              C(SR) = 00007                          *
+ 0188            EXTEND
+ 0189            SU     SR              C(SR) = 00003                          *
+ 0190            CA     SR              $ C(SR) = +1, C(A) = +3, CA ERASABLE   *
+ 0191            MASK   SR              $ B(SR) = C(SR) = +1, MASK ERASABLE    *
+ 0192            TC     +1CHK
+ 0193            EXTEND
+ 0194            MP     SR
+ 0195            EXTEND
+ 0196            DV     SR
+ 0197            CA     SR              $ CA ERASABLE
+ 0198  2         TC     +1CHK           MAKES SURE MASK, MP, AND DV DO NOT EDIT.
+R0199   RESTORE2 ALSO CHECKS XCH ERASABLE,INDEX (WITH EXTRACODE) ERASABLE AND
+R0200   FIXED MEMORY, DCS ERASABLE, CA SC, AND DCA ERASABLE.
+ 0201   RESTORE2 CAF    ADRS1           ADDRESS OF SKEEP1
+ 0202            TS     SKEEP6
+ 0203            CA     S-1
+ 0204            TS     SKEEP1          -1
+ 0205            CS     A
+ 0206            XCH    SKEEP1          $ XCH ERASABLE, C(SKEEP1) = +1
+ 0207            XCH    SKEEP2          $ XCH ERASABLE, C(SKEEP2) = -1
+ 0208            EXTEND
+ 0209            NDX    SKEEP6          $ NDX ERASABLE                         *
+ 0210            DCA    0000            DCA ERASABLE                           *
+ 0211            EXTEND
+ 0212            NDX    ADRS1           $ NDX FIXED MEMORY                     *
+ 0213            DCS    0000            $ DCS ERASABLE MEMORY                  *
+ 0214            TC     -1CHK           MAKES SURE DCS ERASABLE OK
+ 0215            CA     L               $ CA SC
+ 0216            TC     +1CHK
+ 0217            EXTEND
+ 0218            NDX    SKEEP6          MAKE SURE C(SKEEP6) IS STILL CORRECT
+ 0219            DCA    0000            $ DCA ERASABLE
+ 0220            TC     +1CHK
+ 0221            CA     L
+ 0222  2         TC     -1CHK
+R0223   RESTORE3 CHECKS ABILITY TO RESTORE INSTRUCTIONS BACK INTO ERASABLE
+R0224   MEMORY. IT IS ONLY NECESSARY TO RESTORE ONE INSTRUCTION BECAUSE THE
+R0225   G REGISTER DOES NOT CHANGE.
+R0226   ALSO CHECKS TC TO ERASABLE MEMORY.
+ 0227   RESTORE3 CA     SBIT15          CS
+ 0228            TS     SKEEP1          40000
+ 0229            CA     S+2             TC Q
+ 0230            TS     SKEEP2
+ 0231            CA     S+1             +1
+ 0232            TC     SKEEP1          $ TC ERASABLE
+ 0233            TC     -1CHK           FIRST TIME BACK FROM ERASABLE.
+ 0234            TC     SKEEP1
+ 0235  2         TC     -0CHK           SECOND TIME BACK FROM ERASABLE.
+R0236   BZFCHK CHECKS ALL PULSES OF BZF.
+ 0237   BZFCHK   CAF    S+5
+ 0238            EXTEND
+ 0239            BZF    ERRBZF1         $
+ 0240            CS     A
+ 0241            EXTEND
+ 0242            BZF    ERRBZF2         $
+ 0243            CA     S+MAX
+ 0244            AD     S+1             01-00000
+ 0245            EXTEND
+ 0246            BZF    ERRBZF3         $
+ 0247            CS     A
+ 0248            EXTEND
+ 0249            BZF    ERRBZF4         $
+ 0250            CAF    S+ZERO
+ 0251            EXTEND
+ 0252            BZF    +2              $
+ 0253            TC     ERRORS
+ 0254            CS     A
+ 0255            EXTEND
+ 0256            BZF    +6              $
+ 0257            TC     ERRORS
+ 0258   ERRBZF1  TC     ERRORS          +NON-ZERO
+ 0259   ERRBZF2  TC     ERRORS          -NON-ZERO
+ 0260   ERRBZF3  TC     ERRORS          01-00000
+ 0261  2ERRBZF4  TC     ERRORS          10-37777
+R0262   DXCH+DIM CHECKS ALL PULSES OF DXCH AND DIM.
+R0263   ALSO CHECKS TS WITH OVERFLOW, TS SC, CA SC, AND AD ERASABLE.
+ 0264   DXCH+DIM CA     S+MAX
+ 0265            AD     S+2             OVERFLOW WITH +1
+ 0266            TS     SKEEP1          $ TS WITH OVERFLOW, +1
+ 0267            TC     ERRORS
+ 0268            CS     A
+ 0269            TS     SKEEP2
+ 0270            CS     S+MAX
+ 0271            TS     L               $ TS SC,  40000
+ 0272            CS     A               37777
+ 0273            DXCH   SKEEP1          $ DXCH ERASABLE
+ 0274            TC     +1CHK
+ 0275            CA     L               $ CA SC
+ 0276            TC     -1CHK
+ 0277            EXTEND
+ 0278            DIM    SKEEP1          $ DIM ERASABLE, DIM + NUMBER, 37776
+ 0279            EXTEND
+ 0280            DIM    SKEEP2          $ DIM - NUMBER, 40001
+ 0281            CA     S+MAX           37777
+ 0282            AD     SKEEP2          $ AD ERASABLE, +1
+ 0283            TC     +1CHK
+ 0284            CS     S+MAX           40000
+ 0285            AD     SKEEP1          -1
+ 0286            TC     -1CHK
+ 0287            CA     S+1             +1
+ 0288            EXTEND
+ 0289            DIM    A               $ DIM SC, DIM +1
+ 0290            EXTEND
+ 0291            DIM    A               $ DIM -0
+ 0292            TC     -0CHK
+ 0293            EXTEND
+ 0294            DIM    A               $ DIM +0
+ 0295  2         TC     +0CHK
+R0296   DAS+INCR CHECKS ALL PULSES OF DAS AND INCR.
+R0297   ALSO CHECKS DCA FIXED, LXCH SC, DCA ERASABLE, AD ERASABLE, DCS FIXED,
+R0298   DCS ERASABLE, AND XCH SC.
+ 0299   DAS+INCR CA     S-1
+ 0300   DAS++    TS     L               -1
+ 0301            CA     S+2             +2
+ 0302            DAS    A               $ DAS SC, C(A) = +4 AND C(L) = -2
+ 0303            AD     S-3             $ AD FIXED MEMORY
+ 0304            TC     +1CHK
+ 0305            CA     S+1
+ 0306            AD     L               $ AD SC, -1
+ 0307            TC     -1CHK
+R0308   DAS WITH INTERFLOW IN LOW ORDER AND NET OVERFLOW
+ 0309   DAS+-    EXTEND
+ 0310            DCA    S+MAX           $DCA FIXED MEMORY
+ 0311            DXCH   SKEEP3          37777, 40000
+ 0312            CA     S-2
+ 0313            TS     L
+ 0314            CA     S+3             C(A) = +3, C(L) = -2
+ 0315            DAS    SKEEP3          $ DAS ERASABLE
+ 0316            LXCH   A               $ LXCH SC
+ 0317            TC     +0CHK
+ 0318            CA     L
+ 0319            TC     +1CHK
+ 0320            EXTEND
+ 0321            DCA    SKEEP3          $ DCA ERASABLE
+ 0322            LXCH   A               C(A) = -1, C(L) = +1
+ 0323            TC     -1CHK
+ 0324            CA     L
+ 0325            TC     +1CHK
+R0326   INCRCHK CHECKS ALL INCR PULSES EXCEPT WOVR.
+ 0327   INCRCHK  INCR   SKEEP4          $ INCR ERASABLE, -0
+ 0328            AD     SKEEP4          $ AD ERASABLE
+ 0329            TC     -0CHK
+ 0331            INCR   A               $ INCR SC, +1
+ 0331            TC     +1CHK
+R0332   DAS WITH OVERFLOW IN LOW ORDER AND NET UNDERFLOW
+ 0333   DAS-+    EXTEND
+ 0334            DCS    S+MAX           $ DCS FIXED MEMORY
+ 0335            DXCH   SKEEP1          40000, 37777
+ 0336            CA     S+3             +3
+ 0337            TS     L
+ 0338            CS     A               -3
+ 0339            DAS    SKEEP1          $
+ 0340            TC     -1CHK
+ 0341            EXTEND
+ 0342            DCS    SKEEP1          $ DCS ERASABLE (+1, -2)
+ 0343            XCH    L               $ XCH SC (-2, +1)
+ 0344            AD     S+1
+ 0345            TC     -1CHK
+ 0346            CA     L
+ 0347  2         TC     +1CHK
+R0348   MPCHK CHECKS ALL PULSES OF MP, AUG, AND ADS.
+ 0349   MPCHK    CA     S+1
+ 0350            EXTEND
+ 0351            AUG    A               $ AUG SC, +2
+ 0352            TS     SKEEP5          +2
+ 0353            CS     A
+ 0354            TS     Q               -2
+ 0355            CS     A
+ 0356   MP++     EXTEND
+ 0357            MP     S+MAX           $ MP FIXED MEMORY, +1, 37776
+ 0358            AD     L               37777
+ 0359   MP+-     EXTEND
+ 0360            MP     Q               $ MP SC, -1, 40001
+ 0361            ADS    L               $ ADS SC, 40000
+ 0362            AD     DVCON
+ 0363            TC     -1CHK
+ 0364            CA     L
+ 0365   MP-+     EXTEND
+ 0366            MP     SKEEP5          $ MP ERASABLE, -1, 40001
+ 0367            TS     SKEEP6
+ 0368            EXTEND
+ 0369            AUG    SKEEP6          $ AUG ERASABLE, -2
+ 0370            AD     L               40000
+ 0371   MP--     EXTEND
+ 0372            MP     SKEEP6          $ +1, 37776
+ 0373            TC     +1CHK
+ 0374            CS     L               40001
+ 0375            AD     DVCON
+ 0376            TC     -0CHK
+ 0377            CA     S+1
+ 0378            ADS    SKEEP6          $ ADS ERASABLE, +1
+ 0379            TC     -1CHK
+ 0380            CA     SKEEP6
+ 0381  2         TC     -1CHK
+R0382   DVCH AND DVQXCHK CHECK ALL OF PULSES OF DV AND QXCH.
+R0383   ALSO CHECKS TS WITH UNDERFLOW
+ 0384   DVCHK    CA     SBIT14          20000
+ 0385            TS     SKEEP1
+ 0386            AD     A               OVERFLOW
+ 0387            AD     S+1
+ 0388            TS     L               $ TS SC WITH OVERFLOW, +1
+ 0389            TC     ERRORS
+ 0390            CS     A
+ 0391            TS     SKEEP2          -1
+ 0392            CA     S-ZERO          -0
+ 0393            LXCH   SKEEP1          $ LXCH ERASABLE
+ 0394   DV++     EXTEND
+ 0395            DV     SKEEP1          $ DV ERASABLE, C(A) = 20000, C(L) = +0
+ 0396            CS     A
+ 0397            LXCH   A
+ 0398            TC     +0CHK
+ 0399   DV--     EXTEND
+ 0400            DV     SKEEP2          $ 20000, +0
+ 0401            TS     SKEEP4          20000
+ 0402            CS     A
+ 0403            TS     SKEEP3          -(20000)
+ 0404            AD     SBIT14
+ 0405            TC     -0CHK
+ 0406            CA     L
+ 0407            TC     -0CHK
+ 0408   DV+-     CA     S+MAX
+ 0409            TS     L
+ 0410            CA     S13BITS
+ 0411            EXTEND
+ 0412            DV     SKEEP3          $ -(37777), +(17777)
+ 0413            XCH    L
+ 0414            CS     A
+ 0415   DV-+     EXTEND
+ 0416            DV     SKEEP4          $ -(37777), -(17777)
+ 0417            AD     DVCON
+ 0418            TC     -1CHK
+ 0419            CA     S+MAX
+ 0420            XCH    L               ALSO PUTS 37777 IN L FOR DV-+,-
+ 0421            AD     SBIT14
+ 0422            TC     +1CHK
+ 0423   DV-+,+   CS     S13BITS         -(17777)
+ 0424            EXTEND
+ 0425            DV     SKEEP4
+ 0426            AD     L               -(37775)
+ 0427            AD     DVCON
+ 0428            TC     +1CHK
+ 0429            XCH    L
+ 0430            TC     -1CHK           ALSO PUTS +0 IN L FOR DVQXCH
+ 0431   DVQXCHK  CS     DVCON
+ 0432            TS     Q               40001
+ 0433            CS     A
+ 0434            EXTEND
+ 0435            DV     Q               $ DV SC, -(37777), +(37776)
+ 0436            EXTEND
+ 0437            QXCH   L               $ QXCH SC, C(L) = 40001, C(Q) = 37776
+ 0438            AD     Q
+ 0439            TC     -1CHK
+ 0440            CA     L
+ 0441            AD     S+MAX
+ 0442            TC     +1CHK
+ 0443            EXTEND
+ 0444            QXCH   SKEEP1          $ QXCH ERAS., C(Q) = +1, C(SKEEP1) = +3
+ 0445            CA     Q
+ 0446            TC     +1CHK
+ 0447            CS     SKEEP1          -3
+ 0448            AD     S+2
+ 0449  2         TC     -1CHK
+R0450   MSUCHK CHECKS ALL PULSES OF MSU EXCEPT RB WG.
+ 0451   MSUCHK   CA     S+ZERO
+ 0452            TS     SKEEP1          +0
+ 0453            CS     A
+ 0454            TS     SKEEP2          -0
+ 0455            EXTEND
+ 0456            MSU    A               $ MSU SC, +0
+ 0457            TC     +0CHK
+ 0458            EXTEND
+ 0459            MSU    SKEEP2          $ MSU ERASABLE, +1
+ 0460            TC     +1CHK
+ 0461            EXTEND
+ 0462            DCA    S+MAX
+ 0463            EXTEND
+ 0464            MSU    L               $ CHECKS RUS WA, ALSO -1 FROM NEG. NO.
+ 0465            TS     A
+ 0466            TC     +2
+ 0467            TC     ERRORS
+ 0468  2         TC     -1CHK
+R0469   MASKCHK  FINISHES CHECKING MASK INSTRUCTION.
+ 0470   MASKCHK  CA     S+7
+ 0471            TS     L
+ 0472            MASK   S-7             $ MASK FIXED MEMORY
+ 0473            TC     +0CHK
+ 0474            CA     S+1
+ 0475            MASK   L               $ MASK SC
+ 0476  2         TC     +1CHK
+R0477   NDX+SU FINISHES CHECKING BOTH INDEX INSTRUCTIONS. ALSO CHECKS ALL OF SU
+R0478   EXCEPT RB WG.
+ 0479   NDX+SU   CA     S+1
+ 0480            TS     L
+ 0481            TS     SKEEP1
+ 0482            NDX    A               $ NDX SC
+ 0483            AD     0000            AD L, +2
+ 0484            EXTEND
+ 0485            SU     SKEEP1          $ SU ERASABLE
+ 0486            TC     +1CHK
+ 0487            EXTEND
+ 0488            NDX    L               $ NDX SC
+ 0489            SU     0000            $ SU SC, SU L
+ 0490  2         TC     -1CHK
+R0491   D--SC CHECKS DCS SC, DXCH SC, AND DCA SC.
+ 0492   D--SC    CA     S+2
+ 0493            TS     L               +2
+ 0494            CA     S+1
+ 0495            EXTEND
+ 0496            DCS    A               $ DCS SC, C(L) = -2
+ 0497            TC     -1CHK
+R0498   AFTER DXCH C(A) = B(Q) = +3, C(L) = B(A) = +0, C(Q) = B(L) = -1.
+ 0499            DXCH   L               $ DXCH SC
+ 0500            TS     SKEEP3
+ 0501            AD     Q
+ 0502            TC     +1CHK
+ 0503            CA     L
+ 0504            TC     +0CHK
+ 0505            CA     S-1
+ 0506            TS     Q
+ 0507            CS     A
+ 0508            EXTEND
+R0509   AFTER DCA C(A) = C(L) = C(Q) = B(Q) = -1.
+ 0510            DCA    L               $ DCA SC
+ 0511            AD     Q
+ 0512            AD     SKEEP3
+ 0513            TC     +1CHK
+ 0514            CA     L
+ 0515  2         TC     -1CHK
+R0516   D--LCHK CHECKS THAT OVERFLOW IS LOST IN PROCESS OF GOING THROUGH L REG.
+R0517   ALSO CHECKS THAT Q WILL HOLD 16 BITS
+ 0518   D--LCHK  CA     S-2
+ 0519            TS     Q
+ 0520            CA     S-MAX
+ 0521            ADS    Q
+ 0522            CS     Q
+ 0523            TS     A
+ 0524            TC     ERRORS
+ 0525            EXTEND
+ 0526            DCA    L
+ 0527            TS     A
+ 0528            TC     +2
+ 0529            TC     ERRORS
+ 0530  2         TC     -1CHK
+R0531   CHECKS OVERFLOW, UNDERFLOW,END-AROUND-CARRY, AND SIGN CHANGE OF ADDER.
+R0532   ALSO CHECKS ADS SC WITH OVERFLOW AND TS A WITH UNDERFLOW
+ 0533   ADDRCHK  CA     SBIT14          20000
+ 0534            TS     Q
+ 0535            ADS    Q               $ ADS SC, OVERFLOW
+ 0536            ADS    Q               UNDERFLOW
+ 0537            TS     A               $ TS SC WITH UNDERFLOW
+ 0538            TC     ERRORS
+ 0539            ADS    Q
+ 0540  2         TC     +1CHK
+R0541   RUPTCHK CHECKS THAT INTERRUPT DOES NOT OCCUR WHILE OVERFLOW OR UNDERFLOW
+R0542   IS IN THE A REGISTER. ALSO CHECKS THAT INHINT RELINT WORK PROPERLY.
+ 0543   RUPTCHK  INHINT
+ 0544            CA     S+ZERO
+ 0545            TS     ZRUPT
+ 0546            RELINT
+ 0547            AD     TIME4
+ 0548            TS     SKEEP1
+ 0549   TENMS    CS     SKEEP1
+ 0550            AD     TIME4           WAIT FOR NEXT TIME4 INCREMENT
+ 0551            EXTEND
+ 0552            BZF    TENMS
+ 0553            INHINT
+ 0554            CA     ZRUPT
+ 0555            EXTEND
+ 0556            BZF    +2              NO INTERRUPT.
+ 0557            TC     RUPTCHK         THERE WAS AN INTERRUPT. START AGAIN.
+ 0558            CAF    S+1             2 1/2 MS UNTILE NEXT T3 INTERRUPT.
+ 0559            TC     WAITLIST
+ 0560            EBANK= LST1
+ 0561            2CADR  TSKADRS
+ 0562            CA     S+MAX
+ 0563            AD     OVCON           CONTROLS TIME SPENT IN OF-UF LOOP
+ 0564            RELINT
+ 0565   WAIT     CS     A
+ 0566            CCS    A
+ 0567            TC     INHNTCHK
+ 0568   RUPTCON  ADRES  C(BRUPT)
+ 0569            AD     S+2
+ 0570            TC     WAIT
+ 0571   INHNTCHK INHINT                 T3 RUPT SHOULD BE WAITING
+ 0572            TS     SKEEP5
+ 0573            TC     ERRORS
+ 0574            RELINT
+ 0575   C(BRUPT) CS     ZRUPT           INTERRUPT SHOULD HAPPEN HERE
+ 0576            EXTEND
+ 0577            BZF    +6              MAKES SURE AN INTERRUPT DID OCCUR
+ 0578            TC     IN-OUT1         AN INTERRUPT. END OF RUPTCHK
+ 0579   TSKADRS  CS     ZRUPT
+ 0580            AD     RUPTCON
+ 0581            TC     -1CHK
+ 0582            TC     TASKOVER
+ 05825 2         TC     ERRORS          NO INTERRUPT
+R0583   IN-OUT1 CHECKS ALL PULSES OF WRITE AND READ
+ 0584   IN-OUT1  CA     S-1
+ 0585   WRITECHK EXTEND
+ 0586            WRITE  Q
+ 0587            LXCH   Q               PUT C(Q) IN L
+ 0588            TC     -1CHK
+ 0589   READCHK  EXTEND                 C(L) = 77776
+ 0590            READ   L
+ 0591            TC     -1CHK
+ 0592            CA     L
+ 0593  2         TC     -1CHK
+R0594   IN-OUT2 CHECKS ALL PULSES OF ROR AND WOR
+ 0595   IN-OUT2  CS     S+3
+ 0596   RORCHK   TS     L               77774
+ 0597            CA     DVCON           37776
+ 0598            EXTEND
+ 0599            ROR    L               $ ROR, -1
+ 0600            TC     -1CHK
+ 0601   WORCHK   CA     DVCON           C(L) STILL 77774
+ 0602            EXTEND
+ 0603            WOR    L               $ WOR, -1
+ 0604            TC     -1CHK
+ 0605            CA     L
+ 0606  2         TC     -1CHK
+R0607   IN-OUT3 CHECKS ALL PULSES OF RAND, WAND, AND RXOR
+ 0608   IN-OUT3  CS     DVCON
+ 0609   RANDCHK  TS     L               40001
+ 0610            CA     S13BITS         17777
+ 0611            EXTEND
+ 0612            RAND   L               $ RAND, +1
+ 0613            TC     +1CHK
+ 0614   WANDCHK  CA     S13BITS         C(L) STILL 40001
+ 0615            EXTEND
+ 0616            WAND   L               $ WAND, +1
+ 0617            TC     +1CHK
+ 0618            CS     S+5
+ 0619            XCH    L               ALSO PUT -5 IN L FOR RXORCHK
+ 0620            TC     +1CHK
+ 0621   RXORCHK  CA     S+6
+ 0622            EXTEND
+ 0623            RXOR   L               $ RXOR, -3
+ 0624            AD     S+2
+ 0625            TC     -1CHK
+ 0626            CA     L
+ 0627            AD     S+4
+ 0628  2         TC     -1CHK
+ 0629  2         TC     SMODECHK
+R0630   COUNTCHK COUNTS UP 14 BIT NUMBER WITH SIGN.
+R0631   TAKES APPROXIMATELY 8.7 SECONDS.
+R0632   ** PUT IN CCS NEWJOB FOR ROPE.
+ 0633   COUNTCHK EXTEND
+ 0634            DCA    S+MAX
+ 0635            DXCH   SKEEP6          PUT 37777 IN SKEEP6 AND 40000 IN SKEEP7
+ 0636   +LOOP    CA     SKEEP6
+ 0637            XCH    Q
+ 0638            EXTEND
+ 0639            DCS    L
+ 0640            CCS    A
+ 0641            TC     -NMBR
+ 0642            TC     ENDCOUNT
+ 0643            TS     SKEEP6
+ 0644            AD     SKEEP7
+ 0645            TC     -1CHK
+ 0646            INCR   SKEEP7
+ 0647            TC     +LOOP
+ 0648   -NMBR    AD     L
+ 0649            TC     -1CHK
+ 0650            TC     CHECKNJ         CHECK FOR NEW JOB
+ 0651            CS     SKEEP6
+ 0652            TC     +LOOP +1
+ 0653   ENDCOUNT CA     SKEEP7          -0
+ 0654            AD     SKEEP6          SKEEP6 SHOULD BE +0
+ 0655  2         TC     -0CHK
+R0656   O-UFLOW COUNTS DOWN OVERFLOW AND UNDERFLOW NUMBERS.
+R0657   TAKES APPROXIMATELY 10.8 SECONDS
+ 0658   O-UFLOW  CA     S-MAX
+ 0659            TS     SKEEP5          40000
+ 0660            CS     A
+ 0661   OFLOOP   INHINT
+ 0662            AD     S+MAX
+ 0663            AD     S+1
+ 0664            XCH    Q
+ 0665            CCS    Q
+ 0666            TC     -NMBRS
+ 0667            TC     ERRORS          CAN PUT IN CONSTANT
+ 0668            TS     SKEEP3
+ 0669            TC     ERRORS
+ 0670            CA     SKEEP3
+ 0671            AD     SKEEP5
+ 0672            TC     -1CHK
+ 0673            RELINT
+ 0674            TC     CHECKNJ         CHECK FOR NEW JOB
+ 0675            CA     SKEEP4
+ 0676            EXTEND
+ 0677            DIM    SKEEP5
+ 0678            TC     OFLOOP
+ 0679   -NMBRS   TS     SKEEP4
+ 0680            TC     ENDOFUF
+ 0681            CA     SKEEP4
+ 0682            AD     SKEEP5
+ 0683            TC     -1CHK
+ 0684            CA     SKEEP5
+ 0685            AD     S-MAX
+ 0686            AD     S-1
+ 0687            TC     OFLOOP +3
+ 0688   ENDOFUF  CA     SKEEP5
+ 0689            TC     -0CHK
+ 0690            CS     SKEEP4
+ 0691            AD     DVCON
+ 0692            TC     -1CHK
+ 0693  2         RELINT
+ 0694  2         TC     SMODECHK
+R0695   SKEEP7 HOLDS LOWEST OF TWO ADDRESSES BEING CHECKED.
+R0696   SKEEP6 HOLDS B(X+1).
+R0697   SKEEP5 HOLDS B(X).
+R0698   SKEEP4 CONTROLS CHECKING OF NON-SWITCHABLE ERASABLE MEMORY WITH
+R0699   BANK NUMBERS IN EB.
+R0700   SKEEP3 HOLDS LAST ADDRESS BEING CHECKED (HIGHEST ADDRESS).
+R0701   SKEEP2 HOLDS C(EBANK) DURING CHECKNJ
+R0702   ERASCHK TAKES APPROXMATELY 7 SECONDS
+ 0703   ERASCHK  CA     S+1
+ 0704            TS     SKEEP4
+ 0705   0EBANK   CA     S+ZERO
+ 0706            TS     EBANK
+ 0707            CA     ERASCON3        01461
+ 0708            TS     SKEEP7          STARTING ADDRESS
+ 0709            CA     S10BITS         01777
+ 0710            TS     SKEEP3          LAST ADDRESS CHECKED
+ 0711  2         TC     ERASLOOP
+ 0712   E134567B CA     ERASCON6        01400
+ 0713            TS     SKEEP7          STARTING ADDRESS
+ 0714            CA     S10BITS         01777
+ 0715            TS     SKEEP3          LAST ADDRESS CHECKED
+ 0716  2         TC     ERASLOOP
+ 0717   2EBANK   CA     ERASCON6        01400
+ 0718            TS     SKEEP7          STARTING ADDRESS
+ 0719            CA     ERASCON4        01774
+ 0720            TS     SKEEP3          LAST ADDRESS CHECKED
+ 0721  2         TC     ERASLOOP
+ 0722   NOEBANK  TS     SKEEP4          +0
+ 0723            CA     ERASCON1        00061
+ 0724            TS     SKEEP7          STARTING ADDRESS
+ 0725            CA     ERASCON2        01374
+ 0726  2         TS     SKEEP3          LAST ADDRESS CHECKED
+ 0727   ERASLOOP INHINT
+ 0728            EXTEND
+ 0729            NDX    SKEEP7
+ 0730            DCA    0000
+ 0731            DXCH   SKEEP5          STORES C(X) AND C(X+1) IN SKEEP6 AND 5.
+ 0732            CA     SKEEP7
+ 0733            TS     ERESTORE        IF RESTART, RESTORE C(X) AND C(X+1)
+ 0734            TS     L
+ 0735            INCR   L
+ 0736            NDX    A
+ 0737            DXCH   0000            PUTS OWN ADDRESS IN X AND X +1
+ 0738            NDX    SKEEP7
+ 0739            CS     0001            CS  X+1
+ 0740            NDX    SKEEP7
+ 0741            AD     0000            AD X
+ 0742            TC     -1CHK
+ 07421           CA     ERESTORE        HAS ERASABLE BEEN RESTORED
+ 07422           EXTEND
+ 07423           BZF    ELOOPFIN        YES, EXIT ERASLOOP.
+ 0743            EXTEND
+ 0744            NDX    SKEEP7
+ 0745            DCS    0000            COMPLEMENT OF ADDRESS OF X AND X+1
+ 0746            NDX    SKEEP7
+ 0747            DXCH   0000            PUT COMPLEMENT OF ADDRESS OF X AND X+1
+ 0748            NDX    SKEEP7
+ 0749            CS     0000            CS  X
+ 0750            NDX    SKEEP7
+ 0751            AD     0001            AD X+1
+ 0752            TC     -1CHK
+ 07521           CA     ERESTORE        HAS ERASABLE BEEN RESTORED
+ 07522           EXTEND
+ 07523           BZF    ELOOPFIN        YES, EXIT ERASLOOP.
+ 0753            EXTEND
+ 0754            DCA    SKEEP5
+ 0755            NDX    SKEEP7
+ 0756            DXCH   0000            PUT B(X) AND B(X+1) BACK INTO X AND X+1
+ 0757            CA     S+ZERO
+ 0758            TS     ERESTORE        IF RESTART, DO NOT RESTORE C(X), C(X+1)
+ 0759   ELOOPFIN RELINT
+ 0760            CA     EBANK           STORES C(EBANK)
+ 0761            TS     SKEEP2
+ 0762            TC     CHECKNJ         CHECK FOR NEW JOB
+ 0763            CA     SKEEP2          REPLACES B(EBANK)
+ 0764            TS     EBANK
+ 0765            INCR   SKEEP7
+ 0766            CS     SKEEP7
+ 0767            AD     SKEEP3
+ 0768            EXTEND
+ 0769            BZF    +2
+ 0770            TC     ERASLOOP        GO TO NEXT ADDRESS IN SAME BANK
+ 0771            CCS    SKEEP4
+ 0772            TC     NOEBANK
+ 0773            INCR   SKEEP4          PUT +1 IN SKEEP4
+ 0774            CA     EBANK
+ 0775            AD     SBIT9
+ 0776            TS     EBANK
+ 0777            AD     ERASCON5        76777, CHECK FOR BANK E2
+ 0778            EXTEND
+ 0779            BZF    2EBANK
+ 0780            CCS    EBANK
+ 0781            TC     E134567B        GO TO EBANKS 1,3,4,5,6, AND 7
+ 0782            CA     ERASCON6        END OF ERASCHK
+ 0783            TS     EBANK
+R0784   CNTRCHK PERFORMS A CS OF ALL REGISTERS FROM OCT. 60 THROUGH OCT. 10.
+R0785   INCLUDED ARE ALL COUNTERS, T6-1, CYCLE AND SHIFT, AND ALL RUPT REGISTERS
+ 0786   CNTRCHK  CA     CNTRCON         00050
+ 0787   CNTRLOOP TS     SKEEP2
+ 0788            AD     SBIT4           +10 OCTAL
+ 0789            INDEX  A
+ 0790            CS     0000
+ 0791            CCS    SKEEP2
+ 0792  2         TC     CNTRLOOP
+R0793   CYCLSHFT CHECKS THE CYCLE AND SHIFT REGISTERS
+ 0794   CYCLSHFT CA     CONC+S1         25252
+ 0795            TS     CYR             C(CYR) = 12525
+ 0796            TS     CYL             C(CYL) = 52524
+ 0797            TS     SR              C(SR) = 12525
+ 0798            TS     EDOP            C(EDOP) = 00125
+ 0799            AD     CYR             37777         C(CYR) = 45252
+ 0800            AD     CYL             00-12524      C(CYL) = 25251
+ 0801            AD     SR              00-25251      C(SR) = 05252
+ 0802            AD     EDOP            00-25376      C(EDOP) = +0
+ 0803            AD     CONC+S2         C(CONC+S2) = 52400
+ 0804            TC     -1CHK
+ 0805            AD     CYR             45252
+ 0806            AD     CYL             72523
+ 0807            AD     SR              77775
+ 0808            AD     EDOP            77775
+ 0809            AD     S+1             77776
+ 0810  2         TC     -1CHK
+ 0811            INCR   SCOUNT +1
+ 0812            TC     SMODECHK
+ 0813  2         TC     ROPECHK
+R0814   SKEEP1 HOLDS SUM
+R0815   SKEEP2 HOLDS PRESENT CONTENTS OF ADDRESS IN ROPECHK AND SHOWSUM ROUTINES
+R0816   SKEEP2 HOLDS BANK NUMBER IN LOW ORDER BITS DURING SHOWSUM DISPLAY
+R0817   SKEEP3 HOLDS PRESENT ADDRESS (00000 TO 01777 IN COMMON FIXED BANKS)
+R0818                                (04000 TO 07777 IN FXFX BANKS)
+R0819   SKEEP3 HOLDS BUGGER WORD DURING SHOWSUM DISPLAY
+R0820   SKEEP4 HOLDS BANK NUMBER AND SUPER BANK NUMBER
+R0821   SKEEP5 COUNTS 2 SUCCESSIVE TC SELF WORDS
+R0822   SKEEP6 CONTROLS ROPECHK OR SHOWSUM OPTION
+R0823  2SKEEP7 CONTROLS WHEN ROUNTINE IS IN COMMON FIXED OR FIXED FIXED BANKS
+ 0824   STSHOSUM TC     GRABDSP
+ 0825            TC     PREGBSY
+ 0826            TC     +3
+ 0827   ROPECHK  CA     S-ZERO
+ 0828            TS     SKEEP6          ROPECHK OPTION
+ 0829            CA     S+ZERO
+ 0830            TS     SKEEP4          BANK NUMBER
+ 0831            CA     S+1
+ 0832   COMMFX   TS     SKEEP7
+ 0833            CA     S+ZERO
+ 0834            TS     SKEEP1
+ 0835            TS     SKEEP3
+ 0836            CA     S+1
+ 0837            TS     SKEEP5          COUNTS DOWN 2 TC SELF WORDS
+ 0838   COMADRS  CA     SKEEP4
+ 0839            TS     L               TO SET SUPER BANK
+ 0840            MASK   HI5
+ 0841            AD     SKEEP3
+ 0842            TC     SUPDACAL        SUPER DATA CALL
+ 0843            TC     ADSUM
+ 0844            AD     SBIT11          02000
+ 0845  2         TC     ADRSCHK
+ 0846   FXFX     CS     A
+ 0847            TS     SKEEP7
+ 0848            EXTEND
+ 0849            BZF    +3
+ 0850            CA     SBIT12          04000, STARTING ADDRESS OF BANK 02
+ 0851            TC     +2
+ 0852            CA     SBNK03          06000, STARTING ADDRESS OF BANK 03
+ 0853            TS     SKEEP3
+ 0854            CA     S+ZERO
+ 0855            TS     SKEEP1
+ 0856            CA     S+1
+ 0857            TS     SKEEP5          COUNTS DOWN 2 TC SELF WORDS
+ 0859   FXADRS   INDEX  SKEEP3
+ 0860            CA     0000
+ 0861            TC     ADSUM
+ 0862  2         TC     ADRSCHK
+ 0863   ADSUM    TS     SKEEP2
+ 0864            AD     SKEEP1
+ 0865            TS     SKEEP1
+ 0866            CAF    S+ZERO
+ 0867            AD     SKEEP1
+ 0868            TS     SKEEP1
+ 0869            CS     SKEEP2
+ 0870            AD     SKEEP3
+ 0871  2         TC     Q
+ 08711  ADRSCHK  LXCH   A
+ 08712           CCS    SKEEP5          IS CHECKSUM FINISHED
+ 08713           TC     +3              NO
+ 08714           TC     +2              NO
+ 08715           TC     SOPTION         GO TO ROPECHK SHOWSUM OPTION
+ 0872            CCS    L               -0 MEANS A TC SELF WORD.
+ 0873            TC     CONTINU
+ 0874            TC     CONTINU
+ 0875            TC     CONTINU
+ 0876            CCS    SKEEP5
+ 0877            TC     CONTINU +1
+ 0878            CA     S-1
+ 0879            TC     CONTINU +1      AD IN THE BUGGER WORD
+ 0881   CONTINU  CA     S+1             MAKE SURE TWO CONSECUTIVE TC SELF WORDS
+ 0882            TS     SKEEP5
+ 0883            CCS    SKEEP6          +1 IN SKEEP6, SHOWSUM VIA EXECUTIVE
+ 0884            CCS    NEWJOB
+ 0885            TC     CHANG1
+ 0886            TC     +2
+ 0887  2         TC     CHECKNJ         -0 IN SKEEP6 FOR ROPECHK
+ 0888   ADRS+1   INCR   SKEEP3
+ 0889            CCS    SKEEP7
+ 0890            TC     COMADRS
+ 0891            TC     COMADRS
+ 0892            TC     FXADRS
+ 0893  2         TC     FXADRS
+ 0894   NXTBNK   CS     SKEEP4
+ 0895            AD     LSTBNKCH        LAST BANK TO BE CHECKED
+ 0896            EXTEND
+ 0897            BZF    ENDSUMS         END OF SUMMING OF BANKS.
+ 0898            CA     SKEEP4
+ 0899            AD     SBIT11
+ 0900            TS     SKEEP4          37 TO 40 INCRMTS SKEEP4 BY END RND CARRY
+ 0901            TC     CHKSUPR
+ 0902   17TO20   CA     SBIT15
+ 0903            ADS    SKEEP4          SET FOR BANK 20
+ 0904            TC     GONXTBNK
+ 0905   CHKSUPR  MASK   HI5
+ 0906            EXTEND
+ 0907            BZF    NXTSUPR         INCREMENT SUPER BANK
+ 0908   27TO30   AD     S13BITS
+ 0909            EXTEND
+ 0910            BZF    +2              BANK SET FOR 30
+ 0911            TC     GONXTBNK
+ 0912            CA     SIXTY           FIRST SUPER BANK
+ 0913            ADS    SKEEP4
+ 0914            TC     GONXTBNK
+ 0915   NXTSUPR  AD     SUPRCON         SET BNK 30 + INCR SUPR BNK AND CANCEL
+ 0916            ADS    SKEEP4          ERC BIT OF THE 37 TO 40 ADVANCE.
+ 0917   GONXTBNK CCS    SKEEP7
+ 0918            TC     COMMFX
+ 0919            CA     S+1
+ 0920            TC     FXFX
+ 0921            CA     SBIT7           HAS TO BE LARGER THAN NO OF FXSW BANKS.
+ 0922  2         TC     COMMFX
+ 0923   ENDSUMS  CCS    SKEEP6
+ 0924            TC     ROPECHK +2      START SHOWSUM AGAIN
+ 0925   S+MAX    OCTAL  37777           ** S+MAX AND S-MAX MUST BE TOGETHER
+ 0926   S-MAX    OCTAL  40000           FOR DOUBLE PRECISION CHECKING.
+ 0927  2         TC     RPCHKFIN        ROPECHK IS COMPLETE
+ 0928   SOPTION  CA     SKEEP4
+ 0929            MASK   HI5             = BANK BITS
+ 0930            TC     LEFT5
+ 09305           TS     L               BANK NUMBER BEFORE SUPER BANK
+ 09310           CA     SKEEP4
+ 09315           MASK   S8BITS          = SUPER BANK BITS
+ 09320           EXTEND
+ 09325           BZF    SOPT            BEFORE SUPER BANK
+ 0933            TS     SR              SUPER BANK NECESSARY
+ 0934            CA     L
+ 09345           MASK   SEVEN
+ 0935            AD     SR
+ 0936            TS     L               BANK NUMBER WITH SUPER BANK
+ 0937   SOPT     CCS    SKEEP6
+ 0938            TC     SDISPLAY
+ 0939   VNCON    OCTAL  00501           USED IN SHOWSUM. DISPLAY 3 REGISTERS.
+ 0940            EBANK= NEWJOB
+ 0941  2LSTBNKCH BBCON*                 * CONSTANT, LAST BANK.
+ 0942   BNKCHK   CCS    SKEEP1          WHEN C(SKEEP6) = -0
+ 0943            TC     +4
+ 0944   SCADR    FCADR  NOKILL          * CONSTANT, USED IN SHOWSUM ONLY
+ 0945            TC     +2
+ 0946            CA     S-1             FOR BANK 00
+ 0947            TS     SKEEP1
+ 0948            CS     L               = - BANK NUMBER
+ 0949            AD     SKEEP1
+ 0950            TC     -1CHK
+ 0951  2         TC     NXTBNK
+R0952   INITIALIZE SKEEP6 TO +1 TO PERFORM SHOWSUM
+R0953   START OF ROUTINE THAT DISPLAYS SUM OF EACH BANK
+ 0954   SHOWSUM  CAF    S+1
+ 0955            TS     SKEEP6          SHOWSUM OPTION
+ 0956            CAF    S+ZERO
+ 0957            TS     SMODE           PUT SELF-CHECK TO SLEEP
+ 0958            CA     SELFADRS        INITIALIZE SELFRET TO GO TO SELFCHK.
+ 0959            TS     SELFRET
+ 0960            INHINT
+ 0961            CAF    PRIO2
+ 0962            TC     NOVAC
+ 0963            EBANK= SELFRET
+ 0964            2CADR  STSHOSUM
+ 0965            RELINT
+ 0966  2         TC     ENDOFJOB
+ 0967   SDISPLAY CA     L               = BANK NUMBER
+ 0968            XCH    SKEEP2          SKEEP2 HOLDS BANK NUMBER DURING DISPLAY
+ 0969            TS     SKEEP3          SKEEP3 HOLDS BUGGER WORD DURING DISPLAY
+ 0970   NOKILL   CAF    ADRS1           ADDRESS OF SKEEP1
+ 0971            TS     MPAC +2
+ 0972            CAF    VNCON           DISPLAY 3 REGISTERS
+ 0973            TC     NVSUB
+ 0974            TC     SBUSY
+ 0975            TC     FLASHON
+ 0976            TC     ENDIDLE
+ 0977            TC     +3              FINISHED WITH SHOWSUM
+ 0978            TC     NXTBNK
+ 0979            TC     NOKILL          SO CAN LOAD WITHOUT KILLING SHOWSUM
+ 0980            TC     FREEDSP
+ 0981            CA     SELFADRS        INITIALIZE SKEEP1 TO GO TO SELFCHK.
+ 0982            TS     SKEEP1
+ 0983  2         TC     ENDOFJOB
+ 0984   SBUSY    CAF    SCADR
+ 0985  2         TC     NVSUBUSY
+ 0986  2RPCHKFIN TC     SELFCHK         START SELF-CHECK AGAIN.
+ 0987   SBNKOPTN CS     A               GO TO BACKUP IDLE LOOP IF C(SMODE) IS
+ 0988            AD     TWO             GREATER THAN OCTAL 11
+ 0989            EXTEND
+ 0990            BZMF   TOSMODE -2
+ 0991            CA     S+ZERO          ZERO SMODE FOR OPTIONS ABOVE 8.
+ 0992            TS     SMODE
+ 0993  2SOPTON11 TC     DSKYCHK
+ 0994            CA     S+ZERO
+ 0995            TS     SMODE
+ 0996  2TOSMODE  TC     SELFCHK
+R0997   THE FOLLOWING CONSTANTS ARE USED BY DSKYCHK.
+ 0998   DSKYCODE OCTAL  05265           00
+ 0999            OCTAL  04143           11
+ 1000            OCTAL  05471           22
+ 1001            OCTAL  05573           33
+ 1002            OCTAL  04757           44
+ 1003            OCTAL  05736           55
+ 1004            OCTAL  05634           66
+ 1005            OCTAL  05163           77
+ 1006            OCTAL  05675           88
+ 1007            OCTAL  05777           99
+ 1008   +-ZERO   OCTAL  07265
+ 1009  211DEC.   OCTAL  00013
+R1010   BITS 2 AND 6 TURN ON THE COMPUTER ACTIVITY AND VERB-NOUN FLASH.
+ 1011  2S11CHAN  OCTAL  00042
+ 1012   DSKYCHK  CAF    TEN
+ 1013            TS     SKEEP3
+ 1014            INHINT
+ 1015            CAF    S+1             SET UP TEN MS INTERRUPT
+ 1016            TC     WAITLIST
+ 1017            EBANK= LST1
+ 1018            2CADR  NXTNMBR
+ 1019            RELINT
+ 1020  2         TC     TOSMODE         GO TO IDLE LOOP
+ 1021   SDSPTAB  TS     SKEEP3
+ 1022            INHINT
+ 1023            NDX    SKEEP3
+ 1024            CS     DSKYCODE
+ 1025   SBLANKS  TS     DSPTAB
+ 1026            TS     DSPTAB +1
+ 1027            TS     DSPTAB +2
+ 1028            TS     DSPTAB +3
+ 1029            TS     DSPTAB +4
+ 1030            TS     DSPTAB +5
+ 1031            TS     DSPTAB +6
+ 1032            TS     DSPTAB +7
+ 1033            TS     DSPTAB +8D
+ 1034            TS     DSPTAB +9D
+ 1035            TS     DSPTAB +10D
+ 1036            CA     11DEC.
+ 1037  2         TS     NOUT
+ 1038   DSKYWAIT INHINT
+ 1039            CAF    BIT10           5.12 SECOND WAIT
+ 1040            TC     WAITLIST
+ 1041            EBANK= LST1
+ 1042            2CADR  NXTNMBR
+ 1043            RELINT
+ 1044  2         TC     TASKOVER
+ 1045   NXTNMBR  CCS    SKEEP3
+ 1046            TC     SDSPTAB         9 THROUGH 0
+ 1047            TC     -SIGN           -ZEROS
+ 1048            TC     +SIGN           +ZEROS
+ 1049            CCS    SKEEP2
+ 1050            TC     NODSPLAY        PUTS BLANKS IN DSKY DISPLAY
+ 1051  2         TC     LITESOUT        TURN OFF LIGHTS
+ 1052   -SIGN    CS     S+1
+ 1053            TS     SKEEP3
+ 1054            CA     S11CHAN         TURN ON VERB-NOUN FLASH
+ 1055            EXTEND                 AND COMPUTER ACTIVITY LIGHTS.
+ 1056            WOR    DSALMOUT
+ 1057            CS     +-ZERO
+ 1058            INHINT
+ 1059            TS     DSPTAB
+ 1060            TS     DSPTAB +3
+ 1061            TS     DSPTAB +5
+ 1062            CAF    THREE
+ 1063            TS     NOUT
+ 1064  2         TC     DSKYWAIT
+ 1065   +SIGN    CS     ZERO
+ 1066            TS     SKEEP3
+ 1067            CA     S+1
+ 1068            TS     SKEEP2
+ 1069            INHINT
+ 1070            CS     +-ZERO
+ 1071            TS     DSPTAB +1
+ 1072            TS     DSPTAB +4
+ 1073            TS     DSPTAB +6
+ 1074            CAF    THREE
+ 1075            TS     NOUT
+ 1076  2         TC     DSKYWAIT
+ 1077   NODSPLAY TS     SKEEP2          +0
+ 1078            CS     BIT12           BLANKS
+ 1079            INHINT
+ 1080  2         TC     SBLANKS         PUTS BLANKS IN ALL DISPLAYS
+ 1081   LITESOUT CS     S11CHAN
+ 1082            EXTEND
+ 1083            WAND   DSALMOUT        TURN OFF COMPUTER ACTIVITY LIGHT.
+ 1084  2         TC     TASKOVER        END OF DSKYCHK
 *       ENDOFJOB
