@@ -22908,6 +22908,216 @@ R1171  4         LOADING RATEINDX WITH 0,2,4,6, RESPECTIVELY
  1175            2DEC   .4444444444     =10 DEG/SEC        $ 22.5DEG/SEC
  1177   ANGLTIME 2DEC   .0001907349     = 100B-19     FUDGE FACTOR TO CONVERT
 A1178                                   MANEUVER ANGLE TO MANEUVER TIME
+L      2KALCMANU STEERING
+R0001  2GENERATION OF STEERING COMMANDS FOR DIGITAL AUTOPILOT FREE FALL MANEUVER
+ 0002  9S
+R0003  2NEW COMMANDS WILL BE GENERATED EVERY ONE SECOND DURING THE MANEUVER
+ 00035 2         EBANK= TTEMP
+ 0004   NEWDELHI TC     INTPRET
+ 0005            AXC,1  AXC,2
+ 0006                   MIS             COMPUTE THE NEW MATRIX FROM S/C TO
+ 0007                   KEL             STABLE MEMBER AXES
+ 0008            CALL
+ 0009                   MXM3
+ 0010            VLOAD  STADR
+ 0011            STOVL  MIS +12D        CALCULATE NEW DESIRED CDU ANGLES
+ 0012            STADR
+ 0013            STOVL  MIS +6D
+ 0014            STADR
+ 0015            STORE  MIS
+ 0016            AXC,1  CALL
+ 0017                   MIS
+ 0018                   DCMTOCDU        PICK UP THE NEW CDU ANGLES FROM MATRIX
+ 0019            RTB
+ 0020                   V1STO2S
+ 0021            STORE  NCDU            NEW CDU ANGLES
+ 0022            BONCLR EXIT
+ 0023                   32D
+ 0024                   MANUSTAT        TO START MANEUVER
+ 0025            CAF    TWO                      +0 OTHERWISE
+ 0026   INCRDCDU TS     SPNDX
+ 0027            INDEX  SPNDX
+ 0028            CA     BCDU            INITIAL CDU ANGLES
+ 0029            EXTEND                 OR PREVIOUS DESIRED CDU ANGLES
+ 0030            INDEX  SPNDX
+ 0031            MSU    NCDU
+ 0032            EXTEND
+ 0033            MP     DT/TAU
+ 0034            CCS    A               CONVERT TO 2S COMPLEMENT
+ 0035            AD     ONE
+ 0036            TCF    +2
+ 0037            COM
+ 0038            INDEX  SPNDX
+ 0039            TS     DELDCDU         ANGLE INCREMENTS TO BE ADDED TO
+ 0040            INDEX  SPNDX           CDUXD, CDUYD, CDUZD EVERY TENTH SECOND
+ 0041            CA     NCDU            BY LEM DAP
+ 0042            INDEX  SPNDX
+ 0043            XCH    BCDU
+ 0044            INDEX  SPNDX
+ 0045            TS     CDUXD
+ 0046            CCS    SPNDX
+ 0047  2         TCF    INCRDCDU        LOOP FOR THREE AXES
+R0048  2COMPARE PRESENT TIME WITH TIME TO TERMINATE MANEUVER
+ 0049   TMANUCHK EXTEND
+ 0050            DCS    TIME2
+ 0051            DXCH   TTEMP
+ 0052            EXTEND
+ 0053            DCA    TM
+ 0054            DAS    TTEMP           TM+T0-1-T
+ 0055            CCS    TTEMP
+ 0056            TCF    CONTMANU        (TM+T0)-T G 164 SEC
+ 0057            TCF    +2
+ 0058            TCF    OVERMANU        (TM+T0)-T L -164 SEC
+ 0059            CCS    TTEMP +1
+ 0060            TCF    CONTMANU        (TM+T0)-T G 1 SEC
+ 0061            TCF    MANUOFF         (TM+T0)-T E 1 SEC
+ 0062            COM                    (TM+T0)-T L 1 SEC
+ 0063   MANUOFF  AD     ONESEK +1       (TM+T0)-T E 1 SEC
+ 0064            EXTEND
+ 0065            BZMF   OVERMANU        THIS IS A SAFETY PLAY
+ 0066   MANUSTAL INHINT                 PREPARE TO STOP THE MANEUVER
+ 0067            TC     WAITLIST
+ 00675           EBANK= TTEMP
+ 0068            2CADR  MANUSTOP
+ 00682           RELINT
+ 00684 2         TCF    ENDOFJOB
+ 0069  2DT/TAU   DEC    .1
+ 0070   MANUSTAT EXIT                   INITIALIZATION ROUTINE
+ 0071            EXTEND                 FOR AUTOMATIC MANEUVERS
+ 0072            DCA    TIME2
+ 0073            DAS    TM              TM+T0    MANEUVER COMPLETION TIME
+ 0074            EXTEND
+ 0075            DCS    ONESEK
+ 0076            DAS    TM              (TM+T0)-1
+ 00761           INHINT
+ 0077            CA     BRATE           X-AXIS MANEUVER RATE
+ 0078            TS     OMEGAPD
+ 0079            CA     BRATE +2        Y-AXIS MANEUVER RATE
+ 0080            TS     OMEGAQD
+ 0081            CA     BRATE +4        Z-AXIS MANEUVER RATE
+ 0082  2         TS     OMEGARD
+ 00821           EXTEND
+ 00822           DCA    CDUY
+ 00823           DXCH   CDUYD
+ 00824           CAE    CDUX
+ 00825           TS     CDUXD
+ 00826           TC     IBNKCALL
+ 00827           FCADR  SETMINDB
+ 00828           RELINT
+ 0083            CA     TIME1
+ 0084            AD     ONESEK +1
+ 0085            XCH    NEXTIME
+ 00852           TC     FLAG2UP         SET BIT 11 OF FLAGWRD2
+ 00854           OCT    2000            TO SIGNAL KALCMANU IN PROCESS
+ 0086  2         TCF    INCRDCDU -1
+ 0087   ONESEK   DEC    0
+ 0088  2         DEC    100
+ 0089   OVERMANU CAF    ONE             SAFETY PLAY
+ 0090  2         TCF    MANUSTAL
+ 0091   CONTMANU CS     TIME1           RESET FOR NEXT DCDU UPDATE
+ 0092            AD     NEXTIME
+ 0093            CCS    A
+ 0094            AD     ONE
+ 0095            TCF    MANUCALL
+ 0096            AD     NEGMAX
+ 0097            COM
+ 0098   MANUCALL INHINT                 CALL FOR NEXT UPDATE VIA WAITLIST
+ 0099            TC     WAITLIST
+ 00991           EBANK= TTEMP
+ 00992           2CADR  UPDTCALL
+ 00993           RELINT
+ 0100            CAF    ONESEK +1       INCREMENT TIME FOR NEXT UPDATE
+ 0101            ADS    NEXTIME
+ 0102  4         TCF    ENDOFJOB
+ 0103   UPDTCALL CAF    PRIO34          SATELLITE PROGRAM TO CALL FOR UPDATE
+ 0104            TC     FINDVAC         OF STEERING COMMANDS
+ 01045           EBANK= TTEMP
+ 0105            2CADR  NEWDELHI
+ 0106            TC     TASKOVER
+P0107  2ROUTINE FOR TERMINATING AUTOMATIC MANEUVERS
+ 0108   MANUSTOP CAF    ZERO            ZERO MANEUVER RATES
+ 0109            TS     DELDCDU2
+ 0110            TS     OMEGARD
+ 0111            TS     DELDCDU1
+ 0112            TS     OMEGAQD
+ 0113            CA     CPSI            SET DESIRED GIMBAL ANGLES TO
+ 0114            TS     CDUZD           DESIRED FINAL GIMBAL ANGLES
+ 0115            CA     CTHETA
+ 0116            TS     CDUYD
+ 0117            CA     STATE +2        CHECK TO SEE IF A FINAL YAW NECESSARY
+ 0118            MASK   BIT14
+ 0119            EXTEND
+ 0120            BZF    KALCROLL
+ 0121   ENDROLL  CA     CPHI            NO FINAL YAW
+ 0122            TS     CDUXD
+ 0123            CAF    ZERO
+ 0124            TS     OMEGAPD         I.E. MANEUVER DID NOT GO THRU
+ 0125            TS     DELDCDU         GIMBAL LOCK ORIGINALLY
+ 01251  GOODMANU TC     FLAG2DWN        RESET BIT 11 OF FLAGWRD2 TO SIGNAL END
+ 01252           OCT    2000            OF KALCMANU
+ 01254           TC     POSTJUMP        RETURN UNDER WAITLIST VIA GOODEND
+ 0126  2         CADR   CHKAKS
+ 012605          BANK   35
+ 012606          EBANK= TTEMP
+ 012610 CHKAKS   CAF    TWO
+ 012615 AKLOOP   TS     SPNDX           CHECK THE MAGNITUDE OF THE ATTITUDE
+ 012620          INDEX  A               ERROR ON COMPLETION OF A KALCMANU
+ 012625          CA     CDUXD           SUPERVISED MANEUVER
+ 012630          EXTEND
+ 012635          INDEX  SPNDX           I.E.   CDUD - CDU
+ 012636          MSU    CDUX
+ 012637          CCS    A               IF THE MAGNITUDE OF THE ERROR EXCEEDS
+ 012640          AD     =-5DEG          5 DEGREES ON ANY AXIS DISPLAY AN ALARM
+ 012645          TCF    CHECKASG        INDICATING THAT SPACECRAFT MAY NOT HAVE
+ 012650          AD     =-5DEG          ACHIEVED THE DESIRED ATTITUDE.
+ 012655 CHECKASG EXTEND
+ 012660          BZMF   AKOK
+ 012665          TC     ALARM
+ 012670          OCT    01412
+ 0126752         TCF    ENDKMANU
+ 012680 AKOK     CCS    SPNDX
+ 0126852         TCF    AKLOOP
+ 012690 ENDKMANU CAF    THREE           TERMINATE KALCMANU VIA GOODEND
+ 012692          TC     POSTJUMP
+ 0126942         CADR   GOODEND
+ 0126964=-5DEG   DEC    -455            =-5 DEGREES SCALED 180 DEG
+ 012698          BANK   34
+ 012699          EBANK= TTEMP
+ 0127   KALCROLL CA     STATE +2        STATE SWITCH NO. 33
+ 0128            MASK   BIT12           0(OFF) = PERFORM A FINAL YAW
+ 0129            EXTEND                          IF NECESSARY
+ 0130            BZF    DOROLL          1(ON) = IGNORE ANY FINAL YAW
+ 0131            TCF    ENDROLL +2
+ 0132   DOROLL   CA     CPHI
+ 0133            EXTEND                 PERFORM A FINAL ROLL  TO
+ 0134            MSU    CDUXD           COMPLETE AUTOMATIC MANEUVER
+ 0135            EXTEND
+ 0136            BZMF   FROLLNEG
+ 0137   FROLLPOS TS     L
+ 0138            CA     ROLLRATE
+ 0139            TS     OMEGAPD
+ 0140            CS     DELFROLL
+ 0141            AD     ONE
+ 0142            TS     DELDCDU
+ 0143            TCF    ROLLSTAL
+ 0144   FROLLNEG COM
+ 0145            TS     L
+ 0146            CS     ROLLRATE
+ 0147            TS     OMEGAPD
+ 0148            CA     DELFROLL
+ 0149            TS     DELDCDU
+ 0150   ROLLSTAL CA     L               ABS(CPHI-CDUXD)
+ 0151            EXTEND
+ 0152            MP     INVRATE
+ 0153            EXTEND
+ 0154            BZMF   ENDROLL
+ 0155            TC     WAITLIST
+ 01555           EBANK= TTEMP
+ 0156            2CADR  ENDROLL
+ 0157  2         TC     TASKOVER
+ 0158   ROLLRATE DEC    720             = 1.98 DEGREES/SEC
+ 0159   DELFROLL DEC    18              MUST BE A WHOLE NUMBER
+ 0160   INVRATE  DEC    .555555
 L      2INTER-BANK COMMUNICATION
 R0001            THE FOLLOWING ROUTINE CAN BE USED TO CALL A SUBROUTINE IN ANOTH
  0002  9ER BANK. IN THE BANKCALL VERSION, THE
