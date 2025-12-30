@@ -23579,6 +23579,370 @@ P0433  2SET UP & EXECUTE JOB TO ADD VELOCITY CORRECTION TO VN:
  0461            EXIT
  0462  4         TC     ENDOFJOB
  0463   -1SEC214 2DEC   -100 B-14
+L      2MP 3 - SUBORBITAL ABORT
+ 0001            BANK   25
+ 0002  4         EBANK= TDEC
+R0003   PROGRAM DESCRIPTION- MISSION PHASE 3 - SUBORBITAL ABORT
+ 0004  9DATE- 28 OCT 66
+R0005   MOD NO- 0
+ 0006  9LOG SECTION- MP 3 - SUBORBITAL ABORT
+R0007  2MOD BY- GILBERT
+ 0008  9ASSEMBLY- SUNBURST REVISION 17
+R0009   FUNCTIONAL DESCRIPTION
+R0010            IN THE FIRST 10 SECONDS OF THIS PHASE, THE GROUND IS CAUSING TH
+ 0011  9E NOSECONE TO BE JETTISONED AND THE SLA
+R0012   PANELS TO BE DEPLOYED. 10 SECONDS AFTER RECEIPT OF THE ABORT COMMAND, MP
+ 0013  93 CHECKS TUMBLING AND PROCEEDS ONLY
+R0014   WHEN THE INDICATED TUMBLING RATES ARE LESS THAN 3 DEGREES PER SECOND. MP
+ 0015  93 THEN STARTS +X TRANSLATION AND
+R0016   COMMANDS SIVB/LEM SEPARATION. 13 SECONDS AFTER SEPARATION THE DESCENT EN
+ 0017  9GINE IS TURNED ON FOR 5 SECONDS, THEN
+R0018   IGNITED AGAIN AFTER A 5 SECOND COAST AND LEFT ON THROUGH THE ABORT STAGE
+ 0019  9 COMMAND WHICH IS SENT/RECEIVED 31
+R0020   SECONDS LATER. THE APS ENGINE IS TURNED OFF 5 SECONDS AFTER ABORT STAGE,
+ 0021  9 THEN IGNITED AGAIN AFTER A 30 SECOND
+R0022  2COAST FOR A FINAL 60 SECOND BURN. IMU COMPENSATION CONTINUES THROUGHOUT
+ 0023  9THIS MISSION PHASE.
+R0024   CALLING SEQUENCE
+R0025       SUBORBITAL ABORT IS STARTED AT THE DISCRETION OF THE GROUND IN THE E
+ 0026  9VENT OF AN ABORT DURING THE EARLIER PART
+R0027  2OF BOOST. KEY CODE 23 IS SENT VIA UPLINK.
+R0028   SUBROUTINES CALLED
+R0029      NEWMODEX, WAITLIST, FIXDELAY, 1LMP, 2LMP, 1LMP+DT, 2LMP+DT, FLAG1DWN,
+ 0030  9 ENGINEON, ENGINOFF, ENGINOF1, PREREAD,
+R0031  2READACCS, SERVICER, AVERAGEG.
+R0032   NORMAL EXIT MODES
+R0033  2    TASKOVER.
+R0034   ALARM OR ABORT EXIT MODES
+R0035  2    MAJOR MODE 71.
+R0036   INPUT
+R0037  2    DVSELECT SET FOR READACCS AND SERVICER
+R0038   OUTPUT
+R0039  2    ''LAST RITES''
+R0040   ERASABLE INITIALIZATION REQUIRED
+R0041  2    KEY CODE 23 SENT VIA UPLINK.
+R0042   DEBRIS
+R0043       CENTRALS - A,L,Q
+R0044  8    OTHER    - ERASABLES IN SUBROUTINES USED
+ 0045   MP03JOB  TC     NEWMODEX        DISPLAY MAJOR MODE 71
+ 0046  2         OCT    71
+ 00465           CAF    THREE
+ 00466 2         TS     PHASENUM
+ 0047            TC     PHASCHNG
+ 0048            OCT    47012
+ 0049            DEC    1
+ 0050            EBANK= TDEC
+ 0051            2CADR  SBORB1
+ 00515           CAF    BIT3
+ 00516 2         TC     SETRSTRT        SET RESTART FLAG
+ 0052            INHINT
+ 0053            CAF    ONE             10 MS. - CONTINUE UNDER WAITLIST CONTROL
+ 0054            TC     WAITLIST
+ 0055            EBANK= TDEC
+ 0056            2CADR  SBORB1
+ 0057  2         TCF    ENDOFJOB        AND RELINT
+ 0061   SBORB1   CAF    ZERO            INSURE RCS JETS OFF
+ 00613           EXTEND
+ 00616           WRITE  6
+ 0062            EXTEND
+ 0063  2         WRITE  5
+ 0064            TC     PHASCHNG
+ 0065            OCT    47012
+ 0066            DEC    100
+ 0067            EBANK= TDEC
+ 0068            2CADR  SBORB2
+ 0069            TC     FIXDELAY        WAIT 1 SECOND
+ 0070  2         DEC    100
+ 0071   SBORB2   TC     2LMP+DT
+ 0072            DEC    188             RCS MAIN S/O VALVES, SYS. A - OPEN **
+ 0073            DEC    190             RCS MAIN S/O VALVES, SYS. B - OPEN **
+ 0074  2         DEC    100             WAIT 1 SECOND
+ 0075            TC     1LMP+DT
+ 0076            DEC    4               ED BATTERY ACTIVATION - ON *
+ 0077  2         DEC    100             WAIT 1 SECOND
+ 0078            TC     2LMP+DT
+ 0079            DEC    189             RESET **
+ 0080            DEC    191             RESET **
+ 0081  2         DEC    100             WAIT 1 SECOND
+ 0082            TC     1LMP+DT
+ 0083            DEC    6               RCS PRESSURIZE - FIRE **
+ 0084  2         DEC    100             WAIT 1 SECOND
+ 0085            TC     1LMP+DT
+ 0086            DEC    5               ED BATTERY ACTIVATION - SAFE *
+ 0087  2         DEC    100             WAIT 1 SECOND
+ 0088            TC     1LMP+DT
+ 0089            DEC    7               RESET **
+ 0090  2         DEC    400             WAIT 4 SECONDS
+ 0091   TUMBCHK  CS     FLAGWRD1        IS VEHICLE RATE LESS THAN 3 DEG/SEC
+ 0092            MASK   BIT13
+ 0093            CCS    A
+ 0094  2         TCF    TUMB1           YES
+ 0095            TC     FIXDELAY        WAIT .5 SECONDS
+ 0096  2         DEC    50
+ 0097  2         TCF    TUMBCHK
+ 0098   TUMB1    TC     PHASCHNG
+ 0099            OCT    05012
+ 0100  2         OCT    77777
+ 0101            TC     FLAG1DWN        TERMINATE TUMBLE MONITOR
+ 0102  2         OCT    20000
+ 0105            CAF    JETS+X          COMMAND +X TRANSLATION - ON (4 JET)
+ 0106            EXTEND
+ 0107            WRITE  5
+ 0108            TC     IBNKCALL
+ 0109  2         CADR   ULLAGE          USE LATER
+ 0110            TC     1LMP+DT
+ 0111            DEC    58              LEM/S4B SEPARATE ARM - ON *
+ 0112  2         DEC    50              WAIT 500 MILLISECONDS
+ 0113            CS     DAPBOOLS        ENABLE DAP
+ 0114            MASK   GODAPGO
+ 0115  2         ADS    DAPBOOLS
+ 0116            TC     IBNKCALL        DEADBAND SELECT - MAX
+ 0117  2         CADR   SETMAXDB
+ 01175           TC     PHASCHNG
+ 01176           OCT    47012
+ 01177           DEC    50
+ 01178           EBANK= TDEC
+ 01179           2CADR  TUMB2
+ 0118            TC     FIXDELAY        WAIT 500 MILLISECONDS
+ 0119  2         DEC    50
+ 0120   TUMB2    TC     IBNKCALL
+ 0121  2         CADR   SETRATE         HOLD VEHICLE ATTITUDE RATE
+ 0125            TC     2LMP+DT
+ 0126            DEC    90              LEM/S4B SEPARATE - COMMAND **
+ 0127            DEC    4               ED BATTERY ACTIVATION - ON *
+ 0128  2         DEC    10              WAIT 100 MILLISECONDS
+ 0129            TC     IBNKCALL        DEADBAND SELECT - MIN
+ 0130  2         CADR   SETMINDB
+ 01304           CS     FLAGWRD1        SETS SIVBGONE TO 1
+ 01305           MASK   BIT4
+ 01306 2         ADS    FLAGWRD1
+ 013065          TC     PHASCHNG
+ 013066          OCT    47012
+ 013067          DEC    90
+ 013068          EBANK= TDEC
+ 013069          2CADR  TUMB3
+ 0131            TC     FIXDELAY        WAIT 900 MILLISECONDS
+ 0132  2         DEC    90
+ 0133   TUMB3    TC     IBNKCALL
+ 01335 2         CADR   ENGINOF1
+ 0134            TC     2LMP+DT
+ 0135            DEC    59              LEM/S4B SEPARATE ARM - OFF *
+ 0136            DEC    150             ENGINE SELECT - DESC ARM *
+ 0137  2         DEC    1               WAIT 10 MILLISECONDS
+ 0138            CAF    BIT10           START ABORT STAGE DISCRETE MONITOR
+ 0139            TC     WAITLIST
+ 0140            EBANK= TDEC
+ 0141            2CADR  ABTSTGDM
+ 0142            TC     2PHSCHNG
+ 0143            OCT    40072
+ 0144            OCT    47016
+ 0145            DEC    512
+ 0146            EBANK= TDEC
+ 0147            2CADR  ABTSTGDM
+ 0148   SBORBA   TC     IBNKCALL        DEADBAND SELECT - MIN
+ 0149  2         CADR   SETMINDB
+ 0150            TC     1LMP+DT
+ 0151            DEC    86              MANUAL THROTTLE - ON (10 PC) *
+ 0152  2         DEC    100             WAIT 1 SECOND
+ 0153            TC     1LMP+DT
+ 0154            DEC    91              RESET **
+ 0155  2         DEC    600             WAIT 6 SECONDS
+ 0156            TC     IBNKCALL        HOLD LEM ATTITUDE
+ 0157            CADR   STOPRATE
+ 0166            TC     PHASCHNG
+ 0167            OCT    47012
+ 0168            DEC    400
+ 0169            EBANK= DVCNTR
+ 0170            2CADR  SBORB3
+ 0171            TC     FIXDELAY        WAIT 4 SECONDS
+ 0172  2         DEC    400
+ 0173  2         EBANK= DVCNTR
+ 01732  SBORB3   CA     EBANK5
+ 01734 2         TS     EBANK
+ 01736           TC     1LMP+DT
+ 0174            DEC    8               LANDING GEAR DEPLOY - FIRE **
+ 0175  2         DEC    100             WAIT 1 SECOND
+ 0176            TC     IBNKCALL
+ 01765 2         CADR   DPSENGON
+ 0177            TC     PHASCHNG
+ 0178            OCT    47012
+ 0179            DEC    100
+ 0180            EBANK= DVCNTR
+ 0181            2CADR  SBORB4
+ 0182            TC     FIXDELAY        WAIT 1 SECOND
+ 0183  2         DEC    100
+ 0184   SBORB4   TC     2LMP+DT
+ 0185            DEC    5               ED BATTERY ACTIVATION - SAFE *
+ 0186            DEC    9               RESET **
+ 0187  2         DEC    400             WAIT 4 SECONDS
+ 01872           CA     ZERO            WE WANT TO DETECT ENGINOFF QUICKLY SO IT
+ 01874 2         TS     SETDVCNT        WON'T INTERFERE WITH NEXT ENG ON.
+ 01876           CA     ONE             DITTO.
+ 01878 2         TS     DVCNTR
+ 0188            TC     IBNKCALL
+ 01885 2         CADR   ENGINOFF
+ 0189            TC     PHASCHNG
+ 0190            OCT    47012
+ 0191            DEC    500
+ 0192            EBANK= DVCNTR
+ 0193            2CADR  SBORB5
+ 0194            TC     FIXDELAY        WAIT 5 SECONDS
+ 0195  2         DEC    500
+ 0196   SBORB5   TC     IBNKCALL
+ 01965 2         CADR   DPSENGON        DPSENGON WILL REFRESH SETDVCNT
+ 0197            TC     PHASCHNG
+ 0198            OCT    47012
+ 0199            DEC    200
+ 0200            EBANK= DVCNTR
+ 0201            2CADR  SBORB6
+ 0202            TC     FIXDELAY        WAIT 2 SECONDS
+ 0203  2         DEC    200
+ 0204   SBORB6   TC     IBNKCALL        COMMAND +X TRANSLATION - OFF (4 JET)
+ 0205  2         CADR   NOULLAGE
+ 0206            TC     PHASCHNG
+ 0207            OCT    47012
+ 0208            DEC    1900
+ 0209            EBANK= DVCNTR
+ 0210            2CADR  SBORB7
+ 0211            TC     FIXDELAY        WAIT 19 SECONDS
+ 0212  2         DEC    1900
+ 0213   SBORB7   TC     1LMP+DT
+ 0214            DEC    222             ASCENT WATER COOLANT VALVE - OPEN **
+ 0215  2         DEC    200             WAIT 2 SECONDS
+ 0216            TC     1LMP+DT
+ 0217            DEC    223             RESET **
+ 0218  2         DEC    300             WAIT 3 SECONDS
+ 0219            CAF    PRIO30          THRUST REQUEST DURING JOB
+ 0220            TC     FINDVAC
+ 0221            EBANK= ETHROT
+ 0222            2CADR  TRST90PC
+ 0224            TC     2PHSCHNG
+ 0225            OCT    40112
+ 02255           OCT    07024
+ 0226            OCT    30000
+ 0227            EBANK= ETHROT
+ 0228            2CADR  TRST90PC
+ 0229            TC     FIXDELAY        WAIT 4 SECONDS
+ 0230  2         DEC    400
+ 0231   SBORB8   TC     1LMP+DT
+ 0232            DEC    38              ABORT STAGE - ARM *
+ 0233  2         DEC    100             WAIT 1 SECOND
+ 0234            TC     1LMP+DT
+ 0235            DEC    22              ABORT STAGE - COMMAND *
+ 0236  2         DEC    1               WAIT 10 MS
+ 0237            TC     PHASCHNG
+ 0238  2         OCT    00002
+ 0239  4         TCF    TASKOVER        ABORT STAGE DISCRETE MONITOR RUNNING
+ 02441           EBANK= LEMMASS2
+ 02442  SBORBB   CAF    EBANK7
+ 02443 2         TS     EBANK
+ 02444           EXTEND
+ 02445           DCA    LEMMASS2
+ 02446 2         DXCH   MASS
+ 024461          TC     IBNKCALL        SET UP DAP FOR APS BURN
+ 0244622         CADR   APSENGON
+ 02447           EBANK= TDEC
+ 02448           CAF    EBANK4
+ 02449 2         TS     EBANK
+ 024493          TC     PHASCHNG
+ 024494          OCT    47012
+ 024495          DEC    100
+ 024496          EBANK= TDEC
+ 024497          2CADR  SBORB9
+ 0245            TC     FIXDELAY        WAIT 1 SECOND
+ 0246  2         DEC    100
+ 0247   SBORB9   TC     1LMP+DT
+ 0248            DEC    151             ENGINE SELECT - DESC ARM OFF *
+ 0249  2         DEC    400             WAIT 4 SECONDS
+ 0250            TC     IBNKCALL
+ 02505 2         CADR   ENGINOFF
+ 0251            TC     PHASCHNG
+ 0252            OCT    47012
+ 0253            DEC    100
+ 0254            EBANK= TDEC
+ 0255            2CADR  SBORB10
+ 0256            TC     FIXDELAY        WAIT 1 SECOND
+ 0257  2         DEC    100
+ 0258   SBORB10  TC     2LMP+DT
+ 0259            DEC    39              ABORT STAGE - COMMAND RESET *
+ 02595           DEC    134             ENGINE SELECT - ASC ARM *
+ 0260  2         DEC    2700            WAIT 27 SECONDS
+ 0261            TC     IBNKCALL        COMMAND +X TRANSLATION - ON (4 JET)
+ 0262  2         CADR   ULLAGE
+ 0263            TC     PHASCHNG
+ 0264            OCT    47012
+ 0265            DEC    200
+ 0266            EBANK= TDEC
+ 0267            2CADR  SBORB11
+ 0268            TC     FIXDELAY        WAIT 2 SECONDS
+ 0269  2         DEC    200
+ 0270   SBORB11  TC     IBNKCALL
+ 02705 2         CADR   APSENGON
+ 0271            TC     PHASCHNG
+ 0272            OCT    47012
+ 0273            DEC    200
+ 0274            EBANK= TDEC
+ 0275            2CADR  SBORB12
+ 0276            TC     FIXDELAY        WAIT 2 SECONDS
+ 0277  2         DEC    200
+ 0278   SBORB12  TC     IBNKCALL        COMMAND +X TRANSLATION - OFF (4 JET)
+ 0279  2         CADR   NOULLAGE
+ 0280            TC     PHASCHNG
+ 0281            OCT    47012
+ 0282            DEC    5800
+ 0283            EBANK= TDEC
+ 0284            2CADR  SBORB13
+ 0285            TC     FIXDELAY        WAIT 58 SECONDS
+ 0286  2         DEC    5800
+ 0287   SBORB13  TC     IBNKCALL
+ 02875 2         CADR   ENGINOFF
+ 0288            TC     PHASCHNG
+ 0289            OCT    47012
+ 0290            DEC    100
+ 0291            EBANK= TDEC
+ 0292            2CADR  SBORB14
+ 0293            TC     FIXDELAY        WAIT 1 SECOND
+ 0294  2         DEC    100
+ 0295   SBORB14  TC     1LMP+DT
+ 0296            DEC    135             ENGINE SELECT - ASC ARM OFF *
+ 0297  2         DEC    2900            WAIT 29 SECONDS
+ 0298            TC     FLAG1DWN        KNOCK DOWN AVERAGEG FLAG
+ 0299  2         OCT    00001
+ 0300            TC     IBNKCALL        DEADBAND SELECT - MAX
+ 0301  2         CADR   SETMAXDB
+ 0302            TC     PHASCHNG
+ 0303  2         OCT    00002
+ 0304  4         TC     TASKOVER
+ 0305   ABTSTGDM CAF    BIT2            ABORT STAGE DISCRETE MONITOR
+ 0306            EXTEND
+ 0307  2         RAND   30
+ 0308            EXTEND
+ 0309  2         BZF    ABTSTG1         YES
+ 0310            TC     FIXDELAY        WAIT .5 SECONDS
+ 0311  2         DEC    50
+ 0312  2         TCF    ABTSTGDM
+ 0313   ABTSTG1  TC     2PHSCHNG
+ 0314            OCT    00004
+ 0315            OCT    47012
+ 0316            OCT    77777
+ 03165           EBANK= TDEC
+ 0317            2CADR  SBORBB
+ 03175           TC     2PHSCHNG
+ 03176           OCT    00006
+ 03177 2         OCT    00003
+ 0318            CAF    PRIO37          GENERATE RESTART IMMEDIATELY
+ 0319            TC     NOVAC
+ 03195           EBANK= LST1
+ 0320            2CADR  ENEMA
+ 0321  6         TCF    TASKOVER
+ 032102 TRST90PC CAF    POSMAX          INCREASE THROTTLE 90 PERCENT
+ 032104          TS     PCNTF
+ 032106          EXTEND
+ 032108          DCA    THRSTLOC
+ 0321102         DXCH   Z
+ 0321166         TCF    ENDOFJOB
+ 0322            EBANK= ETHROT
+ 0323   THRSTLOC 2CADR  PCNTFMAX
 L      2INTER-BANK COMMUNICATION
 R0001            THE FOLLOWING ROUTINE CAN BE USED TO CALL A SUBROUTINE IN ANOTH
  0002  9ER BANK. IN THE BANKCALL VERSION, THE
