@@ -23943,6 +23943,508 @@ R0044  8    OTHER    - ERASABLES IN SUBROUTINES USED
  0321166         TCF    ENDOFJOB
  0322            EBANK= ETHROT
  0323   THRSTLOC 2CADR  PCNTFMAX
+L      2MP4-CONTINGENCY ORBIT INSERTION
+ 0001  2         BANK   33
+ 0002            EBANK= TDEC
+R0003   PROGRAM NAME-                   DATE-
+R0004            MISSION PHASE 4                 14 DECEMBER 1966
+R0005   MOD NO- 21                      LOG SECTION-
+R0006  2MOD BY- SCHULENBERG                      MP4-CONTINGENCY ORBIT INSERTION
+R0007   FUNCTIONAL DESCRIPTION-
+R0008            CONTINGENCY ORBIT INSERTION IS CALLED BY GROUND IN EVENT OF PRE
+ 0009  9MATURE SIVB SHUTDOWN AND ATTEMPTS TO
+R0010   EFFECT AN ORBITAL INSERTION USING THE DPS ENGINE AND THE GUIDANCE EQUATI
+ 0011  9ONS USED FOR THE APS BURNS. THE
+R0012   PROGRAM LEAVES MISSION PHASE TIMERS INHIBITED AND LEAVES FURTHER CONTROL
+ 0013  9TO THE GROUND VIA UPLINK.
+R0014   CALLING SEQUENCE-               SUBROUTINES CALLED-
+R0015            START MP4 WHEN ABORT            FLAG1UP          FLAG1DWN
+R0016   COMMAND MONITOR DETECTS MP4              FIXDELAY         WAITLIST
+R0017   COMMAND VIA LGC UPLINK.                  VPATCHER         KALCMANU
+R0018                                            ASCENT           UL4JETON
+R0019   NORMAL EXIT MODES-                       LMP              UL4JETOF
+R0020            TASKOVER (AWAITS                EXECUTIVE        ENGINEON
+R0021   FURTHER COMMANDS FROM GROUND)            MIDTOAVE         ENGINOFF
+R0022   ALARM EXIT MODES-                        BANKCALL         ENGINOF1
+R0023  2         NONE                            IBNKCALL         LASTBIAS
+R0024   ERASABLE INITIALIZATION REQUIRED-
+R0025            RINJECT = INJECTION RADIUS DESIRED IN METERS * 2(-25)
+R00252 2         VINJECT = ORBITAL VELOCITY DESIRED IN METERS/CENTISECOND * 2(-7
+R0026   OUTPUT- SAME AS FOR KALCMANU
+R0027  2DEBRIS- SAME AS FOR KALCMANU
+ 0028   MP4JOB   TC     PHASCHNG
+ 00285           OCT    05022
+ 0029  2         OCT    27000
+ 00291           CAF    BIT4
+ 00292 2         TC     SETRSTRT        SET RESTART FLAG
+ 00295           TC     FLAG1UP
+ 0030  2         OCT    00040           POOH FLAG ON
+ 0031            TC     NEWMODEX        START CONTINGENCY ORBIT INSERTION
+ 0032  2         OCT    72
+ 0033            CAF    FOUR            SIGNAL START OF MISSION PHASE 4
+ 0034  2         TS     PHASENUM
+ 0035            TC     FLAG1DWN        TERMINATE AVEG AND DO AUTO AVETOMID
+ 0036  2         OCT    1
+ 0037            INHINT
+ 0038            CAF    BIT1
+ 0039            TC     WAITLIST        SHORT WAITLIST TO INITIALIZE LMP COMMAND
+ 0040            EBANK= TDEC
+ 0041            2CADR  ABORTPRR
+ 0042  2         TCF    ENDOFJOB        END MP4JOB
+R0043  2RCS ABORT PRESSURIZATION ROUTINE
+ 0044   ABORTPRR CAF    ZERO            INSURE RCS JETS OFF
+ 00444           EXTEND
+ 00446           WRITE  6
+ 0045            EXTEND
+ 0046  2         WRITE  5
+ 0047            TC     PHASCHNG
+ 0048            OCT    47012
+ 0049            DEC    100
+ 0050            EBANK= TDEC
+ 0051            2CADR  OPESYS
+ 0052            TC     FIXDELAY
+ 0053  2         DEC    100             DELAY ONE SECOND
+ 0054   OPESYS   TC     2LMP+DT
+ 0055            DEC    188             RCS MAIN S/O VALVES, SYS A-OPEN**
+ 0056            DEC    190             RCS MAIN S/O VALVES, SYS B-OPEN**
+ 0057  2         DEC    100             DELAY ONE SECOND
+ 0058            TC     1LMP+DT
+ 0059            DEC    4               ED BATTERY ACTIVATION-ON
+ 0060  2         DEC    100             DELAY ONE SECOND
+ 0061            TC     2LMP+DT
+ 0062            DEC    189             RCS MAIN S/O VALVES, SYS A-OPEN RESET
+ 0063            DEC    191             RCS MAIN S/O VALVES, SYS B-OPEN RESET
+ 0064  2         DEC    100             DELAY ONE SECOND
+ 0065            TC     1LMP+DT
+ 0066            DEC    6               RCS PRESSURE-FIRE**
+ 0067  2         DEC    100             DELAY ONE SECOND
+ 0068            TC     1LMP+DT
+ 0069            DEC    5               ED BATTERY ACTIVATION-SAFE
+ 0070  2         DEC    100             DELAY ONE SECOND
+ 0071            TC     1LMP+DT
+ 0072            DEC    7               RCS PRESSURE - FIRE RESET
+ 0073  2         DEC    400             DELAY FOUR SECONDS
+R0074  2END RCS ABORT PRESSURIZATION ROUTINE
+ 0075   TUMBLCHK CA     FLAGWRD1
+ 0076            MASK   BIT13
+ 0077            EXTEND
+ 0078  2         BZF    NOTUMBL
+ 0079            TC     PHASCHNG
+ 0080            OCT    47012
+ 0081            DEC    50
+ 0082            EBANK= TDEC
+ 0083            2CADR  TUMBLCHK
+ 0084            TC     FIXDELAY
+ 0085            DEC    50              DELAY .5 SECS AND CHECK AGAIN
+ 0086  2         TCF    TUMBLCHK
+ 0087   NOTUMBL  TC     FLAG1DWN        IF NO TUMBLING-TERMINATE MONITOR
+ 0088  2         OCT    20000           TERMINATE TUMBLE MONITOR
+ 0091   TIG4-51  EXTEND
+ 0092            DCA    TIME2           GET CURRENT TIME
+ 0093  2         DXCH   TDECTEMP
+ 0094            CAF    021CEK          UPDATE STATE TO TIG4-30
+ 0095            TS     L
+ 0096            CAF    ZERO
+ 0097  2         DAS    TDECTEMP
+ 0098            EXTEND
+ 0099            DCA    TDECTEMP
+ 0100            DXCH   TIGN
+ 0101            CAF    030CEK
+ 0102            XCH    L
+ 0103            CAF    ZERO
+ 0104            DAS    TIGN            FOR DOWNLINK USE - NOMINAL TIGN
+R0105  2BEGIN ABORT LEM/S4B SEPARATION PROCEDURE
+ 0106   MP4SEP   CS     FLAGWRD1
+ 0107            MASK   BIT4
+ 0108  2         ADS    FLAGWRD1
+ 0109            CAF    XTRANSON        +X TRANSLATION- ON (PRE-DAP)
+ 0110            EXTEND
+ 0111  2         WRITE  5
+ 0112            TC     IBNKCALL        +X TRANSLATION-ON (4JET)
+ 0113  2         CADR   ULLAGE
+ 0114            TC     1LMP+DT
+ 0115            DEC    58              LEM/SIVB SEPARATE - ARM ON
+ 0116  2         DEC    50              DELAY 500 MS.
+ 0117            CS     DAPBOOLS
+ 0118            MASK   GODAPGO         TURN ON THE DAP
+ 0119  2         ADS    DAPBOOLS
+ 0120            TC     IBNKCALL
+ 0121  2         CADR   SETMAXDB
+ 0122            TC     PHASCHNG
+ 0123            OCT    47012
+ 01235           DEC    50
+ 0124            EBANK= TDEC
+ 0125            2CADR  MP4HOLD
+ 0126            TC     FIXDELAY        WAIT FOR 300 MS.
+ 0127  2         DEC    50              DELAY 500 MS.
+ 0128   MP4HOLD  TC     IBNKCALL
+ 0129  2         CADR   HOLDRATE
+ 0130            TC     1LMP+DT
+ 0131            DEC    90              LEM/SIVB SEPARATE- COMMAND
+ 0132  2         DEC    10              DELAY 100 MS.
+ 0133            TC     IBNKCALL
+ 0134  2         CADR   SETMINDB
+ 0135            TC     PHASCHNG
+ 0136            OCT    47012
+ 0137            DEC    90
+ 0138            EBANK= TDEC
+ 0139            2CADR  TIG4-49
+ 0140            TC     FIXDELAY
+ 0141  2         DEC    90              DELAY 900 MS.
+ 0142   TIG4-49  TC     1LMP+DT
+ 0143            DEC    59              LEM/S4B SEPARATE-ARM-OFF
+ 0144  2         DEC    100             DELAY ONE SECOND
+ 0145   TIG4-48  TC     1LMP
+ 0146  2         DEC    91              LEM/S4B SEPARATE-COMMAND RESET
+R0147  2END LEM/S4B SEPARATION ROUTINE
+ 0148            CAF    007CEK
+ 0149            TC     WAITLIST
+ 0150            EBANK= TDEC
+ 0151            2CADR  TIG4-41
+ 0152            TC     2PHSCHNG
+ 0153            OCT    40152           TABLES RESTART FOR TIG4-41
+ 0154            OCT    05014
+ 0155  2         OCT    77777
+ 0156            CAF    PRIO27          START NEW JOB FOR CALCULATIONS
+ 0157            TC     FINDVAC
+ 0158            EBANK= TDEC
+ 0159            2CADR  LONGJOB
+ 0160  2         TCF    TASKOVER        END TIG4-48 TASK
+ 0161   LONGJOB  TC     INTPRET         SET INTEGRSW SO THAT THE THIRD TESTLOOP
+ 0162            SET    EXIT            OF MIDTOAVE WILL GENERATE IGN+28 STATES
+ 0163  2                INTEGRSW        INSTEAD OF IGNITION STATES.
+ 01631           EXTEND                 RESET TDEC IN CASE OF A RESTART
+ 01632           DCA    TDECTEMP
+ 01633 2         DXCH   TDEC
+ 0164            EXTEND
+ 0165            DCA    ORBINTAD        DO ORBITAL INTEGRATION
+ 0166  2         DXCH   Z
+ 01665           TC     PHASCHNG
+ 01667           OCT    05024
+ 01669 2         OCT    27000
+ 0167   PRECOI   CAF    KALC4AD
+ 0168            TS     ASCRET
+ 0169            TC     INTPRET
+ 0170            CALL
+ 0171                   VPATCHER        RESCALE AND LOAD IGN STATES IN RN AND VN
+ 01712 2         EXIT
+ 01713           TC     PHASCHNG        BECAUSE PAXIS1 & QAXIS TIME-SHARE
+ 01714 2         OCT    04024           LOCATIONS WITH RN & VN.
+ 01715           TC     INTPRET
+ 0172            VLOAD
+ 0173                   VN              VN FROM VPATCHER=VIGNTION*2(-7) M/CS
+ 0174            VXV    UNIT
+ 0175                   RN              RN FROM VPATCHER=RIGNTION*2(N-29) M
+ 0176            STOVL  QAXIS           UNIT HORIZONTAL VECTOR NORMAL TO ORBIT
+ 0177                   UNITR           UNITR FROM AVEG=UNIT(RIGNTION)*2(-1) M
+ 0178            STORE  PAXIS1
+ 0179            VXV    VSL1
+ 0180                   QAXIS
+ 0181            STOVL  SAXIS           UNIT HORIZONTAL VECTOR PARALLEL TO ORBIT
+ 0182                   ABLOCK
+ 0183            STOVL  AT
+ 0184                   BBLOCK
+ 0185            STOVL  ATMEAS
+ 0186                   CBLOCK
+ 0187            STODL  RDOTD           RDOTD, YDOTD.  ZDOTD FIXED LATER.
+ 0188                   KR1EST
+ 0189            STODL  KR1             LOAD ATTITUDE LIMITING PARAMETER
+ 0190                   TGOEST
+ 0191            STODL  TGO
+ 0192                   VTO-DPS
+ 0193            STODL  VTO             LOAD DPS TAILOFF VELOCITY FOR ASCENT
+ 0194                   RINJECT
+ 0195            STODL  RCO             LOAD INJECTION RADIUS FOR ASCENT
+ 0196                   VINJECT
+ 0197            STODL  ZDOTD           LOAD INJECTION VELOCITY FOR ASCENT
+ 01971                  KREST
+ 01972           STORE  KR
+ 0198            CLEAR
+ 0199                   DIRECT
+ 0200            VLOAD  DOT
+ 0201                   SAXIS
+ 0202                   VN              ZDOT*2(-8)
+ 0203            SL1                     *2(-7)
+ 0204            STOVL  ZDOT
+ 0205                   PAXIS1
+ 0206            DOT    SL1             RDOT*2(-8)
+ 0207                   VN               *2(-7)
+ 0208            STODL  RDOT
+ 0209                   DP0
+ 0210            STORE  YDOT            YDOT = 0
+ 0211            SET    GOTO
+ 0212                   BAKTO4
+ 0213                   ASCENT          GO TO USE GEFF SECTION OF ASCENT
+ 0214   GFKNOWN  SR1                    LET AVG GEFF = .5 GEFF
+ 0215            STORE  GEFF
+ 0216            GOTO
+ 0217                   GAIN
+ 0218   TKNOWN   DLOAD  DAD
+ 0219                   RDOTD
+ 0220                   RDOT            (RDOT+RDOTD)*2(-7)
+ 0221            SR1    DMP              .5RDOTAVE*2(-7)
+ 0222                   TGO             RGO*2(-24),SINCE TGO IS *2(-17)
+ 0223            DAD    SR1             RFREE IS RCO FOR NO R-CONTROL,*2(-24)
+ 0224                   RMAG             *2(-25)
+ 0225            DSU    BPL
+ 0226                   RCO
+ 0227                   FREE-R
+ 0228            CLEAR  GOTO            IF RFREE SMTHAN RCO, CONSTRAIN RCO
+ 0229                   HC
+ 0230                   ASCENT
+ 0231   FREE-R   SET    GOTO
+ 0232                   HC              IF RFREE GRTHAN RCO, FREE RCO
+ 0233                   ASCENT
+ 0234   PREKALC4 VLOAD  CLEAR
+ 0235                   AXISD
+ 0236                   ENGOFFSW        TO AVOID MULTIPLE ENGINOFF COMMANDS
+ 0237            STOVL  POINTVSM        KALCMANU INPUT REGISTER
+ 0238                   BODYVECT        LOAD BODY AXES VECTOR IN SM COORDS
+ 0239            STORE  SCAXIS          KALCMANU INPUT VECTOR
+ 0240            SET    SSP
+ 0241  2                33D
+ 0242                   RATEINDX
+ 0243                   6               10 DEGREE/SEC MANEUVERING RATE
+ 0244  2         EXIT
+ 02443           TC     PHASCHNG
+ 02445 2         OCT    00004           DEACTIVATE GR 4
+ 0245  2         TCF    ENDOFJOB        END LONGJOB
+ 0246   TIG4-41  CAF    AVGENADR        GENADR OF AVERAGEG
+ 0247  2         TS     DVSELECT
+ 0248            EXTEND
+ 0249            DCA    EXITADR         SET AVEG TO EXIT TO END OF JOB UNTIL
+ 0250  2         DXCH   AVGEXIT         IT IS RESET TO ATMAG
+ 0251            EXTEND
+ 0252            DCA    MP4TM1AD        SET MONITOR EXIT
+ 0253  2         DXCH   DVMNEXIT
+ 0254            TC     1LMP+DT
+ 0255            DEC    4               ED BATTERY ACTIVATION-ON
+ 0256  2         DEC    400             DELAY 4 SECONDS
+ 0257   TIG4-37  TC     IBNKCALL        +X TRANSLATION- OFF
+ 0258  2         CADR   NOULLAGE
+ 0259            TC     IBNKCALL
+ 0260  2         CADR   STOPRATE        HOLD VEHICLE ATTITUDE
+ 0261            TC     PHASCHNG
+ 0262            OCT    47012
+ 0263            DEC    100
+ 0264            EBANK= TDEC
+ 0265            2CADR  TIG4-36
+ 0266            TC     FIXDELAY
+ 0267  2         DEC    100             DELAY ONE SECOND
+ 0268   TIG4-36  TC     1LMP
+ 0269  2         DEC    8               LANDING GEAR DEPLOY-FIRE
+ 0270            CAF    002CEK
+ 0271            TC     WAITLIST
+ 0272            EBANK= TDEC
+ 0273            2CADR  TIG4-34
+ 0274            TC     2PHSCHNG
+ 0275            OCT    40172
+ 0276            OCT    05013           GR 3 FOR KALCMANU
+ 02765 2         OCT    77777
+ 0277            CAF    PRIO16          CALL KALCMANU.
+ 0278            TC     FINDVAC
+ 0279            EBANK= MIS
+ 0280            2CADR  VECPOINT
+ 0281  2         TCF    TASKOVER        END TIG4-36 TASK
+ 0282   TIG4-34  CAF    004CEK          SET PREREAD CALL (AUTO LASTBIAS)
+ 0283            TC     WAITLIST
+ 0284            EBANK= DVTOTAL
+ 0285            2CADR  PREREAD
+ 0286            TC     2PHSCHNG
+ 0287            OCT    40275           5.27 SPOT FOR PREREAD
+ 0288            OCT    05012           GR 2 CONTINUES HERE
+ 0289  2         OCT    77777
+ 0291            TC     1LMP+DT
+ 0292            DEC    9               LANDING GEAR DEPLOY- FIRE RESET
+ 0293  2         DEC    402             DELAY 4 SECONDS
+ 0294   TIG4-30  TC     IBNKCALL
+ 0295  2         CADR   ENGINOF1
+ 0296            TC     2LMP+DT
+ 0297            DEC    150             ENGINE SELECT- DESC ARM
+ 0298            DEC    86              MANUAL THROTTLE- ON 10 PERCENT
+ 0299  2         DEC    1398            DELAY 14 SECONDS
+ 0300   TIG4-16  TC     2LMP+DT
+ 0301            DEC    228             DPS PQGS ARM NO 1 - ENABLE
+ 0302            DEC    196             DPS PQGS ARM NO 2- ENABLE
+ 0303  2         DEC    100
+ 0304   TIG4-15  TC     2LMP+DT
+ 0305            DEC    244             DPS PQGS NO 1- ON
+ 0306            DEC    212             DPS PQGS NO 2- ON
+ 0307  2         DEC    750             DELAY 7.5 SECONDS
+ 0310   TIG4-7.5 TC     IBNKCALL        +X TRANSLATION- ON
+ 0311  2         CADR   ULLAGE
+ 0312            TC     PHASCHNG
+ 0313            OCT    47012
+ 0314            DEC    750
+ 0315            EBANK= TDEC
+ 0316            2CADR  TIG4TST
+ 0317            TC     FIXDELAY
+ 0318  2         DEC    750             DELAY 7.5 SECONDS
+ 0319   TIG4TST  CAF    PRIO17
+ 0320            TC     NOVAC
+ 0321            EBANK= TDEC
+ 0322            2CADR  IGNTEST
+ 0323  2         TCF    TASKOVER
+ 0326   IGNTEST  TC     BANKCALL        WAIT UNTIL MANEUVER IS FINISHED
+ 0327            CADR   ATTSTALL
+ 0328  2         TC     CURTAINS
+ 0329   MP4IGN   INHINT
+ 0330            TC     IBNKCALL
+ 0331  2         CADR   DPSENGON
+ 0332            CAF    003CEK
+ 0333            TC     WAITLIST
+ 0334            EBANK= TDEC
+ 0335            2CADR  MP4IGN+3
+ 0336            TC     2PHSCHNG
+ 03365           OCT    00003
+ 0337            OCT    47012
+ 0338            DEC    300
+ 0339            EBANK= TDEC
+ 0340            2CADR  MP4IGN+3
+ 0341  2         TCF    ENDOFJOB
+ 0342   MP4IGN+3 TC     IBNKCALL        +X TRANSLATION- OFF
+ 0343  2         CADR   NOULLAGE
+ 0344            TC     1LMP+DT
+ 0345            DEC    5               ED BATTERY ACTIVATION- SAFE
+ 0346  2         DEC    2300            DELAY 23 SECONDS
+ 0347   MAXTHRST CAF    POSMAX          CALL FOR 92.5 PERCENT THRUST
+ 0348            TS     PCNTF
+ 0349            EXTEND
+ 0350            DCA    PCNTFMAD
+ 0351  2         DTCB
+ 0352            TC     2PHSCHNG        PROTECT CALL FOR MAXIMUM THRUST
+ 03525           OCT    00114
+ 0353            OCT    47012
+ 0354            DEC    300
+ 0355            EBANK= TDEC
+ 0356            2CADR  GUIDANCE
+ 0357            TC     FIXDELAY
+ 0358  2         DEC    300             WAIT 3 SECS BEFORE CALLING THRUST FILTER
+ 0359   GUIDANCE EXTEND                 TUNE IN ASCENT GUIDANCE
+ 0360            DCA    ATMAG4
+ 0361  2         DXCH   AVGEXIT
+ 0362            CAF    CDUJOBAD
+ 0363  2         TS     ASCRET
+ 03635           TC     PHASCHNG
+ 03637 2         OCT    00002           DEACTIVATE GR 2
+ 0364  2         TCF    TASKOVER
+ 0365   MP4TERM1 INHINT
+ 0366            CAF    005CEK
+ 0367            TC     WAITLIST
+ 0368            EBANK= TDEC
+ 0369            2CADR  TCO+5
+ 0370            TC     PHASCHNG
+ 0371            OCT    47012
+ 0372            DEC    500
+ 0373            EBANK= TDEC
+ 0374            2CADR  TCO+5
+ 0375            TC     POSTJUMP
+ 0376  2         CADR   SERVEXIT
+ 0377   TCO+5    TC     2LMP+DT
+ 0378            DEC    151             ENGINE SELECT-DESC ARM-OFF
+ 0379            DEC    87              MANUAL THROTTLE-RESET (30 PERCENT)
+ 0380  2         DEC    100             DELAY ONE SECOND
+ 0381            TC     IBNKCALL        SET MAXIMUM DEADBAND
+ 0382  2         CADR   SETMAXDB
+ 0383            TC     PHASCHNG
+ 0384            OCT    47012
+ 0385            DEC    900
+ 0386            EBANK= TDEC
+ 0387            2CADR  TCO+15
+ 0388            TC     FIXDELAY
+ 0389            DEC    900             DELAY NINE SECONDS
+ 0390   TCO+15   TC     2LMP+DT
+ 0391            DEC    245             DPS PQGS NO 1- OFF
+ 0392            DEC    213             DPS PQGS NO 2- OFF
+ 0393  2         DEC    100
+ 0394            TC     2LMP+DT
+ 0395            DEC    229             DPS PQGS ARM NO 1- DISABLE
+ 0396            DEC    197             DPS PQGS ARM NO 2- DISABLE
+ 0397  2         DEC    1400            DELAY 14 SECONDS
+ 0398            TC     FLAG1DWN        TERMINATE AVEG AND DO AUTO AVETOMID
+ 0399  2         OCT    00041           ALSO KNOCK DOWN THE POOH FLAG
+ 0402            TC     PHASCHNG        DEACTIVATE GROUP 2
+ 0403  2         OCT    00002
+ 0404  2         TCF    TASKOVER
+R0405   ************************************************************************
+R0406   TIME INCREMENTS FOR WAITLISTS IN MP4 - XXXXXCEK = DEC XXXXX00 CS
+R0407  2************************************************************************
+ 0408  2002CEK   DEC    200
+ 0409  2003CEK   DEC    300
+ 0410  2004CEK   DEC    400
+ 0411  2005CEK   DEC    500
+ 0412  2007CEK   DEC    700
+ 0413  2021CEK   DEC    2100
+ 0414  2030CEK   DEC    3000
+ 0415  4XTRANSON OCT    00252           CHANNEL 5 CODE FOR 4-JET TRANSLATION
+R0416   ************************************************************************
+R0417   CONSTANTS FOR PRECOI CALCULATIONS AND FOR INITIALIZATION OF ASCENT EQ.
+R0418  2************************************************************************
+ 0419   ABLOCK   2DEC   0.30893 E-3 B+9 ANTICIPATED INITIAL ACCELERATION M/CS/CS
+ 0420            2DEC   0.2990 E+2 B-7  INITIAL EXHAUST VELOCITY  M/CS
+ 0421            2DEC   0.9678 E+5 B-17 ESTIMATED BURNUP TIME IN CENTISECONDS
+ 0422   BBLOCK   2DEC   0.1642          1/DV1
+ 0423            2DEC   0.1642          1/DV2
+ 0424            2DEC   0.1642          1/DV3
+ 0425   KREST    2DEC   0.4750          LIMITS MAXIMUM PITCH TO 72 DEGREES
+ 0426   KR1EST   2DEC   0.3122
+ 0427   TGOEST   2DEC   25000 B-17
+ 0428   BODYVECT 2DEC   .5
+ 0429   CBLOCK   2DEC   0               RDOTD
+ 0430            2DEC   0               YDOTD
+R0431   ************************************************************************
+R0432   GENADRS, ECADRS, AND 2CADRS USED IN MP4
+R0433  2************************************************************************
+ 0434  2AVGENADR GENADR AVERAGEG
+ 0436            EBANK= TDEC
+ 0437   MP4TM1AD 2CADR  MP4TERM1
+ 0438            EBANK= TDEC
+ 0439   EXITADR  2CADR  SERVEXIT
+ 0440            EBANK= AMEMORY
+ 0441   ORBINTAD 2CADR  MIDTOAVE
+ 0442            EBANK= ETHROT
+ 0443   PCNTFMAD 2CADR  PCNTFMAX
+ 0444            EBANK= TDEC
+ 0445   ATMAG4   2CADR  ATMAG
+ 0448  2KALC4AD  FCADR  PREKALC4
+ 0449  2CDUJOBAD FCADR  FINDCDUD
+R0450   ************************************************************************
+R0451   TASKSETR SUBROUTINE - SETS UP WAITLISTS REFERENCED TO VALUE OF TDEC
+R0452  2************************************************************************
+ 0453   TASKSETR EXTEND
+ 0454            QXCH   ITEMP1
+ 0455            TS     L
+ 0456            CAF    ZERO
+ 0457            DXCH   MPAC
+ 0458            DXCH   ITEMP3
+ 0459            CAF    ZERO
+ 0460            XCH    MPAC +2
+ 0461            TS     ITEMP5
+ 0462            EXTEND
+ 0463            DCS    TIME2
+ 0464            DAS    MPAC
+ 0465            CAF    EBANK4
+ 0466            XCH    EBANK
+ 0467            TS     ITEMP2
+ 0468            EXTEND
+ 0469            DCA    TDEC
+ 0470            DAS    MPAC
+ 0471            TC     TPAGREE
+ 0472            CA     ITEMP5
+ 0473            TS     MPAC +2
+ 0474            DXCH   ITEMP3
+ 0475            DXCH   MPAC
+ 0476            EXTEND
+ 0477            BZF    +3
+ 0478            TC     ABORT
+ 0479            OCT    00404
+ 0480            XCH    L
+ 0481            EXTEND
+ 0482            BZMF   -4
+ 0483            LXCH   ITEMP2
+ 0484            LXCH   EBANK
+ 0485            TC     ITEMP1
+R0486   ************************************************************************
 L      2INTER-BANK COMMUNICATION
 R0001            THE FOLLOWING ROUTINE CAN BE USED TO CALL A SUBROUTINE IN ANOTH
  0002  9ER BANK. IN THE BANKCALL VERSION, THE
