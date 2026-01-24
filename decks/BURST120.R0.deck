@@ -25516,6 +25516,469 @@ R0402  2         ********************************
  0423   11SECS9  DEC    1100
  0424   70SECS9  DEC    7000
 R0425            ********************************
+L      2MISSION PHASE 11 - DPS2/FITH/APS1
+ 0001            BANK   36
+ 0002            EBANK= TDEC
+ 0003   EMP11JOB EQUALS MPRETRN
+R0004   MISSION PHASE 11 DOES PROG32-PREDPS2, PROG42-DPS2 BURN BRAKING GUIDANCE,
+R0005   PROG43-APPROACH GUIDANCE, PROG43-RANDOM THROTTLE PROGRAM AND PROG74-THE
+R0006  2FIRE-IN-THE-HOLE AND APS1 BURN
+R0007  2THE APPROXIMATE STARTING TIME OF THESE PROG IS SHOWN BELOW
+R0008   T       PROG32
+R0009   T+187   DPS2 IGNITION (TIG11)
+R0010   TIG+26  PROG42
+R0011   TIG+705 PROG44
+R0012   TIG+757 PROG74
+R0013  4TIG+792 MISSION TERMINATED
+ 0014   MP11JOB  CAF    BIT11
+ 0015  2         TC     SETRSTRT        SET RESTART FLAG
+ 0016            EXTEND
+ 0017            DCA    TIME2
+ 0018  2         DXCH   TDECTEMP
+ 0019            TC     NEWMODEX        SET DISPLAY
+ 0020  2         OCT    32
+ 0021            CAF    1SEC11          SETUP MP11 TASK-REQUIRES 75 SECS AND
+ 0022            INHINT                 TERMINATES ITSELF
+ 0023            TC     WAITLIST
+ 0024            EBANK= TDEC
+ 0025            2CADR  MP11TASK
+ 0026            TC     2PHSCHNG
+ 0027            OCT    40253           3.25SPOT FOR MP11TASK.
+ 0028  2         OCT    00312           2.31 SPOT TO CONTINUE MP11JOB.
+ 0029   11REDO1  EXTEND                 SET TDEC TO TIME OF START OF MP 11
+ 0030            DCA    TDECTEMP           PLUS 135 SECONDS.
+ 0031            DXCH   TDEC
+ 0032            EXTEND
+ 0033            DCA    135SECS
+ 0034  2         DAS    TDEC
+ 0035            EXTEND                 SET RETURN FROM MIDTOAVE TO INTRTN
+ 0036            DCA    MDAVADR
+ 0037  2         DXCH   Z               DO MIDTOAVE VIA RVUPDATE
+ 0038            TC     PHASCHNG
+ 0039  2         OCT    00332
+ 0040   INTRTN   EXTEND
+ 0041            DCA    DPS2ADR         INTEGRATION DONE-DO PRE-DPS2
+ 0042  2         DXCH   Z               STATE AT RIGNTION-TIME AT TET FOR PREDPS
+R0043    PRE-DPS2 RETURN TO RETPREB WITH ULLAGE-ON TIME AT TULLG, (TIG-7.5).
+R0044   THE DESIRED 1/2 UNIT THRUST VECTOR AT POINTVSM.
+R0045    STATE VECTOR IN SM COORDINATES STORED AT RN, VN WITH CORRESPONDING
+R0046    TIME AT PIPTIME WHERE (TULLG - PIPTIME)IS BETWEEN
+R0047  4 3.8 AND 6 SECS.
+ 0048   RETPREB  INHINT
+ 0049            EXTEND
+ 0050            DCA    TULLG           C(TULLG)=TIG-7.5
+ 0051            DXCH   MPAC
+ 0052            CS     22.5SECS
+ 0053            TS     L
+ 0054            CAF    ZERO
+ 0055            TS     MPAC +2
+ 0056            DAS    MPAC            C(MPAC)=TIG-30
+ 0057            EXTEND
+ 0058            DCS    TIME2           GET CURRENT TIME
+ 0059            DAS    MPAC            C(MPAC)=DELTA(TIG-30)
+ 0060            TC     TPAGREE         MAKE SIGNS AGREE
+ 0061            EXTEND
+ 0062            DCA    MPAC
+ 0063            DXCH   TDECTEMP
+ 0064            DXCH   MPAC
+ 0065            TC     LONGCALL
+ 0066            EBANK= TDEC
+ 0067            2CADR  TIG11-30
+ 0068            TC     PHASCHNG
+ 0069  2         OCT    20022
+ 0070   11REDO2  TC     INTPRET
+ 0071            VLOAD
+ 0072                   RN              STATE STORED IN RAVEGON AND VAVEGON FOR
+ 0073            STOVL  RAVEGON         AVERAGE G INITIALIZATION AT PIPTIME
+ 0074                   VN
+ 0075            STODL  VAVEGON
+ 0076                   D1/2            JAM .5,0,0 IN SCAXIS FOR KALCMANU
+ 0077            STODL  SCAXIS
+ 0078                   DZERO
+ 0079            STORE  SCAXIS +2
+ 0080            STODL  SCAXIS +4
+ 0081                   PIPTIME         THIS TIME CONSISTANT WITH STATE-RAVEGON
+ 0082            STORE  DT11TEMP        USED AFTER KALCMANU TO CALL PREREAD
+ 0083            SSP    SET
+ 0084                   RATEINDX        SET KALCMANU FOR ANGULAR RATE OF 5 DEG/S
+ 0085                   4
+ 0086                   33D
+ 0087  2         EXIT
+ 0088            CAF    PRIO16          DO ATTITUDE MANEUVER JOB.
+ 0089            INHINT
+ 0090            TC     FINDVAC
+ 0091            EBANK= MIS
+ 0092            2CADR  VECPOINT
+ 0093            TC     BANKCALL
+ 0094  2         CADR   ATTSTALL        PUT MP11 TO SLEEP - KALCMANU WILL WAKE
+ 0095            TC     CURTAINS        KALCMANU HAS GIMBALOC PROBLEMS-CURTAINS
+ 0096            TC     PHASCHNG
+ 0097  2         OCT    00352
+ 0098  2         TC     ENDOFJOB        WAIT FOR TIG-30
+ 0099   TIG11-30 CAF    BIT11           SEE IF ATTITUDE MANEUVER DONE
+ 0100            MASK   FLAGWRD2
+ 0101            CCS    A
+ 0102            TC     DOCURTN         KALCMANU NOT-DO CURTJOB
+ 0103            TC     NEWMODEX        SET MODE TO PROG42
+ 0104  2         OCT    42
+ 0105            CAF    AVEG11AD        SET UP SERVICER.
+ 0106  2         TS     DVSELECT
+ 0107            EXTEND
+ 0108            DCA    ADROFSER
+ 0109  2         DXCH   AVGEXIT
+ 0110            EXTEND
+ 0111            DCA    MP11TMAD
+ 0112  2         DXCH   DVMNEXIT
+ 0113            CS     TIME1
+ 0114            AD     DT11TEMP +1     FIND DT TO PIPTIME
+ 0115            CCS    A               CORRECT NEG DT OR NEGATIVE OVERFLOW DT.
+ 0116            AD     ONE
+ 0117            TCF    +5
+ 0118            AD     OCT40001
+ 0119            AD     MINUS1          ALLOWS FOR REMOTE CHANCE FO ZERO DT.
+ 0120            COM
+ 0121            TCF    -6
+ 0122            TS     RSDTTEMP        SAVED FOR RESTARTS.
+ 0123            TC     WAITLIST
+ 0124            EBANK= DVTOTAL
+ 0125            2CADR  PREREAD
+ 0126            TC     2PHSCHNG
+ 0127            OCT    40355           5.35 SPOT FOR PREREAD.
+ 0128  2         OCT    00212           2.21 SPOT FOR DPSTART.
+ 0129   DPSTART  TC     IBNKCALL
+ 0130  2         CADR   ENGINOF1
+ 0131            TC     1LMP+DT
+ 0132            DEC    150             ARM DESCENT ENGINE
+ 0133  2         DEC    1000            DELAY 10 SECONDS
+ 0134   TIG11-20 TC     1LMP+DT
+ 0135            DEC    86              SET MANUAL THROTTLE TO 10 %
+ 0136  2         DEC    400             DELAY 4 SECONDS
+ 0137   TIG11-16 TC     2LMP+DT
+ 0138            DEC    228             ENABLE DPS PQGS ARM 1
+ 0139            DEC    196             ENABLE DPS PQGS ARM 2
+ 0140  2         DEC    100             DELAY 1 SECOND
+ 0141   TIG11-15 TC     2LMP+DT
+ 0142            DEC    244             DPS PQGS =1 ON
+ 0143            DEC    212             DPS PQGS =2 ON
+ 0144  2         DEC    750             DELAY 7.5 SECONDS
+ 0145   TIG-7.5  TC     IBNKCALL
+ 0146  2         CADR   ULLAGE          CALL FOR 4 JET ULLAGE
+ 0147            CAF    BIT1            START UP ABORT STAGE MONITOR.
+ 0148            TC     WAITLIST
+ 0149            EBANK= TDEC
+ 0150            2CADR  ABMON
+ 0151            TC     2PHSCHNG
+ 0152            OCT    40033           3.3 SPOT FOR ABMON
+ 0153  2         OCT    40232           2.23 SPOT FOR TIG11
+ 0154            TC     FIXDELAY
+ 0155  2         DEC    750             DELAY 7.5 SECONDS, UNTIL ENGINEON
+ 0156   TIG11    TC     IBNKCALL
+ 0157  2         CADR   DPSENGON
+ 0158            TC     PHASCHNG
+ 0159  2         OCT    47012
+ 0160            DEC    50
+ 0161            EBANK= TDEC
+ 0162            2CADR  TIG11A
+ 0163            TC     FIXDELAY
+ 0164  2         DEC    50              DELAY HALF A SECOND
+ 0165     TIG11A TC     IBNKCALL
+ 0166  2         CADR   NOULLAGE
+ 0167            TC     PHASCHNG
+ 0168            OCT    47012
+ 0169            DEC    2550
+ 0170            EBANK= TDEC
+ 0171            2CADR  TIG11+26
+ 0172            TC     FIXDELAY
+ 0173  2         DEC    2550            WAIT 25.5 SECONDS
+ 0174   TIG11+26 CAF    POSMAX          HAVE BEEN AT 10% THROTTLE FOR 26 SECONDS
+ 0175  2         TS     PCNTF           NOW CALL FOR MAXIMUM THRUST (92.5%)
+ 0176            EXTEND
+ 0177            DCA    PCNTFAD
+ 0178  2         DXCH   Z
+ 0179            EXTEND
+ 0180            DCA    BURNADR         STARTING DPS2 GUIDANCE: TIG +26 SECONDS
+ 0181  2         DXCH   AVGEXIT
+ 0182            CA     DAPOFFDT        SKIP AUTOMATIC TURN-OFF OF DAP IF
+ 0183            EXTEND                 DAPOFFDT IS NEGATIVE OR ZERO.
+ 0184  2         BZMF   NODAPOFF
+ 0185            TC     WAITLIST
+ 0186            EBANK= DNTMBUFF
+ 0187            2CADR  11DAPOFF
+ 0188            TC     PHASCHNG
+ 0189  2         OCT    40116           6.11 FOR 11DAPOFF TASK.
+ 0190   NODAPOFF TC     2PHSCHNG
+ 0191            OCT    00002
+ 0192  2         OCT    00114           4.11 SPOT FOR THRUSTING
+ 0193  2         TC     TASKOVER
+ 0194   RETBURN  EXTEND                 RETURN FROM BURN GUIDANCE
+ 0195            DCA    ADROFSER        SET SERVICER EXIT TO KILL BURN GUID
+ 0196  2         DXCH   AVGEXIT
+ 0197            TC     PHASCHNG
+ 0198            OCT    45022
+ 0199  2         OCT    20000
+ 0200            CAF    BIT1            SET TASK FOR RANDOM THROTTLE
+ 0201            INHINT
+ 0202            TC     WAITLIST        PROGRAM P44
+ 0203            EBANK= TDEC
+ 0204            2CADR  PROG44
+ 0205  4         TCF    ENDOFJOB        READACCS STILL ACTIVE.
+ 0206   11DAPOFF CA     PRIO30          CALL JOB TO TURN OFF DAP & START
+ 0207            TC     NOVAC           SPECIAL CDU-ONLY DOWNLINK.
+ 0208            EBANK= DNTMBUFF
+ 0209            2CADR  BEGINCDU
+ 0210            TCF    TASKOVER
+P0211   THE DPS2 RANDOM THROTTLE PROG44 STARTS APPROXIMATELY AT TIG+705. THE
+R0212   EXACT TIME AND THRUST LEVEL SETTING AT THE START OF PROG44 ARE COMPUTED
+R0213  2BY BURN GUIDANCE PROG43.  THE SUBSEQUENT THRUST COMMANDS ARE LISTED.
+R0214   T    10 PERCENT THRUST
+R0215   T+10 50 PERCENT
+R0216   T+30 30 PERCENT
+R0217   T+40 20 PERCENT
+R0218  2T+50 92.5 PERCENT FOR 2 SECS THEN FIRE-IN-THE-HOLE
+ 0219   PROG44   TC     NEWMODEX
+ 0220  2         OCT    44              SET MODE TO RANDOM THROTTLE
+ 0221            TC     PHASCHNG
+ 0222            OCT    05012
+ 0223  2         OCT    77777
+ 0224   INDPCT   CAF    FOUR
+ 0225  2         TS     RSDTTEMP        INDEX.
+ 0226            INDEX  A               OFFSET POINTER
+ 0227            CAF    20PCTHR         AMOUNT OF THROTTLE
+ 0228  2         TS     PCNTF
+ 0229            EXTEND
+ 0230            DCA    PCNTFAD         GO TO THRUSTING ROUTINE
+ 0231  2         DTCB
+ 0232            CS     TWO             WATER VALVE DUE 22 SEC AFTER RANDOM
+ 0233            AD     RSDTTEMP        THROTTLE PHASE BEGINS.  THAT PUTS IT
+ 0234            EXTEND                 2 SEC AFTER MPRETRN = 2.
+ 0235  2         BZF    SETWATER
+ 0236            TC     2PHSCHNG
+ 0237            OCT    00114           4.11SPOT FOR THRUSTING
+ 0238  2         OCT    00372           2.37 FOR MOVENDX TASK.
+ 0239   MOVENDX  CA     RSDTTEMP
+ 0240  2         TS     MPRETRN
+ 0241            TC     PHASCHNG
+ 0242  2         OCT    40412           2.41 FOR CCSMPRET TASK.
+ 0243            TC     FIXDELAY
+ 0244  210SECS11 DEC    1000            DELAY 10 SECS
+ 0245   CCSMPRET CCS    MPRETRN         DECREMENT INDEX
+ 0246  2         TC     INDPCT +1       NO
+ 0247            CAF    925PCTHR        TURN ON 92.5 THRUST
+ 0248            TS     PCNTF
+ 0249            EXTEND
+ 0250            DCA    PCNTFAD         GO FOR THRUSTING
+ 0251  2         DXCH   Z
+ 0252            CAF    1SEC11          THRUST AT MAX FOR 2 SEC, 1 SEC HERE AND
+ 0253            TC     WAITLIST        1 MORE IN FITHCMD
+ 0254            EBANK= TDEC
+ 0255            2CADR  FITHCMD
+ 0256            TC     2PHSCHNG
+ 0257            OCT    00114           4.11SPOT FOR THRUSTING
+ 0258            OCT    47012
+ 0259            DEC    100
+ 0260            EBANK= TDEC
+ 0261            2CADR  FITHCMD
+ 0262            TC     TASKOVER
+P0263   FITH/APS1 PROGRAM 74
+R0264   WITH DETECTION OF THE ABORT STAGE DISCRETE BY THE ABORT STAGE MONITOR
+R0265   THE FOLLOWING EVENTS OCCUR BY PROGRAM OR ARE PROCESSED AUTOMATICALLY
+R0266  2BY THE LEM SEQUENCER.
+R0267    T-1.0 ABORT STAGE ARM (PROGRAMMED)
+R0268    T     ABORT STAGE COMMAND (PROGRAMMED)
+R0269         ATTITUDE HOLD (PROGRAMMED)
+R0270    T+.04 ASCENT PRESSURIZED
+R0271    T+.15 DESCENT ENGINE-OFF
+R0272    T+.42 ASCENT ENGINE ARM
+R0273          ASCENT/DESCENT STAGING INITIATED
+R0274          STAGE VERIFIED
+R0275    T+.46 INTERSTAGE BOLTS FIRED
+R0276          ASCENT STAGE UMBILICAL ELECTRICAL DEADFACE
+R0277    T+.50 DESCENT STAGE UMBILICAL ELEC. DEADFACE
+R0278    T+.55 ASCENT/DESCENT STAGE UMBILICAL CUT
+R0279    T+.78 ASCENT ENGINE REACHES 90 PC THRUST
+R0280   T+1.0 CHANGE LEM MASS (PROGRAMMED)
+R0281         DESCENT ENGINE ARM-OFF (PROGRAMMED)
+R0282  2T+5.0 ASCENT ENGINE-OFF (PROGRAMMED)
+ 0283   FITHCMD  TC     1LMP+DT         THRUST AT MAX FOR 1 MORE SEC AND ABORT
+ 0284            DEC    38
+ 0285  2         DEC    100             DELAY 1.0 SEC.
+ 0286            TC     1LMP            INITIATE ABORT STAGE COMMAND
+ 0287            DEC    22
+ 0288  2         TC     TASKOVER        LET ABORT MONITOR TAKE IT FROM HERE
+ 0289   ABMON    CAF    BIT2            ABORT STAGE MONITOR SAMPLES CHANNEL
+ 0290            EXTEND                 30 FOR ABORT STAGE DISCRETE EVERY .5 SEC
+ 0291            RAND   30
+ 0292            EXTEND
+ 0293  2         BZF    FITHGCMD        ABORT DISCRETE PRESENT-KILL MONITOR
+ 0294            CS     TIME1
+ 0295            TS     TBASE3
+ 0296            TC     FIXDELAY        NO ABORT DISCRETE-CONTINUE TO MONITOR
+ 0297            DEC    50              DELAY .5 SECS
+ 0298  2         TCF    ABMON
+ 0299   FITHGCMD EXTEND                 BYPASS GUIDANCE, ASSURE ULLAGE OFF, AND
+ 0300            DCA    ADROFSER        CLEAR OUT CURRENT ACTIVITY BY ENEMA - -
+ 0301            DXCH   AVGEXIT         ALL THIS TO PROTECT IN CASE OF EARLY
+ 0302            TC     IBNKCALL        ABORT STAGE COMMAND BY GROUND.
+ 0303  2         CADR   NOULLAGE
+ 0304            TC     2PHSCHNG
+ 0305            OCT    1
+ 0306  2         OCT    3
+ 0307            TC     2PHSCHNG
+ 0308            OCT    4
+ 0309  2         OCT    6
+ 0310            TC     PHASCHNG
+ 0311  2         OCT    00252           2.25 SPOT FOR MP11HOLD.
+ 0312            CAF    PRIO37
+ 0313            TC     NOVAC
+ 0314            EBANK= LST1
+ 0315            2CADR  ENEMA           ENEMA AS SOON AS POSSIBLE.
+ 0316  2         TC     TASKOVER
+ 0317   MP11HOLD TC     IBNKCALL        ENEMA SHOULD PICK UP HERE.
+ 0318  2         CADR   STOPRATE        SET ATTITUDE HOLD
+ 0319            TC     NEWMODEX        SET MODE TO FIRE-IN-THE-HOLE
+ 0320  2         OCT    74              PROG74
+ 0321            EBANK= LEMMASS2
+ 0322            CAF    EBANK7
+ 0323            TS     EBANK           SET  EBANK= 7
+ 0324            EXTEND
+ 0325            DCA    LEMMASS2        CHANGE LEM MASS AT DPS/APS SEPARATION
+ 0326            DXCH   MASS
+ 0327            CAF    BIT11           RETURN EBANK TO 04
+ 0328            TS     EBANK
+ 0329  2         EBANK= TDEC
+ 0330            TC     IBNKCALL        SET UP DAP FOR APS BURN
+ 0331  2         CADR   APSENGON
+ 0332            TC     PHASCHNG
+ 0333            OCT    47012
+ 0334            DEC    100
+ 0335            EBANK= TDEC
+ 0336            2CADR  ENGLECT
+ 0337            TC     FIXDELAY
+ 0338  2         DEC    100             DELAY 1 SEC TO DPS ARM OFF
+ 0339   ENGLECT  TC     1LMP+DT         ENGINE SELECT-DESC ARM OFF
+ 0340            DEC    151             APS BURN FOR 5 SECS
+ 0341  2         DEC    400             DELAY 4.0 SECONDS
+ 0342            TC     IBNKCALL
+ 0343  2         CADR   ENGINOFF
+ 0344  4         TC     TASKOVER
+ 0345   DOCURTN  TC     IBNKCALL         GO SET UP CURTAIN JOB
+ 0346  2         CADR   CURTJOB
+ 0347   MP11TERM CAF    1SEC11          SET TO DO MP11 TERMINAL TASKS IN 1 SEC
+ 0348            INHINT
+ 0349            TC     WAITLIST
+ 0350            EBANK= TDEC
+ 0351            2CADR  MP11OUT
+ 0352            TC     2PHSCHNG
+ 0353            OCT    35              5.3 SPOT FOR SERVICER.
+ 0354  2         OCT    40272           2.27 SPOT FOR MP11OUT.
+ 0355  2         TC     ENDOFJOB
+ 0356   MP11OUT  TC     1LMP+DT
+ 0357            DEC    39              INITIATE ABORT STAGE COMMAND RESET
+ 0358  21SEC11   DEC    100             DELAY 1 SEC
+ 0359            TC     1LMP+DT
+ 0360            DEC    183             LANDING RADAR POWER OFF
+ 0361  2         DEC    800             DELAY 8 SECS
+ 0362            TC     2LMP+DT
+ 0363            DEC    245             DPS PQGS U AND 2 OFF
+ 0364            DEC    213
+ 0365  2         DEC    100             DELAY 1 SEC
+ 0366            TC     2LMP+DT
+ 0367            DEC    229             DPS PQGS ARM 1 AND 2 DISABLE
+ 0368            DEC    197
+ 0369  2         DEC    1900            DELAY 19 SECS TO KILL AVEG
+ 0370            TC     FLAG1DWN        KILL AVERAGE G
+ 0371  2         OCT    1
+ 0372            TC     IBNKCALL
+ 0373  2         CADR   SETMAXDB
+ 0374            TC     2PHSCHNG
+ 0375            OCT    2
+ 0376            OCT    05013           GROUP 3 FOR MISSION SCHEDULER.
+ 0377  2         OCT    77777
+ 0378            TC     MPENTRY         SETUP MISSION PHASE SCHEDULING
+ 0379            DEC    2               TIMER -2-
+ 0380            DEC    13              MISSION PHASE -13-
+ 0381            ADRES  MP11TO13
+ 0382            TC     TASKOVER        MISSION PHASE 11 COMPLETE
+P0383   ????????????????????????????????
+R0384   NUMERICAL AND ADDRESS CONSTANTS
+R0385  4????????????????????????????????
+A0386  2** TIME CONSTANTS **
+ 0387   135SECS  2DEC   13500
+ 0388   22.5SECS DEC    2250
+ 0389   25.5SECS DEC    2550
+ 0390  422SECS11 DEC    2200
+A0391  2** THRUST LEVEL CONSTANTS **
+ 0392   20PCTHR  DEC    .2
+ 0393            DEC    .4
+ 0394            DEC    .3
+ 0395            DEC    .5
+ 0396            DEC    .1
+ 0397  4925PCTHR =      POSMAX          FOR MAXIMUM PERMITTED THRUST (92.5%)
+A0398  2** ADDRESS CONSTANTS **
+ 0399   AVEG11AD GENADR AVERAGEG
+ 0400            EBANK= E2DPS
+ 0401   BURNADR  2CADR  BURN
+ 0402            EBANK= E2DPS
+ 0403   DPS2ADR  2CADR  PREBURN
+ 0404            EBANK= ETHROT          EBANK 5
+ 0405   PCNTFAD  2CADR  PCNTFMAX
+ 0406            EBANK= TDEC
+ 0407   MP11TMAD 2CADR  MP11TERM
+ 0408            EBANK= TDEC
+ 0409   MDAVADR  2CADR  RVUPDATE
+ 0410            EBANK= DVCNTR
+ 0411   ADROFSER 2CADR  SERVEXIT
+P0412   ????????????????????????????????
+R0413   TASKS CALLED ELSEWHERE IN MP11
+R0414  4????????????????????????????????
+ 0415   MP11TASK TC     1LMP
+ 0416  2         DEC    236             DFI T/M CALIBRATION - ON
+ 0417            TC     PHASCHNG
+ 0418  2         OCT    40153
+ 0419            TC     FIXDELAY
+ 0420  2         DEC    1200
+ 0421   NEXLMP   TC     2LMP
+ 0422            DEC    237             DFI T/M CALIBRATE - OFF
+ 0423  2         DEC    198             C+W ALARM RESET - COMMAND
+ 0424            TC     PHASCHNG
+ 0425  2         OCT    40173
+ 0426            TC     FIXDELAY
+ 0427  22SECS11  DEC    200
+ 0428   NEXLMP1  TC     1LMP
+ 0429  2         DEC    199             C+W ALARM RESET - COMMAND RESET
+ 0430            TC     PHASCHNG
+ 0431  2         OCT    40213
+ 0432            TC     FIXDELAY
+ 0433  2         DEC    100
+ 0434   NEXLMP2  TC     2LMP
+ 0435            DEC    182             LR POWER - ON
+ 0436  2         DEC    26              RADAR SELFTEST - ON
+ 0437            TC     PHASCHNG
+ 0438  2         OCT    40233
+ 0439            TC     FIXDELAY
+ 0440  2         DEC    6000
+ 0441   NEXLMP3  TC     1LMP
+ 0442  2         DEC    27              RADAR SELFTEST-OFF
+ 0443            TC     PHASCHNG
+ 0444  2         OCT    3
+ 0445  4         TC     TASKOVER
+ 0446   SETWATER TC     2PHSCHNG
+ 0447            OCT    00114           4.11 FOR PCNTJOB JOB.
+ 0448            OCT    47012
+ 0449            DEC    200
+ 0450            EBANK= TDEC
+ 0451            2CADR  ASWTVLON
+ 0452            TC     FIXDELAY
+ 0453  2         DEC    200
+ 0454   ASWTVLON TC     1LMP+DT
+ 0455            DEC    222             ASCENT WATER COOLANT VALVE - OPEN
+ 0456  2         DEC    200
+ 0457            TC     1LMP+DT
+ 0458            DEC    223             ASCENT WATER COOLANT VALVE - OPEN RESET
+ 0459  2         DEC    600
+ 0460            CA     RSDTTEMP
+ 0461  2         TS     MPRETRN
+ 0462            TCF    CCSMPRET
 L      2INTER-BANK COMMUNICATION
 R0001            THE FOLLOWING ROUTINE CAN BE USED TO CALL A SUBROUTINE IN ANOTH
  0002  9ER BANK. IN THE BANKCALL VERSION, THE
