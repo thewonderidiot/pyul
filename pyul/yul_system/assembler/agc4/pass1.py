@@ -192,10 +192,10 @@ class Agc4Pass1(Pass1):
                 return
 
             # Branch if not a polish or store address.
-            if (opcode & 0o370) < 0o70:
+            if (opcode & 0o370) <= 0o70:
                 return
 
-            if 0o120 < (opcode & 0o370):
+            if 0o120 <= (opcode & 0o370):
                 return
 
             # Reset indicator, exit.
@@ -235,26 +235,56 @@ class Agc4Pass1(Pass1):
         # Branch if no modifier.
         if self._field_cod[1] != 0:
             # Indicate improper address field, exit.
+            two_polop_17 = (0o17 << 17)
             popo.health |= two_polop_17
             return
 
-        # FIXME: Handle detached asterisk?
+        two_polop_27 = (0o27 << 17)
+
+        # Branch if no detached asterisk.
+        if adr_wd[7] == '*':
+            # Branch if operator symbol too long.
+            if adr_wd[6] != ' ':
+                # Indicate failure and exit.
+                popo.health |= two_polop_27
+                return
+
+            # Blank out asterisk, look up code.
+            adr_wd = adr_wd[:7]
+
+        # Branch if more than six characters.
+        elif adr_wd[6:8] != '  ':
+            # Indicate failure and exit.
+            popo.health |= two_polop_27
+            return
+
+        else:
+            # Scan to left until a character is found.
+            adr_wd = adr_wd.rstrip()
+
+            # Proceed with search if no asterisk.
+            if adr_wd[-1] == '*':
+                # Blank out attached asterisk.
+                adr_wd = adr_wd[:-1]
 
         adr_wd = adr_wd.strip()
 
-        if adr_wd[-1] == '*':
-            # Blank out attached asterisk.
-            adr_wd = adr_wd[:-1]
+        # Branch if op code not found.
+        if adr_wd not in self.op_thrs:
+            # Indicate failure and exit.
+            popo.health |= two_polop_27
+            return
 
-        two_polop_27 = (0o27 << 17)
-        # Branch if more than six characters or polish operator not found.
-        if len(adr_wd) > 6 or adr_wd not in self.op_thrs:
+        # Branch if polish operator found.
+        b37b48m = Bit.BIT37 | Bit.BIT48
+        second_opcode = self.op_thrs[adr_wd]
+        if not isinstance(second_opcode, int) or (second_opcode & b37b48m) != b37b48m:
             # Indicate failure and exit.
             popo.health |= two_polop_27
             return
 
         # Send equivalent of right operator.
-        second_opcode = self.op_thrs[adr_wd] & ~Bit.BIT37
+        second_opcode &= ~Bit.BIT37
         b25t31m = 0o77400000
         popo.health |= (second_opcode << 14) & b25t31m
 
