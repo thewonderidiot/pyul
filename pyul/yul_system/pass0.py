@@ -111,20 +111,20 @@ class Yul:
 
             card = abbrev + card[8:]
 
-            # Initial letter must match that of tape.
-            if abbrev[0] != self.tape[0]:
-                self._mon.mon_typer('WRONG TAPE NAME ABBREVIATION IN COLS 2-7')
-                self.rejec_dir(card)
+            try:
+                # Initial letter must match that of tape.
+                if abbrev[0] != self.tape[0]:
+                    self._mon.mon_typer('WRONG TAPE NAME ABBREVIATION IN COLS 2-7')
+                    self.rejec_dir(card)
 
-            # Set up table look-up on 1st word.
-            if sentence[0] in self._directs:
-                try:
+                # Set up table look-up on 1st word.
+                if sentence[0] in self._directs:
                     self._directs[sentence[0]](card, sentence)
-                except TypAbort:
-                    pass
-            else:
-                # Announce unrecognition of first word.
-                self.howz_that(card, sentence[0])
+                else:
+                    # Announce unrecognition of first word.
+                    self.howz_that(card, sentence[0])
+            except TypAbort:
+                pass
 
         # FIXME: close threads?
         self._mon.mon_typer('END YUL SYSTEM')
@@ -202,7 +202,7 @@ class Yul:
 
         # Peek at next card.
         next_card = self._mon.phi_peek()
-        if next_card[0] == 'S':
+        if next_card[:1] == 'S':
             # Set up for sentence reading.
             self._mon.phi_read()
             # Break down subdirector.
@@ -241,7 +241,11 @@ class Yul:
 
     def cpn_fixer(self, sentence, word):
         # Exit if name does not begin with digit.
-        if sentence[word][0].isnumeric():
+        if sentence[word][0].isdecimal():
+            # But exit if 3rd character is also digit.
+            if sentence[word][2:3].isdecimal():
+                return
+
             # Insert "MOD"
             sentence[word] = 'MOD ' + sentence[word]
 
@@ -429,6 +433,7 @@ class Yul:
             # Recover new progname, force revision.
             self.prog_name = self._new_prog_name
             self.switch |= SwitchBit.REVISION
+            self.revno = 0
 
             # Recover author name of version.
             self._auth_name = self._new_auth_name
@@ -575,9 +580,9 @@ class Yul:
                 self.unrc_sbdr(sub_card, sub_sent[word])
 
             if conditional:
-                self._mon.mon_typer('SUPPRESS', end='')
-            else:
                 self._mon.mon_typer('SUPPRESS CONDITIONALLY: ', end='')
+            else:
+                self._mon.mon_typer('SUPPRESS', end='')
 
             self._mon.mon_typer('%s' % suppressed, end='\n\n\n')
             return
@@ -714,6 +719,7 @@ class Yul:
 
         common = prog['REVISION']
 
+        revising = self._incr_revno
         if self._incr_revno:
             # Increment old renv, ask for match.
             self._incr_revno = False
@@ -729,7 +735,7 @@ class Yul:
             self.yul_typer('WRONG AUTHOR, SHOULD BE: %s' % prog['AUTHOR'])
             self.typ_abort()
 
-        if (self.switch & SwitchBit.REVISION) and prog['CONTROLLED']:
+        if revising and prog['CONTROLLED']:
             # Cuss attempt to revise controlled subro.
             self._mon.mon_typer('CONTROLLED SUBROUTINE CANNOT BE DIDDLED.')
             self.typ_abort()
@@ -764,7 +770,7 @@ class Yul:
 
     def task_objc(self, card, sentence, word):
         # Some initializations.
-        self._task_msg += ' FOR'
+        self._task_msg = self._task_msg.split(' FOR')[0] + ' FOR'
         self.switch = 0
 
         # Decode "NEW", "REVISION N OF", or "VERSION".
@@ -866,7 +872,7 @@ class Yul:
         word += 1
         if len(sentence[word]) > 8:
             # Cuss name of more than 8 characters.
-            self.yul_typer('TOO-LONG PROG/SUB NAME: %s' % sentencew[word])
+            self.yul_typer('TOO-LONG PROG/SUB NAME: %s' % sentence[word])
             self.rejec_dir(card)
 
         if sentence[word] == '':
@@ -936,7 +942,10 @@ class Yul:
             # Call version "NEW".
             sentence[0] = 'NEW'
             # Close up sentence to suit.
-            sentence[1] = sub_sent[3]
+            if sub_sent[0] == 'NEW':
+                sentence[1] = sub_sent[1]
+            else:
+                sentence[1] = sub_sent[3]
 
             self.switch |= SwitchBit.VERSION
 
@@ -963,12 +972,12 @@ class Yul:
             self.yul_typer('TOO-LONG REVISION NO.: %s' % sentence[word])
             self.rejec_dir(card)
 
-        try:
-            revision = int(sentence[word], 10)
-        except:
+        if not sentence[word].isdecimal():
             # Error if revision no. not decimal.
             self.yul_typer('UNDECIMAL REVISION NO.: %s' % sentence[word])
             self.rejec_dir(card)
+
+        revision = int(sentence[word], 10)
 
         # Error if 3rd word is not "OF".
         word += 1
@@ -1036,7 +1045,7 @@ class Yul:
 
         # Branch if latest revision was specified.
         if self.revno < self._latest_rev:
-            self.mon_typer('OLD REVISION NO.: %u' % self.revno)
+            self._mon.mon_typer('OLD REVISION NO.: %u' % self.revno)
 
         bypt_data = self.yulprogs.find_bypt(self.comp_name, self.prog_name, self.revno)
         if bypt_data is None:
