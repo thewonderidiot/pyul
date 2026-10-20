@@ -382,7 +382,7 @@ class Agc4Pass2(Pass2):
         if not ((self._address <= 0o1777) or # Interpretive may address erasable ....
                 ((additive >= Bit.BIT1) and (self._address <= 0o17777)) or # With some latitude if indexed....
                 (self._address > 0o37777)): # ... or upper half of switched banks.
-            return self.range_error(popo)
+            return self.rng_error(popo)
 
         # Use additive on polish or store address.
         self._word &= ~0o37777
@@ -468,6 +468,10 @@ class Agc4Pass2(Pass2):
     def basic_adr(self, popo):
         if self._address >= 0:
             return self.basic_sba(popo)
+
+        if self._word == 0:
+            # +0 must become -0 for subtraction.
+            self._word = 0o77777
 
         # Add in negative address and go to print.
         return self.gud_basic(popo, adr_wd=self._address)
