@@ -906,7 +906,7 @@ class AgcPass2(Pass2):
                     # Otherwise check for conflict.
                     if (self._sec_half & 0o7) != (self._ebank_reg & 0o7):
                         # E(S)BANK conflict with 1-shot declare.
-                        self._cuss_list[66].demand = True
+                        self.cuss_list[66].demand = True
 
                 # Put GENADR in the range 1400-1777, exit.
                 adr_wd[0] &= ~0o3400
@@ -931,7 +931,7 @@ class AgcPass2(Pass2):
                     # Maybe cuss address confl w/ 1-shot decl.
                     if sec_alf != (self._sbank_reg & b28t30m):
                         # E(S)BANK conflict with 1-shot declare.
-                        self._cuss_list[66].demand = True
+                        self.cuss_list[66].demand = True
 
                 # Plant super-bank bits in BBCON word.
                 self._sec_half |= (self._sec_half >> 9) & 0o360
@@ -1145,7 +1145,7 @@ class AgcPass2(Pass2):
                 self._dp_inst = False
 
                 # Branch if it is indeed one word.
-                if self._yul.av_tale[x6] < (1 << 31):
+                if self._yul.av_table[x6] < (1 << 31):
                     # No need for TC SELFs if one-word hole.
                     self._yul.av_table[x6] |= (1 << 31)
 
@@ -1267,7 +1267,7 @@ class AgcPass2(Pass2):
 
         # Exit here when there is one TC SELF.
         if self._sec_half == ONES:
-            return self.add_addr_wd(popo, adr_wd)
+            return self.add_adr_wd(popo, adr_wd)
 
         # Form second TC SELF word.
         self._sec_half = adr_wd[0] + 1
@@ -1369,6 +1369,10 @@ class AgcPass2(Pass2):
         if not self._yul.switch & SwitchBit.PREVIOUS_INDEX:
             # Cuss no index before minus address.
             self.cuss_list[71].demand = True
+
+        if (self._word & 0o77777) == 0:
+            # +0 must become -0 for subtraction.
+            self._word |= 0o77777
 
         # Add negative address.
         self._word += adr_wd[0]
@@ -2025,12 +2029,13 @@ class AgcPass2(Pass2):
             return self.int_op_not(popo, data_word, second)
 
         # Jump if last modeout = unknowns
+        data_word &= ~b28t30m
         if self._mode_out <= Bit.BIT47 or self._mode_out > Bit.BIT46:
             # Set opmode = D
             data_word |= Bit.BIT29
         else:
             # Set opmode = V
-            data_word |= Bit.BIT29
+            data_word |= Bit.BIT28
 
         return self.int_op_sap(popo, data_word, second)
 
@@ -2452,7 +2457,7 @@ class AgcPass2(Pass2):
             self._loc_hold = self._location
 
         # Jump if any of four addresses active and pushup no allowed
-        if any(map(lambda x: x & Bit.BIT31, self._int_addr[0:3])):
+        if any(map(lambda x: x & Bit.BIT31, self._int_addr[0:4])):
             # Polish address(es) missing error. IMAS
             self.cuss_list[73].demand = True
 
