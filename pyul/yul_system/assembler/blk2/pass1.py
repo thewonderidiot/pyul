@@ -364,7 +364,8 @@ class Blk2Pass1(Pass1):
     def blk2_dnx(self, popo, num):
         popo.health |= (num << 27)
         opcode = self.op_thrs['ECADR'] & ~Bit.BIT37
-        return self._op_found(popo, opcode)
+        self._op_found(popo, opcode)
+        return self.instruct(popo)
 
     # Special routine in pass 1 for BLK2 to respond to the finding of an instruction operatio ncode. If
     # the code is a basic instruction or an address constant, sets 11 bits into health as usual, and returns to the
@@ -402,23 +403,36 @@ class Blk2Pass1(Pass1):
         if self._field_cod[1] != 0:
             return self.pole_fail(popo)
 
-        # FIXME: Handle detached asterisk?
+        # Branch if more than six characters.
+        if adr_wd[6:8] != '  ':
+            # Branch if no detached asterisk.
+            if adr_wd[6:8] != ' *':
+                # Branch if operator symbol too long.
+                if adr_wd[6:8] != '* ':
+                    return self.pole_fail(popo)
+
+            # Blank out asterisk, look up code.
+            adr_wd = adr_wd[:6]
+        else:
+            # Scan to left until a character is found.
+            adr_wd = adr_wd.rstrip()
+
+            # Proceed with search if no asterisk.
+            if adr_wd[-1] == '*':
+                # Blank out attached asterisk.
+                adr_wd = adr_wd[:-1]
 
         adr_wd = adr_wd.strip()
 
-        if adr_wd[-1] == '*':
-            # Blank out attached asterisk.
-            adr_wd = adr_wd[:-1]
-
-        # Branch if more than six characters or polish operator not found.
-        if len(adr_wd) > 6 or adr_wd not in self.op_thrs:
+        # Branch if op code not found.
+        if adr_wd not in self.op_thrs:
             return self.pole_fail(popo)
 
         # Branch if find is not a polish operator.
         b37b48m = Bit.BIT37 | Bit.BIT48
         second_opcode = self.op_thrs[adr_wd]
 
-        if (second_opcode & b37b48m) != b37b48m:
+        if not isinstance(second_opcode, int) or (second_opcode & b37b48m) != b37b48m:
             return self.pole_fail(popo)
 
         # Send internal code for 2nd operator.
