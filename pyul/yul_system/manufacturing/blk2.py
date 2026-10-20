@@ -1,4 +1,5 @@
 import struct
+from yul_system.pass0 import BadSubdirector
 
 class ManufacturingBlk2:
     def __init__(self, mon, yul, bypt):
@@ -145,6 +146,9 @@ class ManufacturingBlk2:
 
             last_par = par_id
 
+        if first_par is None:
+            return
+
         with open(bin_fn, 'wb') as f:
             f.write(b''.join(par_data[first_par:last_par+1]))
 
@@ -217,7 +221,10 @@ class ManufacturingBlk2:
             # Jump if not *ALL*
             word += 1
             if sub_sent[word] != 'ALL':
-                self.list_para(sub_card, sub_sent, word)
+                try:
+                    self.list_para(sub_card, sub_sent, word)
+                except BadSubdirector:
+                    pass
                 continue
 
             # No more words allowed.
@@ -229,7 +236,7 @@ class ManufacturingBlk2:
             got_all = True
 
     def list_para(self, sub_card, sub_sent, word):
-        par_no = self.chk_para_n(sub_sent[word])
+        par_no = self.chk_para_n(sub_card, sub_sent[word])
 
         # Save low paragraph number
         low_no = par_no
@@ -237,7 +244,7 @@ class ManufacturingBlk2:
         word += 1
         if sub_sent[word] in ('THRU', 'THROUGH'):
             word += 1
-            par_no = self.chk_para_n(sub_sent[word])
+            par_no = self.chk_para_n(sub_card, sub_sent[word])
             
             # No more words allowed in SD.
             word += 1
@@ -261,6 +268,11 @@ class ManufacturingBlk2:
 
             if p >= 0o30  and p <= 0o37:
                 # Paras numbers 030 - 037 are illegal
+                self._mon.mon_typer('ILLEGAL PARAGRAPH NO.')
+                self._yul.ign_sbdir(sub_card)
+
+            if p >= 0o240:
+                # Numbers 240 thru 777 are illegal
                 self._mon.mon_typer('ILLEGAL PARAGRAPH NO.')
                 self._yul.ign_sbdir(sub_card)
 
