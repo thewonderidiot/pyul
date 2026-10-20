@@ -166,7 +166,7 @@ class Monitor:
 
             # Set the A/B switch for use with the log number
             if self.year > 1965:
-                self.h1800_ab_sw = machine[4]
+                self.h1800_ab_sw = machine[4:5] or ' '
             else:
                 self.h1800_ab_sw = ' '
 

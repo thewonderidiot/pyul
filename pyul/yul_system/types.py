@@ -172,7 +172,7 @@ class Line:
     def __setitem__(self, index, substr):
         max_idx = index + len(substr)
         if max_idx > 120:
-            substr = substr[:max_idx-120]
+            substr = substr[:120-index]
         self.text = self.text[:index] + substr + self.text[index+len(substr):]
 
     def __str__(self):
@@ -230,7 +230,8 @@ class SymbolTable:
 
     def first(self, sym_name):
         if sym_name not in self._sym_map:
-            self.add(Symbol(sym_name))
+            if not self.add(Symbol(sym_name)):
+                return None
 
         return self._symbols[self._sym_map[sym_name][0]]
 
@@ -245,7 +246,7 @@ class SymbolTable:
         return self._symbols
 
     def count(self):
-        return len(self._sym_map) + sum([1 if len(defs) > 1 else 0 for defs in self._sym_map])
+        return len(self._sym_map) + sum([1 if len(defs) > 1 else 0 for defs in self._sym_map.values()])
 
     def __contains__(self, sym):
         return sym in self._sym_map
