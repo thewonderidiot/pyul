@@ -78,6 +78,7 @@ class Pass1:
         self._mon = mon
         self._yul = yul
         self._real_cdno = 0
+        self._tape_cdno = 0
         self._last_cdno = 0
         self._field_cod = [None, None]
         self._end_of = POPO(health=0, card='⌑999999Q' + '%-72s' % yul.old_line)
@@ -203,8 +204,8 @@ class Pass1:
         card = self._mon.mon_peek()
 
         # Branch if not any kind of end of file.
-        if card[0] in 'Y*':
-            if card[0] == 'Y':
+        if card[:1] in 'Y*':
+            if card[:1] == 'Y':
                 # Show that another task follows.
                 self._yul.switch |= SwitchBit.ANOTHER_TASK
 
@@ -217,26 +218,33 @@ class Pass1:
             return None
 
         card = self._mon.mon_read()
-        self._real = POPO(health=0, card=card)
 
-        if self._real.card[7] == ' ':
+        vert_code = ALPHABET.index(card[7]) if card[7] in ALPHABET else 0o17
+        if card[7] == ' ':
             # Insert upspace 1 for blank.
-            self._real.card = self._real.card[:7] + '1' + self._real.card[8:]
+            card = card[:7] + '1' + card[8:]
 
-        elif self._real.card[7] == '-':
+        elif card[7] == '-':
             # Assume minus is a fat-fingering of 2.
-            self._real.card = self._real.card[:7] + '2' + self._real.card[8:]
+            card = card[:7] + '2' + card[8:]
 
-        elif not self._real.card[7].isnumeric():
+        elif (vert_code & 0o17) > 9:
             # Insert form-skip for non-numeric.
-            self._real.card = self._real.card[:7] + '8' + self._real.card[8:]
+            card = card[:7] + '8' + card[8:]
+
+        else:
+            # Clear zone bits of vertical format.
+            card = card[:7] + ('%d' % (vert_code & 0o17)) + card[8:]
+
+        self._real = POPO(health=0, card=card)
 
         # Mark all cards entering during merging.
         if self._yul.switch & SwitchBit.MERGE_MODE:
             self._real.mark()
 
         # Blot out undesirable column 1 contents.
-        if not (self._real.card[0].isalnum() or self._real.card[0] in '= '):
+        col1_code = ALPHABET.index(card[0]) if card[0] in ALPHABET else 0o17
+        if col1_code <= 0o12 or (col1_code > 0o15 and not (1 <= (col1_code & 0o17) <= 9)):
             self._real.card = '■' + self._real.card[1:]
 
         self._real.health = 0
@@ -250,9 +258,8 @@ class Pass1:
         card_no = card_no.replace(' ', '0')
 
         seq_break = False
-        test_col1 = True
 
-        if not card_no.isnumeric():
+        if not card_no.isdecimal():
             # "SEQBRK" is only non-numeric allowed.
             if card_no == 'SEQBRK':
                 seq_break = True
@@ -270,7 +277,7 @@ class Pass1:
             seq_break = True
 
         # Do not test column 1 of right print.
-        if self._real.card[7] != '9':
+        if (ord(self._real.card[7]) & 0xF) != 9:
             # A log card is an automatic sequence break.
             if self._real.card[0] == 'L':
                 # FIXME: Remove confusing info from log card?
@@ -282,7 +289,8 @@ class Pass1:
                 seq_break = True
 
             # Op code "MODIFY" is automatic seq. brk.
-            if self._real.card[0] == ' ' and self._real.card[16:22] == 'MODIFY':
+            if self._real.card[0] == ' ' and self._real.card[17:23] == 'MODIFY':
+                self._real.card = self._real.card[0] + '      ' + self._real.card[7:]
                 seq_break = True
 
         if seq_break:
@@ -369,7 +377,7 @@ class Pass1:
 
     def modif_chk(self):
         # See if operation code of real card is "MODIFY". But don't be fooled by a remarks card.
-        if self._real.card[1:6] == 'MODIFY' and self._real.card[0] == ' ' and (ord(self._real.card[7]) & 0xF) != 9:
+        if self._real.card[17:23] == 'MODIFY' and self._real.card[0] == ' ' and (ord(self._real.card[7]) & 0xF) != 9:
             # Indicate card type.
             self._real.health |= HealthBit.CARD_TYPE_MODIFY
             if not self._yul.switch & SwitchBit.MERGE_MODE:
@@ -381,7 +389,7 @@ class Pass1:
                 return
 
             # Set up search for "END OF" card.
-            while self._tape.card[:8] != self._end_of[:8]:
+            while self._tape.cardno_wd() != self._end_of.cardno_wd():
                 self.proc_tape()
 
                 # Get another tape card if not found yet.
@@ -486,7 +494,7 @@ class Pass1:
             return self.cardno_cq(cardns=True)
 
         self._real.health |= HealthBit.CARD_TYPE_CARDNO
-        if (not self._real.address_1().isspace()) or (not self._real.address_1().isspace()):
+        if (not self._real.address_1().isspace()) or (not self._real.address_2().isspace()):
             # Cuss bad address field.
             self._real.health |= Bit.BIT9
             raise BadMerge()
@@ -573,7 +581,7 @@ class Pass1:
         # If seq. br., set external card number to SEQBRK and set bit 43.
         if self._tape_cdno == Bit.BIT6:
             self._tape.card = self._tape.card[0] + 'SEQBRK' + self._tape.card[7:]
-            self._tape.set_seq_brk()
+            self._tape.set_seq_break()
 
         return self.send_ccno()
 
@@ -713,8 +721,7 @@ class Pass1:
         self.send_popo(self._real)
 
         # Type most guilty card.
-        self._real.card = self._real.card[:7] + ' ' + self._real.card[8:]
-        self._mon.mon_typer(self._real.card)
+        self._mon.mon_typer(self._real.card[:7] + ' ' + self._real.card[8:])
 
         # Announce rejection of task.
         self._real = POPO(health=HealthBit.CARD_TYPE_ENDERR,
@@ -841,8 +848,9 @@ class Pass1:
 
             # Send a dummy acceptor ahead of a marked log card entering as a member of a called subro
             if popo.marked and (self._yul.switch & SwitchBit.KNOW_SUBS):
-                popo.health |= HealthBit.CARD_TYPE_ACCEPT
-                self.send_popo(popo)
+                acceptor = copy.copy(popo)
+                acceptor.health |= HealthBit.CARD_TYPE_ACCEPT
+                self.send_popo(acceptor)
 
             popo.health |= HealthBit.CARD_TYPE_REMARK
             return self.send_popo(popo)
@@ -851,6 +859,10 @@ class Pass1:
         if popo.cardno_wd() == self._end_of.cardno_wd():
             popo.health |= HealthBit.CARD_TYPE_END_OF
             return self.end_of(popo)
+
+        # Check for modify card.
+        if (popo.health & HealthBit.CARD_TYPE_MASK) == HealthBit.CARD_TYPE_MODIFY:
+            return self.send_popo(popo)
 
         op_field = popo.op_field()[1:7]
 
@@ -1045,7 +1057,7 @@ class Pass1:
         sym_fit = self._yul.sym_thr.add(symbol)
         if not sym_fit:
             # Location-symbol-didn't-fit-in-table-flg.
-            self._loc_state |= Bit.BIT17
+            self._loc_state |= LocStateBit.FULL
 
     def ok_l_size(self, loc_value, symbol, sym_xform, new_health, reserve=True):
         # Look up memory type.
@@ -1117,7 +1129,7 @@ class Pass1:
     # The number set up in CNLIMIT is a standardized to six digits thus: ALF 0NNNNNN0, with a point assumed after char5.
     def mccd_adrf(self):
         # Set up and call sentence reader.
-        sentence = self._mon.phi_sentr(self._real.card[16:])
+        sentence = self._mon.phi_sentr(self._real.card[16:40])
         if sentence[0] == '':
             # FIXME: Cuss if contains terminator only
             self._field_cod[0] = 0
@@ -1141,7 +1153,7 @@ class Pass1:
             # Exit when number is sequence break.
             return Bit.BIT6
 
-        if sentence[1].isspace():
+        if sentence[1] == '':
             # Bad exit when number is missing.
             self._field_cod[0] = None
             return None
@@ -1153,7 +1165,7 @@ class Pass1:
 
         while True:
             # Branch if not a digit.
-            if not cardno[0].isnumeric():
+            if not cardno[0].isdecimal():
                 break
 
             # Branch if this is the fifth digit.
@@ -1177,13 +1189,13 @@ class Pass1:
 
         if not skip_digits:
             # Plant first digit after point.
-            if cardno[0].isnumeric():
+            if cardno[0].isdecimal():
                 cn_limit = cn_limit[:4] + cardno[0] + cn_limit[5]
                 cardno = cardno[1:]
 
             # Plant second digit after point.
-            if cardno[0].isnumeric():
-                cn_limit = cn_limit[:4] + cardno[0] + cn_limit[5]
+            if cardno[0].isdecimal():
+                cn_limit = cn_limit[:5] + cardno[0]
                 cardno = cardno[1:]
 
         # Bad exit if queer character. Bad exit if third subfield.
@@ -1259,12 +1271,20 @@ class Pass1:
 
             if low_lim == 0:
                 # Does req cover all 1st present category.
-                if hi_lim > self.m_typ_tab[0][1]:
+                if hi_lim >= self.m_typ_tab[0][1]:
                     # Put req type in 1st category.
-                    self.m_typ_tab[0] = (mem_type, self.m_type_tab[0][1])
+                    self.m_typ_tab[0] = (mem_type, self.m_typ_tab[0][1])
                 else:
-                    common = 0
-                    # FIXME: go to CHECK TM1
+                    # No, it covers less.
+                    if mem_type != self.m_typ_tab[0][0]:
+                        # Bad exit if lengthening goes too far.
+                        if len(self.m_typ_tab) >= 28:
+                            raise BadMemory(Bit.BIT13)
+
+                        self.m_typ_tab.insert(0, (mem_type, hi_lim))
+
+                    popo.health |= HealthBit.CARD_TYPE_MEMORY
+                    return self.send_popo(popo)
             else:
                 # Use reduced lower limit.
                 low_lim -= 1
@@ -1297,6 +1317,11 @@ class Pass1:
                 self.m_typ_tab.pop(low_idx + 1)
                 hi_idx -= 1
 
+            if mem_type != self.m_typ_tab[low_idx][0] and mem_type != self.m_typ_tab[hi_idx][0]:
+                # Bad exit if lengthening goes too far.
+                if len(self.m_typ_tab) + (low_idx == hi_idx and self.m_typ_tab[hi_idx][1] != hi_lim) >= 28:
+                    raise BadMemory(Bit.BIT13)
+
             if low_lim < self.m_typ_tab[low_idx][1] and mem_type != self.m_typ_tab[low_idx][0]:
                 # First affected category is being shortened.
                 if low_idx == hi_idx:
@@ -1320,8 +1345,12 @@ class Pass1:
                     self.m_typ_tab[low_idx] = (self.m_typ_tab[low_idx][0], low_lim)
 
             if mem_type == self.m_typ_tab[low_idx][0]:
-                # The new category matches the type of the first category. Extend out its end.
-                self.m_typ_tab[low_idx] = (mem_type, hi_lim)
+                if mem_type == self.m_typ_tab[hi_idx][0]:
+                    # Use neither limit if both type matches.
+                    self.m_typ_tab.pop(low_idx)
+                else:
+                    # The new category matches the type of the first category. Extend out its end.
+                    self.m_typ_tab[low_idx] = (mem_type, hi_lim)
 
             elif self.m_typ_tab[hi_idx][0] != mem_type:
                 # Insert a new category.
@@ -1482,7 +1511,7 @@ class Pass1:
         while True:
             if afield[8] != ' ':
                 break
-            afield = afield[:16] + afield[17:24] + afield[15] + afield[24:]
+            afield = afield[:8] + afield[9:16] + afield[8] + afield[16:]
 
         # Insert head character.
         afield = afield[:15] + afield[16] + afield[16:]
@@ -1517,7 +1546,7 @@ class Pass1:
 
         decimal = False
         while subf[0] != ' ':
-            if not subf[0].isnumeric():
+            if not subf[0].isdecimal():
                 if (subf[0] != 'D'):
                     self._field_cod[0] = FieldCodBit.SYMBOLIC
                     return common, subf
@@ -1610,7 +1639,7 @@ class Pass1:
     def head_tail(self, popo):
         if popo.health & HealthBit.ASTERISK:
             # Asterisk makes illegal op.
-            return self.illeg(popo)
+            return self.illegop(popo)
 
         self._head = popo.loc_field().strip()
         if self._head == '':
@@ -1655,7 +1684,7 @@ class Pass1:
                     return self.er_loc_sym(popo)
             else:
                 # For plus modifier, upper limit is sum.
-                adr_wd[0] += adr_wd[1]
+                adr_wd[1] = adr_wd[0] + adr_wd[1]
 
             return self.ch_er_size(popo, adr_wd)
 
@@ -1874,7 +1903,7 @@ class Pass1:
             # Which would mean type error on at least one of the locations.
             popo.health |= Bit.BIT15
 
-            if popo.health & HealthBit.SYMBOLIC:
+            if (popo.health & (LocStateBit.SYMBOLIC | LocStateBit.FULL)) == LocStateBit.SYMBOLIC:
                 # If loc is symbolic and in table, use the DP type error transformation.
                 sym_xform = 0xFEECEE9EC900FEEC
                 symbol = self.anal_symb(popo.loc_field().strip())
@@ -1887,7 +1916,7 @@ class Pass1:
             popo.health |= Bit.BIT16
 
             # With same conditions as for type error, use DP conflict transform.
-            if popo.health & HealthBit.SYMBOLIC:
+            if (popo.health & (LocStateBit.SYMBOLIC | LocStateBit.FULL)) == LocStateBit.SYMBOLIC:
                 sym_xform = 0xFEDEEAEEDA00FEDE
                 symbol = self.anal_symb(popo.loc_field().strip())
                 symbol.health = (sym_xform >> (symbol.health*4)) & 0xF
@@ -1926,11 +1955,11 @@ class Pass1:
 
     def equ_minus(self, popo):
         popo.health |= HealthBit.CARD_TYPE_EQUALS
-        return self.decod_adr(popo, self._loc_ctr)
+        return self.decod_adr(popo, -self._loc_ctr)
 
     def equ_plus(self, popo):
         popo.health |= HealthBit.CARD_TYPE_EQUALS
-        return self.decod_adr(popo, -self._loc_ctr)
+        return self.decod_adr(popo, self._loc_ctr)
 
     def setloc(self, popo):
         popo.health |= HealthBit.CARD_TYPE_SETLOC
@@ -1950,7 +1979,7 @@ class Pass1:
             return self.no_adress(popo, adr_wd)
 
         # Bad loc ctr kills =PLUS and =MINUS now.
-        if loc_loc >= ONES:
+        if abs(loc_loc) >= ONES:
             return self.ch_il_size(popo, loc_loc, adr_wd, check_loc=False)
 
         # If blank adr field, fake up absolute.
@@ -2034,10 +2063,12 @@ class Pass1:
         return self.ch_il_size(popo, loc_loc, adr_wd, symbol)
 
     def ch_il_size(self, popo, loc_loc, adr_wd, adr_symbol=None, check_loc=True):
-        if not check_loc or loc_loc >= ONES:
+        if not check_loc or abs(loc_loc) > self.max_loc:
+            # Oversize from all paths but undef.
             popo.health |= HealthBit.OVERSIZE
             return self.no_adress(popo, adr_wd, adr_symbol)
 
+        loc_loc = abs(loc_loc)
         popo.health |= loc_loc & 0xFFFF
 
         # Branch for normal IS,= path.
@@ -2082,7 +2113,7 @@ class Pass1:
 
         # Save symbol, get address of transform.
         sym_xform = self._xforms[symbol.health]
-        if symbol.health <= 2 or symbol.heatlh != 5:
+        if symbol.health <= 2 or symbol.health != 5:
             # Branch if loc sym was not leftover.
             return self.it_is(popo, loc_loc, symbol, sym_xform, adr_wd, adr_symbol, check_loc=True)
 
@@ -2111,8 +2142,8 @@ class Pass1:
             new_health = 0xC
             return self.end_is(popo, loc_loc, symbol, new_health)
 
-        hi_lim = loc_loc + abs(sym.value)
-        if hi_lim > self._m_typ_tab[midx][1]:
+        hi_lim = loc_loc + abs(symbol.value)
+        if hi_lim > self.m_typ_tab[midx][1]:
             new_health = 0xC
             return self.end_is(popo, loc_loc, symbol, new_health)
 
@@ -2138,17 +2169,17 @@ class Pass1:
         self.sy_def_xit(loc_loc, symbol, new_health)
 
         # Exit unless loc symbol failed to fit.
-        b8b17 = Bit.BIT8 | Bit.BIT17
+        b8b17 = LocStateBit.SYMBOLIC | LocStateBit.FULL
         if (self._loc_state & b8b17) != b8b17:
             return self.send_popo(popo)
 
         # Branch if op code is equals.
-        if popo.health & HealthBit.CARD_TYPE_EQUALS:
+        if (popo.health & HealthBit.CARD_TYPE_MASK) != HealthBit.CARD_TYPE_ERASE:
             # Show unfitting of equals loc sym.
             popo.health |= Bit.BIT15
         else:
             # Show unfitting of erase loc sym.
-            popo.health |= Bit.BIT15
+            popo.health |= Bit.BIT16
 
         return self.send_popo(popo)
 
@@ -2166,9 +2197,11 @@ class Pass1:
             new_health = (sym_xform >> 1*4) & 0xF
             return self.end_is(popo, loc_loc, symbol, new_health)
 
-        symbol.definer = adr_symbol.name
-        if symbol.name not in adr_symbol.definees:
-            adr_symbol.definees.append(symbol.name)
+        # Branch if definer didn't fit in table.
+        if adr_symbol is not None:
+            symbol.definer = adr_symbol.name
+            if symbol.name not in adr_symbol.definees:
+                adr_symbol.definees.append(symbol.name)
 
         new_health = (sym_xform >> 2*4) & 0xF
         return self.end_is(popo, adr_wd[1], symbol, new_health)
