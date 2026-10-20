@@ -1,4 +1,4 @@
-from yul_system.types import ALPHABET, ONES, BAD_WORD, Symbol, SwitchBit, HealthBit, FieldCodBit, Bit, Line
+from yul_system.types import ALPHABET, ONES, BAD_WORD, Symbol, SwitchBit, HealthBit, FieldCodBit, LocStateBit, Bit, Line
 from math import modf
 
 class Cuss:
@@ -234,7 +234,7 @@ class Pass2:
         # Branch if main "END OF" in reprint.
         if self._yul.switch & SwitchBit.REPRINT_PASS1P5:
             # Include date last assembled.
-            self._line[80] = 'LAST ASSEMBLED ON ' + popo.card[69:]
+            self._line[80] = 'LAST ASSEMBLED ON ' + popo.card[68:].lstrip()
 
         # Clear any wham call.
         self._yul.switch &= ~SwitchBit.CUSSES_ON_PAGE
@@ -447,7 +447,7 @@ class Pass2:
         e_number = ONES
         mantissa = 0
         # Expo increases when wd full, no point.
-        full_delt = -1
+        full_delt = 1
         # But point moves down when wd not full.
         nful_delt = 0
         n_digits = 0
@@ -465,7 +465,7 @@ class Pass2:
             caracter = con_word[0]
             con_word = con_word[1:].lstrip()
 
-            if not caracter.isdigit():
+            if not caracter.isdecimal():
                 # Branch if a point has occurred or this is not a point.
                 if nful_delt == 0 and caracter == '.':
                     # Signal point occurrence and get next.
@@ -475,7 +475,7 @@ class Pass2:
                 else:
                     break
             else:
-                if mantissa >= 10000000000:
+                if mantissa >= 1000000000:
                     exponent += full_delt
                     self.cuss_list[39].demand = True
                 else:
@@ -516,7 +516,7 @@ class Pass2:
                 caracter = con_word[0]
                 con_word = con_word[1:].lstrip()
 
-                if not caracter.isdigit():
+                if not caracter.isdecimal():
                     # No digits after E is wrong.
                     if dec_digs == 0:
                         return self.bad_const(), e_number
@@ -530,10 +530,14 @@ class Pass2:
                         return self.bad_const(ex_range=True), e_number
 
             # Add implicit and explicit exponents.
-            number *= 10**(e_sign*e_number)
+            if number == 0.0:
+                e_total = -64 + e_sign*e_number
+            else:
+                e_total = len(str(mantissa)) + exponent + e_sign*e_number
             # Negative result is wrong. 128 or more is wrong too.
-            if e_number <= -63 or e_number >= 63:
+            if e_total < -64 or e_total > 63:
                 return self.bad_const(ex_range=True), e_number
+            number *= 10.0**(e_sign*e_number)
 
         # Branch if character is not a B.
         if caracter == 'B':
@@ -557,7 +561,7 @@ class Pass2:
                 con_word = con_word[1:].lstrip()
 
                 # Branch if not a digit.
-                if not caracter.isdigit():
+                if not caracter.isdecimal():
                     # No digits after E is wrong.
                     if dec_digs == 0:
                         return self.bad_const(), e_number
@@ -589,6 +593,15 @@ class Pass2:
 
                 # Scale by B factor.
                 number *= common
+
+        # Error if character is not asterisk.
+        if caracter != '*':
+            return self.bad_const(), e_number
+
+        # Test none/some digits indicator.
+        if n_digits == 0:
+            # Void field is illegal.
+            return self.bad_const(), e_number
 
         if number >= 1.0:
             # Error if too-big integer.
@@ -688,7 +701,7 @@ class Pass2:
                 caracter = con_word[0]
                 con_word = con_word[1:].lstrip()
 
-                if not caracter.isdigit():
+                if not caracter.isdecimal():
                     # No digits after B is illegal.
                     if dec_digs == 0:
                         return self.bad_const(), e_number
@@ -762,7 +775,7 @@ class Pass2:
                 loc_symbol = None
             else:
                 # Maybe cuss loc sym no fit in table.
-                if popo.health & Bit.BIT17:
+                if popo.health & LocStateBit.FULL:
                     self.cuss_list[14].demand = True
 
                 # Analyze and pre-process location symbol.
@@ -791,7 +804,7 @@ class Pass2:
         no_loc_leftover = Bit.BIT8 | Bit.BIT12
         # Branch if there's no good location valu.
         if popo.health & Bit.BIT14:
-            location = ONES
+            self._location = ONES
         # Branch if location not leftover or no location field symbol.
         elif (popo.health & no_loc_leftover) == no_loc_leftover:
             # Turn on leftover switch.
@@ -849,13 +862,13 @@ class Pass2:
         if popo.health & Bit.BIT16:
             adr_wd = self.adr_field(popo)
             # Form headed symbol.
-            if len(adr_wd[0]) < 8:
-                adr_wd[0] = ('%-7s%s' % (adr_wd[0], self._head)).strip()
+            if adr_wd[0][7] == ' ':
+                adr_wd[0] = adr_wd[0][:7] + self._head
             # Cuss fullness.
-            self.sym_cuss(self.cuss_list[14], adr_wd[0])
+            self.sym_cuss(self.cuss_list[15], adr_wd[0])
             # Go to join end of setloc procedure.
             self.cuss_list[15].demand = True
-            return self.form_locn(good_loc=False)
+            return self.form_locn(popo, good_loc=False)
 
         # Recover address symbol information
         self._adr_symbol = self.fits_fitz(popo)
@@ -993,7 +1006,7 @@ class Pass2:
             self.cuss_list[22].demand = False
             self.sym_cuss(self.cuss_list[24], symbol.name)
 
-        elif symbol.health == 0xE:
+        elif symbol.health == 0xF:
             # Miscellaneous trouble.
             self.cuss_list[26].demand = True
             # Inhibit mult. def. cuss for healths E,F.
@@ -1223,6 +1236,7 @@ class Pass2:
             # No multiple definition cuss for E and F.
             self.cuss_list[23].demand = False
             self.sym_cuss(self.cuss_list[25], symbol.name)
+            self._address = ONES
             return None
 
         else: # 0xF
@@ -1231,6 +1245,7 @@ class Pass2:
             # No multiple definition cuss for E and F.
             self.cuss_list[23].demand = False
             self.sym_cuss(self.cuss_list[27], symbol.name)
+            self._address = ONES
             return None
 
     # Procedure in pass 2 for SETLOC. Does not accept any changes in the status of an
@@ -1259,12 +1274,13 @@ class Pass2:
         # Branch if adr sym fitted in sym tab.
         if popo.health & Bit.BIT16:
             adr_wd = self.adr_field(popo)
-            if len(symbol) < 8:
+            symbol = adr_wd[0]
+            if symbol[7] == ' ':
                 # Get address symbol (headed).
-                symbol = ('%-7s%s' % (adr_wd[0], self._head)).strip()
+                symbol = symbol[:7] + self._head
             self.sym_cuss(self.cuss_list[15], symbol)
             self.cuss_list[15].demand = True
-            return self.form_locn(good_loc=False)
+            return self.form_locn(popo, good_loc=False)
 
         self._adr_symbol = self.fits_fitz(popo)
         # Branch if no address symbol.
@@ -1352,8 +1368,8 @@ class Pass2:
             elif loc_symbol.defined:
                 # Use location value found by pass 1.5 to
                 # form upper and lower erase addresses.
-                popo.health |= (symbol.value & 0xFFFF) << 16
-                upper_addr = (popo.health & 0xFFFF) + symbol.value
+                popo.health |= (loc_symbol.value & 0xFFFF) << 16
+                upper_addr = (popo.health & 0xFFFF) + loc_symbol.value
                 popo.health &= ~0xFFFF
                 popo.health |= upper_addr
             else:
@@ -1367,7 +1383,7 @@ class Pass2:
                 # Maybe cuss unsigned numeric loc
                 if popo.health & Bit.BIT16:
                     self.cuss_list[52].demand = True
-                if popo.health & Bit.BIT17:
+                if popo.health & Bit.BIT16:
                     no_eraloc = True
 
             if (popo.health & (Bit.BIT11 | Bit.BIT12)) != 0:
@@ -1487,8 +1503,7 @@ class Pass2:
 
     def too_late(self, popo):
         self.cuss_list[56].demand = True
-        self.m_proc_1p(popo, BAD_WORD)
-        self.proc_word(popo, None)
+        return self.no_loc_sym(popo)
 
     def subro(self, popo):
         # Maybe cuss oversize/ill-defined loc.
@@ -1518,10 +1533,11 @@ class Pass2:
             self.cuss_list[8].demand = True
 
         # Maybe cuss loc sym no fit in table.
+        if popo.health & LocStateBit.FULL:
+            self.cuss_list[14].demand = True
 
         # Fetch and set in print the location value.
         self._location = popo.health & 0xFFFF
-        self.m_ploc_is(self._location)  # FIXME: I don't see how Yul actually calls this
 
         # "Branch" if bad location value.
         if popo.health & Bit.BIT14:
@@ -1533,6 +1549,8 @@ class Pass2:
         # Maybe cuss multiple calls in a prog/sub.
         if popo.health & Bit.BIT13:
             self.cuss_list[94].demand = True
+
+        self.m_ploc_is(self._location)
 
         # Print line with location value.
         self.print_lin()
@@ -1759,7 +1777,7 @@ class Pass2:
         while True:
             if afield[8] != ' ':
                 break
-            afield = afield[:16] + afield[17:24] + afield[15] + afield[24:]
+            afield = afield[:8] + afield[9:16] + afield[8] + afield[16:]
 
         # Insert head character.
         afield = afield[:15] + afield[16] + afield[16:]
@@ -1794,7 +1812,7 @@ class Pass2:
 
         decimal = False
         while subf[0] != ' ':
-            if not subf[0].isnumeric():
+            if not subf[0].isdecimal():
                 if (subf[0] != 'D'):
                     self._field_cod[0] = FieldCodBit.SYMBOLIC
                     return common, subf
@@ -2193,7 +2211,7 @@ class Pass2:
         if self._yul.n_copies > 0:
             self.copy_prt5()
 
-        self.phi_print(old_line.text, old_line.spacing)
+        self._mon.phi_print(old_line.text, old_line.spacing)
 
         if self._lin_count <= self._yul.n_lines:
             old_line.clear()
@@ -2231,6 +2249,10 @@ class Pass2:
         self._yul.sym_thr.get_first()
 
     def def_test(self, symbol):
+        # Branch if definer didn't fit in table.
+        if symbol.definer is None:
+            return
+
         # Mark definer thread.
         symbol.analyzer = 1
 
