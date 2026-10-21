@@ -591,6 +591,16 @@ class Pass2:
                     b_number >>= 1
                     pow_idx += 1
 
+                # Tentatively combine exponents.
+                if number != 0.0:
+                    e_total = int(('%.9e' % number).split('e')[1]) + 1
+                elif e_number == ONES:
+                    e_total = -64
+                e_total += int(('%.9e' % common).split('e')[1]) + 1
+                # Branch if product will underflow. Branch if product will overflow.
+                if e_total <= -55 or e_total >= 64:
+                    return self.bad_const(ex_range=True), e_number
+
                 # Scale by B factor.
                 number *= common
 
@@ -801,6 +811,10 @@ class Pass2:
         if popo.health & Bit.BIT16:
             self.cuss_list[4].demand = True
 
+        # Maybe cuss predefinition failure.
+        if popo.health & Bit.BIT10:
+            self.cuss_list[13].demand = True
+
         no_loc_leftover = Bit.BIT8 | Bit.BIT12
         # Branch if there's no good location valu.
         if popo.health & Bit.BIT14:
@@ -879,7 +893,7 @@ class Pass2:
 
         # Exit when no location symbol.
         if loc_symbol is None:
-            return self.form_locn(good_loc=False)
+            return self.form_locn(popo, good_loc=False)
 
         if loc_symbol.defined:
             self._location = loc_symbol.value
@@ -1364,6 +1378,7 @@ class Pass2:
             # Branch if there is a location symbol.
             if not popo.health & Bit.BIT8:
                 self.cuss_list[46].demand = True
+                no_eraloc = True
             # Branch if leftover is now defined.
             elif loc_symbol.defined:
                 # Use location value found by pass 1.5 to
@@ -1908,6 +1923,8 @@ class Pass2:
                 left_end = self.prin_cuss(cuss)
 
         if line_cussed:
+            # Show that there are cusses on this page.
+            self._yul.switch |= SwitchBit.CUSSES_ON_PAGE
             self.count_cus(left_end, 9)
 
     def prin_cuss(self, cuss):
@@ -2217,6 +2234,13 @@ class Pass2:
             old_line.clear()
             return self.endoform(old_line, False)
 
+        # Prepare a wham for last line of page.
+        old_line[0] = '■'*120
+
+        # Print last line, skip, and owe heads.
+        old_line.spacing = Bit.BIT1
+        return self.print_old(old_line)
+
     def print_old(self, old_line=None):
         if self._heads_only:
             self._heads_only = False
@@ -2286,9 +2310,11 @@ class Pass2:
     def definem(self, definer):
         for definee in definer.definees:
             for def_symbol in self._yul.sym_thr.all(definee):
+                if def_symbol.definer != definer.name:
+                    continue
                 # Reconstitute signed modifier.
                 def_symbol.value += definer.value
-                if def_symbol.value < 0 or def_symbol.value > self._adr_limit:
+                if def_symbol.value < 0 or def_symbol.value >= self._adr_limit:
                     if def_symbol.health == 0x1:
                         # Nearly def becomes oversize defined.
                         def_symbol.health = 0x8

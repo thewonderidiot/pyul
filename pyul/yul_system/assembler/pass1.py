@@ -561,7 +561,7 @@ class Pass1:
         self.find_cdno()
 
         # Change external card number.
-        self._tape.card = self._tape.card[0] + ('%06d' % cn_limit) + self._tape.card[7:]
+        self._tape.card = self._tape.card[0] + ('%06d' % (cn_limit & ~Bit.BIT6)) + self._tape.card[7:]
         self._tape.mark()
 
         # On log card, change is superficial only.
@@ -622,7 +622,7 @@ class Pass1:
 
     # Proceudre to detect and process "DELETE" cards.
     def delete_cq(self):
-        # Branch if not a "CARDNO" code.
+        # Branch if not a "DELETE" code.
         if self._real.card[17:23] != 'DELETE':
             return self.insert_cq()
 
@@ -919,6 +919,7 @@ class Pass1:
     def end_of(self, popo):
         if not self._send_endo:
             self._send_endo = True
+            self._early = False
             # The subroutines are known.
             self._yul.switch |= SwitchBit.KNOW_SUBS
             # Prohibit renumbering in subroutines.
@@ -949,7 +950,7 @@ class Pass1:
             self._subro_idx += 1
 
         # Exit via SEND POPO unless freezing subs.
-        if not self._yul.switch & SwitchBit.FREEZE:
+        if not self._yul.switch & SwitchBit.FREEZE_P1:
             return self.send_popo(popo)
 
         # Otherwise kill intermediate "END OF"s.
@@ -1040,7 +1041,7 @@ class Pass1:
         if self._loc_state & LocStateBit.SYMBOLIC:
             self.sy_def_xit(loc_value, symbol, new_health)
 
-    def sy_def_xit(self, loc_value, symbol, new_health):
+    def sy_def_xit(self, loc_value, symbol, new_health, definer=None):
         if symbol is None:
             return False
 
@@ -1048,11 +1049,13 @@ class Pass1:
         if symbol.health == 0:
             symbol.value = loc_value
             symbol.health = new_health
+            symbol.definer = definer
             return
 
         symbol = copy.deepcopy(symbol)
         symbol.value = loc_value
         symbol.health = new_health
+        symbol.definer = definer
 
         sym_fit = self._yul.sym_thr.add(symbol)
         if not sym_fit:
@@ -1825,7 +1828,7 @@ class Pass1:
             return self.end_is(popo, 0, symbol, new_health)
 
         if popo.health & Bit.BIT13:
-            # Use transform for oversize assignment.
+            # Use transform for memory type error.
             new_health = (sym_xform >> 6*4) & 0xF
             return self.end_is(popo, low_lim, symbol, new_health)
 
@@ -1895,11 +1898,11 @@ class Pass1:
 
         # Find memory type (this happened in LOCATION, but wasn't saved in this port)
         midx = 0
-        while loc_value > self.m_typ_tab[midx][1]:
+        while (popo.health & 0xFFFF) > self.m_typ_tab[midx][1]:
             midx += 1
 
         # Branch if 1st loc in bad memory type or end of category.
-        if (popo.health & Bit.BIT15) or (popo.health & 0xFFFF == self.m_typ_tab[midx][1]):
+        if (popo.health & Bit.BIT15) or ((popo.health & 0xFFFF) == self.m_typ_tab[midx][1]):
             # Which would mean type error on at least one of the locations.
             popo.health |= Bit.BIT15
 
@@ -2164,9 +2167,9 @@ class Pass1:
         new_health = (sym_xform >> 3*4) & 0xF
         return self.end_is(popo, loc_loc, symbol, new_health)
 
-    def end_is(self, popo, loc_loc, symbol, new_health):
+    def end_is(self, popo, loc_loc, symbol, new_health, definer=None):
         self._loc_state = LocStateBit.SYMBOLIC
-        self.sy_def_xit(loc_loc, symbol, new_health)
+        self.sy_def_xit(loc_loc, symbol, new_health, definer)
 
         # Exit unless loc symbol failed to fit.
         b8b17 = LocStateBit.SYMBOLIC | LocStateBit.FULL
@@ -2198,13 +2201,14 @@ class Pass1:
             return self.end_is(popo, loc_loc, symbol, new_health)
 
         # Branch if definer didn't fit in table.
+        definer = None
         if adr_symbol is not None:
-            symbol.definer = adr_symbol.name
+            definer = adr_symbol.name
             if symbol.name not in adr_symbol.definees:
                 adr_symbol.definees.append(symbol.name)
 
         new_health = (sym_xform >> 2*4) & 0xF
-        return self.end_is(popo, adr_wd[1], symbol, new_health)
+        return self.end_is(popo, adr_wd[1], symbol, new_health, definer)
 
     def no_adress(self, popo, adr_wd, adr_symbol=None):
         if (popo.health & HealthBit.CARD_TYPE_MASK) != HealthBit.CARD_TYPE_EQUALS:

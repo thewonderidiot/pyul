@@ -519,7 +519,7 @@ class Yul:
                 self.ign_sbdir(sub_card)
 
             if num < 2 or num > 63:
-                    self.num_rng_er(sub_card)
+                self.num_rng_er(sub_card)
 
             word += 1
             if sub_sent[word] == 'LINES':

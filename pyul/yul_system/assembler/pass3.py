@@ -103,7 +103,7 @@ class Pass3:
             SymbolHealth('C ■', False, 'ASSOCIATED WITH CONFLICT IN FIXED OR ERASABLE MEMORY'),
             SymbolHealth('OM■', True,  'MULTIPLY DEFINED; OVERSIZE- OR ILL-DEFINED'),
             SymbolHealth('TM■', False, 'MULTIPLY DEFINED; ASSOCIATED WITH WRONG MEMORY TYPE'),
-            SymbolHealth('CM■', False, 'MUTLIPLY DEIFNED; ASSOCIATED WITH CONFLICT IN FIXED OR ERASABLE MEMORY'),
+            SymbolHealth('CM■', False, 'MULTIPLY DEFINED; ASSOCIATED WITH CONFLICT IN FIXED OR ERASABLE MEMORY'),
             SymbolHealth('MM■', True,  'MULTIPLE ERRORS'),
             SymbolHealth('X ■', True,  'IN MISCELLANEOUS TROUBLE'),
             SymbolHealth('■■■', True,  'FAILED TO FIT IN SYMBOL TABLE'),

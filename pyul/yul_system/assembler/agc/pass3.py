@@ -350,7 +350,7 @@ class AgcPass3(Pass3):
         # Form binary sense line set number.
         sense_set = ((m_common >> 1) & 0xF) + 1
 
-        self._line[48] = ('ROPE MODULE %u, SIDE %s, SENSE LINE SET %02o (WIRES %s' %
+        self._line[48] = ('ROPE MODULE %u, SIDE %s, SENSE LINE SET %02d (WIRES %s' %
                           (module, side, sense_set, self._wire_nos[sense_set - 1]))
 
         return self.m_edit_def(eqivlent)

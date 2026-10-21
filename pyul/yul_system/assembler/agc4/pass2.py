@@ -140,8 +140,8 @@ class Agc4Pass2(Pass2):
 
             # 66-68
             Cuss('FIRST ADDRESS OF AN EQUATION MUST BE POSITIVE   ', poison=True),
-            Cuss('FIRST POLISH OPERATOR ILLEGAL INDEXED   ', poison=True),
-            Cuss('SECOND POLISH OPERATOR ILLEGAL INDEXED  ', poison=True),
+            Cuss('FIRST POLISH OPERATOR ILLEGALLY INDEXED ', poison=True),
+            Cuss('SECOND POLISH OPERATOR ILLEGALLY INDEXED', poison=True),
 
             # 69-71
             Cuss('NO MATCH FOUND FOR SECOND CARD NUMBER   ', poison=True),
@@ -379,18 +379,19 @@ class Agc4Pass2(Pass2):
         if spec_cond >= 0o12:
             return self.basic_adr(popo)
 
-        if not ((self._address <= 0o1777) or # Interpretive may address erasable ....
-                ((additive >= Bit.BIT1) and (self._address <= 0o17777)) or # With some latitude if indexed....
-                (self._address > 0o37777)): # ... or upper half of switched banks.
+        address = abs(self._address)
+        if not ((address <= 0o1777) or # Interpretive may address erasable ....
+                ((additive >= Bit.BIT1) and (address <= 0o17777)) or # With some latitude if indexed....
+                (address > 0o37777)): # ... or upper half of switched banks.
             return self.rng_error(popo)
 
         # Use additive on polish or store address.
         self._word &= ~0o37777
-        add_sum = abs(self._address) + abs(additive)
+        add_sum = address + abs(additive)
 
         if additive >= Bit.BIT1:
             # Use 2 x address if indexed.
-            add_sum += abs(self._address)
+            add_sum += address
 
         self._word |= add_sum & 0o37777
 
@@ -422,7 +423,7 @@ class Agc4Pass2(Pass2):
         # Branch if there are no special conds.
         spec_cond = (popo.health >> 19) & 0x1F
         if spec_cond == 0:
-           pass
+            pass
 
         # CAF/OVIND
         elif spec_cond <= 2:
@@ -432,7 +433,7 @@ class Agc4Pass2(Pass2):
             # No check on indexed caf or ovind.
             if not self._yul.switch & SwitchBit.PREVIOUS_INDEX:
                 # Branch if value correct for CAF, OVIND.
-                if self._address < 0o2000:
+                if abs(self._address) < 0o2000:
                     # Cuss inappropriate address.
                     self.cuss_list[34].demand = True
         # CCS
@@ -440,10 +441,10 @@ class Agc4Pass2(Pass2):
             # No check on indexed CCS.
             if not self._yul.switch & SwitchBit.PREVIOUS_INDEX:
                 # Branch if value is correct for CCS.
-                if self._address > 0o1777:
+                if abs(self._address) > 0o1777:
                     # Cuss CCS reference to fixed.
                     self.cuss_list[35].demand = True
-                    self.prb_adres(self._address)
+                    self.prb_adres(abs(self._address))
                     self.cuss_list[37].demand = True
         # INDEX
         elif spec_cond <= 4:
@@ -453,7 +454,7 @@ class Agc4Pass2(Pass2):
         elif spec_cond <= 5:
             # Bypass check if instruction is indexed.
             if not self._yul.switch & SwitchBit.PREVIOUS_INDEX:
-                if self._address > 0o1777:
+                if abs(self._address) > 0o1777:
                     # Fixed mem adres inappropriate for TS.
                     self.cuss_list[34].demand = True
         # XTRACODE
@@ -536,7 +537,7 @@ class Agc4Pass2(Pass2):
                 self._word |= dec48_flg
 
             # Supply bank indicator to simulator.
-            bank_no = self._address >> 10
+            bank_no = abs(self._address) >> 10
             self._word |= bank_no << 30
             # Store it twice to make parity OK.
             self._word |= bank_no << 24
@@ -839,11 +840,11 @@ class Agc4Pass2(Pass2):
 
         # Branch if number is signed.
         if e_number != 0:
-            # Set up unsigned constant.
+            # Set up signed constant.
             self._word = (number >> 14) & 0o37777
             common = 0o37777
         else:
-            # Set up signed constant.
+            # Set up unsigned constant.
             self._word = (number >> 15) & 0o77777
             common = 0o77777
 

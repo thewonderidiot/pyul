@@ -154,6 +154,7 @@ class Agc4Pass3(Pass3):
 
         # Show no checksum in full bank, exit.
         image = ' NOSUM' + image[6:]
+        self._checksum = ONES
         return image, word
 
     def no_suming(self, image, word, address):
@@ -194,7 +195,7 @@ class Agc4Pass3(Pass3):
         checksum = self._checksum - bank_no
 
         # Branch if alg. val. of cksm is plus.
-        if checksum >= 0:
+        if checksum > 0:
             checksum ^= 0o77777
         else:
             checksum = abs(checksum)
@@ -313,7 +314,11 @@ class Agc4Pass3(Pass3):
 
         stick_no -= 1
 
-        module, stick = self._stick_nos[stick_no]
+        if stick_no < len(self._stick_nos):
+            module, stick = self._stick_nos[stick_no]
+        else:
+            wire_wd = self._wire_nos[stick_no - len(self._stick_nos)]
+            module, stick = wire_wd[4:7], wire_wd[0:3]
         self._line[48] = '  MODULE %s    ' % module
         self._line[64] = 'STICK # %s     ' % stick
 

@@ -188,7 +188,7 @@ class Blk2Pass2(Pass2):
             Cuss('POLISH ADDRESS EXPECTED HERE    ', poison=True),
 
             # 90-92
-            Cuss('ASTERISK ILLEGAL ON THIS OP CODE', poison=True),
+            Cuss('ASTERISK ILLEGAL ON THIS OPCODE ', poison=True),
             Cuss('LOCATION SYMBOL IMPROPER ON STADR\'ED STORE WORD ', poison=True),
             Cuss(''),
 
@@ -394,7 +394,7 @@ class Blk2Pass2(Pass2):
         m_common = (popo.health << 8) & SwitchBit.EXTEND
 
         # Plant extracode flag for simulator.
-        self._word |= (m_common << 10) | (m_common << 11)
+        self._word |= (m_common >> 10) | (m_common >> 11)
 
         # Bit 29 places op-address print split.
         popo.health &= ~0o3000000
@@ -826,17 +826,15 @@ class Blk2Pass2(Pass2):
             if sec_alf != (self._sbank_reg & b28t30m):
                 self.cuss_list[66].demand = True
 
-            # Plant super-bank bits in BBCON word.
-            b41t44m = Bit.BIT41 | Bit.BIT42 | Bit.BIT43 | Bit.BIT44
-            self._word &= ~b41t44m
-            self._word |= (self._address >> 9) & b41t44m
+        # Plant super-bank bits in BBCON word.
+        b41t44m = Bit.BIT41 | Bit.BIT42 | Bit.BIT43 | Bit.BIT44
+        self._word &= ~b41t44m
+        self._word |= (self._address >> 9) & b41t44m
 
-            # Reduce bank number to 3X.
-            self._address &= ~0o160000
-            self._address |= 0o60000
-            return self.bbc_adres(popo, adr_wd)
-
-        return self.bbc_adres(popo, adr_wd, supply_sbank=True)
+        # Reduce bank number to 3X.
+        self._address &= ~0o160000
+        self._address |= 0o60000
+        return self.bbc_adres(popo, adr_wd)
 
     def bbc_adres(self, popo, adr_wd, supply_sbank=False):
         if supply_sbank:
@@ -877,9 +875,9 @@ class Blk2Pass2(Pass2):
                 if (adr_wd[0] & b33t35m) != (self._sbank_reg & b33t35m):
                     self.sbank_cus(adr_wd[0])
 
-                # Reduce bank 4X, 5X, or 6X to 3X.
-                adr_wd[0] &= ~b33t35m
-                adr_wd[0] |= 0o60000
+            # Reduce bank 4X, 5X, or 6X to 3X.
+            adr_wd[0] &= ~b33t35m
+            adr_wd[0] |= 0o60000
 
         # Put GENADR in the range 2000-3777, exit.
         self._sec_half &= ~0o176000
@@ -898,6 +896,7 @@ class Blk2Pass2(Pass2):
             # Branch if refers to an EBANK.
             if 0o1400 <= self._address:
                 # Here use EBANK acording to address.
+                self._sec_half &= ~0o2007
                 self._sec_half |= (self._address >> 8) & 0o2007
 
                 # Branch if there is no 1-shot declaratn.
@@ -923,7 +922,7 @@ class Blk2Pass2(Pass2):
             # Branch if address isn't in a super-bank.
             if self._sec_half > 0o57777:
                 # Branch if no 1-shot SBANK=.
-                if self._sbank_reg & (Bit.BIT25 | Bit.BIT26 | Bit.BIT27) == 0:
+                if (self._sbank_reg & (Bit.BIT25 | Bit.BIT26 | Bit.BIT27)) == 0:
                     # Shift address superbits to match temps.
                     b28t30m = Bit.BIT28 | Bit.BIT29 | Bit.BIT30
                     sec_alf = (self._sec_half << 5) & b28t30m
@@ -933,7 +932,7 @@ class Blk2Pass2(Pass2):
                         self.cuss_list[66].demand = True
 
                 # Plant super-bank bits in BBCON word.
-                self._sec_half |= (self._sec_half >> 9) & 0o360
+                self._sec_half = (self._sec_half & ~0o360) | ((self._sec_half >> 9) & 0o360)
 
                 # Reduce bank 4X, 5X, or 6X to 3X.
                 self._sec_half &= ~(Bit.BIT33 | Bit.BIT34 | Bit.BIT35)
@@ -1185,9 +1184,11 @@ class Blk2Pass2(Pass2):
 
                 # Find memory type of putative bank.
                 for i in range(len(self._m_typ_tab)):
-                    if self._m_typ_tab[i][1] >= m_common and self._m_typ_tab[i][0] == MemType.FIXED:
-                        self._used_fmax = m_common
-                        return
+                    if self._m_typ_tab[i][1] >= m_common:
+                        if self._m_typ_tab[i][0] == MemType.FIXED:
+                            self._used_fmax = m_common
+                            return
+                        break
 
     def set_ebcon(self, popo, check_oneshot=False):
         # Bypass update if 1-shot declaration.
@@ -1270,7 +1271,7 @@ class Blk2Pass2(Pass2):
         self._line[39] = '\''
 
         # Call for prime in quarter-code print.
-        adr_wd[0] = 0o1000
+        adr_wd[0] = -0o1000
         return self.gud_basic(popo, adr_wd)
 
     def add_adr_wd(self, popo, adr_wd):
@@ -1288,6 +1289,7 @@ class Blk2Pass2(Pass2):
                 self.cuss_list[35].demand = True
                 self.prb_adres(self._address)
                 self.cuss_list[10].demand = True
+                return self.adres_adr(popo, adr_wd)
 
             # Put misc. flag on unindexed basic instructions that refer to fixed memory.
             dec48_flg = Bit.BIT2 | Bit.BIT5
@@ -1360,9 +1362,10 @@ class Blk2Pass2(Pass2):
 
     def cus_e_bank(self, popo, adr_wd):
         adr_wd[0] &= ~0o3400
-        adr_wd[0] |= 0o1000
+        adr_wd[0] |= 0o1400
+        self.cuss_bank()
         cuss = self.cuss_list[33]
-        bank_no = self._address >> 10
+        bank_no = self._address >> 8
         # Put EBANK number into bank error cuss.
         cuss.msg = cuss.msg[:19] + ('E%o' % bank_no) + cuss.msg[21:]
         return self.add_adr_wd(popo, adr_wd)
@@ -1370,6 +1373,7 @@ class Blk2Pass2(Pass2):
     def cus_f_bank(self, popo, adr_wd):
         adr_wd[0] &= ~0o176000
         adr_wd[0] |= 0o2000
+        self.cuss_bank()
         cuss = self.cuss_list[33]
         bank_no = (self._address - 0o10000) >> 10
         # Put FBANK number into bank error cuss.
@@ -1399,7 +1403,7 @@ class Blk2Pass2(Pass2):
                 cuss.msg = cuss.msg[:8] + ('=%02o,%04o' % (bank_no, address))
                 return
             else:
-                cuss.msg = cuss.msg[:8] + ('=%04o   ' % address)
+                cuss.msg = cuss.msg[:8] + ('= %04o  ' % address)
                 return
         else:
             # Branch if address is in unswitched E.
@@ -1411,7 +1415,7 @@ class Blk2Pass2(Pass2):
                 cuss.msg = cuss.msg[:8] + ('=E%o,%04o' % (bank_no, address))
                 return
 
-        cuss.msg = cuss.msg[:8] + '= %04o   ' % address
+        cuss.msg = cuss.msg[:8] + '= %04o  ' % address
 
     # Printing procedures for basic instructions and address constants.
     def gud_basic(self, popo, adr_wd):
@@ -1509,7 +1513,7 @@ class Blk2Pass2(Pass2):
             self._word ^= 0o77777
 
         # Choose printing of straight op or other.
-        return self.print_op(popo, [0,0])
+        return self.op_digit_m1(popo, [0,0])
 
     def naughty(self, popo):
         self._word = BAD_WORD
@@ -1520,6 +1524,7 @@ class Blk2Pass2(Pass2):
             # Clear extension cusses if minus.
             self.cuss_list[36].demand = False
             self.cuss_list[37].demand = False
+            self.cuss_list[38].demand = False
             # Clear "should-be-INDEXed" cuss if minus.
             self.cuss_list[71].demand = False
         # Cuss if neither blank nor minus in CC 17.
@@ -1530,6 +1535,7 @@ class Blk2Pass2(Pass2):
             # Clear extension cusses if leftover.
             self.cuss_list[36].demand = False
             self.cuss_list[37].demand = False
+            self.cuss_list[38].demand = False
             # Clear "should-be-INDEXed" cuss if lftvr.
             self.cuss_list[71].demand = False
         # Cuss if neither blank nor J in column 1.
@@ -1693,7 +1699,7 @@ class Blk2Pass2(Pass2):
                 check_end = False
 
         # Branch if not end of block or bank.
-        if check_end and (orig_loc & 0o1777) == 0o1777:
+        if check_end and (location & 0o1777) == 0o1777:
             # "EB" precedes such locations.
             self._line[24] = '  EB'
         else:
@@ -1754,11 +1760,11 @@ class Blk2Pass2(Pass2):
 
         # Branch if number is signed.
         if e_number != 0:
-            # Set up unsigned constant.
+            # Set up signed constant.
             self._word = (number >> 14) & 0o37777
             common = 0o37777
         else:
-            # Set up signed constant.
+            # Set up unsigned constant.
             self._word = (number >> 15) & 0o77777
             common = 0o77777
 
@@ -1909,6 +1915,8 @@ class Blk2Pass2(Pass2):
                 (icommon == 2 and self._mode_out not in (Bit.BIT46, (Bit.BIT47 | Bit.BIT48)))):
                 # Flag op mode out/in mismatch.
                 self.cuss_list[77 if second else 76].demand = True
+            else:
+                return self.int_op_sap(popo, data_word, second)
 
         # Branch by mode in requirement
         if icommon == 0:
@@ -1951,7 +1959,8 @@ class Blk2Pass2(Pass2):
             return data_word
 
         # Give data to second address
-        self._int_addr[self._int_addr_idx] = data_word
+        self._int_addr[self._int_addr_idx] &= ~0o77777777
+        self._int_addr[self._int_addr_idx] |= data_word & 0o77777777
         # Shift addr type to correct position
         b25t27m = Bit.BIT25 | Bit.BIT26 | Bit.BIT27
         self._int_addr[self._int_addr_idx] &= ~b25t27m
@@ -2052,7 +2061,7 @@ class Blk2Pass2(Pass2):
         # Jump if addr for general shift inst
         if self._int_addr[0] & Bit.BIT32:
             # Jump if address not indexed
-            if (self._int_addr[0] & Bit.BIT24) == 0:
+            if self._int_addr[0] & Bit.BIT24:
                 self._int_addr[0] &= ~(Bit.BIT25 | Bit.BIT26 | Bit.BIT27)
 
             # Extract general shift opcode additive
@@ -2123,6 +2132,7 @@ class Blk2Pass2(Pass2):
         if self._address < 0:
             # Fake up an X2 flag for negative operand.
             self._int_addr[0] |= Bit.BIT7
+            self._address = -self._address
         else:
             # Jump if would be an addr in fixed banks.
             if 0o20000 <= self._address:
@@ -2248,11 +2258,10 @@ class Blk2Pass2(Pass2):
         if self._address > 0o57777:
             # Branch if there is no superbank setting.
             b33t35m = (Bit.BIT33 | Bit.BIT34 | Bit.BIT35)
-            if self._sbank_reg & b33t35m > 0:
+            if (self._sbank_reg & b33t35m) > 0:
                 # Branch to cuss superbank error
                 if (self._address & b33t35m) != (self._sbank_reg & b33t35m):
                     self.sbank_cus(self._address)
-                    return self.int_wd_sum(popo)
 
             # Reduce super-banks
             self._address &= ~b33t35m
@@ -2463,7 +2472,7 @@ class Blk2Pass2(Pass2):
         return self.int_wd_pot(popo)
 
     def int_wd_run(self, popo):
-        if ONES <= self._location:
+        if ONES <= self._loc_hold:
             self.int_err_33()
         else:
             # Increment polish count
@@ -2535,7 +2544,7 @@ class Blk2Pass2(Pass2):
             self.cuss_list[10].demand = True
 
         # Branch if address is unprintable
-        if 0o170000 <= self._address:
+        if 0o170000 <= abs(self._address):
             return self.int_wd_sum(popo)
 
         # Go tell man what addr value is
