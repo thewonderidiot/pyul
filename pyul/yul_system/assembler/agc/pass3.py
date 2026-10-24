@@ -234,8 +234,7 @@ class AgcPass3(Pass3):
         else:
             tc_self = 0o2000 | (address & 0o1777)
 
-        # Branch if not an instruction.
-        if m_common == tc_self and image[:6].isspace():
+        if m_common == tc_self:
             # Branch if this is 2nd TC self in a row.
             if address != self._l_tc_self:
                 self._l_tc_self = self._next_eqiv
@@ -248,7 +247,7 @@ class AgcPass3(Pass3):
             # Look in substrab for next paragraph.
             par_id = (address + 1) // 256
             # Branch if next paragraph exists.
-            if par_id in self._paragraphs:
+            if self._yul.substrab[par_id]:
                 return self.add_2_sum(image, word, request=True)
 
             return self.sum_error(image, word)

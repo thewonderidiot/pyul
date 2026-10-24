@@ -241,7 +241,7 @@ class Agc4Pass3(Pass3):
             # Look in substrab for next paragraph.
             par_id = (address + 1) // 256
             # Branch if next paragraph exists.
-            if par_id in self._paragraphs:
+            if self._yul.substrab[par_id]:
                 return self.add_2_sum(image, word, request=True)
 
             return self.sum_error(image, word)

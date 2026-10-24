@@ -491,7 +491,7 @@ class Yul:
         self.adhoc_subs = []
 
         # Initialize availability table.
-        self.av_table = [0]*2048
+        self.av_table = [0xFFFFFFFF]*2048
 
         # Initialize POPO list
         self.popos = []

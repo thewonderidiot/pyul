@@ -1099,14 +1099,14 @@ class Pass1:
     def avail(self, loc_value, reserve=False):
         available = True
 
-        avail_msk = 1 << (loc_value & 0x1F)
+        avail_msk = 1 << (31 - (loc_value & 0x1F))
         avail_idx = loc_value >> 5
 
-        if self._yul.av_table[avail_idx] & avail_msk:
+        if (self._yul.av_table[avail_idx] & avail_msk) == 0:
             available = False
 
         if reserve:
-            self._yul.av_table[avail_idx] |= avail_msk
+            self._yul.av_table[avail_idx] &= ~avail_msk
 
         return available
 

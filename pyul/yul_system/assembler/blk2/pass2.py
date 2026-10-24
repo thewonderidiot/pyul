@@ -1081,7 +1081,7 @@ class Blk2Pass2(Pass2):
         # Branch if no fixed was occupied (odd) or banksum is unnecessary.
         if (self._used_fmax == ONES) or (self._address > self._used_fmax):
             # Plant good news and join EBANK= proc.
-            self._line[39] = 'NO NEED'
+            self._line[40] = 'NO NEED'
 
             # Exit, bypassing word processing.
             self._zequaloc = True
@@ -1090,11 +1090,11 @@ class Blk2Pass2(Pass2):
 
         i_common = self._address
         while True:
-            avail_msk = 1 << (i_common & 0x1F)
+            avail_msk = 1 << (31 - (i_common & 0x1F))
             avail_idx = i_common >> 5
 
-            if (self._yul.av_table[avail_idx] & avail_msk) == 0:
-                self._yul.av_table[avail_idx] |= avail_msk
+            if self._yul.av_table[avail_idx] & avail_msk:
+                self._yul.av_table[avail_idx] &= ~avail_msk
                 break
 
             # BNKSUM must go no later than word 3775 of the bank, so too bad if it conflicts.
@@ -1108,12 +1108,12 @@ class Blk2Pass2(Pass2):
         self._address = i_common
 
         # Get set to look at word for 2nd TC SELF.
-        avail_msk = 1 << ((self._address + 1) & 0x1F)
+        avail_msk = 1 << (31 - ((self._address + 1) & 0x1F))
         avail_idx = (self._address + 1) >> 5
 
-        if (self._yul.av_table[avail_idx] & avail_msk) == 0:
+        if self._yul.av_table[avail_idx] & avail_msk:
             # Both words are now shown occupied.
-            self._yul.av_table[avail_idx] |= avail_msk
+            self._yul.av_table[avail_idx] &= ~avail_msk
         else:
             # Plant conflict bit for second word.
             popo.health |= Bit.BIT16
@@ -1171,11 +1171,11 @@ class Blk2Pass2(Pass2):
 
         # Point to the avail table wd for highest fix.
         for m_common in range(0o170000, 0o3777, -1):
-            avail_msk = 1 << (m_common & 0x1F)
+            avail_msk = 1 << (31 - (m_common & 0x1F))
             avail_idx = m_common >> 5
 
             # Branch if no fixed is occupied.
-            if self._yul.av_table[avail_idx] & avail_msk:
+            if (self._yul.av_table[avail_idx] & avail_msk) == 0:
                 # Form address 2000 of last used bank.
                 m_common = avail_idx << 5
 

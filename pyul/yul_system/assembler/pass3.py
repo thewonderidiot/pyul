@@ -633,10 +633,10 @@ class Pass3:
     def avail_q(self, eqivlent):
         available = True
 
-        avail_msk = 1 << (eqivlent & 0x1F)
+        avail_msk = 1 << (31 - (eqivlent & 0x1F))
         avail_idx = eqivlent >> 5
 
-        if self._yul.av_table[avail_idx] & avail_msk:
+        if (self._yul.av_table[avail_idx] & avail_msk) == 0:
             available = False
 
         return available
@@ -727,6 +727,11 @@ class Pass3:
                 if par_addr >= 256:
                     par_addr = 0
                     par_id += 1
+
+        for par_id,used in enumerate(self._yul.substrab):
+            if used and par_id not in self._paragraphs:
+                self._paragraphs[par_id] = Paragraph(par_id)
+        self._paragraphs = dict(sorted(self._paragraphs.items()))
 
     def prin_pars(self):
         # Skip to head of form after availability.

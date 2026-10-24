@@ -1108,7 +1108,7 @@ class AgcPass2(Pass2):
         # Branch if no fixed was occupied (odd) or banksum is unnecessary.
         if (self._used_fmax == ONES) or (self._address > self._used_fmax):
             # Plant good news and join EBANK= proc.
-            self._line[39] = 'NO NEED'
+            self._line[40] = 'NO NEED'
 
             # Exit, bypassing word processing.
             self._zequaloc = True
@@ -1124,7 +1124,7 @@ class AgcPass2(Pass2):
         au1 = i_common + 31
         while True:
             # Find an avail word with a hole.
-            if self._yul.av_table[x6] < 0xFFFFFFFF:
+            if self._yul.av_table[x6] != 0:
                 break
 
             x6 += 1
@@ -1133,7 +1133,7 @@ class AgcPass2(Pass2):
             # Branch if about to do last poss. av wd.
             if x6 == au1:
                 # If hole is before 3776 of bank, 2 TC's.
-                if self._yul.av_table[x6] < (1 << 30):
+                if self._yul.av_table[x6] >= (1 << 2):
                     break
 
                 # Show that banksum will be at most 1P.
@@ -1141,12 +1141,15 @@ class AgcPass2(Pass2):
                 self._dp_inst = False
 
                 # Branch if it is indeed one word.
-                if self._yul.av_table[x6] < (1 << 31):
+                if self._yul.av_table[x6] & (1 << 1):
+                    break
+
+                if self._yul.av_table[x6] & (1 << 0):
                     # No need for TC SELFs if one-word hole.
-                    self._yul.av_table[x6] |= (1 << 31)
+                    self._yul.av_table[x6] &= ~(1 << 0)
 
                     # Plant good news and join EBANK= proc.
-                    self._line[39] = 'NO NEED'
+                    self._line[40] = 'NO NEED'
 
                     # Exit, bypassing word processing.
                     self._zequaloc = True
@@ -1155,65 +1158,65 @@ class AgcPass2(Pass2):
 
                 # Cuss conflict and force hole at end.
                 popo.health |= Bit.BIT16
-                self._yul.av_table[x6] &= ~(1 << 31)
+                self._yul.av_table[x6] |= (1 << 0)
                 break
 
         # Find first hole in bank for BNKSUM, or force one at 3777.
-        av_msk = 0x1
+        av_msk = 1 << 31
 
-        while True:
+        # Seek a one-word hole in bank.
+        while (self._yul.av_table[x6] & av_msk) == 0:
             # Keep address guess up to date.
             self._address += 1
-            av_msk <<= 1
-            if (self._yul.av_table[x6] & av_msk) == 0:
-                break
+            av_msk >>= 1
 
         # Get set to look at word for 2nd TC SELF
-        self._yul.av_table[x6] |= av_msk
-        av_msk <<= 1
+        self._yul.av_table[x6] &= ~av_msk
+        av_msk >>= 1
 
         # Advance to next avail wd if necessary.
-        if av_msk > (1 << 31):
-            av_msk = 1
+        if av_msk == 0:
+            av_msk = 1 << 31
             x6 += 1
 
         # Branch if there are 2 TC SELFs.
         if self._sec_half == ONES:
             # Branch if just cussed full bank.
-            if av_msk == 1:
-                return self.sum_confq(popo)
+            if av_msk == (1 << 31):
+                return self.sum_confq(popo, adr_wd, x6, av_msk, check_avail=False)
 
-        if self._yul.av_table[x6] & av_msk:
+        if (self._yul.av_table[x6] & av_msk) == 0:
             # Cuss conflict of 2nd TC SELF or CHKSUM.
             popo.health |= Bit.BIT16
 
         # Get set to look at the checksum word.
-        self._yul.av_table[x6] |= av_msk
-        av_msk <<= 1
+        self._yul.av_table[x6] &= ~av_msk
+        av_msk >>= 1
 
         # Branch if there is one TC SELF word.
         if self._sec_half == ONES:
-            return self.sum_confq(popo)
+            return self.sum_confq(popo, adr_wd, x6, av_msk, check_avail=False)
 
-        if av_msk <= (1 << 31):
-            return self.sum_confq(popo)
+        if av_msk != 0:
+            return self.sum_confq(popo, adr_wd, x6, av_msk)
 
         # 2nd TC SELF was at end of avail word...
-        av_msk = 1
+        av_msk = 1 << 31
         x6 += 1
-        # ...was it also at end of paragraph?
 
-        # FIXME: Maybe create a paragraph just for chksum.
+        # ...was it also at end of paragraph? May create a paragraph just for chksum.
+        self._yul.substrab[x6 >> 3] = True
 
-    def sum_confq(self, popo, check_avail=True):
+        return self.sum_confq(popo, adr_wd, x6, av_msk)
+
+    def sum_confq(self, popo, adr_wd, x6, av_msk, check_avail=True):
         if check_avail:
-            if self._yul.av_table[x6] & av_msk:
+            if (self._yul.av_table[x6] & av_msk) == 0:
                 # Cuss conflict in checksum word itself.
                 popo.health |= Bit.BIT16
             else:
                 # Reserve checksum word.
-                self._yul.av_table[x6] |= av_msk
-
+                self._yul.av_table[x6] &= ~av_msk
 
         # Branch when memory type is found.
         midx = 0
@@ -1287,11 +1290,11 @@ class AgcPass2(Pass2):
 
         # Point to the avail table wd for highest fix.
         for m_common in range(0o170000, 0o3777, -1):
-            avail_msk = 1 << (m_common & 0x1F)
+            avail_msk = 1 << (31 - (m_common & 0x1F))
             avail_idx = m_common >> 5
 
             # Branch if no fixed is occupied.
-            if self._yul.av_table[avail_idx] & avail_msk:
+            if (self._yul.av_table[avail_idx] & avail_msk) == 0:
                 # Form address 2000 of last used bank.
                 m_common = avail_idx << 5
 
