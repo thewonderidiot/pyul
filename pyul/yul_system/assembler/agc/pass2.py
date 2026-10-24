@@ -1258,8 +1258,16 @@ class AgcPass2(Pass2):
             adr_wd[0] &= 0o1777
             adr_wd[0] |= 0o2000
 
-        # Numer of words left in bank, in decimal.
-        ## FIXME
+        # Modify subtraction for fixed-fixed.
+        if self._address > 0o7777:
+            i_common = 0o3777
+        elif self._address & 0o2000:
+            i_common = 0o7777
+        else:
+            i_common = 0o5777
+
+        # Set remaining-word count in print.
+        self._line[8] = '%4d' % (i_common - adr_wd[0])
 
         # Exit here when there is one TC SELF.
         if self._sec_half == ONES:

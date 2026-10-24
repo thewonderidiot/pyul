@@ -283,7 +283,7 @@ class Pass2:
 
     def end_error(self, popo):
         # Branch unless announcement of rejects.
-        if popo.card[0] == 'E':
+        if popo.card[0] == '<':
             # End error message must be last log line.
             popo.card = 'L' + popo.card[1:]
 
@@ -291,7 +291,7 @@ class Pass2:
             self._qu_col_ssl = False
             self._yul.switch &= ~SwitchBit.LAST_REM
 
-        if not self._rejected:
+        elif not self._rejected:
             # "REJECT PAGE NNN"
             self._mon.mon_typer(self._yul.page_head[104:])
 

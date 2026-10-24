@@ -955,7 +955,7 @@ class Pass1:
             return self.send_popo(popo)
 
         # Otherwise kill intermediate "END OF"s.
-        return # FIXME
+        return
 
     def illegop(self, popo):
         self._yul.switch &= ~(Bit.BIT25 | Bit.BIT26 | Bit.BIT27)
@@ -1135,11 +1135,9 @@ class Pass1:
         # Set up and call sentence reader.
         sentence = self._mon.phi_sentr(self._real.card[16:40])
         if sentence[0] == '':
-            # FIXME: Cuss if contains terminator only
             self._field_cod[0] = 0
             return None
 
-        # FIXME: Cuss unwanted terminators.
         if sentence[0] in ('THRU', 'THROUGH'):
             # Signify THROUGH and go to find number.
             self._field_cod[0] = Bit.BIT1
@@ -1605,7 +1603,8 @@ class Pass1:
                 self._yul._prog['REVISION'],
                 self._yul._prog['TYPE'] == 'SUBROUTINE'
             )
-            # FIXME: Error if SYPT/SYLT entry not found
+            if self._sypt is None:
+                raise Disaster()
 
         tape_card = self._sypt.readline()
         if tape_card == '':

@@ -621,6 +621,15 @@ class Pass3:
 
                 self._l_bank_5 = []
 
+    def tape_sym(self, sym):
+        # Accept only good definitions.
+        if sym.health in (6, 3):
+            # Send page of definition to sim & edit.
+            self._bypt['SYMBOLS'].append({'SYMBOL': sym.name, 'VALUE': sym.value, 'PAGE': sym.def_page})
+        else:
+            # Special flag for bad definition.
+            self._bypt['SYMBOLS'].append({'SYMBOL': sym.name, 'BAD': True})
+
     def avail_q(self, eqivlent):
         available = True
 
@@ -633,7 +642,20 @@ class Pass3:
         return available
 
     def ws3(self):
-        # FIXME: put symbol table into BYPT
+        mem_names = {MemType.ERASABLE: 'ERASABLE', MemType.FIXED: 'FIXED', MemType.SPEC_NON: 'SPEC_NON'}
+        # Program name for miscellany record.
+        self._bypt['AUTHMEMO'] = {
+            'PROGRAM': self._yul.prog_name,
+            'AUTHOR': self._yul._auth_name,
+            'PARAGRAPHS': [n for n,used in enumerate(self._yul.substrab) if used],
+            'SYMBOLS': self._yul.sym_thr.count(),
+            'REVISION': self._yul.revno,
+            'MEMORY TYPES': [[mem_names[t & MemType.MEM_MASK], limit] for t,limit in self._m_typ_tab],
+            # Mark bad assembly on tape and disc.
+            'BAD ASSEMBLY': (self._yul.switch & SwitchBit.BAD_ASSEMBLY) != 0,
+        }
+
+        self.read_syms(self.tape_sym, lambda: None)
 
         # Sort and merge word records
         self._wd_recs = sorted(self._wd_recs, key=lambda w: w.fwa)
@@ -901,7 +923,6 @@ class Pass3:
             # Be most emphatic about rejection.
             self._mon.mon_typer('ALL INPUT CARDS REJECTED')
         else:
-            # FIXME: Improve BYPT handling
             self._bypt['PARAGRAPHS'] = [{'PARAGRAPH': p.number, 'WORDS': p.words} for n,p in self._paragraphs.items()]
 
             # Let last line show filing on disc.
@@ -966,10 +987,11 @@ class Pass3:
         self.print_lin()
 
         # Write BYPT to tape
-        if not self._yul.switch & SwitchBit.REPRINT:
+        if not self._yul.switch & (SwitchBit.REPRINT | SwitchBit.SUBROUTINE):
             self._yul.yulprogs.create_bypt(self._yul.comp_name, self._yul.prog_name, self._yul.revno, self._bypt)
 
-        # FIXME: final closeout
+        self._yul.reload_p0()
+        self._yul.set_pg_hed()
 
 
     # Subroutine in pass 3 to print a line with pagination control.
@@ -1040,7 +1062,7 @@ class Pass3:
             # Clear subroutine name slot in page head.
             self._yul.page_head = self._yul.page_head[:102] + '         ' + self._yul.page_head[111:]
 
-        self._yul.sym_place = 3 * (self._yul.sym_thr.count() + 1) # FIXME: Add in SUBROS and COUNTS
+        self._yul.sym_place = 3 * self._yul.sym_thr.count()
 
         # Change rejection line in version assy.
         if self._yul.switch & SwitchBit.VERSION:

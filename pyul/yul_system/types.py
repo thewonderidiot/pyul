@@ -84,6 +84,7 @@ class SwitchBit:
     REVISION          = Bit.BIT10
     REPRINT           = Bit.BIT11
     VERSION           = Bit.BIT12
+    TRANSFERRED       = Bit.BIT13
     SUPPRESS_INACTIVE = Bit.BIT14
     SUPPRESS_SYMBOL   = Bit.BIT15
     SUPPRESS_OCTAL    = Bit.BIT16

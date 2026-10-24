@@ -27,12 +27,8 @@ class Yul:
         self._incr_revno = False
         self._non_wise = 0
         self._invisible_director = False
-        self.substrab = [False]*256
         self.yulprogs = None
-        self.switch = 0
         self.revno = 0
-        self.n_err_lins = 0
-        self.err_pages = [None, None]
         self._auth_name = ''
         self.prog_name = ''
         self._prog = None
@@ -42,13 +38,7 @@ class Yul:
         self._task_msg = ''
         self._yul_date = ''
         self._yul_log_a = 'A'
-        self.n_lines = 54
-        self.n_copies = 0
-        self.page_head = 'LOGNO.  YUL SYSTEM FOR                  ' + \
-                         '                                        ' + \
-                         '                        (MAIN)  PAGE   0'
-        self.page_no = 0
-        self.sym_place = 0
+        self.reload_p0()
 
         self._directs = {
             'ADD':           self.add_comp,
@@ -126,13 +116,10 @@ class Yul:
             except TypAbort:
                 pass
 
-        # FIXME: close threads?
         self._mon.mon_typer('END YUL SYSTEM')
 
     def begin_job(self):
         # Special routine, done at the beginning of a Yul job.
-
-        # FIXME: Set up side groups as dummy threads?
 
         # Re-sentence-read monitor call card.
         sentence = self._mon.phi_sentr(self._mon.lcard)
@@ -164,6 +151,19 @@ class Yul:
         # Put log and date in page heading.
         self.page_head = self._yul_log_a + self.page_head[7:90] + self._yul_date + self.page_head[90+len(self._yul_date):]
 
+    def reload_p0(self):
+        self.switch = 0
+        self.substrab = [False]*256
+        self.n_err_lins = 0
+        self.err_pages = [None, None]
+        self.n_lines = 54
+        self.n_copies = 0
+        self.page_head = 'LOGNO.  YUL SYSTEM FOR                  ' + \
+                         '                                        ' + \
+                         '                        (MAIN)  PAGE   0'
+        self.page_no = 0
+        self.sym_place = 0
+
     def rejec_dir(self, card):
         # Director or subdirector rejected.
         self._mon.mon_typer('THEREFORE THIS CARD IS REJECTED:')
@@ -174,7 +174,8 @@ class Yul:
         # Final action, all aborts.
         self._mon.mon_typer('8   TASK ABORT', end='\n\n\n')
 
-        # FIXME: abort things
+        # Reset update-revision-number switch.
+        self._incr_revno = False
         raise TypAbort
 
     def accept_m2(self):
@@ -188,8 +189,15 @@ class Yul:
         if self._no_typist and s[0:7] != '        ':
             return
         self._no_typist = False
-        #stripped = ' '.join(s.split()) ## FIXME: Need to strip out duplicate blanks?
-        self._mon.mon_typer(s, end=end)
+        # Omit blank words at beginning and end of message.
+        # Reduce each imbedded string of blank words to one blank word.
+        words = []
+        for i in range(0, len(s), 8):
+            if s[i:i+8].strip() or (words and words[-1].strip()):
+                words.append(s[i:i+8])
+        while words and not words[-1].strip():
+            words.pop()
+        self._mon.mon_typer(''.join(words), end=end)
 
     def howz_that(self, card, word):
         # Procedure to cuss an unrecognized word
