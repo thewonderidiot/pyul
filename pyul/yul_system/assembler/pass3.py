@@ -216,7 +216,8 @@ class Pass3:
         self.print_lin()
 
         # Line with just dividers after col hdgs.
-        self._line[39] = '■' + self._line[40:79] + '■'
+        self._line[39] = self._old_line[39]
+        self._line[79] = self._old_line[79]
         self._line.spacing = 1
         self.print_lin()
 
@@ -278,12 +279,13 @@ class Pass3:
                         self._line[cc+2] = '%-8s' % sym.name
 
                     # Branch unless symbol was simply undef.
-                    if sym.health < 3:
+                    if sym.def_page == 0:
                         # Show that there's no page of definition.
-                        self._line[cc+21] = ' - '
+                        self._line[cc+20] = ' -  '
                     else:
                         # Convert page of def to zero-supp alpha.
-                        self._line[cc+21] = '%3d' % sym.def_page
+                        fmt = '%3d' if self._mon.year < 1967 else '%4d'
+                        self._line[cc+20] = fmt % sym.def_page
 
                     # Branch if symbol was referred to.
                     refs = len(sym.ref_pages)
@@ -294,8 +296,8 @@ class Pass3:
                         # Convert number of references to z/s alf.
                         refs_alf = '%3d' % refs
 
-                        # Branch if 999 refs or fewer.
-                        if refs > 999:
+                        # Branch if 998 references or fewer.
+                        if refs >= 999:
                             refs_alf = '>1K'
 
                         self._line[cc+25] = refs_alf
@@ -333,13 +335,17 @@ class Pass3:
         self.print_lin()
 
         self._line[0] = 'N NEARLY DEFINED BY =   J FAILED LEFTOVE' + \
-                        'R WORD    D OVERSIZE- OR ILL-DEFINED   C' + \
-                        ' CONFLICT IN MEMORY   K  MISC. TROUBLE  '
+                        'R WORD    O OVERSIZE- OR ILL-DEFINED   C' + \
+                        ' CONFLICT IN MEMORY   X  MISC. TROUBLE  '
         self._line.spacing = Bit.BIT1
         self.print_lin()
 
         # Show that no page is under construction.
         self._sym_liner = ONE_THIRD*2
+
+        # Point to construction area, skip to HOF.
+        self._l_bank_5 = []
+        return self.owe_sym_q()
 
     def early_sym_page(self):
         self._line.spacing = Bit.BIT1
@@ -397,7 +403,11 @@ class Pass3:
             self.sym_page()
 
         # Page heading for symbol table summary.
-        self._page_hed2[0] = '%-120s' % 'SUMMARY OF SYMBOL TABLE LISTING'
+        if self._mon.year <= 1965:
+            anal_list = 'ANALYSIS'
+        else:
+            anal_list = 'LISTING'
+        self._page_hed2[0] = '%-120s' % ('SUMMARY OF SYMBOL TABLE %s' % anal_list)
 
         # Clean out print line in case of suppress.
         self._line.clear()
@@ -430,7 +440,7 @@ class Pass3:
         self._line.spacing = 7
         self.print_lin()
 
-        if self._mon.year > 1967:
+        if self._mon.year >= 1967:
             # Upspace 7 and print character set.
             self._line.spacing = Bit.BIT1
             self._line[0] = 'H-1800 CHARACTER SEQUENCE (360 LACKS ■≠½' + \
@@ -570,11 +580,9 @@ class Pass3:
                         desc = 3
 
                 # Go to find end of reserved/available E or F.
-                end += 1
                 while end < upper_lim:
-                    next_avail = self.avail_q(end)
+                    next_avail = self.avail_q(end + 1)
                     if avail != next_avail:
-                        end -= 1
                         break
                     end += 1
 
@@ -703,9 +711,15 @@ class Pass3:
         self._old_line.spacing = Bit.BIT1
 
         # Page subhead for substrand summary.
-        self._page_hed2[0] = 'PARAGRAPHS GENERATED FOR THIS ASSEMBLY; ' + \
-                             'ADDRESS LIMITS AND THE MANUFACTURING LOC' + \
-                             'ATION CODE ARE SHOWN FOR EACH.          '
+        if self._mon.year <= 1965:
+            prog_assy = 'PROGRAM'
+        else:
+            prog_assy = 'ASSEMBLY'
+
+        hed2 = ('PARAGRAPHS GENERATED FOR THIS %s; ' + \
+                'ADDRESS LIMITS AND THE MANUFACTURING ' + \
+                'LOCATION CODE ARE SHOWN FOR EACH.') % prog_assy
+        self._page_hed2[0] = '%-120s' % hed2
 
         # In case of barren assembly (no words).
         if len(self._paragraphs) == 0:
@@ -820,7 +834,7 @@ class Pass3:
                 # Cuss line is done if just one on page.
                 if self._n_oct_errs > 1:
                     # Make it "E■■■■■■  # NN   THROUGH  # NN"
-                    line_end = 'THROUGH  # %d' % self._yul.n_err_lins
+                    line_end = 'THROUGH ' + (' # %-5d' % self._yul.n_err_lins)
                     self._line[16] = line_end
 
                 # Skip if octal map is suppressed.
@@ -855,12 +869,12 @@ class Pass3:
             # Branch if subro call was not confirmed.
             if subro['CALLED'] != 0:
                 # Set in print page of confirming call.
-                self._line[21] = '%3u' % subro['CALLED']
+                self._line[20] = '%4u' % subro['CALLED']
 
                 # Branch if subroutine was not printed
                 if subro['BEGINS'] != 0:
                     # Set in print page where subro begins.
-                    self._line[29] = '%3u' % subro['BEGINS']
+                    self._line[28] = '%4u' % subro['BEGINS']
 
             self._line.spacing = 1
             if (subro_no & 3) == 3:
@@ -1021,9 +1035,10 @@ class Pass3:
         # Type "END YUL PASS 2"
         self._mon.mon_typer('END YUL PASS 2')
 
-        # Clear subroutine name slot in page head.
-        # FIXME: Only do if not reject or obsolete.
-        self._yul.page_head = self._yul.page_head[:102] + '         ' + self._yul.page_head[111:]
+        # Branch if not reject or obsolete.
+        if self._yul.page_head[104] != '■':
+            # Clear subroutine name slot in page head.
+            self._yul.page_head = self._yul.page_head[:102] + '         ' + self._yul.page_head[111:]
 
         self._yul.sym_place = 3 * (self._yul.sym_thr.count() + 1) # FIXME: Add in SUBROS and COUNTS
 

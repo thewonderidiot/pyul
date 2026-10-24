@@ -1,5 +1,5 @@
 from yul_system.types import ALPHABET, ONES, BAD_WORD, Symbol, SwitchBit, HealthBit, FieldCodBit, LocStateBit, Bit, Line
-from math import modf
+from fractions import Fraction
 
 class Cuss:
     def __init__(self, msg, poison=False):
@@ -207,10 +207,7 @@ class Pass2:
 
     # Procedure in pass 2 for "END OF" cards.
     def end_of(self, popo):
-        if self._mon.year <= 1965:
-            self._line[0] = '  END OF ' + popo.card[8:68] + ' '*51
-        else:
-            self._line[0] = '    END OF ' + popo.card[8:68] + ' '*49
+        self._line[0] = '  END OF ' + popo.card[8:68] + ' '*51
 
         # Branch if not for new and main program
         if popo.card[8] == 'N':
@@ -262,7 +259,10 @@ class Pass2:
                 # Print subro rev no. in subhead.
                 self._user_log[104] = '  REV%3u' % subro['REVISION']
 
-            # FIXME: Establish head that was gien in adrfld.
+            # Establish head that was given in adrfld.
+            # For pyul, this is really the HEAD that was in force
+            # when the SUBRO card was encountered.
+            self._head = subro['HEAD']
             self._subro_idx += 1
 
             # Branch unless inactive subs suppressed.
@@ -436,6 +436,17 @@ class Pass2:
         self.m_proc_1p(popo, number)
         self.proc_word(popo, loc_symbol)
 
+    def fdm(self, a, b):
+        product = a * b
+        if product == 0:
+            return Fraction(0)
+        shift = 10 - (len(str(product.numerator)) - len(str(product.denominator)))
+        while product * Fraction(10)**shift >= 10**10:
+            shift -= 1
+        while product * Fraction(10)**shift < 10**9:
+            shift += 1
+        return Fraction(int(product * Fraction(10)**shift)) / Fraction(10)**shift
+
     # Subroutine in pass 2 to translate the address field of a decimal constant. Expects to find the field
     # delimited by an asterisk. Delivers the result as an integer with sign in bit 1 in number, or delivers
     # ..BAD WORD.. in number if the value cannot be determined. Approporiate cussing is done.
@@ -490,10 +501,10 @@ class Pass2:
         # Test none/some digits indicator.
         if n_digits == 0:
             # Number = 1.0 if no digits before E or B.
-            number = 1.0
+            number = Fraction(1)
         else:
             # Float number before E or B adjust.
-            number = mantissa * 10**exponent
+            number = Fraction(mantissa) * Fraction(10)**exponent
 
         # Branch if not an E.
         if caracter == 'E':
@@ -537,7 +548,7 @@ class Pass2:
             # Negative result is wrong. 128 or more is wrong too.
             if e_total < -64 or e_total > 63:
                 return self.bad_const(ex_range=True), e_number
-            number *= 10.0**(e_sign*e_number)
+            number *= Fraction(10)**(e_sign*e_number)
 
         # Branch if character is not a B.
         if caracter == 'B':
@@ -584,10 +595,10 @@ class Pass2:
                     l_powers_2 = self.pow_pow_2p
 
                 pow_idx = 0
-                common = 1.0
+                common = Fraction(1)
                 while b_number != 0:
                     if b_number & 1:
-                        common *= l_powers_2[pow_idx]
+                        common = self.fdm(Fraction(repr(l_powers_2[pow_idx])), common)
                     b_number >>= 1
                     pow_idx += 1
 
@@ -602,7 +613,7 @@ class Pass2:
                     return self.bad_const(ex_range=True), e_number
 
                 # Scale by B factor.
-                number *= common
+                number = self.fdm(number, common)
 
         # Error if character is not asterisk.
         if caracter != '*':
@@ -617,19 +628,20 @@ class Pass2:
             # Error if too-big integer.
             if number > max_decml:
                 return self.bad_const(ex_range=True), e_number
-            fract, integer = modf(number)
-            # FIXME: epsilon?
-            if fract != 0.0:
+            integer = int(number)
+            fract = number - integer
+            if fract != 0:
                 self.cuss_list[41].demand = True
             number = int(number)
         else:
             # Turn fraction into integer for machine.
-            number *= iscale
+            number = self.fdm(number, Fraction(iscale))
             if number < 0.5 and number != 0.0:
                 # Inadvertant 0 is a scaling blunder.
                 self.cuss_list[41].demand = True
-            fract, integer = modf(number)
-            number = int(integer)
+            integer = int(number)
+            fract = number - integer
+            number = integer
             if fract >= 0.5:
                 number += 1
             if number > max_numbr:
@@ -940,6 +952,9 @@ class Pass2:
 
         # Branch if no address symbol in sym tab.
         if self._adr_symbol is not None:
+            if len(self._adr_symbol.ref_pages) > 0 and not self._yul.switch & SwitchBit.PRINT:
+                # Branch if doing a suppressed subroutine.
+                page = self._adr_symbol.ref_pages[-1]
             self._adr_symbol.ref_pages.append(page)
 
             # Branch if this is not the first ref or doing a suppressed subroutine.
@@ -1925,12 +1940,12 @@ class Pass2:
         if line_cussed:
             # Show that there are cusses on this page.
             self._yul.switch |= SwitchBit.CUSSES_ON_PAGE
-            self.count_cus(left_end, 9)
+            self.count_cus(left_end, 10)
 
     def prin_cuss(self, cuss):
-        left_end = (16 + len(cuss.msg)) // 8
         self._line[16] = cuss.msg
-        # FIXME: If 1st cuss of page, left end of blots.
+        # If 1st cuss of page, left end of blots.
+        left_end = (16 + len(cuss.msg)) // 8
 
         # Poison indicates fatal cuss (bad assy).
         if cuss.poison:
@@ -2015,6 +2030,7 @@ class Pass2:
 
             # If nothing is owed, we're in mid-page. So print blank line(s) to
             # get to E-O-F.
+            old_line.clear()
             self._yul.switch |= SwitchBit.OWE_HEADS
             return self.endoform(old_line, True)
 
@@ -2145,10 +2161,7 @@ class Pass2:
         return self.dpaginat(old_line)
 
     def dpaginat(self, old_line):
-        # FIXME: what does DEPAGIN8 do?
-        # if self._yul.n_copies > 0:
-        #     self.copy_prt5()
-        #self._mon.phi_print('', spacing=Bit.BIT1)
+        # At every skip, suppress monitor pagehed.
 
         if self._yul.n_copies > 0:
             self.copy_prt5()
@@ -2213,7 +2226,7 @@ class Pass2:
             if self._yul.n_copies > 0:
                 self.copy_prt5()
 
-            # FIXME: DEPAGIN8
+            # At every skip, suppress monitor pagehed.
 
             # Print last line, skip, and owe heads.
             old_line.spacing = Bit.BIT1
@@ -2343,10 +2356,14 @@ class Pass2:
         self._yul.page_head = self._yul.page_head[:104] + '■REJECT ' + self._yul.page_head[112:]
         
         # Branch unless version or transferred.
-        if self._yul.switch & SwitchBit.VERSION:
-            # FIXME: handle switch bit 13?
+        if self._yul.switch & (SwitchBit.VERSION | SwitchBit.TRANSFERRED):
             # A version or transferred assembly is rejected. Delete the new prog/sub name without typing anything.
+            # FIXME: This should not delete the program yet!
             self._yul.yulprogs.remove_prog(self._yul.comp_name, self._yul.prog_name)
+
+            # Make transferred look like version.
+            self._yul.switch |= SwitchBit.VERSION
+            self._yul.switch &= ~SwitchBit.TRANSFERRED
         else:
             # A revision is rejected. Subtract one from the revision number.
             prog = self._yul.yulprogs.find_prog(self._yul.comp_name, self._yul.prog_name)

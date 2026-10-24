@@ -34,9 +34,6 @@ class AgcPass2(Pass2):
         self._used_fmax = ONES
         self._last_banx = ['  ', '  ']
 
-        # FIXME: Does the real Yul do this?
-        yul.switch &= ~SwitchBit.DP_OPCODE
-
         self.cuss_list = [
             # 0-2
             Cuss('CARD NUMBER OUT OF SEQUENCE     '),

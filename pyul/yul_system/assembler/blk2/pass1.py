@@ -18,9 +18,17 @@ class Blk2Pass1(Pass1):
             (MemType.ERASABLE,   0o3777),
             (MemType.FIXED,     0o13777),
             (MemType.SPEC_NON,  0o17777), # Banks 02 and 03 access fixed-fixed.
-            (MemType.FIXED,    0o117777),
-            (MemType.SPEC_NON, 0o167777),
         ]
+        if self._mon.year <= 1965:
+            self.m_typ_tab.extend([
+                (MemType.FIXED,     0o67777),
+            ])
+        else:
+            self.m_typ_tab.extend([
+                (MemType.FIXED,    0o117777),
+                (MemType.SPEC_NON, 0o167777),
+            ])
+
         self.op_thrs = {
             # CODES 01
             'MASK':   0o7400,

@@ -941,7 +941,8 @@ class Pass1:
             # Point to next subroutine to enter assy.
             self._sypt = self._yul.adhoc_subs[self._subro_idx]['SYLT']
 
-            # FIXME: Establish HEAD specified in call
+            # Establish head specified in call.
+            self._head = self._yul.adhoc_subs[self._subro_idx]['HEAD']
 
             # "Branch" if there is a good base addr.
             self._loc_ctr = self._yul.adhoc_subs[self._subro_idx]['BASE']
@@ -2398,6 +2399,7 @@ class Pass1:
             'CALLED': 0,
             'BEGINS': 0,
             'SYLT': sylt_file,
+            'HEAD': self._head,
         })
 
         # Thread health to tape file directory.

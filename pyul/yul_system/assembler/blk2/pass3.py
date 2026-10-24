@@ -161,6 +161,7 @@ class Blk2Pass3(Pass3):
 
         # Show no checksum in full bank, exit.
         image = ' NOSUM' + image[6:]
+        self._checksum = ONES
         return image, word
 
     def no_suming(self, image, word, address):
@@ -174,6 +175,10 @@ class Blk2Pass3(Pass3):
         if self._checksum >= ONES:
             return image, word
 
+        # "■EOB" for used word after checksum.
+        image = '  ■EOB' + image[6:]
+        self.p3_errors()
+        self._checksum = ONES
         return image, word
 
     def plant_sum(self, image, word, address):

@@ -161,6 +161,7 @@ class AgcPass3(Pass3):
 
         # Show no checksum in full bank, exit.
         image = ' NOSUM' + image[6:]
+        self._checksum = ONES
         return image, word
 
     def no_suming(self, image, word, address):
@@ -174,6 +175,10 @@ class AgcPass3(Pass3):
         if self._checksum >= ONES:
             return image, word
 
+        # "■EOB" for used word after checksum.
+        image = '  ■EOB' + image[6:]
+        self.p3_errors()
+        self._checksum = ONES
         return image, word
 
     def plant_sum(self, image, word, address):
@@ -187,18 +192,20 @@ class AgcPass3(Pass3):
         if bank_no > 3:
             bank_no -= 4
 
-        # Complement running sum...
-        self._checksum ^= 0o2000000000177777
+        self._checksum &= ~Bit.BIT2
 
-        # ...form raw checksum word...
-        checksum = self._checksum + bank_no
+        # Branch if checksum is positive.
+        if self._checksum > 0o37777:
+            # Give bank number AGC sign of checksum.
+            bank_no ^= 0o177777
 
-        # ...and propagate end-around carry.
-        if checksum > 0o177777:
-            checksum -= 0o177777
+        checksum = self._checksum - bank_no
 
-        # Clean out duplicate sign
-        checksum &= 0o77777
+        # Branch if alg. val. of cksm is plus.
+        if checksum > 0:
+            checksum ^= 0o77777
+        else:
+            checksum = -checksum
 
         parity = 1
         for i in range(16):
